@@ -163,7 +163,7 @@ export default function Messages() {
                     : <><Button size="sm" asChild><Link to="/jobseeker/jobs">Explore opportunities</Link></Button><Button size="sm" variant="outline" asChild><Link to="/jobseeker/bookings">Bookings</Link></Button></>}</div>
                 </div>
               : <ul>{convs.map(c => <li key={c.id}><button type="button" onClick={() => select(c.id)} aria-current={activeId === c.id ? 'true' : undefined} className={`w-full text-left p-4 border-b border-white/10 ${activeId === c.id ? 'bg-violet-500/10' : 'hover:bg-white/5'}`}>
-                  <div className="flex items-start justify-between gap-2"><span className="font-semibold truncate" data-testid="conversation-name">{nameOf(c)}</span>{(c.unreadCount || 0) > 0 && <span className="shrink-0 rounded-full bg-fuchsia-500 px-2 py-0.5 text-[11px] font-bold" aria-label={`${c.unreadCount} unread`}>{c.unreadCount}</span>}</div>
+                  <div className="flex items-start justify-between gap-2"><span className="font-semibold truncate" data-testid="conversation-name">{nameOf(c)}</span>{(c.unreadCount || 0) > 0 && <span className="shrink-0 rounded-full bg-fuchsia-700 px-2 py-0.5 text-[11px] font-bold text-white" aria-label={`${c.unreadCount} unread`}>{c.unreadCount}</span>}</div>
                   <div className="text-xs text-violet-300 mt-1 truncate">{c.jobTitle || 'General conversation'}</div>
                   <div className={`text-sm mt-2 truncate ${(c.unreadCount || 0) > 0 ? 'text-slate-200 font-medium' : 'text-slate-500'}`}>{c.lastMessage ? `${c.lastMessageFromMe ? 'You: ' : ''}${c.lastMessage}` : 'No messages yet'}</div>
                 </button></li>)}</ul>}

@@ -27,7 +27,7 @@ class User < ApplicationRecord
   has_many :billing_attempts, dependent: :destroy
 
   enum :role, { jobseeker: "jobseeker", employer: "employer", admin: "admin" }, validate: true
-  enum :status, { active: "active", suspended: "suspended", pending: "pending" }, validate: true
+  enum :status, { active: "active", suspended: "suspended", pending: "pending", deleted: "deleted" }, validate: true
 
   validates :name, length: { minimum: 2, maximum: 120 }
   validates :email, presence: true, uniqueness: { case_sensitive: false }, format: { with: URI::MailTo::EMAIL_REGEXP }

@@ -6,6 +6,7 @@ module Admin
       return render_error("You cannot change your own admin status.", :conflict) if params[:id] == current_user.id
       return render_error("Invalid user status.", :bad_request) unless %w[active suspended pending].include?(params[:status])
       user = User.find(params[:id])
+      return render_error("This account was deleted by its owner and cannot be restored.", :conflict, "ACCOUNT_DELETED") if user.deleted?
       user.update!(status: params[:status])
       user.sessions.delete_all unless user.active?
       audit!("admin.user.status", user, status: user.status)

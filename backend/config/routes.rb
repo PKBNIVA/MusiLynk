@@ -14,6 +14,8 @@ Rails.application.routes.draw do
     post "auth/otp/verify", to: "auth#otp_verify"
     get "auth/methods", to: "auth#sign_in_methods"
     get "me", to: "auth#me"
+    get "account/export", to: "account#export"
+    delete "account", to: "account#destroy"
     put "profile", to: "profiles#update"
 
     resources :jobs, only: %i[index show create] do

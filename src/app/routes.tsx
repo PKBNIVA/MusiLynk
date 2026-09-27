@@ -48,6 +48,7 @@ const BookTalent=L(()=>import('./pages/BookTalent'));
 const Bookings=L(()=>import('./pages/Bookings'));
 const BandBuilder=L(()=>import('./pages/BandBuilder'));
 const Billing=L(()=>import('./pages/Billing'));
+const AccountData=L(()=>import('./pages/AccountData'));
 const S=({children}:{children:React.ReactNode})=><React.Suspense fallback={<PageLoading/>}>{children}</React.Suspense>;
 const P=({roles,children}:{roles:any[];children:React.ReactNode})=><S><ProtectedRoute roles={roles}>{children}</ProtectedRoute></S>;
 // The pathless root route gives every page one error boundary: stale lazy chunks after a
@@ -102,6 +103,7 @@ export const router=createBrowserRouter([{errorElement:<RouteErrorPage/>,childre
 {path:'build-my-crew',element:<P roles={['jobseeker']}><BuildMyCrew/></P>},
 {path:'hiring/applicants',element:<P roles={['jobseeker']}><EmployerApplications/></P>},
 {path:'billing',element:<P roles={['jobseeker']}><Billing/></P>},
+{path:'account',element:<P roles={['jobseeker']}><AccountData/></P>},
 {path:'workspace',element:<P roles={['jobseeker']}><Workspace/></P>}]},
 {path:'/employer',children:[{index:true,element:<P roles={['employer']}><EmployerDashboard/></P>},
 {path:'profile',element:<P roles={['employer']}><CompanyProfile/></P>},
@@ -120,6 +122,7 @@ export const router=createBrowserRouter([{errorElement:<RouteErrorPage/>,childre
 {path:'urgent',element:<P roles={['employer']}><UrgentRequests/></P>},
 {path:'availability',element:<P roles={['employer']}><Availability/></P>},
 {path:'billing',element:<P roles={['employer']}><Billing/></P>},
+{path:'account',element:<P roles={['employer']}><AccountData/></P>},
 {path:'workspace',element:<P roles={['employer']}><Workspace/></P>}]},
 {path:'/admin',element:<P roles={['admin']}><AdminDashboard/></P>},
 {path:'/admin/tester',element:<P roles={['admin']}><AdminTester/></P>},

@@ -41,23 +41,67 @@ import DemoDataPanel from '../components/admin/DemoDataPanel';
 import { SignInDoctor } from '../components/admin/SignInDoctor';
 import { ReportReview } from '../components/admin/ReportReview';
 import OperationsPanel from '../components/admin/OperationsPanel';
+import { errorMessage } from '../lib/errors';
+import type {
+  AdminBooking,
+  AdminReport,
+  AdminStats,
+  AdminSubscription,
+  AdminUser,
+  AdminVerification,
+  AuditLogEntry,
+  BillingAttempt,
+  BillingEventSummary,
+  Job,
+  Review,
+} from '../lib/apiTypes';
+import type { LucideIcon } from 'lucide-react';
 
 // Each panel loads independently: one failing endpoint must not blank the whole console.
-const SOURCES = {
-  stats: ['/admin/stats', (d: any) => d?.stats || {}],
-  users: ['/admin/users', (d: any) => d?.users || []],
-  jobs: ['/admin/jobs', (d: any) => d?.jobs || []],
-  reviews: ['/admin/reviews', (d: any) => d?.reviews || []],
-  verifications: ['/admin/verifications', (d: any) => d?.requests || []],
-  reports: ['/admin/reports', (d: any) => d?.reports || []],
-  logs: ['/admin/audit', (d: any) => d?.logs || []],
-  subscriptions: ['/admin/subscriptions', (d: any) => d?.subscriptions || []],
-  bookings: ['/admin/bookings', (d: any) => d?.bookings || []],
-  attempts: ['/admin/billing-attempts', (d: any) => d?.attempts || []],
-  billingEvents: ['/admin/billing-events', (d: any) => d?.events || []],
-} as const;
-type Source = keyof typeof SOURCES;
-type Data = { stats: any } & Record<Exclude<Source, 'stats'>, any[]>;
+type Data = {
+  stats: Partial<AdminStats>;
+  users: AdminUser[];
+  jobs: Job[];
+  reviews: Review[];
+  verifications: AdminVerification[];
+  reports: AdminReport[];
+  logs: AuditLogEntry[];
+  subscriptions: AdminSubscription[];
+  bookings: AdminBooking[];
+  attempts: BillingAttempt[];
+  billingEvents: BillingEventSummary[];
+};
+type Source = keyof Data;
+// What the admin list endpoints answer with; each source reads its own key.
+type Payload = Partial<{
+  stats: AdminStats;
+  users: AdminUser[];
+  jobs: Job[];
+  reviews: Review[];
+  requests: AdminVerification[];
+  reports: AdminReport[];
+  logs: AuditLogEntry[];
+  subscriptions: AdminSubscription[];
+  bookings: AdminBooking[];
+  attempts: BillingAttempt[];
+  events: BillingEventSummary[];
+}>;
+const SOURCES: { [K in Source]: readonly [path: string, read: (d: Payload | null) => Data[K]] } = {
+  stats: ['/admin/stats', (d) => d?.stats || {}],
+  users: ['/admin/users', (d) => d?.users || []],
+  jobs: ['/admin/jobs', (d) => d?.jobs || []],
+  reviews: ['/admin/reviews', (d) => d?.reviews || []],
+  verifications: ['/admin/verifications', (d) => d?.requests || []],
+  reports: ['/admin/reports', (d) => d?.reports || []],
+  logs: ['/admin/audit', (d) => d?.logs || []],
+  subscriptions: ['/admin/subscriptions', (d) => d?.subscriptions || []],
+  bookings: ['/admin/bookings', (d) => d?.bookings || []],
+  attempts: ['/admin/billing-attempts', (d) => d?.attempts || []],
+  billingEvents: ['/admin/billing-events', (d) => d?.events || []],
+};
+const readSource = <K extends Source>(next: Partial<Data>, k: K, d: Payload | null) => {
+  next[k] = SOURCES[k][1](d);
+};
 const EMPTY: Data = {
   stats: {},
   users: [],
@@ -90,7 +134,7 @@ type Confirm = {
 };
 type Grant = { id: string; name: string; email: string };
 
-const date = (value: any, withTime = false) => {
+const date = (value: string | null | undefined, withTime = false) => {
   if (!value) return '—';
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? '—' : withTime ? d.toLocaleString() : d.toLocaleDateString();
@@ -120,13 +164,13 @@ export default function AdminDashboard() {
   const load = useCallback(async () => {
     setLoading(true);
     const keys = Object.keys(SOURCES) as Source[];
-    const settled = await Promise.allSettled(keys.map((k) => apiGet<any>(SOURCES[k][0])));
-    const next: any = {},
+    const settled = await Promise.allSettled(keys.map((k) => apiGet<Payload | null>(SOURCES[k][0])));
+    const next: Partial<Data> = {},
       nextErrors: Partial<Record<Source, string>> = {};
     settled.forEach((result, i) => {
       const k = keys[i];
-      if (result.status === 'fulfilled') next[k] = (SOURCES[k][1] as (d: any) => any)(result.value);
-      else nextErrors[k] = result.reason?.message || 'Unable to load.';
+      if (result.status === 'fulfilled') readSource(next, k, result.value);
+      else nextErrors[k] = errorMessage(result.reason, 'Unable to load.');
     });
     setData((prev) => ({ ...prev, ...next }));
     setErrors(nextErrors);
@@ -144,14 +188,14 @@ export default function AdminDashboard() {
       await request();
       toast.success(message);
       await load();
-    } catch (e: any) {
-      toast.error(e?.message || 'Action failed');
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Action failed'));
       throw e;
     } finally {
       setBusy(null);
     }
   };
-  const patch = (key: string, path: string, body: any, message: string) =>
+  const patch = (key: string, path: string, body: Record<string, unknown>, message: string) =>
     act(key, () => apiPatch(path, body), message).catch(() => {});
 
   const {
@@ -176,7 +220,7 @@ export default function AdminDashboard() {
   }, [users, userQuery]);
   const failedCount = Object.keys(errors).length;
 
-  const Stat = ({ label, value, icon: I }: { label: string; value: any; icon: any }) => (
+  const Stat = ({ label, value, icon: I }: { label: string; value?: number; icon: LucideIcon }) => (
     <Card className="bg-white/[.055] border-white/10">
       <CardContent className="p-4 md:p-5 flex items-center gap-4">
         <div className="p-3 rounded-xl bg-violet-500/10">

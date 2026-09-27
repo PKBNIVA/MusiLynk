@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
+import { errorMessage } from '../../lib/errors';
+import type { LucideIcon } from 'lucide-react';
 
 type Diagnosis = { level: 'error' | 'warn' | 'info' | 'ok'; code: string; message: string };
 type Lookup = {
@@ -47,7 +49,7 @@ function deliverability(s: Lookup['emailSuppression']): string {
   return `${s.softBounces} soft bounce(s)`;
 }
 
-const tone: Record<Diagnosis['level'], { icon: any; cls: string; label: string }> = {
+const tone: Record<Diagnosis['level'], { icon: LucideIcon; cls: string; label: string }> = {
   error: { icon: XCircle, cls: 'border-rose-400/30 bg-rose-500/10 text-rose-100', label: 'Blocker' },
   warn: { icon: AlertTriangle, cls: 'border-amber-400/30 bg-amber-500/10 text-amber-100', label: 'Warning' },
   info: { icon: Info, cls: 'border-sky-400/25 bg-sky-500/10 text-sky-100', label: 'Note' },
@@ -74,9 +76,9 @@ export function SignInDoctor() {
     setError('');
     try {
       setResult(await apiGet<Lookup>(`/admin/users/lookup?email=${encodeURIComponent(value)}`));
-    } catch (err: any) {
+    } catch (err: unknown) {
       setResult(null);
-      setError(err?.message || 'Lookup failed.');
+      setError(errorMessage(err, 'Lookup failed.'));
     } finally {
       setLoading(false);
     }
@@ -88,8 +90,8 @@ export function SignInDoctor() {
       const d = await apiPost<{ revoked: number }>(`/admin/users/${result.user.id}/revoke-sessions`);
       toast.success(`Signed out of ${d?.revoked ?? 0} session(s)`);
       await lookup();
-    } catch (err: any) {
-      toast.error(err?.message || 'Could not revoke sessions');
+    } catch (err: unknown) {
+      toast.error(errorMessage(err, 'Could not revoke sessions'));
     } finally {
       setRevoking(false);
     }

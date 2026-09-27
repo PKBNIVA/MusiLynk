@@ -26,8 +26,8 @@ const GENERIC = {
 };
 
 interface Calls {
-  requests: any[];
-  verifies: any[];
+  requests: Record<string, unknown>[];
+  verifies: Record<string, unknown>[];
 }
 
 async function mockApi(

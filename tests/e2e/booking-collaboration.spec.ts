@@ -5,7 +5,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
 
 type Role = 'jobseeker' | 'employer';
-type Handler = (route: Route, body: any) => unknown;
+type Handler = (route: Route, body: Record<string, unknown>) => unknown;
 
 const userFor = (role: Role) => ({
   id: `qa-${role}`,
@@ -35,7 +35,7 @@ async function signIn(page: Page, role: Role, handlers: Record<string, Handler |
       return route.fulfill({ json: { user: userFor(role) } });
     const handler = handlers[key] ?? handlers[url.pathname];
     if (typeof handler === 'function') {
-      let body: any = {};
+      let body: Record<string, unknown> = {};
       try {
         body = route.request().postDataJSON();
       } catch {}
@@ -99,13 +99,13 @@ test('band builder survives malformed genres and shows an empty seat state', asy
 });
 
 test('book talent preselects the act from ?act and validates before sending', async ({ page }) => {
-  const sent: any[] = [];
+  const sent: Record<string, unknown>[] = [];
   const failures = await signIn(page, 'employer', {
     '/api/acts': { acts: [] },
     '/api/acts/act-9': {
       act: { id: 'act-9', name: 'Raga Collective', status: 'active', city: 'Mumbai', act_type: 'ensemble' },
     },
-    'POST /api/bookings': (route: Route, body: any) => {
+    'POST /api/bookings': (route: Route, body: Record<string, unknown>) => {
       sent.push(body);
       return route.fulfill({ status: 201, json: { id: 'b-new' } });
     },
@@ -146,7 +146,7 @@ test('requester accepts a quote through an accessible dialog and sees server err
   let attempts = 0;
   const failures = await signIn(page, 'employer', {
     '/api/bookings': { bookings: [booking({})] },
-    'POST /api/bookings/b1/status': (route: Route, body: any) => {
+    'POST /api/bookings/b1/status': (route: Route, body: Record<string, unknown>) => {
       attempts += 1;
       expect(body).toEqual({ status: 'accepted' });
       return attempts === 1
@@ -243,7 +243,7 @@ test('bookings load failure offers a retry and empty data offers next steps', as
 });
 
 test('lineup members and urgent requests use dialogs instead of native prompts', async ({ page }) => {
-  const posted: any[] = [];
+  const posted: Record<string, unknown>[] = [];
   const failures = await signIn(page, 'jobseeker', {
     '/api/acts/me': {
       acts: [
@@ -261,7 +261,7 @@ test('lineup members and urgent requests use dialogs instead of native prompts',
         },
       ],
     },
-    'POST /api/acts/a1/members': (route: Route, body: any) => {
+    'POST /api/acts/a1/members': (route: Route, body: Record<string, unknown>) => {
       posted.push(body);
       return route.fulfill({ status: 201, json: { id: 'm3' } });
     },

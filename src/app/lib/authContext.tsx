@@ -8,9 +8,9 @@ export interface User {
   role: Role;
   status: string;
   profileComplete: boolean;
-  headline?: string;
-  location?: string;
-  companyName?: string;
+  headline?: string | null;
+  location?: string | null;
+  companyName?: string | null;
   verified?: boolean;
   skills?: string[];
   genres?: string[];

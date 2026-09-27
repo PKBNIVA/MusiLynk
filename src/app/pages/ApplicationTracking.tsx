@@ -8,17 +8,19 @@ import { toast } from 'sonner';
 import { Link } from 'react-router';
 import { useConfirm } from '../components/booking/BookingDialogs';
 import { MapPin, Calendar, BriefcaseBusiness } from 'lucide-react';
+import { errorMessage } from '../lib/errors';
+import type { Application } from '../lib/apiTypes';
 const ordered = ['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Offer', 'Hired'];
 export default function ApplicationTracking() {
-  const [apps, setApps] = useState<any[]>([]),
+  const [apps, setApps] = useState<Application[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
     confirm = useConfirm();
   const load = () => {
     setError('');
-    return apiGet<any>('/applications')
+    return apiGet<{ applications?: Application[] }>('/applications')
       .then((d) => setApps(d.applications || []))
-      .catch((e: any) => setError(e?.message || 'Applications could not be loaded.'))
+      .catch((e: unknown) => setError(errorMessage(e, 'Applications could not be loaded.')))
       .finally(() => setLoading(false));
   };
   useEffect(() => {

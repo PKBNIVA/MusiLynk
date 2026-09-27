@@ -16,8 +16,8 @@ const PASSWORD = 'StrongPass123!';
 const VALID_CODE = '482913';
 
 interface Calls {
-  logins: any[];
-  completions: any[];
+  logins: Record<string, unknown>[];
+  completions: Record<string, unknown>[];
 }
 
 async function mockApi(

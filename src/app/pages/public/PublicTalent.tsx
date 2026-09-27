@@ -10,6 +10,8 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { apiGet } from '../../lib/api';
 import { useLatestCallback } from '../../lib/useLatestCallback';
+import { errorMessage } from '../../lib/errors';
+import type { Professional } from '../../lib/apiTypes';
 
 export default function PublicTalent() {
   usePageMeta(
@@ -17,7 +19,7 @@ export default function PublicTalent() {
     'Search singers, instrumentalists, composers, engineers, technical directors, tour crew and managers on Verse.',
   );
   const [sp, setSp] = useSearchParams();
-  const [items, setItems] = useState<any[]>([]),
+  const [items, setItems] = useState<Professional[]>([]),
     [q, setQ] = useState(sp.get('q') || ''),
     [location, setLocation] = useState(sp.get('location') || ''),
     [role] = useState(sp.get('role') || '');
@@ -32,10 +34,10 @@ export default function PublicTalent() {
     setLoading(true);
     setError('');
     try {
-      const d = await apiGet<any>(`/public/talent?${p}`);
+      const d = await apiGet<{ talent?: Professional[] }>(`/public/talent?${p}`);
       setItems(d.talent || []);
-    } catch (e: any) {
-      setError(e.message || 'Unable to load professionals');
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'Unable to load professionals'));
     } finally {
       setLoading(false);
     }

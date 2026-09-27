@@ -1,7 +1,7 @@
 import { usePageMeta } from '../../components/PageMeta';
 import { Link } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
-const groups = [
+const groups: [title: string, links: [label: string, path: string][]][] = [
   [
     'Explore',
     [
@@ -55,11 +55,11 @@ export default function SiteMapPage() {
           <code className="text-violet-300">/sitemap.xml</code>.
         </p>
         <div className="grid md:grid-cols-2 gap-5 mt-10">
-          {groups.map(([title, links]: any) => (
+          {groups.map(([title, links]) => (
             <section key={title} className="rounded-xl border border-white/10 bg-white/[.035] p-6">
               <h2 className="font-semibold text-xl">{title}</h2>
               <div className="grid gap-3 mt-4">
-                {links.map((l: any) => (
+                {links.map((l) => (
                   <Link key={l[1]} to={l[1]} className="text-violet-300 hover:text-violet-200">
                     {l[0]}
                   </Link>

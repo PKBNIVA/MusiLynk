@@ -8,31 +8,33 @@ import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import { Link } from 'react-router';
 import { useConfirm } from '../components/booking/BookingDialogs';
+import { errorMessage } from '../lib/errors';
+import type { JobAlert } from '../lib/apiTypes';
 
 export default function JobAlerts() {
-  const [alerts, setAlerts] = useState<any[]>([]),
+  const [alerts, setAlerts] = useState<JobAlert[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
     confirm = useConfirm();
   const load = () => {
     setLoading(true);
     setError('');
-    apiGet<any>('/job-alerts')
+    apiGet<{ alerts?: JobAlert[] }>('/job-alerts')
       .then((d) => setAlerts(d.alerts || []))
-      .catch((e: any) => setError(e.message))
+      .catch((e: unknown) => setError(errorMessage(e)))
       .finally(() => setLoading(false));
   };
   useEffect(load, []);
-  async function update(alert: any, changes: any) {
+  async function update(alert: JobAlert, changes: { active?: boolean; frequency?: string }) {
     try {
       await apiPatch(`/job-alerts/${alert.id}`, changes);
       toast.success('Alert updated');
       load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
-  function remove(alert: any) {
+  function remove(alert: JobAlert) {
     confirm.ask({
       title: `Delete “${alert.name || 'Saved search'}”?`,
       description: 'You will stop getting notifications for this saved search.',

@@ -11,6 +11,7 @@ import { Input } from '../../components/ui/input';
 import { LoadMoreJobs } from '../../components/LoadMoreJobs';
 import { usePagedJobs } from '../../lib/usePagedJobs';
 import { useLatestCallback } from '../../lib/useLatestCallback';
+import type { Job } from '../../lib/apiTypes';
 
 const kinds = ['jobs', 'gigs', 'auditions', 'sessions', 'tours'] as const;
 
@@ -20,7 +21,7 @@ export default function PublicJobs() {
     'Browse open music jobs, gigs, studio sessions, auditions and tours across performance, production and live events.',
   );
   const [sp, setSp] = useSearchParams();
-  const list = usePagedJobs<any>();
+  const list = usePagedJobs<Job>();
   const { jobs, loading, error } = list;
   const [q, setQ] = useState(sp.get('q') || ''),
     [location, setLocation] = useState(sp.get('location') || ''),

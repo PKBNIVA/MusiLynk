@@ -9,8 +9,10 @@ import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { apiGet } from '../lib/api';
 import { DemoBadge } from '../components/DemoBadge';
+import type { SearchResponse, SearchResult } from '../lib/apiTypes';
+import type { LucideIcon } from 'lucide-react';
 
-const icons: any = { jobs: Briefcase, talent: Users, acts: Music, samples: PlayCircle };
+const icons: Record<string, LucideIcon> = { jobs: Briefcase, talent: Users, acts: Music, samples: PlayCircle };
 const suggestions = ['Playback singer', 'FOH engineer', 'Session guitarist', 'Wedding band', 'Music producer'];
 
 export default function GlobalSearch() {
@@ -22,7 +24,7 @@ export default function GlobalSearch() {
   );
   const [q, setQ] = useState(sp.get('q') || '');
   const [type, setType] = useState(sp.get('type') || 'all');
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [interpreted, setInterpreted] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -49,7 +51,7 @@ export default function GlobalSearch() {
     setError('');
     // Ignore a response that arrives after a newer search started, so older results never replace newer ones.
     let current = true;
-    apiGet<any>(`/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(selectedType)}`)
+    apiGet<SearchResponse>(`/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(selectedType)}`)
       .then((d) => {
         if (!current) return;
         setResults(d.results || []);
@@ -180,7 +182,7 @@ export default function GlobalSearch() {
               <p className="mt-2 text-slate-300">Try a broader role, instrument, genre or city.</p>
             </div>
           ) : (
-            results.map((r: any) => {
+            results.map((r) => {
               const Icon = icons[r.type] || Search;
               return (
                 <Link key={`${r.type}-${r.id}`} to={r.url} className="group">

@@ -17,6 +17,8 @@ import {
 } from '../components/ui/alert-dialog';
 import { AlertTriangle, Check, CreditCard, FlaskConical, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { errorMessage } from '../lib/errors';
+import type { BillingCancellation, BillingCheckout, BillingHistoryEntry, Plan, Subscription } from '../lib/apiTypes';
 
 type Summary = {
   status: 'pending' | 'trialing' | 'active' | 'cancelling' | 'past_due' | 'cancelled';
@@ -30,11 +32,11 @@ type Summary = {
   monthlyAmount?: number | null;
 };
 type BillingState = {
-  subscription: any;
-  plan: any;
-  purchasedPlan: any;
+  subscription: Subscription | null;
+  plan: Plan | null;
+  purchasedPlan: Plan | null;
   summary: Summary | null;
-  history: any[];
+  history: BillingHistoryEntry[];
   testMode: boolean;
   paymentMode?: PaymentMode;
 };
@@ -90,15 +92,15 @@ function statusCopy(s: Summary): string {
 }
 
 function newIdempotencyKey() {
-  const c: any = (globalThis as any).crypto;
-  if (c?.randomUUID) return c.randomUUID() as string;
+  const c: Partial<Crypto> | undefined = globalThis.crypto;
+  if (c?.randomUUID) return c.randomUUID();
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function Billing() {
-  const [plans, setPlans] = useState<any[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [state, setState] = useState<BillingState | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -108,13 +110,15 @@ export default function Billing() {
   const inFlight = useRef(false);
 
   const load = () =>
-    Promise.all([apiGet<any>('/billing/plans'), apiGet<BillingState>('/billing/subscription')]).then(([p, s]) => {
-      setPlans(p.plans || []);
-      setState(s);
-      return s;
-    });
+    Promise.all([apiGet<{ plans?: Plan[] }>('/billing/plans'), apiGet<BillingState>('/billing/subscription')]).then(
+      ([p, s]) => {
+        setPlans(p.plans || []);
+        setState(s);
+        return s;
+      },
+    );
   useEffect(() => {
-    load().catch((e: any) => toast.error(e.message));
+    load().catch((e: unknown) => toast.error(errorMessage(e)));
   }, []);
 
   // Activation arrives by signed webhook, usually within seconds of checkout.
@@ -133,7 +137,11 @@ export default function Billing() {
     setPendingPlan(code);
     const key = intentKeys.current[code] || (intentKeys.current[code] = newIdempotencyKey());
     try {
-      const d: any = await apiPost('/billing/checkout', { planCode: code }, { headers: { 'Idempotency-Key': key } });
+      const d = await apiPost<BillingCheckout>(
+        '/billing/checkout',
+        { planCode: code },
+        { headers: { 'Idempotency-Key': key } },
+      );
       delete intentKeys.current[code];
       if (d.salesAssisted) {
         toast.info(d.message);
@@ -167,10 +175,10 @@ export default function Billing() {
           await load();
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       const status = e instanceof ApiError ? e.status : 0;
       if (status !== 0 && status !== 502) delete intentKeys.current[code];
-      toast.error(e.message);
+      toast.error(errorMessage(e));
     } finally {
       inFlight.current = false;
       setPendingPlan(null);
@@ -180,7 +188,7 @@ export default function Billing() {
   async function cancel() {
     setCancelling(true);
     try {
-      const d: any = await apiPost('/billing/cancel', {});
+      const d = await apiPost<BillingCancellation>('/billing/cancel', {});
       toast.success(
         d.outcome === 'scheduled'
           ? `Cancellation scheduled. Access continues until ${day(d.accessEndsAt) || 'the end of the billing period'}.`
@@ -188,8 +196,8 @@ export default function Billing() {
       );
       setConfirmOpen(false);
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setCancelling(false);
     }
@@ -295,7 +303,7 @@ export default function Billing() {
                 <h2 className="text-xl font-semibold">{p.name}</h2>
                 <div className="text-3xl font-bold mt-3">
                   {p.monthly === null ? 'Custom' : p.monthly === 0 ? 'Free' : inr(p.monthly)}{' '}
-                  {p.monthly > 0 && <span className="text-xs font-normal text-slate-500">/month</span>}
+                  {(p.monthly ?? 0) > 0 && <span className="text-xs font-normal text-slate-500">/month</span>}
                 </div>
                 {p.trialDays > 0 && (
                   <div className="text-sm text-emerald-300 mt-1">

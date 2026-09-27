@@ -7,6 +7,7 @@ import { Badge } from '../ui/badge';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import { errorMessage } from '../../lib/errors';
 
 export type Decision = 'warn' | 'suspend' | 'dismiss';
 
@@ -115,8 +116,8 @@ export function ReportReview({
       .then((d) => {
         if (!cancelled) setContext(d);
       })
-      .catch((e: any) => {
-        if (!cancelled) setError(e?.message || 'Unable to load this report.');
+      .catch((e: unknown) => {
+        if (!cancelled) setError(errorMessage(e, 'Unable to load this report.'));
       });
     return () => {
       cancelled = true;
@@ -131,8 +132,8 @@ export function ReportReview({
       await apiPost(`/admin/reports/${reportId}/moderate`, { decision, note: note.trim() || undefined });
       await onDecided(DECISIONS[decision].done);
       onClose();
-    } catch (e: any) {
-      setError(e?.message || 'Action failed.');
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'Action failed.'));
     } finally {
       setPending(false);
     }

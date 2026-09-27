@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import type { PortfolioItem } from '../../src/app/lib/apiTypes';
 
 // Real frontend + Rails. The API must run with Disk storage (no AWS_BUCKET) and a job
 // adapter that executes jobs (development :async or GoodJob), because deleting a work
@@ -102,7 +103,7 @@ test.describe('portfolio uploads', () => {
     await expect(pdf.getByRole('link', { name: /PDF document/ })).toBeVisible();
 
     const listed = await (await request.get(`${apiBase()}/portfolio`, { headers: auth })).json();
-    const urls: string[] = listed.items.map((item: any) => item.url);
+    const urls: string[] = listed.items.map((item: PortfolioItem) => item.url);
     expect(urls).toHaveLength(3);
     for (const url of urls) expect((await request.get(url)).status()).toBe(200);
 

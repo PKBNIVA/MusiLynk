@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { apiGet } from '../../lib/api';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader } from '../ui/card';
+import { errorMessage } from '../../lib/errors';
 
 type Window = {
   requests: number;
@@ -147,8 +148,8 @@ export default function OperationsPanel() {
     try {
       setData(await apiGet<Operations>('/admin/operations'));
       setError('');
-    } catch (e: any) {
-      setError(e.message || 'Unable to load operations data.');
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'Unable to load operations data.'));
     } finally {
       setLoading(false);
     }

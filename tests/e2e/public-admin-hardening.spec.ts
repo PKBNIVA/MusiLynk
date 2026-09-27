@@ -8,12 +8,12 @@ type Reply = { status?: number; body: unknown };
 type Handler = (request: Request) => Reply;
 
 async function mockApi(page: Page, routes: Record<string, Reply | Handler>, user?: Record<string, unknown>) {
-  const calls: Array<{ method: string; path: string; body: any }> = [];
+  const calls: Array<{ method: string; path: string; body: unknown }> = [];
   if (user) await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
   await page.route('**/api/**', (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace(/^.*\/api/, '/api');
-    let body: any = null;
+    let body: unknown = null;
     try {
       body = request.postDataJSON();
     } catch {
@@ -425,7 +425,7 @@ test.describe('public funnel', () => {
     await page.goto('/acts/act-1');
     await page.getByRole('link', { name: 'Sign in to request a quote' }).click();
     await expect(page).toHaveURL(/\/auth\/employer/);
-    const from = await page.evaluate(() => (history.state as any)?.usr?.from);
+    const from = await page.evaluate(() => (history.state as { usr?: { from?: unknown } } | null)?.usr?.from);
     expect(from).toBe('/employer/book-talent?act=act-1');
   });
 

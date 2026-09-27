@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { api, apiDelete, setAccessToken } from '../lib/api';
 import { useAuth } from '../lib/authContext';
+import { errorMessage } from '../lib/errors';
 
 /** Download a copy of your data, or delete your account (DPDP Act rights to access and erasure). */
 export default function AccountData() {
@@ -32,8 +33,8 @@ export default function AccountData() {
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success('Your data file is downloading');
-    } catch (e: any) {
-      toast.error(e?.message || 'Your data could not be prepared. Try again.');
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Your data could not be prepared. Try again.'));
     } finally {
       setExporting(false);
     }
@@ -50,8 +51,8 @@ export default function AccountData() {
       // which would send the now signed-out user to the sign-in page instead.
       setAccessToken(null);
       window.location.replace('/');
-    } catch (err: any) {
-      setDeleteError(err?.message || 'Your account could not be deleted. Try again.');
+    } catch (err: unknown) {
+      setDeleteError(errorMessage(err, 'Your account could not be deleted. Try again.'));
       setDeleting(false);
     }
   }

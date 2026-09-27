@@ -15,9 +15,11 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { Button } from './ui/button';
+import type { LucideIcon } from 'lucide-react';
 
 type Role = 'jobseeker' | 'employer' | 'public';
-const tours: { [k: string]: any[] } = {
+type TourStep = { icon?: LucideIcon; title: string; text: string; to?: string; cta?: string };
+const tours: { [k: string]: TourStep[] } = {
   public: [
     {
       icon: Compass,

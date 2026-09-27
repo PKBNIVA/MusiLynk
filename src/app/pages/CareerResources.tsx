@@ -4,12 +4,13 @@ import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { apiGet } from '../lib/api';
 import { ExternalLink, BookOpen } from 'lucide-react';
+import type { CareerResource } from '../lib/apiTypes';
 export default function CareerResources() {
-  const [items, setItems] = useState<any[]>([]),
+  const [items, setItems] = useState<CareerResource[]>([]),
     [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const load = () => {
     setState('loading');
-    apiGet<any>('/resources')
+    apiGet<{ resources?: CareerResource[] }>('/resources')
       .then((d) => {
         setItems(d.resources || []);
         setState('ready');

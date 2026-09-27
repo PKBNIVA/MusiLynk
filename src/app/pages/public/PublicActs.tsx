@@ -8,22 +8,24 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
 import { MapPin, ShieldCheck } from 'lucide-react';
+import { errorMessage } from '../../lib/errors';
+import type { Act } from '../../lib/apiTypes';
 export default function PublicActs() {
   usePageMeta(
     'Book singers, bands & live acts',
     'Discover bookable singers, duos, bands and ensembles, compare lineups and request a quote for your event on Verse.',
   );
-  const [acts, setActs] = useState<any[]>([]),
+  const [acts, setActs] = useState<Act[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState('');
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const d = await apiGet<any>('/public/acts');
+      const d = await apiGet<{ acts?: Act[] }>('/public/acts');
       setActs(d.acts || []);
-    } catch (e: any) {
-      setError(e.message || 'Unable to load acts.');
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'Unable to load acts.'));
     } finally {
       setLoading(false);
     }

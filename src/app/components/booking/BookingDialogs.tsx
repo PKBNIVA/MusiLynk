@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
+import { errorMessage } from '../../lib/errors';
 
 // Accessible replacements for window.prompt/confirm used by the booking & collaboration pages.
 // Radix Dialog gives focus trapping, Escape to close and aria-modal labelling.
@@ -115,8 +116,8 @@ export function useConfirm() {
               try {
                 await request.action();
                 setRequest(null);
-              } catch (e: any) {
-                setError(e?.message || 'Something went wrong. Try again.');
+              } catch (e: unknown) {
+                setError(errorMessage(e, 'Something went wrong. Try again.'));
               } finally {
                 setBusy(false);
               }

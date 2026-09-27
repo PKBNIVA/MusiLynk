@@ -9,14 +9,15 @@ import { Badge } from '../components/ui/badge';
 import { Field, FormDialog, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
 import { toast } from 'sonner';
 import { BookingDepositPanel } from '../components/BookingDepositPanel';
+import { errorMessage } from '../lib/errors';
+import type { Booking, BookingPayment, ConversationCreated } from '../lib/apiTypes';
 
-const money = (currency: string, value: any) => `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
-const formatDate = (value: any) => {
+const money = (currency: string | null | undefined, value: unknown) =>
+  `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
+const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Date to be confirmed';
   const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? String(value)
-    : date.toLocaleDateString(undefined, { dateStyle: 'medium' } as any);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString(undefined, { dateStyle: 'medium' });
 };
 
 // Mirrors BookingRequest::OWNER_TRANSITIONS / REQUESTER_TRANSITIONS; the API also sends allowedTransitions.
@@ -47,15 +48,15 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-function allowed(b: any): string[] {
+function allowed(b: Booking): string[] {
   if (Array.isArray(b.allowedTransitions)) return b.allowedTransitions;
   return (b.isOwner ? OWNER_TRANSITIONS : REQUESTER_TRANSITIONS)[b.status] || [];
 }
-function statusLabel(b: any) {
+function statusLabel(b: Booking) {
   if (b.status === 'accepted' && b.depositPaid) return 'Confirmed · deposit paid';
   return STATUS_LABEL[b.status] || b.status;
 }
-function nextStep(b: any): string {
+function nextStep(b: Booking): string {
   const quoted = Boolean(b.latestQuote);
   if (b.isOwner) {
     if (['requested', 'viewed'].includes(b.status)) return 'Send a quote or decline this enquiry.';
@@ -114,22 +115,22 @@ function quoteProblem(q: QuoteForm): string {
 
 export default function Bookings() {
   const base = `/${useLocation().pathname.split('/')[1] || 'employer'}`;
-  const [rows, setRows] = useState<any[]>([]),
+  const [rows, setRows] = useState<Booking[]>([]),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
     [quote, setQuote] = useState<QuoteForm | null>(null),
     [quoteError, setQuoteError] = useState(''),
     [sendingQuote, setSendingQuote] = useState(false),
-    [payments, setPayments] = useState<Record<string, any[]>>({}),
+    [payments, setPayments] = useState<Record<string, BookingPayment[]>>({}),
     [paymentOpen, setPaymentOpen] = useState<Record<string, boolean>>({});
   const { ask, element: confirmDialog } = useConfirm();
   async function load() {
     try {
-      const d = await apiGet<any>('/bookings');
+      const d = await apiGet<{ bookings?: Booking[] }>('/bookings');
       setRows(d.bookings || []);
       setLoadError('');
-    } catch (e: any) {
-      setLoadError(e.message || 'Unable to load bookings.');
+    } catch (e: unknown) {
+      setLoadError(errorMessage(e, 'Unable to load bookings.'));
     } finally {
       setLoading(false);
     }
@@ -164,8 +165,8 @@ export default function Bookings() {
       toast.success('Quote sent');
       setQuote(null);
       await load();
-    } catch (e: any) {
-      setQuoteError(e.message || 'Unable to send the quote.');
+    } catch (e: unknown) {
+      setQuoteError(errorMessage(e, 'Unable to send the quote.'));
     } finally {
       setSendingQuote(false);
     }
@@ -176,30 +177,30 @@ export default function Bookings() {
       return;
     }
     try {
-      const d = await apiGet<any>(`/bookings/${id}/payments`);
+      const d = await apiGet<{ payments?: BookingPayment[] }>(`/bookings/${id}/payments`);
       setPayments((x) => ({ ...x, [id]: d.payments || [] }));
       setPaymentOpen((x) => ({ ...x, [id]: true }));
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
   async function paymentsChanged(id: string) {
     await load();
     if (paymentOpen[id]) {
-      const d = await apiGet<any>(`/bookings/${id}/payments`).catch(() => null);
+      const d = await apiGet<{ payments?: BookingPayment[] }>(`/bookings/${id}/payments`).catch(() => null);
       if (d) setPayments((x) => ({ ...x, [id]: d.payments || [] }));
     }
   }
   const nav = useNavigate();
   async function message(id: string) {
     try {
-      const d = await apiPost<any>('/conversations', { bookingId: id });
+      const d = await apiPost<ConversationCreated>('/conversations', { bookingId: id });
       nav(`${base}/messages?c=${d.id}`);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
-  const beginQuote = (b: any) => {
+  const beginQuote = (b: Booking) => {
     const last = b.latestQuote;
     setQuoteError('');
     setQuote({
@@ -217,7 +218,7 @@ export default function Bookings() {
       cancellationTerms: last?.cancellationTerms || '',
     });
   };
-  const confirmStatus = (b: any, s: string) => {
+  const confirmStatus = (b: Booking, s: string) => {
     const q = b.latestQuote;
     const copy: Record<string, [string, string, string, boolean]> = {
       accepted: [

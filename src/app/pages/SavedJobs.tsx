@@ -7,16 +7,18 @@ import { Badge } from '../components/ui/badge';
 import { Link } from 'react-router';
 import { BookmarkX } from 'lucide-react';
 import { toast } from 'sonner';
+import { errorMessage } from '../lib/errors';
+import type { Job } from '../lib/apiTypes';
 export default function SavedJobs() {
-  const [jobs, setJobs] = useState<any[]>([]),
+  const [jobs, setJobs] = useState<Job[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState('');
   const load = () => {
     setError('');
     setLoading(true);
-    return apiGet<any>('/saved-jobs')
+    return apiGet<{ jobs?: Job[] }>('/saved-jobs')
       .then((d) => setJobs(d.jobs || []))
-      .catch((e: any) => setError(e?.message || 'Saved opportunities could not be loaded.'))
+      .catch((e: unknown) => setError(errorMessage(e, 'Saved opportunities could not be loaded.')))
       .finally(() => setLoading(false));
   };
   useEffect(() => {
@@ -27,8 +29,8 @@ export default function SavedJobs() {
       await apiDelete(`/saved-jobs/${id}`);
       setJobs((x) => x.filter((j) => j.id !== id));
       toast.success('Removed from saved');
-    } catch (e: any) {
-      toast.error(e?.message || 'Could not remove this opportunity');
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Could not remove this opportunity'));
     }
   }
   return (

@@ -7,9 +7,11 @@ import { Textarea } from '../components/ui/textarea';
 import { apiGet, apiPost } from '../lib/api';
 import { toast } from 'sonner';
 import { Star } from 'lucide-react';
+import { errorMessage } from '../lib/errors';
+import type { PublicEmployer, Review } from '../lib/apiTypes';
 export default function Reviews() {
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [employers, setEmployers] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [employers, setEmployers] = useState<PublicEmployer[]>([]);
   const [employerId, setEmployerId] = useState('');
   const [rating, setRating] = useState(5);
   const [title, setTitle] = useState('');
@@ -17,17 +19,17 @@ export default function Reviews() {
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState('');
   const load = () =>
-    apiGet<any>('/reviews')
+    apiGet<{ reviews?: Review[]; eligibleEmployers?: PublicEmployer[] }>('/reviews')
       .then((d) => {
         const eligible = d.eligibleEmployers || [];
         setLoadError('');
         setReviews(d.reviews || []);
         setEmployers(eligible);
         setEmployerId((current) =>
-          eligible.some((employer: any) => employer.id === current) ? current : eligible[0]?.id || '',
+          eligible.some((employer) => employer.id === current) ? current : eligible[0]?.id || '',
         );
       })
-      .catch((e: any) => setLoadError(e?.message || 'Reviews could not be loaded.'));
+      .catch((e: unknown) => setLoadError(errorMessage(e, 'Reviews could not be loaded.')));
   useEffect(() => {
     load();
   }, []);
@@ -41,8 +43,8 @@ export default function Reviews() {
       setBody('');
       toast.success('Review submitted for moderation');
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setSubmitting(false);
     }

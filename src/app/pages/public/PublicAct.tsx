@@ -10,22 +10,24 @@ import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
 import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../lib/authContext';
+import { errorMessage, errorStatus } from '../../lib/errors';
+import type { Act } from '../../lib/apiTypes';
 
 export default function PublicAct() {
   const { id } = useParams(),
     { user } = useAuth();
-  const [a, setA] = useState<any>(),
+  const [a, setA] = useState<Act>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const d = await apiGet<any>(`/public/acts/${encodeURIComponent(id || '')}`);
+      const d = await apiGet<{ act: Act }>(`/public/acts/${encodeURIComponent(id || '')}`);
       setA(d.act);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setA(undefined);
-      setError({ message: e.message || 'Unable to load this act.', status: e.status });
+      setError({ message: errorMessage(e, 'Unable to load this act.'), status: errorStatus(e) });
     } finally {
       setLoading(false);
     }
@@ -70,7 +72,7 @@ export default function PublicAct() {
                 <h2 className="font-semibold">Lineup</h2>
                 <div className="mt-3 space-y-2">
                   {a.members?.length ? (
-                    a.members.map((m: any, i: number) => (
+                    a.members.map((m, i: number) => (
                       <div key={i} className="p-3 rounded-xl bg-white/5">
                         <b>{m.displayName}</b>
                         <div className="text-sm text-slate-400">

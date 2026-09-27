@@ -9,21 +9,23 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
 import { MapPin, ShieldCheck, Wallet, CalendarDays } from 'lucide-react';
+import { errorMessage, errorStatus } from '../../lib/errors';
+import type { Job } from '../../lib/apiTypes';
 
 export default function PublicOpportunity() {
   const { id } = useParams();
-  const [j, setJ] = useState<any>(),
+  const [j, setJ] = useState<Job>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const d = await apiGet<any>(`/jobs/${encodeURIComponent(id || '')}`);
+      const d = await apiGet<{ job?: Job }>(`/jobs/${encodeURIComponent(id || '')}`);
       setJ(d.job);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setJ(undefined);
-      setError({ message: e.message || 'Unable to load this opportunity.', status: e.status });
+      setError({ message: errorMessage(e, 'Unable to load this opportunity.'), status: errorStatus(e) });
     } finally {
       setLoading(false);
     }

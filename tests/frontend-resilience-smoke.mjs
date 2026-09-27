@@ -42,7 +42,7 @@ assert.match(
 );
 assert.match(
   notificationsCompact,
-  /catch\(e:any\)\{setItems\(\(?xs\)?=>xs\.map\(\(?x\)?=>\(?x\.id===n\.id\?\{\.\.\.x,readAt:null\}:x\)?\)\)/,
+  /catch\(e:unknown\)\{setItems\(\(?xs\)?=>xs\.map\(\(?x\)?=>\(?x\.id===n\.id\?\{\.\.\.x,readAt:null\}:x\)?\)\)/,
   'mark-read failure must roll back optimistic state',
 );
 

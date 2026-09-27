@@ -7,20 +7,22 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { usePageMeta } from '../components/PageMeta';
+import { errorMessage } from '../lib/errors';
+import type { PlatformCheckReport } from '../lib/apiTypes';
 
 export default function AdminTester() {
   usePageMeta('Admin · Live Tester', 'Non-destructive runtime checks for the Verse platform.');
-  const [data, setData] = useState<any>();
+  const [data, setData] = useState<PlatformCheckReport>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   async function run() {
     setLoading(true);
     setError('');
     try {
-      setData(await apiGet('/admin/tester'));
-    } catch (e: any) {
+      setData(await apiGet<PlatformCheckReport>('/admin/tester'));
+    } catch (e: unknown) {
       setData(undefined);
-      setError(e.message || 'Unable to run platform checks.');
+      setError(errorMessage(e, 'Unable to run platform checks.'));
     } finally {
       setLoading(false);
     }
@@ -52,8 +54,8 @@ export default function AdminTester() {
           ? `Server test error sent (event ${String(result.eventId || '').slice(0, 8)}). Check the verse-api project in Sentry.`
           : 'Server error tracking is off: SENTRY_DSN is not set on the API.',
       );
-    } catch (e: any) {
-      setAlertStatus(e.message || 'Could not reach the API.');
+    } catch (e: unknown) {
+      setAlertStatus(errorMessage(e, 'Could not reach the API.'));
     } finally {
       setAlertBusy(false);
     }
@@ -132,7 +134,7 @@ export default function AdminTester() {
               </CardContent>
             </Card>
             <div className="space-y-3 mt-5">
-              {(data.checks || []).map((check: any) => (
+              {(data.checks || []).map((check) => (
                 <Card key={check.name} className="bg-white/[.045] border-white/10">
                   <CardContent className="p-4 flex justify-between gap-4">
                     <div>

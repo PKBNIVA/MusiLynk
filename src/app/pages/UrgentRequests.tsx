@@ -10,6 +10,8 @@ import { useAuth } from '../lib/authContext';
 import { useLatestCallback } from '../lib/useLatestCallback';
 import { Field, FormDialog, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
 import { Clock3, Zap } from 'lucide-react';
+import { errorMessage } from '../lib/errors';
+import type { UrgentRequest, UrgentRequestResponse } from '../lib/apiTypes';
 
 type Draft = {
   title: string;
@@ -51,15 +53,15 @@ function draftProblem(d: Draft): string {
 
 export default function UrgentRequests() {
   const { user } = useAuth();
-  const [items, setItems] = useState<any[]>([]),
+  const [items, setItems] = useState<UrgentRequest[]>([]),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
     [city, setCity] = useState(''),
     [role, setRole] = useState(''),
-    [responses, setResponses] = useState<Record<string, any[]>>({}),
+    [responses, setResponses] = useState<Record<string, UrgentRequestResponse[]>>({}),
     [expanded, setExpanded] = useState<string | null>(null),
     [draft, setDraft] = useState<Draft | null>(null),
-    [reply, setReply] = useState<{ request: any; message: string; rate: string } | null>(null),
+    [reply, setReply] = useState<{ request: UrgentRequest; message: string; rate: string } | null>(null),
     [formError, setFormError] = useState(''),
     // The mutation in flight ("create" or a request id); others wait so nothing is submitted twice.
     [pending, setPending] = useState<string | null>(null);
@@ -69,11 +71,11 @@ export default function UrgentRequests() {
     if (city.trim()) p.set('city', city.trim());
     if (role.trim()) p.set('role', role.trim());
     try {
-      const d = await apiGet<any>(`/urgent-requests?${p}`);
+      const d = await apiGet<{ requests?: UrgentRequest[] }>(`/urgent-requests?${p}`);
       setItems(d.requests || []);
       setLoadError('');
-    } catch (e: any) {
-      setLoadError(e.message || 'Unable to load urgent requests.');
+    } catch (e: unknown) {
+      setLoadError(errorMessage(e, 'Unable to load urgent requests.'));
     } finally {
       setLoading(false);
     }
@@ -102,8 +104,8 @@ export default function UrgentRequests() {
       toast.success('Urgent request published');
       setDraft(null);
       await load();
-    } catch (e: any) {
-      setFormError(e.message || 'Unable to publish this request.');
+    } catch (e: unknown) {
+      setFormError(errorMessage(e, 'Unable to publish this request.'));
     } finally {
       setPending(null);
     }
@@ -122,8 +124,8 @@ export default function UrgentRequests() {
       toast.success('Availability sent');
       setReply(null);
       await load();
-    } catch (e: any) {
-      setFormError(e.message || 'Unable to send your availability.');
+    } catch (e: unknown) {
+      setFormError(errorMessage(e, 'Unable to send your availability.'));
     } finally {
       setPending(null);
     }
@@ -131,14 +133,14 @@ export default function UrgentRequests() {
   async function viewResponses(id: string) {
     if (expanded === id) return setExpanded(null);
     try {
-      const data = await apiGet<any>(`/urgent-requests/${id}/responses`);
+      const data = await apiGet<{ responses?: UrgentRequestResponse[] }>(`/urgent-requests/${id}/responses`);
       setResponses((current) => ({ ...current, [id]: data.responses || [] }));
       setExpanded(id);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
-  const closeRequest = (r: any, status: 'filled' | 'cancelled') =>
+  const closeRequest = (r: UrgentRequest, status: 'filled' | 'cancelled') =>
     ask({
       title: status === 'filled' ? 'Mark this request filled?' : 'Cancel this request?',
       description: 'It stops appearing to professionals and cannot be reopened.',
@@ -244,7 +246,7 @@ export default function UrgentRequests() {
                           Budget {r.currency}{' '}
                           {[r.budget_min, r.budget_max]
                             .filter(Boolean)
-                            .map((x: any) => Number(x).toLocaleString('en-IN'))
+                            .map((x) => Number(x).toLocaleString('en-IN'))
                             .join(' – ')}
                         </p>
                       )}
@@ -292,7 +294,7 @@ export default function UrgentRequests() {
                     <div className="mt-5 border-t border-white/10 pt-4">
                       <h3 className="font-semibold">Available professionals</h3>
                       <div className="mt-3 space-y-2">
-                        {(responses[r.id] || []).map((response: any) => (
+                        {(responses[r.id] || []).map((response) => (
                           <div key={response.user_id} className="rounded-xl border border-white/10 bg-black/15 p-3">
                             <div className="font-medium">{response.name}</div>
                             <div className="text-sm text-violet-300">{response.headline || 'Music professional'}</div>

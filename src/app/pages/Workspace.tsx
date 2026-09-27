@@ -9,12 +9,14 @@ import { Input } from '../components/ui/input';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { useConfirm } from '../components/booking/BookingDialogs';
+import { errorMessage } from '../lib/errors';
+import type { Organization, OrganizationMember } from '../lib/apiTypes';
 
 export default function Workspace() {
   const { user } = useAuth();
-  const [orgs, setOrgs] = useState<any[]>([]),
-    [selected, setSelected] = useState<any>(null),
-    [members, setMembers] = useState<any[]>([]);
+  const [orgs, setOrgs] = useState<Organization[]>([]),
+    [selected, setSelected] = useState<Organization | null>(null),
+    [members, setMembers] = useState<OrganizationMember[]>([]);
   const [name, setName] = useState(''),
     [invite, setInvite] = useState({ email: '', role: 'recruiter' });
   const [loading, setLoading] = useState(true),
@@ -25,14 +27,14 @@ export default function Workspace() {
     setLoading(true);
     setError('');
     try {
-      const data = await apiGet<any>('/organizations');
+      const data = await apiGet<{ organizations?: Organization[] }>('/organizations');
       const next = data.organizations || [];
       setOrgs(next);
-      setSelected((current: any) =>
-        current ? next.find((org: any) => org.id === current.id) || next[0] || null : next[0] || null,
+      setSelected((current) =>
+        current ? next.find((org) => org.id === current.id) || next[0] || null : next[0] || null,
       );
-    } catch (e: any) {
-      setError(e.message || 'Unable to load workspaces.');
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'Unable to load workspaces.'));
     } finally {
       setLoading(false);
     }
@@ -47,11 +49,11 @@ export default function Workspace() {
       return;
     }
     setMembersLoading(true);
-    apiGet<any>(`/organizations/${selectedId}/members`)
+    apiGet<{ members?: OrganizationMember[] }>(`/organizations/${selectedId}/members`)
       .then((data) => setMembers(data.members || []))
-      .catch((e: any) => {
+      .catch((e: unknown) => {
         setMembers([]);
-        toast.error(e.message || 'Unable to load workspace members.');
+        toast.error(errorMessage(e, 'Unable to load workspace members.'));
       })
       .finally(() => setMembersLoading(false));
   }, [selectedId]);
@@ -62,8 +64,8 @@ export default function Workspace() {
       setName('');
       await load();
       toast.success('Workspace created.');
-    } catch (e: any) {
-      toast.error(e.message || 'Unable to create workspace.');
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Unable to create workspace.'));
     }
   }
   async function add() {
@@ -71,18 +73,18 @@ export default function Workspace() {
     try {
       await apiPost(`/organizations/${selected.id}/members`, { ...invite, email: invite.email.trim() });
       setInvite((current) => ({ ...current, email: '' }));
-      const data: any = await apiGet(`/organizations/${selected.id}/members`);
+      const data = await apiGet<{ members?: OrganizationMember[] }>(`/organizations/${selected.id}/members`);
       setMembers(data.members || []);
       setOrgs((current) =>
         current.map((item) => (item.id === selected.id ? { ...item, memberCount: (data.members || []).length } : item)),
       );
       toast.success('Team member added.');
-    } catch (e: any) {
-      toast.error(e.message || 'Unable to add team member.');
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Unable to add team member.'));
     }
   }
   const { ask, element: confirmDialog } = useConfirm();
-  function remove(member: any) {
+  function remove(member: OrganizationMember) {
     if (!selected) return;
     const org = selected;
     const self = member.id === user?.id;
@@ -186,7 +188,7 @@ export default function Workspace() {
                       </div>
                       <Badge>{selected.memberRole}</Badge>
                     </div>
-                    {['owner', 'admin'].includes(selected.memberRole) && (
+                    {['owner', 'admin'].includes(selected.memberRole ?? '') && (
                       <div className="grid md:grid-cols-[1fr_150px_auto] gap-2 mt-5">
                         <label htmlFor="member-email" className="sr-only">
                           Existing Verse user email

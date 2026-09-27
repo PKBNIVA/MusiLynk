@@ -9,6 +9,7 @@ import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge } from '..
 import { consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
 import { toast } from 'sonner';
 import { BrandMark } from '../components/BrandMark';
+import { errorCode, errorMessage } from '../lib/errors';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 const CODE_LENGTH = 6;
@@ -72,7 +73,7 @@ export default function AuthPage() {
   }, []);
 
   const go = (r: string, complete = true) => {
-    const requested = (location.state as any)?.from ?? consumeReturnTo();
+    const requested = (location.state as { from?: unknown } | null)?.from ?? consumeReturnTo();
     const allowed =
       typeof requested === 'string' &&
       (requested.startsWith(`/${r === 'jobseeker' ? 'jobseeker' : r}`) ||
@@ -93,7 +94,7 @@ export default function AuthPage() {
     );
   };
   /* Code-flow errors are shown inline (role=alert) next to the field; password errors keep the existing toast. */
-  const fail = (e: any, fallback: string) => setError(e?.message || fallback);
+  const fail = (e: unknown, fallback: string) => setError(errorMessage(e, fallback));
   const switchMethod = (next: 'code' | 'password') => {
     touched.current = true;
     setMethod(next);
@@ -138,8 +139,8 @@ export default function AuthPage() {
       const u = result;
       toast.success(mode === 'login' ? 'Welcome back' : 'Your Verse profile is ready');
       go(u.role, u.profileComplete);
-    } catch (e: any) {
-      toast.error(e.message || 'Unable to continue');
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Unable to continue'));
     } finally {
       setLoading(false);
     }
@@ -153,7 +154,7 @@ export default function AuthPage() {
     try {
       const result = await login(email, password);
       if (isSecondFactorChallenge(result)) startChallenge(result);
-    } catch (e: any) {
+    } catch (e: unknown) {
       fail(e, 'Could not send a code. Try again.');
     } finally {
       setLoading(false);
@@ -173,11 +174,11 @@ export default function AuthPage() {
       setCodeStep('code');
       setCooldown(RESEND_COOLDOWN_SECONDS);
       toast.success('Check your email for a 6-digit code');
-    } catch (e: any) {
-      if (e?.code === 'OTP_UNAVAILABLE') {
+    } catch (e: unknown) {
+      if (errorCode(e) === 'OTP_UNAVAILABLE') {
         setCodesAvailable(false);
         setMethod('password');
-        toast.error(e.message);
+        toast.error(errorMessage(e));
       } else fail(e, 'Could not send a code. Try again.');
     } finally {
       setLoading(false);
@@ -199,11 +200,11 @@ export default function AuthPage() {
         : await verifyCode(email, value);
       toast.success(mode === 'register' ? 'Your Verse profile is ready' : 'Welcome back');
       go(u.role, u.profileComplete);
-    } catch (e: any) {
+    } catch (e: unknown) {
       /* An expired or unusable challenge cannot be retried; start again from the password. */
-      if (challenge && e?.code === 'SECOND_FACTOR_EXPIRED') {
+      if (challenge && errorCode(e) === 'SECOND_FACTOR_EXPIRED') {
         leaveChallenge();
-        toast.error(e.message);
+        toast.error(errorMessage(e));
         return;
       }
       setCode('');

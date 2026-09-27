@@ -3,7 +3,8 @@ import React from 'react';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PageLoading } from './components/ExperienceStates';
 import { RouteErrorPage } from './components/RouteErrorPage';
-const L = (f: () => Promise<any>) => React.lazy(f);
+import type { Role } from './lib/authContext';
+const L = (f: () => Promise<{ default: React.ComponentType }>) => React.lazy(f);
 const LandingPage = L(() => import('./pages/LandingPage'));
 const AuthPage = L(() => import('./pages/AuthPage'));
 const JobSeekerDashboard = L(() => import('./pages/JobSeekerDashboard'));
@@ -56,7 +57,7 @@ const AccountData = L(() => import('./pages/AccountData'));
 const S = ({ children }: { children: React.ReactNode }) => (
   <React.Suspense fallback={<PageLoading />}>{children}</React.Suspense>
 );
-const P = ({ roles, children }: { roles: any[]; children: React.ReactNode }) => (
+const P = ({ roles, children }: { roles: Role[]; children: React.ReactNode }) => (
   <S>
     <ProtectedRoute roles={roles}>{children}</ProtectedRoute>
   </S>

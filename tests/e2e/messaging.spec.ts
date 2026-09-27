@@ -12,7 +12,11 @@ const at = (minute: number) => new Date(Date.UTC(2026, 8, 20, 10, minute)).toISO
 async function mockApi(
   page: Page,
   role: Role,
-  opts: { conversations?: any[]; threads?: Record<string, Msg[]>; notifications?: any[] } = {},
+  opts: {
+    conversations?: Record<string, unknown>[];
+    threads?: Record<string, Msg[]>;
+    notifications?: Record<string, unknown>[];
+  } = {},
 ) {
   const state = {
     conversations: opts.conversations ?? [],
@@ -30,7 +34,7 @@ async function mockApi(
     preferenceWrites: [] as unknown[],
     unsubscribeTokens: [] as string[],
     blocks: [] as string[],
-    reports: [] as any[],
+    reports: [] as Record<string, unknown>[],
   };
   const json = (route: Route, body: unknown, status = 200) =>
     route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -226,7 +230,7 @@ test.describe('messages', () => {
     const bubble = page.getByTestId('message-body');
     await expect(bubble).toHaveText('Line one 🎸\n<img src=x onerror="window.__xss=1"><script>window.__xss=2</script>');
     await expect(bubble.locator('img, script')).toHaveCount(0);
-    expect(await page.evaluate(() => (window as any).__xss)).toBeUndefined();
+    expect(await page.evaluate(() => (window as Window & { __xss?: unknown }).__xss)).toBeUndefined();
     await expect(page.getByTestId('read-receipt')).toHaveText('Sent');
   });
 

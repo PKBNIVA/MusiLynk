@@ -65,7 +65,7 @@ module Employer
     private
 
     def owner_json(job)
-      job.api_json.merge("applications" => job.applications_count, "allowedNextStatuses" => OWNER_TRANSITIONS.fetch(job.status, []))
+      job.api_json(current_user).merge("applications" => job.applications_count, "allowedNextStatuses" => OWNER_TRANSITIONS.fetch(job.status, []))
     end
   end
 end

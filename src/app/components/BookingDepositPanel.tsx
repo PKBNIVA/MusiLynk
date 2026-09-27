@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPost } from '../lib/api';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { Button } from './ui/button';
@@ -16,13 +16,17 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: any; onCh
   const inFlight = useRef(false);
   const eligible = booking.isRequester && ['accepted', 'completed', 'disputed'].includes(booking.status);
 
-  const refresh = () =>
-    apiGet<any>(`/bookings/${booking.id}/payments`)
-      .then((d) => setPayments(d.payments || []))
-      .catch(() => setPayments([]));
+  const refresh = useCallback(
+    () =>
+      apiGet<any>(`/bookings/${booking.id}/payments`)
+        .then((d) => setPayments(d.payments || []))
+        .catch(() => setPayments([])),
+    [booking.id],
+  );
+  // status and paymentCount are not read here: a change to either means the payments changed.
   useEffect(() => {
     if (eligible) refresh();
-  }, [booking.id, booking.status, booking.paymentCount, eligible]);
+  }, [refresh, booking.status, booking.paymentCount, eligible]);
 
   if (!eligible) return null;
   const deposit = (payments || []).find(

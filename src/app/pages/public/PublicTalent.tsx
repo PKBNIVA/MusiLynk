@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { apiGet } from '../../lib/api';
+import { useLatestCallback } from '../../lib/useLatestCallback';
 
 export default function PublicTalent() {
   usePageMeta(
@@ -22,7 +23,7 @@ export default function PublicTalent() {
     [role] = useState(sp.get('role') || '');
   const [loading, setLoading] = useState(true),
     [error, setError] = useState('');
-  async function load() {
+  const load = useLatestCallback(async () => {
     const p = new URLSearchParams();
     if (q) p.set('q', q);
     if (location) p.set('location', location);
@@ -38,10 +39,10 @@ export default function PublicTalent() {
     } finally {
       setLoading(false);
     }
-  }
+  });
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     void load();

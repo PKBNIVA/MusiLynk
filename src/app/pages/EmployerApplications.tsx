@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -40,18 +40,21 @@ export default function EmployerApplications() {
     });
   const [interview, setInterview] = useState<{ id: string; name: string; date: string } | null>(null),
     [notes, setNotes] = useState<{ id: string; name: string; note: string; rating: string } | null>(null);
-  const load = () =>
-    apiGet<any>(`/employer/applications?${new URLSearchParams(jobId ? { jobId } : {})}`)
-      .then((d) => {
-        setApps(d.applications || []);
-        setLoadError('');
-      })
-      .catch((e: any) => setLoadError(e.message || 'Applications could not be loaded.'))
-      .finally(() => setLoading(false));
+  const load = useCallback(
+    () =>
+      apiGet<any>(`/employer/applications?${new URLSearchParams(jobId ? { jobId } : {})}`)
+        .then((d) => {
+          setApps(d.applications || []);
+          setLoadError('');
+        })
+        .catch((e: any) => setLoadError(e.message || 'Applications could not be loaded.'))
+        .finally(() => setLoading(false)),
+    [jobId],
+  );
   useEffect(() => {
     setLoading(true);
     load();
-  }, [jobId]);
+  }, [load]);
   useEffect(() => {
     apiGet<any>('/employer/jobs')
       .then((d) => setJobs(d.jobs || []))

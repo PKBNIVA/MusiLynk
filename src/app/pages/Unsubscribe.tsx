@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { MailX } from 'lucide-react';
 import { PublicNav } from '../components/PublicNav';
@@ -14,7 +14,7 @@ export default function Unsubscribe() {
   const [state, setState] = useState<State>(token ? 'working' : 'invalid');
   const started = useRef(false);
 
-  const run = async () => {
+  const run = useCallback(async () => {
     setState('working');
     try {
       await apiPost('/notifications/unsubscribe', { token }, { skipAuthRedirect: true });
@@ -22,13 +22,13 @@ export default function Unsubscribe() {
     } catch (e: any) {
       setState(e?.status === 400 ? 'invalid' : 'error');
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     if (!token || started.current) return;
     started.current = true;
     void run();
-  }, [token]);
+  }, [token, run]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">

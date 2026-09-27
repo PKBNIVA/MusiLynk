@@ -1,5 +1,10 @@
 import { vi } from 'vitest';
 
+declare global {
+  // Tells React's act() that it runs inside a test environment.
+  var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
+}
+
 /** A fetch Response with a JSON body (or no body for 204). */
 export function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}) {
   if (status === 204) return new Response(null, { status, headers });

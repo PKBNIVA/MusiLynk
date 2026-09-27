@@ -40,20 +40,21 @@ export default function Workspace() {
   useEffect(() => {
     void load();
   }, []);
+  const selectedId = selected?.id;
   useEffect(() => {
-    if (!selected) {
+    if (!selectedId) {
       setMembers([]);
       return;
     }
     setMembersLoading(true);
-    apiGet<any>(`/organizations/${selected.id}/members`)
+    apiGet<any>(`/organizations/${selectedId}/members`)
       .then((data) => setMembers(data.members || []))
       .catch((e: any) => {
         setMembers([]);
         toast.error(e.message || 'Unable to load workspace members.');
       })
       .finally(() => setMembersLoading(false));
-  }, [selected?.id]);
+  }, [selectedId]);
 
   async function create() {
     try {

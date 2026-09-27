@@ -9,6 +9,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
+import { useLatestCallback } from '../lib/useLatestCallback';
 import { Search, MapPin, BookmarkPlus, BookmarkCheck, MessageSquare, ShieldCheck, FolderPlus } from 'lucide-react';
 import { WorkSamplePlayer } from '../components/WorkSamplePlayer';
 import { Label } from '../components/ui/label';
@@ -35,7 +36,7 @@ export default function CandidateSearch() {
     [folderChoice, setFolderChoice] = useState(''),
     [newFolder, setNewFolder] = useState(''),
     [folderBusy, setFolderBusy] = useState(false);
-  async function load() {
+  const load = useLatestCallback(async () => {
     try {
       const p = new URLSearchParams();
       if (q) p.set('q', q);
@@ -52,7 +53,7 @@ export default function CandidateSearch() {
     } finally {
       setLoading(false);
     }
-  }
+  });
   useEffect(() => {
     load();
     apiGet<any>('/recent-activity')
@@ -60,7 +61,7 @@ export default function CandidateSearch() {
         setRecent((d.items || []).filter((x: any) => x.kind === 'profile_view' || x.kind === 'search').slice(0, 6)),
       )
       .catch(() => {});
-  }, []);
+  }, [load]);
   async function shortlist(c: any) {
     try {
       c.shortlisted ? await apiDelete(`/shortlists/${c.id}`) : await apiPost(`/shortlists/${c.id}`, {});

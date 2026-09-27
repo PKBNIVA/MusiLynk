@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { PublicNav } from '../components/PublicNav';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import { Search, Briefcase, Music, Users, CalendarDays, Zap, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Search, Briefcase, Music, Users, Zap, ShieldCheck, CheckCircle2 } from 'lucide-react';
 const paths = [
   {
     icon: Briefcase,

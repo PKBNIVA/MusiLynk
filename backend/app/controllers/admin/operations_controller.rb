@@ -1,5 +1,8 @@
 module Admin
   class OperationsController < BaseController
+    # Traffic, background jobs, payments and email health for the last hour and day.
+    def show = render(json: OperationsSnapshot.new.call)
+
     def audit = render(json: { logs: AuditLog.includes(:actor).order(created_at: :desc).limit(300).map { _1.attributes.merge(actorName: _1.actor&.name) } })
     def subscriptions = render(json: { subscriptions: Subscription.includes(:user).order(created_at: :desc).limit(500).map { _1.attributes.merge(name: _1.user.name, email: _1.user.email) } })
     def billing_attempts = render(json: { attempts: BillingAttempt.includes(:user).order(created_at: :desc).limit(500).map { _1.attributes.merge(email: _1.user.email) } })

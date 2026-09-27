@@ -98,6 +98,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:put, "/api/admin/reports/{report}", :admin, { params: { status: "dismissed" }, missing: :report }],
     [:get, "/api/admin/reports/{report}/context", :admin, { missing: :report, keys: %w[report reportedUser history conversation guidelinesUrl] }],
     [:post, "/api/admin/reports/{report}/moderate", :admin, { params: { decision: "dismiss" }, missing: :report, bad: { decision: "ban" }, bad_status: [400], keys: %w[ok report] }],
+    [:get, "/api/admin/operations", :admin, { keys: %w[generatedAt requests jobs payments email] }],
     [:get, "/api/admin/audit", :admin, { keys: %w[logs] }],
     [:get, "/api/admin/subscriptions", :admin, { keys: %w[subscriptions] }],
     [:get, "/api/admin/billing-attempts", :admin, { keys: %w[attempts] }],

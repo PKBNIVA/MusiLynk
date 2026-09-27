@@ -78,7 +78,7 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 | Method | Path | Auth | Params | Response / errors |
 | --- | --- | --- | --- | --- |
 | POST | `/auth/register` | public | `name, email, password (≥10), role: jobseeker\|employer` | 201 `{user, accessToken, verificationRequired, verificationDelivery}`; 422 `INVALID_ROLE`/validation; 409 duplicate |
-| POST | `/auth/login` | public | `email, password` | `{user, accessToken}`; 401; 403 inactive; 429 |
+| POST | `/auth/login` | public | `email, password` | `{user, accessToken}`; admins get 202 `{secondFactorRequired, method, challengeToken, message, expiresIn}` instead and a code by email (`debugCode` only outside production without email); without email delivery in production the admin gets `{user, accessToken}` under the default `ADMIN_SECOND_FACTOR=auto` (audited) or 503 `SECOND_FACTOR_UNAVAILABLE` under `required`; 401; 403 inactive; 429 |
 | POST | `/auth/logout` | public | bearer token | `{ok}` |
 | POST | `/auth/request-email-verification` | any | — | `{ok, alreadyVerified?, debugLink?}` |
 | POST | `/auth/verify-email` | public | `token` | `{ok}`; 400 `TOKEN_INVALID` |
@@ -237,6 +237,7 @@ plans. N+1: `/urgent-requests` (~2 queries per row; 205 queries for 100 rows) an
 | GET | `/auth/methods` | public | — | `{signInCodes, password, emailDelivery}`: what the sign-in page may offer. `signInCodes` is false only in production without an email provider |
 | POST | `/auth/otp/request` | public | `email` (+ `name, role` to sign up) | `{ok, message, expiresIn}`, identical for known and unknown emails (`debugCode` only outside production without email); 422 `INVALID_EMAIL`; 503 `OTP_UNAVAILABLE` in production without an email provider (same for every address, no code issued); 429 |
 | POST | `/auth/otp/verify` | public | `email, code` | `{user, accessToken}` like login; 401 `OTP_INVALID`; 429 |
+| POST | `/auth/second-factor` | public | `challengeToken, code` | completes an admin password sign-in: `{user, accessToken}`; 401 `OTP_INVALID` (wrong code) or `SECOND_FACTOR_EXPIRED` (bad, expired or replaced challenge); 403 inactive; 429 |
 | POST | `/notifications/read-all` | any | — | `{ok, updated}` |
 | GET | `/notifications/unread` | any | — | now also `unreadMessages` |
 | GET | `/conversations` | any | — | items add `counterpartName, unreadCount, lastMessageAt, lastMessageFromMe` |

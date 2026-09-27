@@ -27,4 +27,8 @@ RUN useradd rails --create-home --shell /bin/bash \
   && mkdir -p db log storage tmp/pids \
   && chown -R rails:rails db log storage tmp
 EXPOSE 3000
-CMD ["bash", "-lc", "chown -R rails:rails storage tmp log && exec gosu rails bash -lc 'bin/rails db:prepare && exec bundle exec puma -C config/puma.rb'"]
+# The volume mounted at storage/ arrives root-owned, so fix ownership as root, then drop to
+# the rails user. bin/web runs db:prepare unless SKIP_DB_PREPARE_ON_BOOT=true (migrations
+# then run only in Railway's pre-deploy step), then starts Puma. A worker service overrides
+# this with its own start command (railway.worker.toml).
+CMD ["bash", "-lc", "chown -R rails:rails storage tmp log && exec gosu rails bash -lc 'exec bin/web'"]

@@ -206,6 +206,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/auth/otp/request", :public, { params: { email: "someone-new@example.com" }, bad: { email: "not-an-email" }, bad_status: [422], keys: %w[ok message expiresIn] }],
     [:get, "/api/auth/methods", :public, { keys: %w[signInCodes password emailDelivery] }],
     [:post, "/api/auth/otp/verify", :public, { ok: [401], params: ->(w, _a) { { email: w.user(:js).email, code: "000000" } }, bad: {}, bad_status: [401] }],
+    [:post, "/api/auth/second-factor", :public, { ok: [401], params: { challengeToken: "not-a-challenge", code: "000000" }, bad: {}, bad_status: [401] }],
     [:post, "/api/uploads/{upload}/complete", :any, { idor: true, missing: :upload, keys: %w[upload url] }],
     [:delete, "/api/uploads/{upload}", :any, { idor: true, missing: :upload }],
     [:get, "/api/admin/billing-events", :admin, { keys: %w[events nextBefore] }],

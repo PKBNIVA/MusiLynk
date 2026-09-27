@@ -39,9 +39,34 @@ class ApplicationController < ActionController::API
     return @current_user if defined?(@current_user)
     token = request.authorization.to_s.match(/^Bearer\s+(.+)$/i)&.captures&.first
     session = Session.active.find_by(token_digest: digest(token)) if token.present?
+    session = check_session_binding(session) if session
+    session&.record_activity!(request.user_agent)
+    # Activity can shorten a session (a pre-two-step admin session is capped).
+    session = nil if session && session.expires_at <= Time.current
     @current_user = session&.user
     ErrorReporter.set_user(@current_user)
     @current_user
+  end
+
+  # See Session: a token presented by a different browser family than the one it
+  # was issued to is revoked for admins and flagged (once) for everyone else.
+  def check_session_binding(session)
+    return session if session.fingerprint_matches?(request.user_agent)
+
+    metadata = { ip: request.remote_ip, sessionId: session.id }
+    if session.user.admin?
+      session.destroy!
+      AuditLog.create!(actor: session.user, action: "auth.session_revoked", entity_type: "User", entity_id: session.user_id,
+        metadata: metadata.merge(reason: "client_mismatch"))
+      Rails.logger.warn({ event: "session_client_mismatch", userId: session.user_id, revoked: true }.to_json)
+      return nil
+    end
+    if session.flagged_at.nil?
+      session.update_columns(flagged_at: Time.current)
+      AuditLog.create!(actor: session.user, action: "auth.session_client_mismatch", entity_type: "User", entity_id: session.user_id, metadata:)
+      Rails.logger.warn({ event: "session_client_mismatch", userId: session.user_id, revoked: false }.to_json)
+    end
+    session
   end
 
   def authenticate!(*roles)

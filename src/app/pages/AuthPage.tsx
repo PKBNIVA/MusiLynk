@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { useAuth } from '../lib/authContext';
+import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge } from '../lib/authContext';
 import { consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
 import { toast } from 'sonner';
 import { BrandMark } from '../components/BrandMark';
@@ -21,11 +21,13 @@ export default function AuthPage() {
   const role = userType === 'employer' ? 'employer' : 'jobseeker';
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register, verifyCode } = useAuth();
+  const { login, register, verifyCode, completeSecondFactor } = useAuth();
   const [mode,setMode] = useState<'login'|'register'>('login');
   /* Email codes are the primary path; passwords remain a fallback until email delivery is proven in production. */
   const [method,setMethod] = useState<'code'|'password'>('code');
   const [codeStep,setCodeStep] = useState<'email'|'code'>('email');
+  /* Set when an admin's password was accepted and the emailed second-step code is still needed. */
+  const [challenge,setChallenge] = useState<SecondFactorChallenge|null>(null);
   const [name,setName] = useState('');
   const [email,setEmail] = useState('');
   const [password,setPassword] = useState('');
@@ -69,18 +71,38 @@ export default function AuthPage() {
   };
   /* Code-flow errors are shown inline (role=alert) next to the field; password errors keep the existing toast. */
   const fail = (e:any, fallback:string) => setError(e?.message||fallback);
-  const switchMethod = (next:'code'|'password') => { touched.current = true; setMethod(next); setCodeStep('email'); setCode(''); setError(''); };
+  const switchMethod = (next:'code'|'password') => { touched.current = true; setMethod(next); setCodeStep('email'); setCode(''); setError(''); setChallenge(null); };
+  const leaveChallenge = () => { setChallenge(null); setCodeStep('email'); setCode(''); setDebugCode(undefined); setError(''); };
+  const startChallenge = (next:SecondFactorChallenge) => {
+    setChallenge(next); setDebugCode(next.debugCode); setCode(''); setError(''); setCodeStep('code'); setCooldown(RESEND_COOLDOWN_SECONDS);
+    toast.success('Check your email for a 6-digit code');
+  };
   const switchMode = () => { setMode(mode==='login'?'register':'login'); setCodeStep('email'); setCode(''); setError(''); };
 
   async function submit(e:React.FormEvent) {
     e.preventDefault(); setLoading(true); setError('');
-    try { const u=mode==='login'?await login(email,password):await register({name,email,password,role}); toast.success(mode==='login'?'Welcome back':'Your Verse profile is ready'); go(u.role,u.profileComplete); }
+    try {
+      const result=mode==='login'?await login(email,password):await register({name,email,password,role});
+      if (isSecondFactorChallenge(result)) { startChallenge(result); return; }
+      const u=result; toast.success(mode==='login'?'Welcome back':'Your Verse profile is ready'); go(u.role,u.profileComplete); }
     catch(e:any) { toast.error(e.message||'Unable to continue'); }
+    finally { setLoading(false); }
+  }
+
+  /* A new admin challenge needs the password step again; it emails a fresh code. */
+  async function resendChallenge() {
+    if (loading || cooldown > 0) return;
+    setLoading(true); setError('');
+    try {
+      const result = await login(email, password);
+      if (isSecondFactorChallenge(result)) startChallenge(result);
+    } catch(e:any) { fail(e,'Could not send a code. Try again.'); }
     finally { setLoading(false); }
   }
 
   async function sendCode(e?:React.FormEvent) {
     e?.preventDefault();
+    if (challenge) return resendChallenge();
     if (loading || cooldown > 0) return;
     setLoading(true); setError('');
     try {
@@ -100,10 +122,14 @@ export default function AuthPage() {
     if (value.length !== CODE_LENGTH) { setError(`Enter the ${CODE_LENGTH}-digit code from your email.`); return; }
     verifying.current = true; setLoading(true); setError('');
     try {
-      const u = await verifyCode(email, value);
+      const u = challenge ? await completeSecondFactor(challenge.challengeToken, value) : await verifyCode(email, value);
       toast.success(mode==='register'?'Your Verse profile is ready':'Welcome back');
       go(u.role, u.profileComplete);
-    } catch(e:any) { setCode(''); focusCode(); fail(e,'Invalid or expired code.'); }
+    } catch(e:any) {
+      /* An expired or unusable challenge cannot be retried; start again from the password. */
+      if (challenge && e?.code === 'SECOND_FACTOR_EXPIRED') { leaveChallenge(); toast.error(e.message); return; }
+      setCode(''); focusCode(); fail(e,'Invalid or expired code.');
+    }
     finally { verifying.current = false; setLoading(false); }
   }
 
@@ -128,13 +154,17 @@ export default function AuthPage() {
         <p className="text-center text-xs leading-5 text-slate-400">We’ll email you a 6-digit code. No password needed.</p>
       </form>
     : <form onSubmit={e=>{e.preventDefault();void confirmCode();}} className="space-y-4" aria-busy={loading}>
-        <p className="text-sm leading-6 text-slate-300" aria-live="polite">If <span className="font-semibold text-white">{email}</span> can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.</p>
+        {challenge
+          ? <p className="text-sm leading-6 text-slate-300" aria-live="polite">Admin sign-in needs one more step. We emailed a 6-digit code to <span className="font-semibold text-white">{email}</span>. It expires in 10 minutes.</p>
+          : <p className="text-sm leading-6 text-slate-300" aria-live="polite">If <span className="font-semibold text-white">{email}</span> can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.</p>}
         <div><Label htmlFor="auth-code" className="text-slate-200">Sign-in code</Label><Input id="auth-code" aria-label="Sign-in code" value={code} onChange={e=>onCodeChange(e.target.value)} onPaste={e=>{e.preventDefault();onCodeChange(e.clipboardData.getData('text'));}} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={CODE_LENGTH} placeholder="••••••" aria-invalid={Boolean(error)} aria-describedby="auth-code-help" readOnly={loading} className="mt-2 border-white/15 text-center font-mono text-2xl tracking-[.5em]"/><p id="auth-code-help" className="mt-1.5 text-xs text-slate-400">Paste or type the code from your email.</p></div>
         {debugCode&&<p className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">Local testing: email is not configured, your code is <span className="font-mono font-bold" data-testid="debug-code">{debugCode}</span></p>}
         {errorBox}
         <Button disabled={loading||code.length!==CODE_LENGTH} className="w-full border-0 bg-gradient-to-r from-fuchsia-600 to-violet-600">{loading?'Checking code…':mode==='register'&&!isAdmin?'Verify and create account':'Verify and sign in'}</Button>
         <div className="flex items-center justify-between gap-3">
-          <button type="button" onClick={()=>{setCodeStep('email');setCode('');setError('');}} className={linkButton}>Use a different email</button>
+          {challenge
+            ? <button type="button" onClick={leaveChallenge} className={linkButton}>Back to sign in</button>
+            : <button type="button" onClick={()=>{setCodeStep('email');setCode('');setError('');}} className={linkButton}>Use a different email</button>}
           <button type="button" onClick={()=>void sendCode()} disabled={loading||cooldown>0} className={linkButton}>{cooldown>0?`Resend code in ${cooldown}s`:'Resend code'}</button>
         </div>
       </form>;
@@ -149,10 +179,10 @@ export default function AuthPage() {
         <div className="hidden lg:block"><div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.05] px-3 py-1.5 text-sm text-slate-300"><ShieldCheck size={15} className="text-emerald-300"/>Your account and work stay protected</div><h1 className="mt-6 max-w-xl text-6xl font-black leading-[1] tracking-[-.05em]">One login. Your whole <span className="verse-gradient-text">music world.</span></h1><p className="mt-5 max-w-lg text-lg leading-8 text-slate-300">Discover work, prove your craft, build teams and manage every conversation in one professional home.</p></div>
         <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}}>
           <Card className="verse-surface border-white/15 bg-transparent shadow-2xl">
-            <CardHeader className="text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-500/30 to-violet-500/25 text-violet-200">{isAdmin?<ShieldCheck/>:role==='employer'?<Briefcase/>:<Users/>}</div><CardTitle className="mt-2 text-2xl font-black text-white">{method==='code'&&codeStep==='code'?'Check your email':mode==='login'?'Welcome back':'Create your Verse account'}</CardTitle><CardDescription className="text-slate-300">{isAdmin?'Verse trust and operations':role==='employer'?'Hire music talent and manage every candidate':'Find work and build a career people can hear'}</CardDescription></CardHeader>
+            <CardHeader className="text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-500/30 to-violet-500/25 text-violet-200">{isAdmin?<ShieldCheck/>:role==='employer'?<Briefcase/>:<Users/>}</div><CardTitle className="mt-2 text-2xl font-black text-white">{(method==='code'||challenge)&&codeStep==='code'?'Check your email':mode==='login'?'Welcome back':'Create your Verse account'}</CardTitle><CardDescription className="text-slate-300">{isAdmin?'Verse trust and operations':role==='employer'?'Hire music talent and manage every candidate':'Find work and build a career people can hear'}</CardDescription></CardHeader>
             <CardContent>
               {!isAdmin&&codeStep==='email'&&<div className="mb-5 grid grid-cols-2 rounded-xl border border-white/10 bg-black/15 p-1"><Link to="/auth/jobseeker" className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role==='jobseeker'?'bg-white/10 text-white':'text-slate-400'}`}><Users size={15}/>Professional</Link><Link to="/auth/employer" className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role==='employer'?'bg-white/10 text-white':'text-slate-400'}`}><Briefcase size={15}/>Employer</Link></div>}
-              {method==='code'?codeForms:passwordForm}
+              {method==='code'||challenge?codeForms:passwordForm}
               {codeStep==='email'&&<div className="mt-3 flex items-center justify-between gap-3">
                 {(method==='code'||codesAvailable)&&<button type="button" onClick={()=>switchMethod(method==='code'?'password':'code')} className="min-h-11 text-sm text-slate-300 hover:text-white">{method==='code'?'Use password instead':'Email me a code instead'}</button>}
                 {method==='password'&&mode==='login'&&emailAvailable&&<Link to="/forgot-password" className="text-xs text-slate-400 hover:text-white">Forgot password?</Link>}

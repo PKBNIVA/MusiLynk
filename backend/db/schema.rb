@@ -718,6 +718,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_140000) do
     t.datetime "expires_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "last_seen_at"
+    t.datetime "absolute_expires_at"
+    t.string "client_fingerprint"
+    t.datetime "flagged_at"
     t.index ["token_digest"], name: "index_sessions_on_token_digest", unique: true
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end

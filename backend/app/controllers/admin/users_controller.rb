@@ -112,6 +112,14 @@ module Admin
         add.call("warn", "RESET_NOT_COMPLETED", "#{unused_resets} password reset(s) requested in the last 7 days but not completed — check spam or the address.")
       end
       add.call("warn", "EMAIL_PROVIDER_MISSING", "No email provider is configured: verification and reset emails cannot be delivered.") if !facts[:email_provider] && unused_resets.zero?
+      if user.admin?
+        case AuthController.admin_second_factor_state(user.email)
+        when :skipped
+          add.call("warn", "ADMIN_SECOND_FACTOR_SKIPPED", facts[:email_provider] ? AuthController::SECOND_FACTOR_SUPPRESSED_WARNING : AuthController::SECOND_FACTOR_SKIPPED_WARNING)
+        when :off then add.call("warn", "ADMIN_SECOND_FACTOR_OFF", AuthController::SECOND_FACTOR_DISABLED_WARNING)
+        when :unavailable then add.call("error", "ADMIN_SECOND_FACTOR_UNAVAILABLE", "ADMIN_SECOND_FACTOR=required but the code cannot be emailed to this admin (no email provider, or the address is suppressed), so their password sign-in is refused. Fix email, or set ADMIN_SECOND_FACTOR=auto.")
+        end
+      end
       cap = AuthController::MAX_LIVE_SESSIONS
       add.call("warn", "SESSION_CAP", "#{facts[:active_sessions]} active sessions (cap #{cap}): each new sign-in signs out the oldest device.") if facts[:active_sessions] >= cap
       add.call("warn", "FREQUENT_RELOGINS", "#{facts[:recent_sessions]} sign-ins in 7 days — sessions are being lost (cleared browser storage, private windows or the session cap).") if facts[:recent_sessions] >= 15

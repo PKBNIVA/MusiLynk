@@ -18,6 +18,7 @@ everything else lives here.
 - [API.md](API.md): API contract (routes, roles, status codes, error shape) and the tests that enforce it.
 - [engineering/SAAS_BILLING.md](engineering/SAAS_BILLING.md): plans, entitlements, Razorpay event handling, reconciliation, cancellation rules.
 - [engineering/SEARCH.md](engineering/SEARCH.md): how `/api/search` works (PostgreSQL, synonyms, limits) and its known limits.
+- [engineering/SESSIONS.md](engineering/SESSIONS.md): session expiry and browser binding, admin two-step sign-in, and the HttpOnly cookie migration plan.
 - [RAILS8_UPGRADE.md](RAILS8_UPGRADE.md): the Rails 7.2 → 8.1.4 upgrade and the framework defaults now in effect.
 
 ## QA

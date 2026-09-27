@@ -12,6 +12,7 @@ Rails.application.routes.draw do
     post "auth/reset-password", to: "auth#reset_password"
     post "auth/otp/request", to: "auth#otp_request"
     post "auth/otp/verify", to: "auth#otp_verify"
+    post "auth/second-factor", to: "auth#second_factor"
     get "auth/methods", to: "auth#sign_in_methods"
     get "me", to: "auth#me"
     get "account/export", to: "account#export"

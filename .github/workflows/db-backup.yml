@@ -32,7 +32,27 @@ jobs:
           missing=0
           [ -n "$DATABASE_URL" ] || { echo "::error::Set the PRODUCTION_DATABASE_URL repository secret"; missing=1; }
           [ -n "$BACKUP_PASSPHRASE" ] || { echo "::error::Set the BACKUP_PASSPHRASE repository secret"; missing=1; }
-          exit $missing
+          [ "$missing" = 0 ] || exit 1
+
+          # Tolerate a pasted value wrapped in whitespace or quotes, then check its
+          # shape without printing it, so a wrong paste gets a precise error.
+          url=$(printf '%s' "$DATABASE_URL" | tr -d '\r\n' | sed -e 's/^[[:space:]"'"'"']*//' -e 's/[[:space:]"'"'"']*$//')
+          echo "::add-mask::$url"
+          problem=""
+          case "$url" in
+            *'$'{{*) problem="it still contains Railway template text (a dollar sign and double braces); copy the resolved value" ;;
+            *@:*) problem="its host is empty; turn on the TCP proxy in Railway and copy DATABASE_PUBLIC_URL again" ;;
+            *.railway.internal*) problem="it is Railway's private URL; use DATABASE_PUBLIC_URL (host ends in proxy.rlwy.net)" ;;
+            postgres://*@*:[0-9]*/* | postgresql://*@*:[0-9]*/*) ;;
+            postgres://* | postgresql://*) problem="it is missing the user, host, port or database part" ;;
+            *=postgres*) problem="it includes the variable name; paste only the value after the = sign" ;;
+            *) problem="it does not start with postgresql://; paste the whole DATABASE_PUBLIC_URL value" ;;
+          esac
+          if [ -n "$problem" ]; then
+            echo "::error::PRODUCTION_DATABASE_URL is not usable: $problem"
+            exit 1
+          fi
+          echo "DATABASE_URL=$url" >> "$GITHUB_ENV"
 
       # pg_dump must be at least the server's major version, and the scratch
       # database matches it so the restore test is like-for-like.

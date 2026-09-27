@@ -1,5 +1,7 @@
 # Product Audit & Improvement Register
 
+> **Historical snapshot.** Written during the v0.x Node/SQLite prototype, since replaced by the Rails API in `backend/`. The product intent still applies; implementation details (SQLite, Elasticsearch, `server/`, `node tests/…` scripts) do not. Current docs: [docs/README.md](../README.md).
+
 **260 concrete product/engineering improvements are tracked below.**
 Status legend: **DONE** = implemented in this package; **NEXT** = high-value launch/scale work that should not be faked before implementation.
 

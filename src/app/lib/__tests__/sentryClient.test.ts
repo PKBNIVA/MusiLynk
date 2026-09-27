@@ -10,6 +10,8 @@ const { sdk, scope } = vi.hoisted(() => {
     captureMessage: vi.fn(() => 'message-id'),
     withScope: vi.fn((callback: (s: typeof scope) => unknown) => callback(scope)),
     browserTracingIntegration: vi.fn(() => ({ name: 'BrowserTracing' })),
+    flush: vi.fn(() => Promise.resolve(true)),
+    metrics: { distribution: vi.fn() },
   };
   return { sdk, scope };
 });
@@ -31,7 +33,7 @@ function initOptions() {
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
-  for (const fn of [...Object.values(sdk), ...Object.values(scope)]) fn.mockClear();
+  for (const fn of [...Object.values(sdk), ...Object.values(scope), sdk.metrics.distribution]) if (typeof fn === 'function') fn.mockClear();
 });
 
 describe('initSentry', () => {
@@ -43,6 +45,7 @@ describe('initSentry', () => {
       release: undefined,
       environment: 'production',
       sendDefaultPii: false,
+      dataCollection: { userInfo: false },
       tracesSampleRate: 0,
       replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 0,
@@ -131,5 +134,25 @@ describe('capture helpers', () => {
     captureText('partial', { tags: { only: 'tags' } });
     expect(scope.setTags).toHaveBeenCalledWith({ only: 'tags' });
     expect(scope.setLevel).not.toHaveBeenCalled();
+  });
+});
+
+describe('captureVital', () => {
+  it('records a web vital as a distribution metric with route and rating, then flushes', async () => {
+    const { captureVital } = await loadClient();
+    captureVital({ name: 'LCP', value: 2100, rating: 'good' }, '/professionals/:id');
+    expect(sdk.metrics.distribution).toHaveBeenCalledWith('web_vital.lcp', 2100, {
+      unit: 'millisecond',
+      attributes: { route: '/professionals/:id', rating: 'good' },
+    });
+    expect(sdk.flush).toHaveBeenCalledWith(2_000);
+  });
+
+  it('sends CLS without a unit and ignores a failed flush', async () => {
+    const { captureVital } = await loadClient();
+    sdk.flush.mockReturnValueOnce(Promise.reject(new Error('offline')));
+    captureVital({ name: 'CLS', value: 0.3, rating: 'poor' }, '/');
+    await flush();
+    expect(sdk.metrics.distribution).toHaveBeenCalledWith('web_vital.cls', 0.3, { unit: 'none', attributes: { route: '/', rating: 'poor' } });
   });
 });

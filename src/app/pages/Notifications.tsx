@@ -18,6 +18,8 @@ const SHARED: Record<string, string> = {
   '/bookings': 'bookings', '/urgent-requests': 'urgent', '/messages': 'messages', '/notifications': 'notifications',
   '/workspace': 'workspace', '/profile': 'profile', '/billing': 'billing', '/acts': 'acts', '/availability': 'availability',
 };
+// Public pages a notification may point at (e.g. a moderation warning links the community guidelines).
+const PUBLIC_PAGES = new Set(['/community-guidelines', '/safety', '/terms']);
 // Where a notification without a link should take the viewer, by kind.
 const KIND_FALLBACK: Record<string, Record<Role, string>> = {
   verification: {jobseeker: '/jobseeker/profile', employer: '/employer/profile'},
@@ -34,6 +36,7 @@ export function notificationDestination(link: string | null | undefined, role: R
   const path = cut < 0 ? link : link.slice(0, cut);
   const suffix = cut < 0 ? '' : link.slice(cut);
   if (SHARED[path]) return `${base}/${SHARED[path]}${suffix}`;
+  if (PUBLIC_PAGES.has(path)) return link;
   if (path === '/hiring/applicants') return role === 'employer' ? '/employer/applications' : '/jobseeker/hiring/applicants';
   if (/^\/jobs\/[^/]+$/.test(path)) return `${base}${path}${suffix}`;
   // Workspace-specific links written for the other role: keep the page when both workspaces have it.

@@ -5,6 +5,8 @@ import {toast} from 'sonner';
 import {Navigation} from '../components/Navigation';
 import {Card, CardContent} from '../components/ui/card';
 import {Button} from '../components/ui/button';
+import {ReportDialog} from '../components/ReportDialog';
+import {useConfirm} from '../components/booking/BookingDialogs';
 import {apiDelete, apiGet, apiPost} from '../lib/api';
 import {useAuth} from '../lib/authContext';
 import {announceUnreadChanged, useVisiblePolling} from '../lib/usePolling';
@@ -14,7 +16,8 @@ type Conversation = {
   counterpartActive?: boolean; blockedByMe?: boolean; blockedMe?: boolean;
   jobTitle?: string | null; lastMessage?: string | null; lastMessageAt?: string | null; lastMessageFromMe?: boolean; unreadCount?: number;
 };
-type Message = {id: string; senderId: string; body: string; createdAt: string; readAt?: string | null};
+// safetyFlags: scam-pattern signals, only ever sent to the recipient (see backend ScamSignals).
+type Message = {id: string; senderId: string; body: string; createdAt: string; readAt?: string | null; safetyFlags?: string[]};
 
 const MESSAGE_MAX_LENGTH = 5000;
 const THREAD_POLL_MS = 10_000;
@@ -27,6 +30,24 @@ const errorMessage = (e: any, fallback: string) => {
 const byTime = (a: Message, b: Message) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
 const formatTime = (value?: string | null) => { if (!value) return ''; const d = new Date(value); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(); };
 const isDesktop = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 768px)').matches;
+
+const SAFETY_TIPS: Record<string, string> = {
+  upfront_fee: 'Genuine opportunities on Verse never ask you to pay a registration, audition or joining fee.',
+  payment_details: 'Be careful about sending money to UPI IDs or bank accounts shared in chat.',
+  off_platform: 'Be cautious about moving to WhatsApp or Telegram before you have met or checked this person.',
+};
+
+// A gentle, non-blocking notice under a received message that matched a common scam pattern.
+function SafetyNotice({flags}: {flags: string[]}) {
+  const tips = flags.map(f => SAFETY_TIPS[f]).filter(Boolean);
+  return <div role="note" data-testid="safety-notice" className="mt-2 rounded-lg border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+    <p className="font-medium">Stay safe: this message looks like a common scam pattern.</p>
+    {tips.map(t => <p key={t} className="mt-1">{t}</p>)}
+    <p className="mt-1">
+      Read our <Link to="/community-guidelines" target="_blank" className="underline underline-offset-2">community guidelines</Link> and <Link to="/safety" target="_blank" className="underline underline-offset-2">safety tips</Link>. If something feels wrong, report this conversation.
+    </p>
+  </div>;
+}
 
 export default function Messages() {
   const {user} = useAuth();
@@ -43,6 +64,8 @@ export default function Messages() {
   const [truncated, setTruncated] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [safetyBusy, setSafetyBusy] = useState(false);
+  const [reporting, setReporting] = useState<Conversation | null>(null);
+  const confirm = useConfirm();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
@@ -149,17 +172,31 @@ export default function Messages() {
 
   const patchConv = (id: string, change: Partial<Conversation>) => setConvs(prev => prev.map(c => c.id === id ? {...c, ...change} : c));
 
+  async function applyBlock(c: Conversation) {
+    const name = nameOf(c);
+    if (c.blockedByMe) await apiDelete(`/blocks/${encodeURIComponent(c.counterpartId!)}`);
+    else await apiPost('/blocks', {userId: c.counterpartId});
+    patchConv(c.id, {blockedByMe: !c.blockedByMe});
+    toast.success(c.blockedByMe ? `${name} is unblocked` : `${name} is blocked`);
+    void loadConvs();
+  }
+
   async function toggleBlock(c: Conversation) {
     if (!c.counterpartId || safetyBusy) return;
-    const name = nameOf(c);
-    if (!c.blockedByMe && !window.confirm(`Block ${name}? Neither of you will be able to send messages in this conversation, and they can't start a new one with you. You can unblock them later.`)) return;
+    if (!c.blockedByMe) {
+      // Blocking asks first in an in-app dialog; errors stay inside the dialog.
+      confirm.ask({
+        title: `Block ${nameOf(c)}?`,
+        description: "Neither of you will be able to send messages in this conversation, and they can't start a new one with you. You can unblock them later.",
+        confirmLabel: 'Block',
+        destructive: true,
+        action: () => applyBlock(c).catch((e: any) => { throw new Error(errorMessage(e, 'Unable to update this block.')); }),
+      });
+      return;
+    }
     setSafetyBusy(true);
     try {
-      if (c.blockedByMe) await apiDelete(`/blocks/${encodeURIComponent(c.counterpartId)}`);
-      else await apiPost('/blocks', {userId: c.counterpartId});
-      patchConv(c.id, {blockedByMe: !c.blockedByMe});
-      toast.success(c.blockedByMe ? `${name} is unblocked` : `${name} is blocked`);
-      void loadConvs();
+      await applyBlock(c);
     } catch (e: any) {
       toast.error(errorMessage(e, 'Unable to update this block.'));
     } finally {
@@ -167,19 +204,14 @@ export default function Messages() {
     }
   }
 
-  async function report(c: Conversation) {
-    if (!c.counterpartId || safetyBusy) return;
-    const reason = window.prompt(`What is wrong with ${nameOf(c)}'s messages? e.g. harassment, asks for payment, spam, unsafe contact request`);
-    if (!reason?.trim()) return;
-    setSafetyBusy(true);
+  async function sendReport(c: Conversation, report: {reason: string; details: string}) {
+    const context = `Reported from conversation ${c.id}.`;
     try {
-      await apiPost('/reports', {entityType: 'user', entityId: c.counterpartId, reason: reason.trim().slice(0, 200), details: `Reported from conversation ${c.id}.`});
-      toast.success('Report sent to moderation. You can also block this person.');
+      await apiPost('/reports', {entityType: 'user', entityId: c.counterpartId, reason: report.reason.slice(0, 200), details: report.details ? `${report.details}\n\n${context}` : context});
     } catch (e: any) {
-      toast.error(errorMessage(e, 'Unable to send your report.'));
-    } finally {
-      setSafetyBusy(false);
+      throw new Error(errorMessage(e, 'Unable to send your report.'));
     }
+    toast.success('Report sent to moderation. You can also block this person.');
   }
   const onScroll = () => { const el = scroller.current; if (el) stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; };
 
@@ -251,7 +283,7 @@ export default function Messages() {
               <Button type="button" variant="ghost" size="icon" className="md:hidden" aria-label="Back to conversations" onClick={() => select(null)}><ArrowLeft size={18}/></Button>
               <div className="min-w-0 flex-1"><div className="font-semibold truncate" data-testid="thread-name">{active ? nameOf(active) : threadState === 'missing' ? 'Conversation' : ' '}</div>{active && <div className="text-xs text-violet-300 truncate">{active.jobTitle || 'General conversation'}</div>}</div>
               {active?.counterpartId && <div className="flex shrink-0 gap-1">
-                <Button type="button" variant="ghost" size="sm" disabled={safetyBusy} onClick={() => void report(active)} data-testid="report-conversation"><Flag size={14} aria-hidden="true"/><span className="sr-only sm:not-sr-only sm:ml-1">Report</span></Button>
+                <Button type="button" variant="ghost" size="sm" disabled={safetyBusy} onClick={() => setReporting(active)} data-testid="report-conversation"><Flag size={14} aria-hidden="true"/><span className="sr-only sm:not-sr-only sm:ml-1">Report</span></Button>
                 <Button type="button" variant="ghost" size="sm" disabled={safetyBusy} onClick={() => void toggleBlock(active)} data-testid="block-toggle"><Ban size={14} aria-hidden="true"/><span className="sr-only sm:not-sr-only sm:ml-1">{active.blockedByMe ? 'Unblock' : 'Block'}</span></Button>
               </div>}
             </header>}
@@ -265,6 +297,7 @@ export default function Messages() {
                     {truncated && <div className="text-center"><Button type="button" variant="outline" size="sm" disabled={loadingOlder} aria-busy={loadingOlder} onClick={() => void loadOlder()} data-testid="load-older">{loadingOlder ? 'Loading…' : 'Load earlier messages'}</Button></div>}
                     {msgs.map(m => { const mine = m.senderId === user?.id; return <div key={m.id} data-testid="message" data-mine={mine ? 'true' : 'false'} className={`max-w-[85%] md:max-w-[75%] w-fit rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-violet-600' : 'bg-white/10'}`}>
                       <div className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]" data-testid="message-body">{m.body}</div>
+                      {!mine && !!m.safetyFlags?.length && <SafetyNotice flags={m.safetyFlags}/>}
                       <div className="text-[11px] opacity-70 mt-1 flex gap-2 justify-end"><time dateTime={m.createdAt}>{formatTime(m.createdAt)}</time>{mine && m.id === lastMineId && <span data-testid="read-receipt">{m.readAt ? `Seen ${formatTime(m.readAt)}` : 'Sent'}</span>}</div>
                     </div>; })}
                   </>}
@@ -287,5 +320,13 @@ export default function Messages() {
         </CardContent>
       </Card>
     </main>
+    <ReportDialog
+      open={Boolean(reporting)}
+      onOpenChange={open => { if (!open) setReporting(null); }}
+      title={`Report ${reporting ? nameOf(reporting) : 'this person'}`}
+      description="Tell our moderators what is wrong with these messages."
+      onSubmit={report => sendReport(reporting!, report)}
+    />
+    {confirm.element}
   </div>;
 }

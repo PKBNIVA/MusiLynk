@@ -11,11 +11,14 @@ module ErrorReporter
 
   # Returns the captured Sentry event, or nil when disabled/filtered.
   # `tags` are short searchable strings; other keyword context goes to extras. Both are scrubbed.
-  def capture(exception, tags: {}, level: :error, **context)
+  # `fingerprint` (an array of stable strings) groups every occurrence into one Sentry issue,
+  # so a condition that recurs on each scheduled run alerts once instead of once per run.
+  def capture(exception, tags: {}, level: :error, fingerprint: nil, **context)
     return nil unless enabled?
 
     Sentry.with_scope do |scope|
       scope.set_level(level)
+      scope.set_fingerprint(Array(fingerprint).map(&:to_s)) if fingerprint.present?
       scope.set_tags(ErrorScrubber.scrub(tags.transform_values(&:to_s)))
       scope.set_extras(ErrorScrubber.scrub(context)) if context.any?
       Sentry.capture_exception(exception)

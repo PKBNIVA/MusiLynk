@@ -2,7 +2,10 @@ name: Database backup
 
 # Nightly encrypted, off-Railway backup of production PostgreSQL. Every run also
 # restores the dump into a throwaway database and fails if the restore does not
-# check out, so a green run is a tested backup. See DEPLOYMENT.md "Backups and rollback".
+# check out, so a green run is a tested backup. A failed run opens (or comments on) a
+# GitHub issue labelled backup-failure, and a later green run closes it. When the
+# BACKUP_S3_* secrets are set, each verified dump is also copied to R2/S3.
+# See DEPLOYMENT.md "Backups and rollback".
 on:
   schedule:
     - cron: "30 21 * * *" # 03:00 IST
@@ -24,6 +27,12 @@ jobs:
       DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
       BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
       SCRATCH_DATABASE_URL: postgres://postgres:scratch@localhost:5439/verse_restore
+      # Optional off-GitHub copy (Cloudflare R2 or any S3-compatible store). All unset = skipped.
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
     steps:
       - uses: actions/checkout@v4
 
@@ -87,3 +96,84 @@ jobs:
           path: backups/
           retention-days: 30
           if-no-files-found: error
+
+      # Only the encrypted dump, its checksum and the manifest are uploaded (never plaintext),
+      # under a dated key so a bucket lifecycle rule can expire old copies.
+      - name: Copy verified backup to off-GitHub storage
+        if: env.BACKUP_S3_BUCKET != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+          # Recent AWS CLI versions add checksums some S3-compatible stores reject; send them only when required.
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          missing=0
+          [ -n "$BACKUP_S3_ACCESS_KEY_ID" ] || { echo "::error::Set BACKUP_S3_ACCESS_KEY_ID (or remove BACKUP_S3_BUCKET to skip the copy)"; missing=1; }
+          [ -n "$BACKUP_S3_SECRET_ACCESS_KEY" ] || { echo "::error::Set BACKUP_S3_SECRET_ACCESS_KEY (or remove BACKUP_S3_BUCKET to skip the copy)"; missing=1; }
+          [ "$missing" = 0 ] || exit 1
+          export AWS_DEFAULT_REGION="${BACKUP_S3_REGION:-auto}"
+          endpoint=()
+          [ -z "$BACKUP_S3_ENDPOINT" ] || endpoint=(--endpoint-url "$BACKUP_S3_ENDPOINT")
+          prefix="verse-db/$(date -u +%Y/%m/%d)/run-${GITHUB_RUN_ID}"
+          shopt -s nullglob
+          files=(backups/*.dump.gpg backups/*.dump.sha256 backups/*.manifest.tsv)
+          [ "${#files[@]}" -gt 0 ] || { echo "::error::No backup files to copy"; exit 1; }
+          for file in "${files[@]}"; do
+            aws s3 cp "${endpoint[@]}" --only-show-errors --no-progress "$file" "s3://$BACKUP_S3_BUCKET/$prefix/$(basename "$file")"
+          done
+          # Read the copy back so a silently truncated upload fails the run.
+          dump=$(basename backups/*.dump.gpg)
+          remote_size=$(aws s3api head-object "${endpoint[@]}" --bucket "$BACKUP_S3_BUCKET" --key "$prefix/$dump" --query ContentLength --output text)
+          local_size=$(stat -c %s "backups/$dump")
+          [ "$remote_size" = "$local_size" ] || { echo "::error::Uploaded dump is $remote_size bytes, expected $local_size"; exit 1; }
+          echo "Copied ${#files[@]} files to s3://$BACKUP_S3_BUCKET/$prefix/"
+
+  # Alerts without any new service: a failed or cancelled backup opens a GitHub issue
+  # labelled backup-failure (or comments on the one already open), which emails the repo
+  # owner through normal GitHub notifications. The next green run closes it. Optionally
+  # also POSTs JSON to ALERT_WEBHOOK_URL (Slack/Discord-compatible "text" field).
+  alert:
+    needs: backup
+    if: always() && needs.backup.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RESULT: ${{ needs.backup.result }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+    steps:
+      - name: Open or update the backup-failure issue
+        if: needs.backup.result != 'success'
+        run: |
+          gh label create backup-failure --color B60205 --description "Nightly database backup failed" 2>/dev/null || true
+          body="The nightly database backup **${RESULT}** on $(date -u '+%Y-%m-%d %H:%M UTC') (trigger: ${GITHUB_EVENT_NAME}).
+
+          Run: ${RUN_URL}
+
+          Open the run, fix the failing step, then re-run it (Actions -> Database backup -> Run workflow). This issue closes itself after the next successful backup."
+          existing=$(gh issue list --label backup-failure --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "Database backup failed" --label backup-failure --body "$body"
+          fi
+
+      - name: Post to alert webhook
+        if: needs.backup.result != 'success' && env.ALERT_WEBHOOK_URL != ''
+        run: |
+          payload=$(jq -n --arg text "Verse database backup ${RESULT}: ${RUN_URL}" --arg result "$RESULT" --arg url "$RUN_URL" --arg repo "$GH_REPO" \
+            '{text: $text, content: $text, event: "backup_failure", result: $result, runUrl: $url, repository: $repo}')
+          curl -fsS --max-time 20 --retry 2 -H "Content-Type: application/json" -d "$payload" "$ALERT_WEBHOOK_URL" > /dev/null \
+            || echo "::warning::Alert webhook POST failed; the GitHub issue is still the primary alert"
+
+      - name: Close the backup-failure issue after a green run
+        if: needs.backup.result == 'success'
+        run: |
+          for number in $(gh issue list --label backup-failure --state open --json number --jq '.[].number' || true); do
+            gh issue close "$number" --reason completed --comment "Backup succeeded again: ${RUN_URL}"
+          done

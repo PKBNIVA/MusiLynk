@@ -17,6 +17,7 @@ class AuthController < ApplicationController
   OTP_UNAVAILABLE_MESSAGE = "Email sign-in codes are temporarily unavailable. Use your password instead.".freeze
   OTP_REQUEST_MESSAGE = "If this email can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.".freeze
   OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
+  EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so Verse can no longer send to it. Use a different email address, or sign in with your password.".freeze
   PRODUCTION_FRONTEND_URL = "https://verse-music-platform.vercel.app".freeze
 
   def register
@@ -76,6 +77,9 @@ class AuthController < ApplicationController
     scopes = { email: [email, OTP_REQUESTS_PER_EMAIL], ip: [request.remote_ip, OTP_REQUESTS_PER_IP] }
     return if failure_budget_exhausted?("otp-request", scopes, period: OTP_REQUEST_PERIOD)
     record_failure!("otp-request", scopes, period: OTP_REQUEST_PERIOD)
+    # A code sent to a hard-bounced or complaining address can never arrive: say so instead
+    # of leaving the person waiting. Checked after the throttle so it cannot be probed quickly.
+    return render_error(EMAIL_SUPPRESSED_MESSAGE, :unprocessable_content, "EMAIL_SUPPRESSED") if EmailSuppression.blocks_all?(email)
 
     user = User.find_by(email:)
     pending = user ? {} : sign_up.to_h
@@ -289,6 +293,7 @@ class AuthController < ApplicationController
   def queue_email(user, template, link)
     return { queued: false, delivered: false, reason: "Recipient unavailable" } if user&.email.blank?
     return { queued: false, delivered: false, reason: "Email provider not configured" } unless EmailDelivery.configured?
+    return { queued: false, delivered: false, reason: "Email address suppressed" } if EmailSuppression.blocks_all?(user.email)
     EmailDeliveryJob.enqueue(user:, template:, link:)
     { queued: true }
   rescue StandardError => error

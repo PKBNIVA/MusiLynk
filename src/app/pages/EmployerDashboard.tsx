@@ -1,2 +1,82 @@
-import {useEffect,useState} from 'react';import {Navigation} from '../components/Navigation';import {Card,CardContent} from '../components/ui/card';import {Button} from '../components/ui/button';import {Badge} from '../components/ui/badge';import {apiGet} from '../lib/api';import {Link} from 'react-router';import {Briefcase,FileText,CheckCircle,Plus,Users,ShieldCheck} from 'lucide-react';import {useAuth} from '../lib/authContext';import {OpportunityPipeline} from '../components/OpportunityPipeline';
-export default function EmployerDashboard(){const[d,setD]=useState<any>({}),{user}=useAuth();const load=()=>apiGet<any>('/dashboard').then(setD).catch(()=>{});useEffect(()=>{load()},[]);const Stat=({n,label,icon:I}:{n:any,label:string,icon:any})=><Card className="bg-white/[.055] border-white/10"><CardContent className="p-5 flex gap-4 items-center"><div className="p-3 rounded-xl bg-violet-500/10"><I className="text-violet-300"/></div><div><div className="text-2xl font-bold">{n||0}</div><div className="text-sm text-slate-400">{label}</div></div></CardContent></Card>;return <div className="min-h-screen bg-slate-950 text-white"><Navigation/><main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16"><div className="flex flex-col md:flex-row justify-between gap-5 mb-7"><div><div className="flex items-center gap-2 mb-2"><div className="text-xs uppercase tracking-[.22em] text-violet-300">Hiring workspace</div>{user?.verified&&<Badge className="bg-emerald-500/15 text-emerald-300"><ShieldCheck size={13} className="mr-1"/>Verified</Badge>}</div><h1 className="text-4xl md:text-5xl font-bold">Build the right music team</h1><p className="text-slate-400 mt-2">Post structured opportunities, review proof of work, shortlist talent and manage the hiring funnel.</p></div><Button asChild className="self-start"><Link to="/employer/post-job"><Plus size={16} className="mr-2"/>Create opportunity</Link></Button></div><div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"><Stat n={d.jobs} label="Total opportunities" icon={Briefcase}/><Stat n={d.published} label="Live" icon={CheckCircle}/><Stat n={d.applications} label="Applications" icon={FileText}/><Stat n={d.shortlisted} label="Shortlisted applicants" icon={Users}/></div><div className="flex flex-wrap items-center justify-between gap-3 mb-4"><h2 className="text-2xl font-semibold">Your opportunity pipeline</h2><div className="flex gap-4 text-sm"><Link to="/employer/applications" className="text-violet-300">All applicants</Link><Link to="/employer/candidates" className="text-violet-300">Search talent</Link></div></div><OpportunityPipeline role="employer" onChanged={load}/></main></div>}
+import { useEffect, useState } from 'react';
+import { Navigation } from '../components/Navigation';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { apiGet } from '../lib/api';
+import { Link } from 'react-router';
+import { Briefcase, FileText, CheckCircle, Plus, Users, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../lib/authContext';
+import { OpportunityPipeline } from '../components/OpportunityPipeline';
+export default function EmployerDashboard() {
+  const [d, setD] = useState<any>({}),
+    { user } = useAuth();
+  const load = () =>
+    apiGet<any>('/dashboard')
+      .then(setD)
+      .catch(() => {});
+  useEffect(() => {
+    load();
+  }, []);
+  const Stat = ({ n, label, icon: I }: { n: any; label: string; icon: any }) => (
+    <Card className="bg-white/[.055] border-white/10">
+      <CardContent className="p-5 flex gap-4 items-center">
+        <div className="p-3 rounded-xl bg-violet-500/10">
+          <I className="text-violet-300" />
+        </div>
+        <div>
+          <div className="text-2xl font-bold">{n || 0}</div>
+          <div className="text-sm text-slate-400">{label}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+      <Navigation />
+      <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
+        <div className="flex flex-col md:flex-row justify-between gap-5 mb-7">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="text-xs uppercase tracking-[.22em] text-violet-300">Hiring workspace</div>
+              {user?.verified && (
+                <Badge className="bg-emerald-500/15 text-emerald-300">
+                  <ShieldCheck size={13} className="mr-1" />
+                  Verified
+                </Badge>
+              )}
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold">Build the right music team</h1>
+            <p className="text-slate-400 mt-2">
+              Post structured opportunities, review proof of work, shortlist talent and manage the hiring funnel.
+            </p>
+          </div>
+          <Button asChild className="self-start">
+            <Link to="/employer/post-job">
+              <Plus size={16} className="mr-2" />
+              Create opportunity
+            </Link>
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Stat n={d.jobs} label="Total opportunities" icon={Briefcase} />
+          <Stat n={d.published} label="Live" icon={CheckCircle} />
+          <Stat n={d.applications} label="Applications" icon={FileText} />
+          <Stat n={d.shortlisted} label="Shortlisted applicants" icon={Users} />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-2xl font-semibold">Your opportunity pipeline</h2>
+          <div className="flex gap-4 text-sm">
+            <Link to="/employer/applications" className="text-violet-300">
+              All applicants
+            </Link>
+            <Link to="/employer/candidates" className="text-violet-300">
+              Search talent
+            </Link>
+          </div>
+        </div>
+        <OpportunityPipeline role="employer" onChanged={load} />
+      </main>
+    </div>
+  );
+}

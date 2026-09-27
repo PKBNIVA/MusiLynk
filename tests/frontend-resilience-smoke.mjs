@@ -16,26 +16,54 @@ for (const source of publicPages) {
   if (/PublicDetailState/.test(source)) {
     // The shared detail state renders the Try again button; the page must wire its retry.
     assert.match(source, /onRetry=/, 'public API screens must provide a retry action');
-    assert.match(detailState, /onRetry\}>\s*Try again\s*</, 'the shared public detail state must render a retry action');
+    assert.match(
+      detailState,
+      /onRetry\}>\s*Try again\s*</,
+      'the shared public detail state must render a retry action',
+    );
   } else {
     assert.match(source, /Try again/, 'public API screens must provide a retry action');
   }
 }
-assert.match(publicPages[3], /acts\.length\s*===\s*0/, 'the public act catalog must distinguish an empty result from a failed request');
+assert.match(
+  publicPages[3],
+  /acts\.length\s*===\s*0/,
+  'the public act catalog must distinguish an empty result from a failed request',
+);
 
 const notifications = await read('../src/app/pages/Notifications.tsx');
 // Whitespace-insensitive: these checks are about behaviour, not formatting.
 const notificationsCompact = notifications.replace(/\s+/g, '');
 assert.doesNotMatch(notificationsCompact, /catch\(\(\)=>\{\}\)/, 'notification failures must not be swallowed');
-assert.match(notificationsCompact, /setItems\(\(?xs\)?=>xs\.map\(\(?x\)?=>\(?x\.id===n\.id\?\{\.\.\.x,readAt\}:x\)?\)\)/, 'mark-read must update optimistically');
-assert.match(notificationsCompact, /catch\(e:any\)\{setItems\(\(?xs\)?=>xs\.map\(\(?x\)?=>\(?x\.id===n\.id\?\{\.\.\.x,readAt:null\}:x\)?\)\)/, 'mark-read failure must roll back optimistic state');
+assert.match(
+  notificationsCompact,
+  /setItems\(\(?xs\)?=>xs\.map\(\(?x\)?=>\(?x\.id===n\.id\?\{\.\.\.x,readAt\}:x\)?\)\)/,
+  'mark-read must update optimistically',
+);
+assert.match(
+  notificationsCompact,
+  /catch\(e:any\)\{setItems\(\(?xs\)?=>xs\.map\(\(?x\)?=>\(?x\.id===n\.id\?\{\.\.\.x,readAt:null\}:x\)?\)\)/,
+  'mark-read failure must roll back optimistic state',
+);
 
 const jobDetails = await read('../src/app/pages/JobDetails.tsx');
-assert.match(jobDetails, /user\?\.role\s*===\s*'jobseeker'\s*&&\s*\(?\s*<div className="flex gap-2 mb-5">/, 'save and report controls must be limited to jobseekers');
+assert.match(
+  jobDetails,
+  /user\?\.role\s*===\s*'jobseeker'\s*&&\s*\(?\s*<div className="flex gap-2 mb-5">/,
+  'save and report controls must be limited to jobseekers',
+);
 
 const legal = await read('../src/app/pages/public/LegalPage.tsx');
-assert.doesNotMatch(legal, /starter terms|before launch|replace this placeholder|operational starter copy|production launch should|production operations should/i, 'public legal pages must not expose internal launch instructions');
-assert.match(legal, /Browser Storage & Session Notice/, 'session notice must describe the implemented browser storage model');
+assert.doesNotMatch(
+  legal,
+  /starter terms|before launch|replace this placeholder|operational starter copy|production launch should|production operations should/i,
+  'public legal pages must not expose internal launch instructions',
+);
+assert.match(
+  legal,
+  /Browser Storage & Session Notice/,
+  'session notice must describe the implemented browser storage model',
+);
 assert.doesNotMatch(legal, /HttpOnly cookie/, 'session notice must not claim an unimplemented cookie model');
 assert.match(legal, /mailto:/, 'support pages must provide an actionable contact link');
 
@@ -56,6 +84,7 @@ const catalogs = await Promise.all([
   read('../src/app/pages/public/PublicTalent.tsx'),
   read('../src/app/pages/public/PublicActs.tsx'),
 ]);
-for (const source of catalogs) assert.match(source, /auth\//, 'empty public catalogs must offer a useful account action');
+for (const source of catalogs)
+  assert.match(source, /auth\//, 'empty public catalogs must offer a useful account action');
 
 console.log('frontend resilience smoke: ok');

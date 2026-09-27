@@ -13,8 +13,14 @@ export function BrandMark({ compact = false, inverse = true }: BrandMarkProps) {
         <AudioWaveform className="verse-brand-wave h-3 w-3" />
       </span>
       <span className="leading-none">
-        <span className={`block text-lg font-black tracking-[-0.03em] ${inverse ? 'text-white' : 'text-slate-950'}`}>Verse</span>
-        {!compact && <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">music works here</span>}
+        <span className={`block text-lg font-black tracking-[-0.03em] ${inverse ? 'text-white' : 'text-slate-950'}`}>
+          Verse
+        </span>
+        {!compact && (
+          <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            music works here
+          </span>
+        )}
       </span>
     </span>
   );

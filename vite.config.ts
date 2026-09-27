@@ -4,7 +4,9 @@ import tailwindcss from '@tailwindcss/vite';
 
 // The deployed commit, so errors and the live deploy check can name the exact build.
 // Vercel exposes VERCEL_GIT_COMMIT_SHA during builds; VITE_RELEASE overrides it.
-const release = (process.env.VITE_RELEASE || process.env.VERCEL_GIT_COMMIT_SHA || '').trim().replace(/[^A-Za-z0-9._-]/g, '');
+const release = (process.env.VITE_RELEASE || process.env.VERCEL_GIT_COMMIT_SHA || '')
+  .trim()
+  .replace(/[^A-Za-z0-9._-]/g, '');
 // Exposed to the app as import.meta.env.VITE_RELEASE (Vite reads VITE_* from process.env).
 process.env.VITE_RELEASE = release;
 
@@ -12,7 +14,9 @@ process.env.VITE_RELEASE = release;
 function releaseMeta(): Plugin {
   return {
     name: 'verse-release-meta',
-    transformIndexHtml: () => [{ tag: 'meta', attrs: { name: 'verse-release', content: release || 'unknown' }, injectTo: 'head' }],
+    transformIndexHtml: () => [
+      { tag: 'meta', attrs: { name: 'verse-release', content: release || 'unknown' }, injectTo: 'head' },
+    ],
   };
 }
 

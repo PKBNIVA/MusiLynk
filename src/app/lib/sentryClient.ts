@@ -12,7 +12,9 @@ function secrets(): string[] {
     try {
       const token = window[store].getItem('verse_access_token');
       if (token) found.push(token);
-    } catch { /* storage blocked */ }
+    } catch {
+      /* storage blocked */
+    }
   }
   return found;
 }
@@ -53,7 +55,9 @@ export function initSentry(options: InitOptions) {
   });
   // Performance tracing is its own chunk so error-only builds (the default) never download it.
   if (options.tracesSampleRate > 0) {
-    void import('./sentryTracing').then(module => addIntegration(module.browserTracingIntegration())).catch(() => undefined);
+    void import('./sentryTracing')
+      .then((module) => addIntegration(module.browserTracingIntegration()))
+      .catch(() => undefined);
   }
 }
 
@@ -66,14 +70,14 @@ function applyContext(scope: Scope, context?: ReportContext) {
 }
 
 export function captureError(error: unknown, context?: ReportContext): string {
-  return withScope(scope => {
+  return withScope((scope) => {
     applyContext(scope, context);
     return captureException(error);
   });
 }
 
 export function captureText(message: string, context?: ReportContext): string {
-  return withScope(scope => {
+  return withScope((scope) => {
     applyContext(scope, context);
     return captureMessage(message);
   });

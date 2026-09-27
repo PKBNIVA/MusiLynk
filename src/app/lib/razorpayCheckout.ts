@@ -1,4 +1,4 @@
-import {apiPost} from './api';
+import { apiPost } from './api';
 
 // Opens Razorpay Checkout for a server-created subscription or order and resolves once the
 // customer finishes: `success` carries the handler payload (razorpay_* ids + signature) for the
@@ -21,10 +21,9 @@ export type RazorpayCheckoutConfig = {
 };
 
 export type CheckoutResult =
-  | {status: 'success'; response: Record<string, string>}
-  | {status: 'dismissed'; lastError?: string};
+  { status: 'success'; response: Record<string, string> } | { status: 'dismissed'; lastError?: string };
 
-type Options = {description: string; amountLabel?: string};
+type Options = { description: string; amountLabel?: string };
 
 const CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
 
@@ -33,8 +32,12 @@ function loadCheckoutScript(): Promise<void> {
     if ((window as any).Razorpay) return resolve();
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${CHECKOUT_SRC}"]`);
     const script = existing || document.createElement('script');
-    script.addEventListener('load', () => resolve(), {once: true});
-    script.addEventListener('error', () => reject(new Error('Unable to load Razorpay Checkout. Check your connection and try again.')), {once: true});
+    script.addEventListener('load', () => resolve(), { once: true });
+    script.addEventListener(
+      'error',
+      () => reject(new Error('Unable to load Razorpay Checkout. Check your connection and try again.')),
+      { once: true },
+    );
     if (!existing) {
       script.src = CHECKOUT_SRC;
       document.body.appendChild(script);
@@ -42,29 +45,38 @@ function loadCheckoutScript(): Promise<void> {
   });
 }
 
-export async function openRazorpayCheckout(checkout: RazorpayCheckoutConfig, options: Options): Promise<CheckoutResult> {
+export async function openRazorpayCheckout(
+  checkout: RazorpayCheckoutConfig,
+  options: Options,
+): Promise<CheckoutResult> {
   if (checkout.simulator) return openSimulatedCheckout(checkout, options);
   await loadCheckoutScript();
-  return new Promise<CheckoutResult>(resolve => {
+  return new Promise<CheckoutResult>((resolve) => {
     let lastError: string | undefined;
     const rz = new (window as any).Razorpay({
       key: checkout.keyId,
-      ...(checkout.subscriptionId ? {subscription_id: checkout.subscriptionId} : {order_id: checkout.orderId, amount: checkout.amount, currency: checkout.currency}),
+      ...(checkout.subscriptionId
+        ? { subscription_id: checkout.subscriptionId }
+        : { order_id: checkout.orderId, amount: checkout.amount, currency: checkout.currency }),
       name: 'Verse',
       description: options.description,
-      handler: (response: Record<string, string>) => resolve({status: 'success', response}),
-      modal: {ondismiss: () => resolve({status: 'dismissed', lastError})},
-      theme: {color: '#7c3aed'},
+      handler: (response: Record<string, string>) => resolve({ status: 'success', response }),
+      modal: { ondismiss: () => resolve({ status: 'dismissed', lastError }) },
+      theme: { color: '#7c3aed' },
     });
     // Razorpay keeps the modal open after a decline so the customer can retry.
-    rz.on('payment.failed', (event: any) => { lastError = event?.error?.description || 'The payment was declined.'; });
+    rz.on('payment.failed', (event: any) => {
+      lastError = event?.error?.description || 'The payment was declined.';
+    });
     rz.open();
   });
 }
 
 function openSimulatedCheckout(checkout: RazorpayCheckoutConfig, options: Options): Promise<CheckoutResult> {
-  return new Promise<CheckoutResult>(resolve => {
-    const target = checkout.subscriptionId ? {subscriptionId: checkout.subscriptionId} : {orderId: checkout.orderId};
+  return new Promise<CheckoutResult>((resolve) => {
+    const target = checkout.subscriptionId
+      ? { subscriptionId: checkout.subscriptionId }
+      : { orderId: checkout.orderId };
     const previousFocus = document.activeElement as HTMLElement | null;
     let lastError: string | undefined;
     let busy = false;
@@ -98,16 +110,21 @@ function openSimulatedCheckout(checkout: RazorpayCheckoutConfig, options: Option
       resolve(result);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !busy) { event.stopPropagation(); close({status: 'dismissed', lastError}); }
+      if (event.key === 'Escape' && !busy) {
+        event.stopPropagation();
+        close({ status: 'dismissed', lastError });
+      }
     };
     const run = async (outcome: string) => {
       if (busy) return;
-      if (outcome === 'dismiss') return close({status: 'dismissed', lastError});
+      if (outcome === 'dismiss') return close({ status: 'dismissed', lastError });
       busy = true;
-      buttons.forEach(button => { button.disabled = true; });
+      buttons.forEach((button) => {
+        button.disabled = true;
+      });
       try {
-        const result: any = await apiPost('/dev/razorpay/checkout', {...target, outcome});
-        if (result.response) return close({status: 'success', response: result.response});
+        const result: any = await apiPost('/dev/razorpay/checkout', { ...target, outcome });
+        if (result.response) return close({ status: 'success', response: result.response });
         lastError = result.error?.description || 'The payment was declined.';
         errorBox.textContent = `${lastError} You can try again or close checkout.`;
         errorBox.classList.remove('hidden');
@@ -116,10 +133,12 @@ function openSimulatedCheckout(checkout: RazorpayCheckoutConfig, options: Option
         errorBox.classList.remove('hidden');
       } finally {
         busy = false;
-        buttons.forEach(button => { button.disabled = false; });
+        buttons.forEach((button) => {
+          button.disabled = false;
+        });
       }
     };
-    buttons.forEach(button => button.addEventListener('click', () => run(button.dataset.outcome!)));
+    buttons.forEach((button) => button.addEventListener('click', () => run(button.dataset.outcome!)));
     document.addEventListener('keydown', onKey, true);
     document.body.appendChild(overlay);
     buttons[0].focus();

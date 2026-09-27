@@ -1,11 +1,11 @@
-import { useState, type FormEvent, type ReactNode } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Button } from "../ui/button";
+import { useState, type FormEvent, type ReactNode } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Button } from '../ui/button';
 
 // Accessible replacements for window.prompt/confirm used by the booking & collaboration pages.
 // Radix Dialog gives focus trapping, Escape to close and aria-modal labelling.
 
-const panel = "bg-slate-950 text-white border-white/15 max-h-[90dvh] overflow-y-auto";
+const panel = 'bg-slate-950 text-white border-white/15 max-h-[90dvh] overflow-y-auto';
 
 type FormDialogProps = {
   open: boolean;
@@ -22,7 +22,20 @@ type FormDialogProps = {
   children: ReactNode;
 };
 
-export function FormDialog({ open, onOpenChange, title, description, submitLabel, busyLabel, busy, canSubmit = true, error, wide, onSubmit, children }: FormDialogProps) {
+export function FormDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  submitLabel,
+  busyLabel,
+  busy,
+  canSubmit = true,
+  error,
+  wide,
+  onSubmit,
+  children,
+}: FormDialogProps) {
   function submit(e: FormEvent) {
     e.preventDefault();
     if (busy || !canSubmit) return;
@@ -30,7 +43,7 @@ export function FormDialog({ open, onOpenChange, title, description, submitLabel
   }
   return (
     <Dialog open={open} onOpenChange={(next) => !busy && onOpenChange(next)}>
-      <DialogContent className={`${panel} ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"}`}>
+      <DialogContent className={`${panel} ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}>
         <form onSubmit={submit} className="space-y-4" noValidate>
           <DialogHeader>
             <DialogTitle className="text-2xl">{title}</DialogTitle>
@@ -47,7 +60,7 @@ export function FormDialog({ open, onOpenChange, title, description, submitLabel
               Cancel
             </Button>
             <Button type="submit" disabled={busy || !canSubmit} aria-busy={busy}>
-              {busy ? busyLabel || "Saving…" : submitLabel}
+              {busy ? busyLabel || 'Saving…' : submitLabel}
             </Button>
           </DialogFooter>
         </form>
@@ -68,9 +81,9 @@ export type ConfirmRequest = {
 export function useConfirm() {
   const [request, setRequest] = useState<ConfirmRequest | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const ask = (next: ConfirmRequest) => {
-    setError("");
+    setError('');
     setRequest(next);
   };
   const element = (
@@ -78,7 +91,9 @@ export function useConfirm() {
       <DialogContent className={`${panel} sm:max-w-md`} role="alertdialog">
         <DialogHeader>
           <DialogTitle>{request?.title}</DialogTitle>
-          {request?.description && <DialogDescription className="text-slate-400">{request.description}</DialogDescription>}
+          {request?.description && (
+            <DialogDescription className="text-slate-400">{request.description}</DialogDescription>
+          )}
         </DialogHeader>
         {error && (
           <p role="alert" className="text-sm text-rose-300">
@@ -90,24 +105,24 @@ export function useConfirm() {
             Keep as is
           </Button>
           <Button
-            variant={request?.destructive ? "destructive" : "default"}
+            variant={request?.destructive ? 'destructive' : 'default'}
             disabled={busy}
             aria-busy={busy}
             onClick={async () => {
               if (!request) return;
               setBusy(true);
-              setError("");
+              setError('');
               try {
                 await request.action();
                 setRequest(null);
               } catch (e: any) {
-                setError(e?.message || "Something went wrong. Try again.");
+                setError(e?.message || 'Something went wrong. Try again.');
               } finally {
                 setBusy(false);
               }
             }}
           >
-            {busy ? "Working…" : request?.confirmLabel}
+            {busy ? 'Working…' : request?.confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -116,7 +131,17 @@ export function useConfirm() {
   return { ask, element };
 }
 
-export function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: ReactNode }) {
+export function Field({
+  label,
+  htmlFor,
+  hint,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  hint?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="space-y-1">
       <label htmlFor={htmlFor} className="text-sm text-slate-300">
@@ -128,5 +153,5 @@ export function Field({ label, htmlFor, hint, children }: { label: string; htmlF
   );
 }
 
-export const textareaClass = "w-full min-h-24 rounded-xl bg-slate-900 border border-white/10 p-3 text-sm";
-export const selectClass = "w-full h-11 rounded-xl bg-slate-900 border border-white/10 px-3 text-sm";
+export const textareaClass = 'w-full min-h-24 rounded-xl bg-slate-900 border border-white/10 p-3 text-sm';
+export const selectClass = 'w-full h-11 rounded-xl bg-slate-900 border border-white/10 px-3 text-sm';

@@ -38,7 +38,8 @@ globalThis.window = {
 };
 
 const apiModule = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
-const { apiDelete, apiGet, apiPost, ApiError, hasAccessToken, onAccessTokenChange, setAccessToken, uploadMedia } = apiModule;
+const { apiDelete, apiGet, apiPost, ApiError, hasAccessToken, onAccessTokenChange, setAccessToken, uploadMedia } =
+  apiModule;
 
 // The legacy per-tab token is migrated to localStorage on first read so the session survives new tabs.
 assert.equal(hasAccessToken(), true);
@@ -82,7 +83,10 @@ globalThis.fetch = async () => {
   calls += 1;
   throw new TypeError('offline');
 };
-await assert.rejects(apiPost('/bookings', { actId: 1 }), (error) => error instanceof ApiError && error.code === 'NETWORK_ERROR');
+await assert.rejects(
+  apiPost('/bookings', { actId: 1 }),
+  (error) => error instanceof ApiError && error.code === 'NETWORK_ERROR',
+);
 assert.equal(calls, 1);
 
 // Empty successful responses are valid and must not fail JSON parsing.
@@ -124,24 +128,25 @@ globalThis.fetch = async () => {
     headers: { 'content-type': 'application/json', 'retry-after': '2' },
   });
 };
-await assert.rejects(
-  apiGet('/busy', { timeoutMs: 100 }),
-  (error) => error instanceof ApiError && error.status === 503,
-);
+await assert.rejects(apiGet('/busy', { timeoutMs: 100 }), (error) => error instanceof ApiError && error.status === 503);
 assert.equal(calls, 1);
 
 // Correlation IDs are preserved for support and incident diagnosis.
-globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Unavailable' }), {
-  status: 503,
-  headers: { 'content-type': 'application/json', 'x-request-id': 'req-test-123' },
-});
+globalThis.fetch = async () =>
+  new Response(JSON.stringify({ error: 'Unavailable' }), {
+    status: 503,
+    headers: { 'content-type': 'application/json', 'x-request-id': 'req-test-123' },
+  });
 await assert.rejects(apiGet('/jobs'), (error) => error instanceof ApiError && error.requestId === 'req-test-123');
 
 // A 401 for a token another tab has already replaced must not sign that newer session out.
 setAccessToken('old-token');
 globalThis.fetch = async () => {
   localStorage.setItem('verse_access_token', 'new-token-from-other-tab');
-  return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'content-type': 'application/json' } });
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    status: 401,
+    headers: { 'content-type': 'application/json' },
+  });
 };
 await assert.rejects(apiGet('/jobs'), (error) => error instanceof ApiError && error.status === 401);
 assert.equal(localStorage.getItem('verse_access_token'), 'new-token-from-other-tab');
@@ -149,10 +154,11 @@ assert.deepEqual(redirects, []);
 
 // A 401 clears the stale session and redirects protected pages only once.
 setAccessToken('expired-token');
-globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Unauthorized' }), {
-  status: 401,
-  headers: { 'content-type': 'application/json' },
-});
+globalThis.fetch = async () =>
+  new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    status: 401,
+    headers: { 'content-type': 'application/json' },
+  });
 await assert.rejects(apiGet('/me'), (error) => error instanceof ApiError && error.status === 401);
 assert.equal(localStorage.getItem('verse_access_token'), null);
 assert.equal(sessionStorage.getItem('verse_return_to'), '/employer/messages?thread=42');
@@ -173,11 +179,24 @@ assert.equal(calls, 1);
 const xhrRequests = [];
 let xhrRespond = () => ({ status: 201, body: { url: '/uploads/demo.mp3' } });
 globalThis.XMLHttpRequest = class {
-  constructor() { this.headers = {}; this.upload = {}; this.responseHeaders = { 'content-type': 'application/json' }; }
-  open(method, url) { this.method = method; this.url = url; }
-  setRequestHeader(name, value) { this.headers[name.toLowerCase()] = value; }
-  getResponseHeader(name) { return this.responseHeaders[name.toLowerCase()] ?? null; }
-  abort() { this.onabort?.(); }
+  constructor() {
+    this.headers = {};
+    this.upload = {};
+    this.responseHeaders = { 'content-type': 'application/json' };
+  }
+  open(method, url) {
+    this.method = method;
+    this.url = url;
+  }
+  setRequestHeader(name, value) {
+    this.headers[name.toLowerCase()] = value;
+  }
+  getResponseHeader(name) {
+    return this.responseHeaders[name.toLowerCase()] ?? null;
+  }
+  abort() {
+    this.onabort?.();
+  }
   send(body) {
     this.body = body;
     xhrRequests.push(this);
@@ -213,20 +232,39 @@ assert.equal(uploadHeaders['content-type'], 'audio/mpeg');
 assert.deepEqual(progress, [0, 50, 100]);
 
 // Server rejection of the streamed body surfaces the server's message and code.
-xhrRespond = () => ({ status: 422, body: { error: 'File contents do not match the declared type.', code: 'UPLOAD_REJECTED' } });
-await assert.rejects(uploadMedia(file), (error) => error instanceof ApiError && error.code === 'UPLOAD_REJECTED' && /do not match/.test(error.message));
+xhrRespond = () => ({
+  status: 422,
+  body: { error: 'File contents do not match the declared type.', code: 'UPLOAD_REJECTED' },
+});
+await assert.rejects(
+  uploadMedia(file),
+  (error) => error instanceof ApiError && error.code === 'UPLOAD_REJECTED' && /do not match/.test(error.message),
+);
 
 // Unsupported files are refused before any request.
 fetchCalls.length = 0;
-await assert.rejects(uploadMedia(new File(['<svg/>'], 'x.svg', { type: 'image/svg+xml' })), (error) => error.code === 'UNSUPPORTED_TYPE');
+await assert.rejects(
+  uploadMedia(new File(['<svg/>'], 'x.svg', { type: 'image/svg+xml' })),
+  (error) => error.code === 'UNSUPPORTED_TYPE',
+);
 assert.equal(fetchCalls.length, 0);
 
 // Direct mode: POST policy form (fields first, file last) to the bucket, then server verification.
 globalThis.fetch = async (url, options) => {
   fetchCalls.push([String(url), options.method]);
   const body = String(url).endsWith('/uploads/presign')
-    ? { mode: 'direct', id: 'upl_1', method: 'POST', uploadUrl: 'https://bucket.example.test', fields: { key: 'uploads/u/k/demo.mp3', policy: 'p' }, headers: {} }
-    : { url: 'https://media.example.test/uploads/u/k/demo.mp3', upload: { id: 'upl_1', contentType: 'audio/mpeg', byteSize: 5 } };
+    ? {
+        mode: 'direct',
+        id: 'upl_1',
+        method: 'POST',
+        uploadUrl: 'https://bucket.example.test',
+        fields: { key: 'uploads/u/k/demo.mp3', policy: 'p' },
+        headers: {},
+      }
+    : {
+        url: 'https://media.example.test/uploads/u/k/demo.mp3',
+        upload: { id: 'upl_1', contentType: 'audio/mpeg', byteSize: 5 },
+      };
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
 };
 xhrRespond = () => ({ status: 201, body: {} });
@@ -238,10 +276,22 @@ assert.deepEqual([...xhrRequests.at(-1).body.keys()], ['key', 'policy', 'file'])
 assert.ok(fetchCalls.some(([url, method]) => url.endsWith('/uploads/upl_1/complete') && method === 'POST'));
 
 // Blocked site data: every storage access throws, but the session still works in memory.
-const blocked = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); }, removeItem() { throw new Error('blocked'); } };
+const blocked = {
+  getItem() {
+    throw new Error('blocked');
+  },
+  setItem() {
+    throw new Error('blocked');
+  },
+  removeItem() {
+    throw new Error('blocked');
+  },
+};
 globalThis.localStorage = blocked;
 globalThis.sessionStorage = blocked;
-const blockedModule = await import(`data:text/javascript;base64,${Buffer.from(`${code}\n// blocked storage`).toString('base64')}`);
+const blockedModule = await import(
+  `data:text/javascript;base64,${Buffer.from(`${code}\n// blocked storage`).toString('base64')}`
+);
 assert.equal(blockedModule.hasAccessToken(), false);
 blockedModule.setAccessToken('memory-token');
 assert.equal(blockedModule.hasAccessToken(), true);
@@ -249,10 +299,18 @@ blockedModule.setAccessToken(null);
 assert.equal(blockedModule.hasAccessToken(), false);
 
 // Storage that reads but cannot write (full or read-only) must not hide the in-memory token.
-const readOnly = { getItem: () => null, setItem() { throw new Error('quota'); }, removeItem() {} };
+const readOnly = {
+  getItem: () => null,
+  setItem() {
+    throw new Error('quota');
+  },
+  removeItem() {},
+};
 globalThis.localStorage = readOnly;
 globalThis.sessionStorage = readOnly;
-const readOnlyModule = await import(`data:text/javascript;base64,${Buffer.from(`${code}\n// read-only storage`).toString('base64')}`);
+const readOnlyModule = await import(
+  `data:text/javascript;base64,${Buffer.from(`${code}\n// read-only storage`).toString('base64')}`
+);
 readOnlyModule.setAccessToken('memory-token');
 assert.equal(readOnlyModule.hasAccessToken(), true);
 

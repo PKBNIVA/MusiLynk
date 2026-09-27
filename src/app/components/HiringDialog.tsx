@@ -1,10 +1,20 @@
-import type {FormEvent, ReactNode} from 'react';
-import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from './ui/dialog';
-import {Button} from './ui/button';
+import type { FormEvent, ReactNode } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Button } from './ui/button';
 
 // Accessible replacement for window.prompt in the hiring pages: a titled modal form that
 // traps focus, closes on Escape and submits on Enter.
-export function FormDialog({open, onOpenChange, title, description, submitLabel, busy = false, submitDisabled = false, onSubmit, children}: {
+export function FormDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  submitLabel,
+  busy = false,
+  submitDisabled = false,
+  onSubmit,
+  children,
+}: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -20,7 +30,12 @@ export function FormDialog({open, onOpenChange, title, description, submitLabel,
     if (!busy && !submitDisabled) void onSubmit();
   }
   return (
-    <Dialog open={open} onOpenChange={next => { if (!busy) onOpenChange(next); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!busy) onOpenChange(next);
+      }}
+    >
       <DialogContent className="bg-slate-950 text-white border-white/15">
         <form onSubmit={submit} className="grid gap-4">
           <DialogHeader>
@@ -29,8 +44,12 @@ export function FormDialog({open, onOpenChange, title, description, submitLabel,
           </DialogHeader>
           {children}
           <DialogFooter>
-            <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={busy || submitDisabled} aria-busy={busy}>{busy ? 'Saving…' : submitLabel}</Button>
+            <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy || submitDisabled} aria-busy={busy}>
+              {busy ? 'Saving…' : submitLabel}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

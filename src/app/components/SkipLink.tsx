@@ -6,7 +6,7 @@ export function SkipLink() {
     event.preventDefault();
     if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
     main.focus();
-    main.scrollIntoView({block: 'start'});
+    main.scrollIntoView({ block: 'start' });
   };
   return (
     <a

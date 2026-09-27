@@ -47,7 +47,7 @@ No endpoint accepts `limit`/`page`/`offset`; such parameters are ignored (negati
 are harmless). Lists are capped server-side where noted; **unbounded** lists return every row
 the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 
-### Rate limits (fixed windows, `Rails.cache`; per process unless `REDIS_URL` is set)
+### Rate limits (fixed windows, `Rails.cache`: Solid Cache in PostgreSQL in production, or Redis when `REDIS_URL` is set)
 
 | Action | Limit |
 | --- | --- |

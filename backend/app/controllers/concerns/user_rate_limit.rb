@@ -1,5 +1,5 @@
-# Fixed-window per-user rate limit backed by Rails.cache (memory store per process
-# unless REDIS_URL is configured). Fails open if the cache is unavailable.
+# Fixed-window per-user rate limit backed by Rails.cache (Solid Cache in PostgreSQL in
+# production, or Redis when REDIS_URL is set). Fails open if the cache is unavailable.
 module UserRateLimit
   extend ActiveSupport::Concern
 

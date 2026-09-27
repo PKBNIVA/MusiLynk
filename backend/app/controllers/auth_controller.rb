@@ -14,6 +14,7 @@ class AuthController < ApplicationController
   # Per-code attempts are capped by SignInCode::MAX_ATTEMPTS; this IP budget stops
   # one client spraying guesses across many addresses' codes.
   OTP_VERIFY_FAILURES_PER_IP = 25
+  OTP_UNAVAILABLE_MESSAGE = "Email sign-in codes are temporarily unavailable. Use your password instead.".freeze
   OTP_REQUEST_MESSAGE = "If this email can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.".freeze
   OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
   PRODUCTION_FRONTEND_URL = "https://verse-music-platform.vercel.app".freeze
@@ -59,7 +60,14 @@ class AuthController < ApplicationController
   # existing account gets a sign-in code; an unknown address with name+role gets
   # a sign-up code (the account is created on verify); any other address gets an
   # unusable placeholder row so the work done per request is the same.
+  # GET /auth/methods -> which sign-in paths work right now, so the sign-in page never
+  # offers an emailed code (or a reset link) that cannot be delivered.
+  def sign_in_methods
+    render json: { signInCodes: sign_in_codes_available?, password: password_login_enabled?, emailDelivery: EmailDelivery.configured? }
+  end
+
   def otp_request
+    return render_error(OTP_UNAVAILABLE_MESSAGE, :service_unavailable, "OTP_UNAVAILABLE") unless sign_in_codes_available?
     email = normalized_email
     return render_error("Enter a valid email address.", :unprocessable_content, "INVALID_EMAIL") unless email.match?(URI::MailTo::EMAIL_REGEXP) && email.length <= 254
     sign_up = otp_sign_up_params
@@ -188,6 +196,9 @@ class AuthController < ApplicationController
   def normalized_email = params[:email].to_s.strip.downcase
 
   def password_login_enabled? = ENV.fetch("PASSWORD_LOGIN_ENABLED", "true").strip.downcase != "false"
+
+  # Outside production a missing provider falls back to the on-screen debug code.
+  def sign_in_codes_available? = EmailDelivery.configured? || !Rails.env.production?
 
   # Validated the same way whether or not the address has an account, so a
   # validation error never reveals account existence. Returns nil for sign-in.

@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { useAuth } from '../lib/authContext';
-import { consumeReturnTo, requestSignInCode } from '../lib/api';
+import { consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
 import { toast } from 'sonner';
 import { BrandMark } from '../components/BrandMark';
 
@@ -35,6 +35,10 @@ export default function AuthPage() {
   const [loading,setLoading] = useState(false);
   const [error,setError] = useState('');
   const [cooldown,setCooldown] = useState(0);
+  /* Until the API says otherwise both paths are offered; an explicit `false` means email cannot be delivered. */
+  const [codesAvailable,setCodesAvailable] = useState(true);
+  const [emailAvailable,setEmailAvailable] = useState(true);
+  const touched = useRef(false);
   /* Input does not forward refs, so the code field is focused by id. */
   const focusCode = () => document.getElementById('auth-code')?.focus();
   const verifying = useRef(false);
@@ -45,6 +49,18 @@ export default function AuthPage() {
     return () => window.clearTimeout(timer);
   }, [cooldown]);
   useEffect(() => { if (codeStep === 'code') focusCode(); }, [codeStep]);
+  useEffect(() => {
+    let active = true;
+    getSignInMethods().then(m => {
+      if (!active) return;
+      if (m.emailDelivery === false) setEmailAvailable(false);
+      if (m.signInCodes === false && m.password !== false) {
+        setCodesAvailable(false);
+        if (!touched.current) setMethod('password');
+      }
+    }).catch(() => { /* keep both paths; the code request reports its own error */ });
+    return () => { active = false; };
+  }, []);
 
   const go = (r:string, complete=true) => {
     const requested=(location.state as any)?.from??consumeReturnTo();
@@ -53,7 +69,7 @@ export default function AuthPage() {
   };
   /* Code-flow errors are shown inline (role=alert) next to the field; password errors keep the existing toast. */
   const fail = (e:any, fallback:string) => setError(e?.message||fallback);
-  const switchMethod = (next:'code'|'password') => { setMethod(next); setCodeStep('email'); setCode(''); setError(''); };
+  const switchMethod = (next:'code'|'password') => { touched.current = true; setMethod(next); setCodeStep('email'); setCode(''); setError(''); };
   const switchMode = () => { setMode(mode==='login'?'register':'login'); setCodeStep('email'); setCode(''); setError(''); };
 
   async function submit(e:React.FormEvent) {
@@ -72,7 +88,10 @@ export default function AuthPage() {
       setDebugCode(response.debugCode);
       setCode(''); setCodeStep('code'); setCooldown(RESEND_COOLDOWN_SECONDS);
       toast.success('Check your email for a 6-digit code');
-    } catch(e:any) { fail(e,'Could not send a code. Try again.'); }
+    } catch(e:any) {
+      if (e?.code === 'OTP_UNAVAILABLE') { setCodesAvailable(false); setMethod('password'); toast.error(e.message); }
+      else fail(e,'Could not send a code. Try again.');
+    }
     finally { setLoading(false); }
   }
 
@@ -135,8 +154,8 @@ export default function AuthPage() {
               {!isAdmin&&codeStep==='email'&&<div className="mb-5 grid grid-cols-2 rounded-xl border border-white/10 bg-black/15 p-1"><Link to="/auth/jobseeker" className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role==='jobseeker'?'bg-white/10 text-white':'text-slate-400'}`}><Users size={15}/>Professional</Link><Link to="/auth/employer" className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role==='employer'?'bg-white/10 text-white':'text-slate-400'}`}><Briefcase size={15}/>Employer</Link></div>}
               {method==='code'?codeForms:passwordForm}
               {codeStep==='email'&&<div className="mt-3 flex items-center justify-between gap-3">
-                <button type="button" onClick={()=>switchMethod(method==='code'?'password':'code')} className="min-h-11 text-sm text-slate-300 hover:text-white">{method==='code'?'Use password instead':'Email me a code instead'}</button>
-                {method==='password'&&mode==='login'&&<Link to="/forgot-password" className="text-xs text-slate-400 hover:text-white">Forgot password?</Link>}
+                {(method==='code'||codesAvailable)&&<button type="button" onClick={()=>switchMethod(method==='code'?'password':'code')} className="min-h-11 text-sm text-slate-300 hover:text-white">{method==='code'?'Use password instead':'Email me a code instead'}</button>}
+                {method==='password'&&mode==='login'&&emailAvailable&&<Link to="/forgot-password" className="text-xs text-slate-400 hover:text-white">Forgot password?</Link>}
               </div>}
               {!isAdmin&&codeStep==='email'&&<button onClick={switchMode} className="mt-3 min-h-11 w-full text-sm font-semibold text-violet-200 hover:text-white">{mode==='login'?`New to Verse? Create ${role==='employer'?'an employer':'a professional'} account`:'Already have an account? Sign in'}</button>}
               {mode==='register'&&<p className="mt-4 text-center text-xs leading-5 text-slate-400">By joining, you agree to our <Link className="text-slate-200 underline" to="/terms">Terms</Link> and <Link className="text-slate-200 underline" to="/privacy">Privacy Policy</Link>.</p>}

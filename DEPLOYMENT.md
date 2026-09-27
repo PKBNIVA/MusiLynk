@@ -67,6 +67,16 @@ controlled production test shows sign-in codes reaching real inboxes (Brevo acce
 is not enough); otherwise every user is locked out. When `false`, `POST /api/auth/login`
 returns 403 `PASSWORD_LOGIN_DISABLED` (admins included) while `/api/auth/otp/request`
 and `/api/auth/otp/verify` keep working. Roll back by setting it to `true` again.
+Without an email provider in production, `GET /api/auth/methods` reports `signInCodes: false`:
+the sign-in page opens on password sign-in and hides "Email me a code" and "Forgot password?",
+and `/api/auth/otp/request` answers 503 `OTP_UNAVAILABLE` (identical for every address, no code
+issued). Adding `BREVO_API_KEY` switches the page back to codes on the next deploy.
+
+Current production sender (set 2026-09-27): `BREVO_SENDER_EMAIL=no-reply@notify.alienbrains.in`,
+`BREVO_SENDER_NAME=Verse`. DNS verified the same day: SPF `include:spf.brevo.com`, DKIM
+`brevo1`/`brevo2._domainkey` CNAMEs to Brevo, DMARC `p=none` with Brevo reporting.
+`BREVO_API_KEY` is still to be added (Brevo → SMTP & API → API keys → Generate).
+
 Codes expire after 10 minutes, are single use, allow 5 attempts, and are limited to 5
 requests per email and per IP per hour. Outside production, and only when no email
 provider is configured, the request response includes `debugCode` for local QA.

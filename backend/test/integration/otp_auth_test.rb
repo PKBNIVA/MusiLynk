@@ -254,11 +254,43 @@ class OtpAuthTest < ActionDispatch::IntegrationTest
 
   test "debugCode is never returned in production" do
     production = ActiveSupport::EnvironmentInquirer.new("production")
-    with_env(NO_PROVIDER_ENV) do
+    with_env(PROVIDER_ENV) do
       Rails.stub(:env, production) { post "/api/auth/otp/request", params: { email: "coder@example.com" }, as: :json }
     end
     assert_response :success
     assert_nil response.parsed_body["debugCode"]
+  end
+
+  test "production without an email provider refuses to promise a code, the same way for every address" do
+    production = ActiveSupport::EnvironmentInquirer.new("production")
+    bodies = %w[coder@example.com nobody@example.com].map do |email|
+      with_env(NO_PROVIDER_ENV) do
+        Rails.stub(:env, production) { post "/api/auth/otp/request", params: { email: }, as: :json }
+      end
+      assert_response :service_unavailable
+      response.parsed_body
+    end
+    assert_equal "OTP_UNAVAILABLE", bodies.first["code"]
+    assert_equal bodies.first, bodies.last, "the response must not reveal whether an account exists"
+    assert_nil bodies.first["debugCode"]
+    assert_equal 0, SignInCode.count, "no code is issued that could never be delivered"
+  end
+
+  test "sign-in methods report whether emailed codes can be delivered" do
+    production = ActiveSupport::EnvironmentInquirer.new("production")
+    with_env(NO_PROVIDER_ENV) { Rails.stub(:env, production) { get "/api/auth/methods" } }
+    assert_response :success
+    assert_equal({ "signInCodes" => false, "password" => true, "emailDelivery" => false }, response.parsed_body)
+
+    with_env(PROVIDER_ENV) { Rails.stub(:env, production) { get "/api/auth/methods" } }
+    assert_equal({ "signInCodes" => true, "password" => true, "emailDelivery" => true }, response.parsed_body)
+
+    with_env(NO_PROVIDER_ENV) { get "/api/auth/methods" }
+    assert response.parsed_body["signInCodes"], "outside production the on-screen debug code stands in for email"
+    assert_equal false, response.parsed_body["emailDelivery"]
+
+    with_env(NO_PROVIDER_ENV.merge("PASSWORD_LOGIN_ENABLED" => "false")) { get "/api/auth/methods" }
+    assert_equal false, response.parsed_body["password"]
   end
 
   test "codes do not appear in logs" do

@@ -5,6 +5,7 @@ import {Card,CardContent} from '../components/ui/card';
 import {Button} from '../components/ui/button';
 import {Textarea} from '../components/ui/textarea';
 import {Badge} from '../components/ui/badge';
+import {ReportDialog} from '../components/ReportDialog';
 import {apiDelete,apiGet,apiPost} from '../lib/api';
 import {useAuth} from '../lib/authContext';
 import {toast} from 'sonner';
@@ -13,7 +14,7 @@ import {Bookmark,BookmarkCheck,Flag,MapPin,ShieldCheck,CalendarDays,Wallet,Brief
 const title=(x:string)=>String(x||'').replace(/(^|\s)\S/g,m=>m.toUpperCase());
 
 export default function JobDetails(){const{id}=useParams(),nav=useNavigate(),{user}=useAuth();
-const[job,setJob]=useState<any>(),[cover,setCover]=useState(''),[answers,setAnswers]=useState<Record<number,string>>({}),[busy,setBusy]=useState(false),[loadError,setLoadError]=useState('');
+const[job,setJob]=useState<any>(),[cover,setCover]=useState(''),[answers,setAnswers]=useState<Record<number,string>>({}),[busy,setBusy]=useState(false),[loadError,setLoadError]=useState(''),[reporting,setReporting]=useState(false);
 const load=()=>{setLoadError('');return apiGet<any>(`/jobs/${id}`).then(d=>{if(!d?.job)throw new Error('Opportunity not found');setJob(d.job)}).catch((e:any)=>setLoadError(e?.message||'This opportunity could not be loaded.'))};
 useEffect(()=>{setJob(undefined);load()},[id]);
 const backTo=user?.role==='employer'?'/employer':'/jobseeker/jobs';
@@ -22,10 +23,8 @@ nav(`/jobseeker/messages?conversation=${d.conversation.id}`)}catch(e:any){toast.
 try{await apiPost(`/jobs/${id}/apply`,{coverLetter:cover,screeningAnswers:(job.screeningQuestions||[]).map((q:string,i:number)=>`${q} :: ${answers[i]||''}`)});
 setJob({...job,applied:true});
 toast.success('Application submitted')}catch(e:any){toast.error(e.message)}finally{setBusy(false)}}async function save(){try{job.saved?await apiDelete(`/saved-jobs/${id}`):await apiPost(`/saved-jobs/${id}`);
-setJob({...job,saved:!job.saved})}catch(e:any){toast.error(e.message)}}async function report(){const reason=window.prompt('What is wrong with this listing? e.g. asks for payment, misleading terms, unsafe contact request');
-if(!reason)return;
-try{await apiPost('/reports',{entityType:'job',entityId:id,reason});
-toast.success('Report sent to moderation')}catch(e:any){toast.error(e.message)}}if(!job)return <div className="min-h-screen bg-slate-950 text-white">
+setJob({...job,saved:!job.saved})}catch(e:any){toast.error(e.message)}}async function report({reason,details}:{reason:string;details:string}){await apiPost('/reports',{entityType:'job',entityId:id,reason,...(details?{details}:{})});
+toast.success('Report sent to moderation')}if(!job)return <div className="min-h-screen bg-slate-950 text-white">
 <Navigation/>
 {loadError?<main className="max-w-xl mx-auto px-5 pt-32 pb-16 text-center" role="alert">
 <h1 className="text-2xl font-bold">{/not found/i.test(loadError)?'This opportunity is no longer available':'This opportunity could not be loaded'}</h1>
@@ -98,7 +97,7 @@ return <div className="min-h-screen bg-slate-950 text-white">
 <CardContent className="p-5">
 {user?.role==='jobseeker'&&<div className="flex gap-2 mb-5">
 <Button variant="outline" className="flex-1" onClick={save}>{job.saved?<BookmarkCheck size={17} className="mr-2"/>:<Bookmark size={17} className="mr-2"/>}{job.saved?'Saved':'Save'}</Button>
-<Button variant="ghost" size="icon" aria-label="Report listing" onClick={report}>
+<Button variant="ghost" size="icon" aria-label="Report listing" onClick={()=>setReporting(true)}>
 <Flag size={17}/>
 </Button>
 </div>}{user?.role==='jobseeker'&&<>{job.applied?<div className="rounded-xl bg-emerald-500/10 border border-emerald-400/20 p-4 text-emerald-200">
@@ -107,11 +106,11 @@ return <div className="min-h-screen bg-slate-950 text-white">
 </div>:<>{job.screeningQuestions?.length>0&&<div className="space-y-3 mb-4">
 <div className="text-sm font-medium">Screening questions</div>{job.screeningQuestions.map((q:string,i:number)=>
 <div key={q}>
-<div className="text-xs text-slate-400 mb-1">{q}</div>
-<Textarea value={answers[i]||''} onChange={e=>setAnswers({...answers,[i]:e.target.value})} className="min-h-20 bg-black/20 border-white/15"/>
-</div>)}</div>}<label className="text-sm font-medium">Short note to the employer <span className="text-slate-500">(optional)</span>
+<label htmlFor={`screening-${i}`} className="block text-xs text-slate-400 mb-1">{q}</label>
+<Textarea id={`screening-${i}`} value={answers[i]||''} onChange={e=>setAnswers({...answers,[i]:e.target.value})} className="min-h-20 bg-black/20 border-white/15"/>
+</div>)}</div>}<label htmlFor="cover-note" className="text-sm font-medium">Short note to the employer <span className="text-slate-500">(optional)</span>
 </label>
-<Textarea value={cover} onChange={e=>setCover(e.target.value)} placeholder="Why this opportunity fits your work and what relevant proof should they review…" className="mt-2 min-h-32 bg-black/20 border-white/15"/>
+<Textarea id="cover-note" value={cover} onChange={e=>setCover(e.target.value)} placeholder="Why this opportunity fits your work and what relevant proof should they review…" className="mt-2 min-h-32 bg-black/20 border-white/15"/>
 <Button className="w-full mt-3" disabled={busy} onClick={apply}>
 <Send size={16} className="mr-2"/>{busy?'Applying…':'Apply now'}</Button>
 {job.portfolioRequired&&<p className="text-xs text-amber-200/90 mt-2">This opportunity requires at least one portfolio item. <Link to="/jobseeker/portfolio" className="underline">Add work samples</Link></p>}
@@ -124,4 +123,5 @@ return <div className="min-h-screen bg-slate-950 text-white">
 </aside>
 </div>
 </main>
+<ReportDialog open={reporting} onOpenChange={setReporting} title="Report this listing" description="Tell our moderators what is wrong with this opportunity." onSubmit={report}/>
 </div>}

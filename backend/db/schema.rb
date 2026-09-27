@@ -221,16 +221,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_130500) do
     t.datetime "provider_state_at"
     t.string "last_provider_event_id"
     t.index ["booking_quote_id"], name: "index_booking_payments_on_booking_quote_id"
-    t.index ["booking_request_id", "kind"], name: "index_booking_payments_on_active_kind", unique: true, where: "((status)::text = ANY (ARRAY[('created'::character varying)::text, ('paid'::character varying)::text]))"
+    t.index ["booking_request_id", "kind"], name: "index_booking_payments_on_active_kind", unique: true, where: "((status)::text = ANY ((ARRAY['created'::character varying, 'paid'::character varying])::text[]))"
     t.index ["booking_request_id"], name: "index_booking_payments_on_booking_request_id"
     t.index ["payer_id"], name: "index_booking_payments_on_payer_id"
     t.index ["provider_order_id"], name: "index_booking_payments_on_provider_order_id", unique: true, where: "(provider_order_id IS NOT NULL)"
     t.index ["provider_payment_id"], name: "index_booking_payments_on_provider_payment_id", unique: true, where: "(provider_payment_id IS NOT NULL)"
     t.check_constraint "amount > 0", name: "booking_payments_amount_positive"
     t.check_constraint "currency::text ~ '^[A-Z]{3}$'::text", name: "booking_payments_currency_format"
-    t.check_constraint "kind::text = ANY (ARRAY['deposit'::character varying::text, 'balance'::character varying::text, 'refund'::character varying::text])", name: "booking_payments_kind_valid"
-    t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying::text, 'razorpay'::character varying::text])", name: "booking_payments_provider_valid"
-    t.check_constraint "status::text = ANY (ARRAY['created'::character varying::text, 'paid'::character varying::text, 'failed'::character varying::text, 'refunded'::character varying::text])", name: "booking_payments_status_valid"
+    t.check_constraint "kind::text = ANY (ARRAY['deposit'::character varying, 'balance'::character varying, 'refund'::character varying]::text[])", name: "booking_payments_kind_valid"
+    t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying, 'razorpay'::character varying]::text[])", name: "booking_payments_provider_valid"
+    t.check_constraint "status::text = ANY (ARRAY['created'::character varying, 'paid'::character varying, 'failed'::character varying, 'refunded'::character varying]::text[])", name: "booking_payments_status_valid"
   end
 
   create_table "booking_quotes", id: :string, force: :cascade do |t|
@@ -280,7 +280,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_130500) do
     t.datetime "updated_at", null: false
     t.index ["act_id"], name: "index_booking_requests_on_act_id"
     t.index ["requester_id"], name: "index_booking_requests_on_requester_id"
-    t.check_constraint "status::text = ANY (ARRAY['requested'::character varying::text, 'viewed'::character varying::text, 'negotiating'::character varying::text, 'quoted'::character varying::text, 'accepted'::character varying::text, 'completed'::character varying::text, 'disputed'::character varying::text, 'declined'::character varying::text, 'cancelled'::character varying::text])", name: "booking_requests_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['requested'::character varying, 'viewed'::character varying, 'negotiating'::character varying, 'quoted'::character varying, 'accepted'::character varying, 'completed'::character varying, 'disputed'::character varying, 'declined'::character varying, 'cancelled'::character varying]::text[])", name: "booking_requests_status_valid"
   end
 
   create_table "career_resources", id: :string, force: :cascade do |t|
@@ -762,8 +762,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_130500) do
     t.string "last_provider_event_id"
     t.index ["provider_subscription_id"], name: "index_subscriptions_on_provider_subscription_id", unique: true, where: "(provider_subscription_id IS NOT NULL)"
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
-    t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying::text, 'razorpay'::character varying::text])", name: "subscriptions_provider_valid"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'trialing'::character varying::text, 'active'::character varying::text, 'past_due'::character varying::text, 'cancelled'::character varying::text])", name: "subscriptions_status_valid"
+    t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying, 'razorpay'::character varying]::text[])", name: "subscriptions_provider_valid"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'trialing'::character varying, 'active'::character varying, 'past_due'::character varying, 'cancelled'::character varying]::text[])", name: "subscriptions_status_valid"
   end
 
   create_table "talent_folder_members", id: false, force: :cascade do |t|

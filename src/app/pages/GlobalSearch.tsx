@@ -31,10 +31,13 @@ export default function GlobalSearch(){
     setQ(query);setType(selectedType);
     if(!query.trim()){setResults([]);setInterpreted([]);setError('');return}
     setLoading(true);setError('');
+    // Ignore a response that arrives after a newer search started, so older results never replace newer ones.
+    let current=true;
     apiGet<any>(`/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(selectedType)}`)
-      .then(d=>{setResults(d.results||[]);setInterpreted(d.interpretedAs||[]);const next=[query.trim(),...recent.filter(x=>x!==query.trim())].slice(0,6);setRecent(next);try{localStorage.setItem('verse_recent_searches',JSON.stringify(next))}catch{/* storage blocked: keep in memory */}})
-      .catch(()=>setError('Search is taking a breather. Please try again in a moment.'))
-      .finally(()=>setLoading(false));
+      .then(d=>{if(!current)return;setResults(d.results||[]);setInterpreted(d.interpretedAs||[]);const next=[query.trim(),...recent.filter(x=>x!==query.trim())].slice(0,6);setRecent(next);try{localStorage.setItem('verse_recent_searches',JSON.stringify(next))}catch{/* storage blocked: keep in memory */}})
+      .catch(()=>{if(current)setError('Search is taking a breather. Please try again in a moment.')})
+      .finally(()=>{if(current)setLoading(false)});
+    return()=>{current=false};
   },[sp.toString()]);
 
   const searchFor=(value:string)=>setSp({q:value,...(type!=='all'?{type}:{})});

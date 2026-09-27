@@ -24,6 +24,8 @@ async function mockApi(page: Page, role: Role, opts: {conversations?: any[]; thr
     preferenceStatus: 200,
     preferenceWrites: [] as unknown[],
     unsubscribeTokens: [] as string[],
+    blocks: [] as string[],
+    reports: [] as any[],
   };
   const json = (route: Route, body: unknown, status = 200) => route.fulfill({status, contentType: 'application/json', body: JSON.stringify(body)});
   await page.addInitScript(() => {
@@ -57,6 +59,11 @@ async function mockApi(page: Page, role: Role, opts: {conversations?: any[]; thr
     const patch = path.match(/^\/notifications\/(.+)$/);
     if (patch) { state.patched.push(patch[1]); return json(route, {ok: true}); }
     if (path === '/conversations') return json(route, {conversations: state.conversations});
+    const setBlocked = (userId: string, blockedByMe: boolean) => state.conversations.forEach(c => { if (c.counterpartId === userId) c.blockedByMe = blockedByMe; });
+    if (path === '/blocks' && request.method() === 'POST') { const {userId} = request.postDataJSON(); state.blocks.push(`block ${userId}`); setBlocked(userId, true); return json(route, {blocked: true}, 201); }
+    const unblock = path.match(/^\/blocks\/(.+)$/);
+    if (unblock && request.method() === 'DELETE') { const userId = decodeURIComponent(unblock[1]); state.blocks.push(`unblock ${userId}`); setBlocked(userId, false); return json(route, {blocked: false}); }
+    if (path === '/reports' && request.method() === 'POST') { state.reports.push(request.postDataJSON()); return json(route, {id: 'r1'}, 201); }
     const thread = path.match(/^\/conversations\/([^/]+)\/messages$/);
     if (thread) {
       const id = thread[1];
@@ -69,7 +76,9 @@ async function mockApi(page: Page, role: Role, opts: {conversations?: any[]; thr
         state.threads[id].push(message);
         return json(route, {message}, 201);
       }
-      const list = state.threads[id];
+      const before = new URL(request.url()).searchParams.get('before');
+      const all = state.threads[id];
+      const list = before ? all.slice(0, all.findIndex(m => m.id === before)) : all;
       return json(route, {messages: list.slice(-200), truncated: list.length > 200, limit: 200});
     }
     return json(route, {});
@@ -160,13 +169,50 @@ test.describe('messages', () => {
     await expect(page.getByTestId('send-error')).toBeHidden();
   });
 
-  test('history beyond the cap says only the latest messages are shown', async ({page}) => {
-    const many = Array.from({length: 201}, (_, i) => ({id: `m${i}`, senderId: 'other', body: `bulk ${i}`, createdAt: new Date(Date.UTC(2026, 8, 1, 0, 0, i)).toISOString(), readAt: null}));
-    await mockApi(page, 'jobseeker', {conversations: [conversation('c1')], threads: {c1: many}});
+  test('history beyond the cap loads earlier messages on request and keeps them through polls', async ({page}) => {
+    const many = Array.from({length: 205}, (_, i) => ({id: `m${i}`, senderId: 'other', body: `bulk ${i}`, createdAt: new Date(Date.UTC(2026, 8, 1, 0, 0, i)).toISOString(), readAt: null}));
+    const state = await mockApi(page, 'jobseeker', {conversations: [conversation('c1')], threads: {c1: many}});
     await page.goto('/jobseeker/messages?c=c1');
-    await expect(page.getByTestId('history-truncated')).toHaveText('Showing the latest 200 messages.');
     await expect(page.getByTestId('message')).toHaveCount(200);
-    await expect(page.getByTestId('message-body').last()).toHaveText('bulk 200');
+    await expect(page.getByTestId('message-body').first()).toHaveText('bulk 5');
+    await page.getByTestId('load-older').click();
+    await expect(page.getByTestId('message')).toHaveCount(205);
+    await expect(page.getByTestId('message-body').first()).toHaveText('bulk 0');
+    await expect(page.getByTestId('load-older')).toBeHidden();
+    expect(state.calls).toContain('GET /conversations/c1/messages');
+    // A new message arriving on the next poll keeps the older page.
+    state.threads.c1.push({id: 'm-new', senderId: 'other', body: 'fresh', createdAt: new Date(Date.UTC(2026, 8, 2)).toISOString(), readAt: null});
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.getByTestId('message-body').last()).toHaveText('fresh', {timeout: 15_000});
+    await expect(page.getByTestId('message-body').first()).toHaveText('bulk 0');
+  });
+
+  test('a conversation can be reported and blocked, and blocked or inactive threads close the composer', async ({page}) => {
+    const state = await mockApi(page, 'employer', {
+      conversations: [conversation('c1', {counterpartId: 'u-2', counterpartName: 'Pushy Person'}), conversation('c2', {counterpartId: 'u-3', counterpartName: 'Gone Person', counterpartActive: false}), conversation('c3', {counterpartId: 'u-4', blockedMe: true})],
+      threads: {c1: [{id: 'm1', senderId: 'u-2', body: 'pay me first', createdAt: at(1), readAt: null}], c2: [], c3: []},
+    });
+    await page.setViewportSize({width: 1280, height: 900});
+    await page.goto('/employer/messages?c=c1');
+    await expect(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
+
+    page.once('dialog', dialog => dialog.accept('asks for payment'));
+    await page.getByTestId('report-conversation').click();
+    await expect.poll(() => state.reports).toEqual([{entityType: 'user', entityId: 'u-2', reason: 'asks for payment', details: 'Reported from conversation c1.'}]);
+
+    page.once('dialog', dialog => dialog.accept());
+    await page.getByTestId('block-toggle').click();
+    await expect(page.getByTestId('composer-closed')).toContainText('You blocked Pushy Person');
+    await expect(page.getByRole('textbox', {name: 'Message'})).toBeHidden();
+    expect(state.blocks).toEqual(['block u-2']);
+    await page.getByTestId('composer-closed').getByRole('button', {name: 'Unblock'}).click();
+    await expect.poll(() => state.blocks).toEqual(['block u-2', 'unblock u-2']);
+    await expect(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
+
+    await page.goto('/employer/messages?c=c2');
+    await expect(page.getByTestId('composer-closed')).toHaveText("Gone Person's account is no longer active, so they can't receive messages.");
+    await page.goto('/employer/messages?c=c3');
+    await expect(page.getByTestId('composer-closed')).toHaveText("You can't reply to this conversation.");
   });
 
   test('a long thread scrolls inside the desktop panel, opens at the newest message and keeps the composer visible', async ({page}) => {

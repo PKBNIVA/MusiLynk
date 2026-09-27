@@ -25,6 +25,7 @@ class SearchController < ApplicationController
   # MAX_QUERY_LENGTH characters and each IP gets REQUESTS_PER_MINUTE searches.
   MAX_QUERY_LENGTH = 100
   REQUESTS_PER_MINUTE = 60
+  MAX_RESULTS = 60
 
   def index
     return unless throttle!("search", limit: REQUESTS_PER_MINUTE, period: 1.minute)
@@ -33,17 +34,32 @@ class SearchController < ApplicationController
     return render json: search_response([]) if terms.empty?
 
     requested_type = RESULT_TYPES.include?(params[:type]) ? params[:type] : nil
-    results = []
-    results.concat(job_results(terms)) if requested_type.nil? || requested_type == "jobs"
-    results.concat(talent_results(terms)) if requested_type.nil? || requested_type == "talent"
-    results.concat(act_results(terms)) if requested_type.nil? || requested_type == "acts"
-    results.concat(sample_results(terms)) if requested_type.nil? || requested_type == "samples"
-    render json: search_response(results.first(60), terms)
+    groups = []
+    groups << job_results(terms) if requested_type.nil? || requested_type == "jobs"
+    groups << talent_results(terms) if requested_type.nil? || requested_type == "talent"
+    groups << act_results(terms) if requested_type.nil? || requested_type == "acts"
+    groups << sample_results(terms) if requested_type.nil? || requested_type == "samples"
+    render json: search_response(combine(groups), terms)
   end
 
   def status = render(json: status_payload)
 
   private
+
+  # Every type with matches gets a fair share of the MAX_RESULTS slots before any type
+  # fills the rest, so a broad query cannot push acts and samples out of "All".
+  # Results stay grouped by type, in the order the groups were given.
+  def combine(groups)
+    share = MAX_RESULTS / [groups.size, 1].max
+    taken = groups.map { _1.first(share) }
+    spare = MAX_RESULTS - taken.sum(&:size)
+    groups.each_with_index do |group, index|
+      extra = group.drop(share).first(spare)
+      taken[index] += extra
+      spare -= extra.size
+    end
+    taken.flatten(1)
+  end
 
   def expanded_terms(query)
     normalized = query.downcase.squish

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_110100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -300,6 +300,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_100000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["candidate_id", "employer_id", "job_id"], name: "index_conversations_on_candidate_id_and_employer_id_and_job_id", unique: true
+    t.index ["candidate_id", "employer_id"], name: "index_conversations_on_pair_without_job", unique: true, where: "(job_id IS NULL)"
     t.index ["candidate_id"], name: "index_conversations_on_candidate_id"
     t.index ["employer_id"], name: "index_conversations_on_employer_id"
     t.index ["job_id"], name: "index_conversations_on_job_id"
@@ -825,6 +826,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_100000) do
     t.index ["requester_id"], name: "index_urgent_requests_on_requester_id"
   end
 
+  create_table "user_blocks", id: :string, force: :cascade do |t|
+    t.string "blocker_id", null: false
+    t.string "blocked_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["blocked_id"], name: "index_user_blocks_on_blocked_id"
+    t.index ["blocker_id", "blocked_id"], name: "index_user_blocks_on_blocker_id_and_blocked_id", unique: true
+  end
+
   create_table "users", id: :string, force: :cascade do |t|
     t.string "name", null: false
     t.citext "email", null: false
@@ -915,6 +925,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_100000) do
   add_foreign_key "urgent_request_responses", "urgent_requests"
   add_foreign_key "urgent_request_responses", "users"
   add_foreign_key "urgent_requests", "users", column: "requester_id"
+  add_foreign_key "user_blocks", "users", column: "blocked_id", on_delete: :cascade
+  add_foreign_key "user_blocks", "users", column: "blocker_id", on_delete: :cascade
   add_foreign_key "verification_requests", "users"
   add_foreign_key "verification_requests", "users", column: "reviewed_by_id"
 end

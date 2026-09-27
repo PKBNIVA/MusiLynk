@@ -1,16 +1,17 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {Link, useSearchParams} from 'react-router';
-import {ArrowLeft, MessageSquare, Send} from 'lucide-react';
+import {ArrowLeft, Ban, Flag, MessageSquare, Send} from 'lucide-react';
 import {toast} from 'sonner';
 import {Navigation} from '../components/Navigation';
 import {Card, CardContent} from '../components/ui/card';
 import {Button} from '../components/ui/button';
-import {apiGet, apiPost} from '../lib/api';
+import {apiDelete, apiGet, apiPost} from '../lib/api';
 import {useAuth} from '../lib/authContext';
 import {announceUnreadChanged, useVisiblePolling} from '../lib/usePolling';
 
 type Conversation = {
-  id: string; counterpartName?: string; candidateName?: string; employerName?: string; viewerSide?: 'candidate' | 'employer';
+  id: string; counterpartId?: string; counterpartName?: string; candidateName?: string; employerName?: string; viewerSide?: 'candidate' | 'employer';
+  counterpartActive?: boolean; blockedByMe?: boolean; blockedMe?: boolean;
   jobTitle?: string | null; lastMessage?: string | null; lastMessageAt?: string | null; lastMessageFromMe?: boolean; unreadCount?: number;
 };
 type Message = {id: string; senderId: string; body: string; createdAt: string; readAt?: string | null};
@@ -40,6 +41,8 @@ export default function Messages() {
   const [threadState, setThreadState] = useState<'idle' | 'loading' | 'ready' | 'missing' | 'error'>('idle');
   const [threadError, setThreadError] = useState('');
   const [truncated, setTruncated] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [safetyBusy, setSafetyBusy] = useState(false);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
@@ -51,6 +54,10 @@ export default function Messages() {
   activeRef.current = activeId;
   const scroller = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
+  // Set after "Load earlier messages": polls then keep the older pages and leave `truncated` alone.
+  const olderLoaded = useRef(false);
+  // scrollHeight before older messages were prepended, so the view stays on the same message.
+  const prependFrom = useRef<number | null>(null);
 
   const select = useCallback((id: string | null, replace = false) => {
     setSearch(prev => { const next = new URLSearchParams(prev); next.delete('conversation'); if (id) next.set('c', id); else next.delete('c'); return next; }, {replace});
@@ -78,10 +85,15 @@ export default function Messages() {
       const d = await apiGet<any>(`/conversations/${id}/messages`);
       if (activeRef.current !== id) return;
       const server: Message[] = [...(d.messages || [])].sort(byTime);
+      const oldest = server[0]?.createdAt || '';
       const newest = server[server.length - 1]?.createdAt || '';
-      // Keep anything sent locally after this response was produced; the next poll will include it.
-      setMsgs(prev => [...server, ...prev.filter(m => m.createdAt > newest && !server.some(s => s.id === m.id))]);
-      setTruncated(Boolean(d.truncated));
+      // Keep older pages already loaded, and anything sent locally after this response was produced; the next poll will include it.
+      setMsgs(prev => [
+        ...prev.filter(m => oldest && m.createdAt < oldest && !server.some(s => s.id === m.id)),
+        ...server,
+        ...prev.filter(m => m.createdAt > newest && !server.some(s => s.id === m.id)),
+      ]);
+      if (!olderLoaded.current) setTruncated(Boolean(d.truncated));
       setThreadState('ready');
       // A thread opened by deep link right after it was created may be missing from an earlier inbox fetch.
       if (!silent && !convsRef.current.some(c => c.id === id)) void loadConvsRef.current();
@@ -102,7 +114,7 @@ export default function Messages() {
   loadConvsRef.current = loadConvs;
   useEffect(() => { void loadConvs(); }, [loadConvs]);
   useEffect(() => {
-    setMsgs([]); setTruncated(false); setSendError(''); stickToBottom.current = true; readThreadRef.current = null;
+    setMsgs([]); setTruncated(false); setSendError(''); stickToBottom.current = true; readThreadRef.current = null; olderLoaded.current = false;
     if (activeId) void loadThread(activeId); else setThreadState('idle');
   }, [activeId, loadThread]);
   useVisiblePolling(() => activeRef.current && loadThread(activeRef.current, true), THREAD_POLL_MS, Boolean(activeId));
@@ -110,8 +122,65 @@ export default function Messages() {
 
   useLayoutEffect(() => {
     const el = scroller.current;
-    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    if (prependFrom.current !== null) { el.scrollTop += el.scrollHeight - prependFrom.current; prependFrom.current = null; }
+    else if (stickToBottom.current) el.scrollTop = el.scrollHeight;
   }, [msgs]);
+
+  async function loadOlder() {
+    const id = activeId;
+    const first = msgs[0];
+    if (!id || !first || loadingOlder) return;
+    setLoadingOlder(true);
+    try {
+      const d = await apiGet<any>(`/conversations/${id}/messages?before=${encodeURIComponent(first.id)}`);
+      if (activeRef.current !== id) return;
+      const older: Message[] = [...(d.messages || [])].sort(byTime);
+      olderLoaded.current = true;
+      prependFrom.current = scroller.current?.scrollHeight ?? null;
+      setMsgs(prev => [...older.filter(m => !prev.some(p => p.id === m.id)), ...prev]);
+      setTruncated(Boolean(d.truncated));
+    } catch (e: any) {
+      toast.error(errorMessage(e, 'Unable to load earlier messages.'));
+    } finally {
+      setLoadingOlder(false);
+    }
+  }
+
+  const patchConv = (id: string, change: Partial<Conversation>) => setConvs(prev => prev.map(c => c.id === id ? {...c, ...change} : c));
+
+  async function toggleBlock(c: Conversation) {
+    if (!c.counterpartId || safetyBusy) return;
+    const name = nameOf(c);
+    if (!c.blockedByMe && !window.confirm(`Block ${name}? Neither of you will be able to send messages in this conversation, and they can't start a new one with you. You can unblock them later.`)) return;
+    setSafetyBusy(true);
+    try {
+      if (c.blockedByMe) await apiDelete(`/blocks/${encodeURIComponent(c.counterpartId)}`);
+      else await apiPost('/blocks', {userId: c.counterpartId});
+      patchConv(c.id, {blockedByMe: !c.blockedByMe});
+      toast.success(c.blockedByMe ? `${name} is unblocked` : `${name} is blocked`);
+      void loadConvs();
+    } catch (e: any) {
+      toast.error(errorMessage(e, 'Unable to update this block.'));
+    } finally {
+      setSafetyBusy(false);
+    }
+  }
+
+  async function report(c: Conversation) {
+    if (!c.counterpartId || safetyBusy) return;
+    const reason = window.prompt(`What is wrong with ${nameOf(c)}'s messages? e.g. harassment, asks for payment, spam, unsafe contact request`);
+    if (!reason?.trim()) return;
+    setSafetyBusy(true);
+    try {
+      await apiPost('/reports', {entityType: 'user', entityId: c.counterpartId, reason: reason.trim().slice(0, 200), details: `Reported from conversation ${c.id}.`});
+      toast.success('Report sent to moderation. You can also block this person.');
+    } catch (e: any) {
+      toast.error(errorMessage(e, 'Unable to send your report.'));
+    } finally {
+      setSafetyBusy(false);
+    }
+  }
   const onScroll = () => { const el = scroller.current; if (el) stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; };
 
   async function send(e?: React.FormEvent) {
@@ -130,6 +199,8 @@ export default function Messages() {
     } catch (err: any) {
       const message = errorMessage(err, 'Unable to send your message.');
       setSendError(message);
+      // Blocks and deactivated accounts change what the thread allows; refresh so the composer reflects it.
+      if (err?.code === 'MESSAGING_BLOCKED' || err?.code === 'RECIPIENT_INACTIVE') void loadConvs();
       if (err?.status !== 429) toast.error(message);
     } finally {
       setSending(false);
@@ -145,6 +216,12 @@ export default function Messages() {
   const active = convs.find(c => c.id === activeId);
   const trimmedLength = text.trim().length;
   const lastMineId = [...msgs].reverse().find(m => m.senderId === user?.id)?.id;
+  // Why the composer is closed for the open thread, if it is.
+  const closedNotice = !active ? null
+    : active.blockedByMe ? `You blocked ${nameOf(active)}. Unblock them to send messages.`
+    : active.blockedMe ? "You can't reply to this conversation."
+    : active.counterpartActive === false ? `${nameOf(active)}'s account is no longer active, so they can't receive messages.`
+    : null;
 
   return <div className="min-h-screen bg-slate-950 text-white"><Navigation/>
     <main className="max-w-6xl mx-auto px-4 md:px-6 pt-24 md:pt-28 pb-28 lg:pb-16">
@@ -172,7 +249,11 @@ export default function Messages() {
           <section aria-label="Conversation" className={`flex-col min-w-0 md:h-full md:min-h-0 ${activeId ? 'flex' : 'hidden md:flex'}`}>
             {activeId && <header className="flex items-center gap-3 border-b border-white/10 p-3 md:p-4">
               <Button type="button" variant="ghost" size="icon" className="md:hidden" aria-label="Back to conversations" onClick={() => select(null)}><ArrowLeft size={18}/></Button>
-              <div className="min-w-0"><div className="font-semibold truncate" data-testid="thread-name">{active ? nameOf(active) : threadState === 'missing' ? 'Conversation' : ' '}</div>{active && <div className="text-xs text-violet-300 truncate">{active.jobTitle || 'General conversation'}</div>}</div>
+              <div className="min-w-0 flex-1"><div className="font-semibold truncate" data-testid="thread-name">{active ? nameOf(active) : threadState === 'missing' ? 'Conversation' : ' '}</div>{active && <div className="text-xs text-violet-300 truncate">{active.jobTitle || 'General conversation'}</div>}</div>
+              {active?.counterpartId && <div className="flex shrink-0 gap-1">
+                <Button type="button" variant="ghost" size="sm" disabled={safetyBusy} onClick={() => void report(active)} data-testid="report-conversation"><Flag size={14} aria-hidden="true"/><span className="sr-only sm:not-sr-only sm:ml-1">Report</span></Button>
+                <Button type="button" variant="ghost" size="sm" disabled={safetyBusy} onClick={() => void toggleBlock(active)} data-testid="block-toggle"><Ban size={14} aria-hidden="true"/><span className="sr-only sm:not-sr-only sm:ml-1">{active.blockedByMe ? 'Unblock' : 'Block'}</span></Button>
+              </div>}
             </header>}
             <div ref={scroller} onScroll={onScroll} className="flex-1 p-4 md:p-5 space-y-3 overflow-y-auto h-[calc(100vh-330px)] min-h-[280px] md:h-auto md:min-h-0" role="log" aria-live="polite" aria-label="Messages">
               {!activeId ? <div className="h-full grid place-items-center text-slate-500">{convs.length ? 'Select a conversation' : 'Your messages will appear here'}</div>
@@ -181,14 +262,18 @@ export default function Messages() {
                 : threadState === 'error' ? <div className="text-center" role="alert"><p className="text-rose-300">{threadError}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => void loadThread(activeId)}>Try again</Button></div>
                 : msgs.length === 0 ? <div className="h-full grid place-items-center text-slate-500 text-center" data-testid="thread-empty">No messages yet. Say hello to {nameOf(active)}.</div>
                 : <>
-                    {truncated && <p className="text-center text-xs text-slate-500" data-testid="history-truncated">Showing the latest {msgs.length} messages.</p>}
+                    {truncated && <div className="text-center"><Button type="button" variant="outline" size="sm" disabled={loadingOlder} aria-busy={loadingOlder} onClick={() => void loadOlder()} data-testid="load-older">{loadingOlder ? 'Loading…' : 'Load earlier messages'}</Button></div>}
                     {msgs.map(m => { const mine = m.senderId === user?.id; return <div key={m.id} data-testid="message" data-mine={mine ? 'true' : 'false'} className={`max-w-[85%] md:max-w-[75%] w-fit rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-violet-600' : 'bg-white/10'}`}>
                       <div className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]" data-testid="message-body">{m.body}</div>
                       <div className="text-[11px] opacity-70 mt-1 flex gap-2 justify-end"><time dateTime={m.createdAt}>{formatTime(m.createdAt)}</time>{mine && m.id === lastMineId && <span data-testid="read-receipt">{m.readAt ? `Seen ${formatTime(m.readAt)}` : 'Sent'}</span>}</div>
                     </div>; })}
                   </>}
             </div>
-            {activeId && threadState !== 'missing' && <form onSubmit={send} className="p-3 md:p-4 border-t border-white/10">
+            {activeId && threadState !== 'missing' && closedNotice && <div className="p-4 border-t border-white/10 text-sm text-slate-300 flex flex-wrap items-center justify-between gap-3" role="status" data-testid="composer-closed">
+              <span>{closedNotice}</span>
+              {active?.blockedByMe && <Button type="button" size="sm" variant="outline" disabled={safetyBusy} onClick={() => void toggleBlock(active)}>Unblock</Button>}
+            </div>}
+            {activeId && threadState !== 'missing' && !closedNotice && <form onSubmit={send} className="p-3 md:p-4 border-t border-white/10">
               <div className="flex gap-2 items-end">
                 <textarea value={text} onChange={e => { setText(e.target.value); if (sendError) setSendError(''); }} onKeyDown={onKeyDown} rows={2}
                   placeholder="Write a message…" aria-label="Message" aria-describedby="message-hint"

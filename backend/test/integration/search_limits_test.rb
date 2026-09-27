@@ -31,4 +31,24 @@ class SearchLimitsTest < ActionDispatch::IntegrationTest
     get "/api/search", params: { q: "drummer" }, env: { "REMOTE_ADDR" => "203.0.113.9" }
     assert_response :success, "another IP keeps its own budget"
   end
+
+  test "all results keep a share for every type instead of filling up with jobs and talent" do
+    employer = User.create!(name: "Rhythm Studio", email: "rhythm-studio@example.com", password: "StrongPass123!", role: "employer", status: "active", profile_complete: true)
+    35.times do |index|
+      Job.create!(employer:, title: "Zephyr drummer #{index}", company: "Rhythm Studio", location: "Mumbai", kind: "Contract", genre: "Rock",
+        description: "Record drums for a studio album with written terms and agreed compensation for every session.", status: "published")
+      talent = User.create!(name: "Zephyr Talent #{index}", email: "zephyr-#{index}@example.com", password: "StrongPass123!", role: "jobseeker", status: "active", profile_complete: true)
+      talent.create_profile!(headline: "Zephyr session player")
+    end
+    Act.create!(owner: employer, name: "Zephyr Band", act_type: "band", currency: "INR", fee_basis: "event", status: "active")
+
+    get "/api/search", params: { q: "Zephyr" }
+    results = response.parsed_body["results"]
+    assert_equal SearchController::MAX_RESULTS, results.size
+    counts = results.pluck("type").tally
+    assert_equal 1, counts["acts"], "acts are not pushed out by jobs and talent"
+    assert_operator counts["jobs"], :>=, 15
+    assert_operator counts["talent"], :>=, 15
+    assert_equal results.pluck("type").chunk_while { _1 == _2 }.map(&:first), %w[jobs talent acts], "results stay grouped by type"
+  end
 end

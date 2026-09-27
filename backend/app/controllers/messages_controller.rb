@@ -9,13 +9,22 @@ class MessagesController < ApplicationController
   before_action :load_conversation
 
   # Opening (or polling) a conversation marks the counterpart's messages and the
-  # matching message notification as read.
+  # matching message notification as read. Returns the most recent HISTORY_LIMIT
+  # messages oldest-first; `before=<message id>` pages further back from that message.
+  # `truncated` means older messages exist before the first one returned.
   def index
-    now = Time.current
-    @conversation.messages.where.not(sender: current_user).where(read_at: nil).update_all(read_at: now, updated_at: now)
-    Notifier.conversation_read(@conversation, current_user)
-    # Most recent HISTORY_LIMIT messages, returned oldest-first.
-    recent = @conversation.messages.order(created_at: :desc, id: :desc).limit(HISTORY_LIMIT + 1).to_a
+    scope = @conversation.messages
+    if params[:before].present?
+      return render_error("before must be a single value.", :bad_request, "INVALID_PARAMETER") unless params[:before].is_a?(String)
+      anchor = scope.find_by(id: params[:before])
+      return render_error("Message not found", :not_found) unless anchor
+      scope = scope.where("(messages.created_at, messages.id) < (?, ?)", anchor.created_at, anchor.id)
+    else
+      now = Time.current
+      @conversation.messages.where.not(sender: current_user).where(read_at: nil).update_all(read_at: now, updated_at: now)
+      Notifier.conversation_read(@conversation, current_user)
+    end
+    recent = scope.order(created_at: :desc, id: :desc).limit(HISTORY_LIMIT + 1).to_a
     truncated = recent.size > HISTORY_LIMIT
     render json: { messages: recent.first(HISTORY_LIMIT).reverse.map { serialize(_1) }, truncated:, limit: HISTORY_LIMIT }
   end
@@ -25,6 +34,13 @@ class MessagesController < ApplicationController
     return render_error("Write a message before sending.", :unprocessable_content, "MESSAGE_EMPTY") if body.empty?
     if body.length > MAX_LENGTH
       return render_error("Messages can be at most #{MAX_LENGTH} characters.", :unprocessable_content, "MESSAGE_TOO_LONG")
+    end
+    counterpart = @conversation.counterpart_for(current_user)
+    unless counterpart.active?
+      return render_error("#{counterpart.name}'s account is no longer active, so they can't receive messages.", :forbidden, "RECIPIENT_INACTIVE")
+    end
+    if UserBlock.between?(current_user, counterpart)
+      return render_error("You can't send messages in this conversation.", :forbidden, "MESSAGING_BLOCKED")
     end
     return unless within_user_rate_limit?("message", limit: SEND_LIMIT_PER_HOUR, period: 1.hour)
 

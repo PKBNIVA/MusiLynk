@@ -103,6 +103,114 @@ class MessagingNotificationsTest < ActionDispatch::IntegrationTest
     assert_equal ["bulk 1", "newest"], [body["messages"].first["body"], body["messages"].last["body"]]
   end
 
+  test "older history pages back from a message without marking anything read" do
+    employer = create_user("Page Employer", "employer")
+    candidate = create_user("Page Candidate", "jobseeker")
+    conversation = Conversation.create!(candidate:, employer:)
+    base = 1.day.ago
+    total = MessagesController::HISTORY_LIMIT + 5
+    Message.insert_all!(Array.new(total) do |index|
+      { id: format("msg_%04d", index), conversation_id: conversation.id, sender_id: employer.id, body: "page #{index}", created_at: base + index.seconds, updated_at: base }
+    end)
+    path = "/api/conversations/#{conversation.id}/messages"
+
+    get path, params: { before: "msg_0005" }, headers: auth(candidate)
+    assert_response :success
+    assert_equal ["page 0", "page 1", "page 2", "page 3", "page 4"], response.parsed_body["messages"].pluck("body")
+    assert_equal false, response.parsed_body["truncated"]
+    assert_equal total, conversation.messages.where(read_at: nil).count, "paging back is not opening the thread"
+
+    get path, params: { before: "msg_0204" }, headers: auth(candidate)
+    body = response.parsed_body
+    assert_equal MessagesController::HISTORY_LIMIT, body["messages"].size
+    assert_equal ["page 4", "page 203"], [body["messages"].first["body"], body["messages"].last["body"]]
+    assert body["truncated"]
+
+    get path, params: { before: "missing" }, headers: auth(candidate)
+    assert_response :not_found
+    other = Conversation.create!(candidate: create_user("Other", "jobseeker"), employer:)
+    other_message = other.messages.create!(sender: employer, body: "elsewhere")
+    get path, params: { before: other_message.id }, headers: auth(candidate)
+    assert_response :not_found, "the anchor must belong to this conversation"
+  end
+
+  test "messages to a suspended account are refused and the inbox marks it inactive" do
+    employer = create_user("Active Employer", "employer")
+    candidate = create_user("Suspended Candidate", "jobseeker")
+    conversation = Conversation.create!(candidate:, employer:)
+    candidate.update!(status: "suspended")
+
+    post "/api/conversations/#{conversation.id}/messages", params: { body: "Still there?" }, headers: auth(employer), as: :json
+    assert_response :forbidden
+    assert_equal "RECIPIENT_INACTIVE", response.parsed_body["code"]
+    assert_equal 0, conversation.messages.count
+
+    get "/api/conversations", headers: auth(employer)
+    assert_equal false, response.parsed_body["conversations"].first["counterpartActive"]
+  end
+
+  test "blocking stops messages both ways, blocks new conversations and can be undone" do
+    employer = create_user("Blocking Employer", "employer")
+    candidate = create_user("Blocked Candidate", "jobseeker")
+    job = create_job(employer)
+    Application.create!(job:, candidate:)
+    conversation = Conversation.create!(candidate:, employer:, job:)
+    path = "/api/conversations/#{conversation.id}/messages"
+    employer_auth = auth(employer)
+    candidate_auth = auth(candidate)
+
+    post "/api/blocks", params: { userId: candidate.id }, headers: employer_auth, as: :json
+    assert_response :created
+    post "/api/blocks", params: { userId: candidate.id }, headers: employer_auth, as: :json
+    assert_response :created, "blocking twice is harmless"
+    assert_equal 1, UserBlock.count
+
+    [candidate_auth, employer_auth].each do |headers|
+      post path, params: { body: "hello" }, headers:, as: :json
+      assert_response :forbidden
+      assert_equal "MESSAGING_BLOCKED", response.parsed_body["code"]
+    end
+    get path, headers: candidate_auth
+    assert_response :success, "history stays readable"
+
+    conversation.destroy!
+    post "/api/conversations", params: { jobId: job.id }, headers: candidate_auth, as: :json
+    assert_response :forbidden
+    assert_equal "MESSAGING_BLOCKED", response.parsed_body["code"]
+
+    post "/api/conversations", params: { jobId: job.id, candidateId: candidate.id }, headers: employer_auth, as: :json
+    assert_response :forbidden
+    delete "/api/blocks/#{candidate.id}", headers: employer_auth
+    assert_response :success
+    post "/api/conversations", params: { jobId: job.id, candidateId: candidate.id }, headers: employer_auth, as: :json
+    assert_response :created
+    conversation_id = response.parsed_body["id"]
+
+    post "/api/blocks", params: { userId: employer.id }, headers: candidate_auth, as: :json
+    get "/api/conversations", headers: candidate_auth
+    row = response.parsed_body["conversations"].find { _1["id"] == conversation_id }
+    assert_equal [true, false], row.values_at("blockedByMe", "blockedMe")
+    get "/api/conversations", headers: employer_auth
+    row = response.parsed_body["conversations"].find { _1["id"] == conversation_id }
+    assert_equal [false, true], row.values_at("blockedByMe", "blockedMe")
+
+    post "/api/blocks", params: { userId: candidate.id }, headers: candidate_auth, as: :json
+    assert_response :unprocessable_content
+    post "/api/blocks", params: { userId: "missing" }, headers: candidate_auth, as: :json
+    assert_response :not_found
+  end
+
+  test "a booking pair shares one conversation even when requests race" do
+    owner = create_user("Race Owner", "jobseeker")
+    requester = create_user("Race Requester", "employer")
+    Conversation.create!(candidate: owner, employer: requester)
+    assert_raises(ActiveRecord::RecordNotUnique) { Conversation.create!(candidate: owner, employer: requester) }
+    booking = create_booking(owner:, requester:)
+    post "/api/conversations", params: { bookingId: booking.id }, headers: auth(requester), as: :json
+    assert_response :created
+    assert_equal 1, Conversation.where(candidate: owner, employer: requester).count
+  end
+
   test "new messages raise one debounced notification per conversation and never copy the body" do
     employer = create_user("Debounce Employer", "employer")
     candidate = create_user("Debounce Candidate", "jobseeker")

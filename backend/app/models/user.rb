@@ -21,6 +21,8 @@ class User < ApplicationRecord
   has_many :organizations, foreign_key: :owner_id, dependent: :destroy
   has_many :band_projects, foreign_key: :owner_id, dependent: :destroy
   has_many :crew_plans, foreign_key: :owner_id, dependent: :destroy
+  has_many :user_blocks, foreign_key: :blocker_id, dependent: :delete_all
+  has_many :blocked_by, class_name: "UserBlock", foreign_key: :blocked_id, dependent: :delete_all
   has_many :subscriptions, dependent: :destroy
   has_many :billing_attempts, dependent: :destroy
 

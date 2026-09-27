@@ -46,6 +46,27 @@ class RazorpayConfigTest < ActiveSupport::TestCase
     assert_not RazorpayConfig.usable?
   end
 
+  test "payment mode tells the billing page how upgrades are actually paid for" do
+    ENV.delete("RAZORPAY_KEY_ID")
+    assert_equal "mock", RazorpayConfig.payment_mode
+    assert_not RazorpayConfig.test_mode?, "no keys is mock checkout, not Razorpay test mode"
+
+    set_keys("rzp_test_abc")
+    assert_equal "test", RazorpayConfig.payment_mode
+    assert RazorpayConfig.test_mode?
+
+    set_keys("rzp_live_abc")
+    assert_equal "disabled", RazorpayConfig.payment_mode, "a refused live key disables checkout"
+
+    in_production do
+      assert_equal "live", RazorpayConfig.payment_mode
+      set_keys("rzp_test_abc")
+      assert_equal "disabled", RazorpayConfig.payment_mode
+      ENV.delete("RAZORPAY_KEY_ID")
+      assert_equal "disabled", RazorpayConfig.payment_mode, "production never falls back to mock checkout"
+    end
+  end
+
   test "admin readiness reports the key mode and marks a refused key as not ready" do
     set_keys("rzp_live_abc")
     payments = ReadinessChecks.new.call.fetch(:payments)

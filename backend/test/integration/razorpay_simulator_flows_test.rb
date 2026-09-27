@@ -226,6 +226,7 @@ class RazorpaySimulatorFlowsTest < ActionDispatch::IntegrationTest
     get "/api/billing/subscription", headers: auth
     assert_response :success
     assert_equal true, response.parsed_body["testMode"]
+    assert_equal "test", response.parsed_body["paymentMode"]
     assert_not_includes response.body, ENV["RAZORPAY_KEY_SECRET"]
     assert_not_includes response.body, WEBHOOK_SECRET
   end

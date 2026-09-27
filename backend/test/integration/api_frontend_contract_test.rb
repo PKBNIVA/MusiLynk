@@ -50,7 +50,7 @@ class ApiFrontendContractTest < ActionDispatch::IntegrationTest
     ["Reviews", :js, "/api/reviews", %w[reviews eligibleEmployers], { "reviews" => %w[id rating title body authorName employerName] }],
     ["CareerResources", nil, "/api/resources", %w[resources], { "resources" => %w[id title category description url] }],
     ["Billing", :emp, "/api/billing/plans", %w[plans], { "plans" => %w[code name monthly trialDays activePosts seats shortlist bookings] }],
-    ["Billing", :emp, "/api/billing/subscription", %w[subscription plan purchasedPlan summary history testMode], { "summary" => %w[status planCode planName nextChargeAt currentPeriodEnd], "history" => %w[paymentId invoiceId amount currency status at] }],
+    ["Billing", :emp, "/api/billing/subscription", %w[subscription plan purchasedPlan summary history testMode paymentMode], { "summary" => %w[status planCode planName nextChargeAt currentPeriodEnd], "history" => %w[paymentId invoiceId amount currency status at] }],
     ["DemoDataPanel", :admin, "/api/admin/demo-data", %w[batches jobs busy demoUsers maxUsers sizes], { "batches" => %w[name demo artists employers users createdAt], "jobs" => %w[id kind state batch size], "sizes.small" => %w[artists employers] }],
     ["GlobalSearch", nil, "/api/search?q=Matrix", %w[results interpretedAs], { "results" => %w[type id url title subtitle description tags] }],
     ["ActsManager/BandBuilder", nil, "/api/taxonomy", %w[opportunityKinds functionAreas workplaces currencies actTypes eventTypes engagementTypes roleCategories instruments], {}],

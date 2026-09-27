@@ -21,9 +21,15 @@ class SearchController < ApplicationController
     ["tour manager", "road manager"]
   ].freeze
   RESULT_TYPES = %w[jobs talent acts samples].freeze
+  # Search is public, so bound the work one request can ask for: queries are cut to
+  # MAX_QUERY_LENGTH characters and each IP gets REQUESTS_PER_MINUTE searches.
+  MAX_QUERY_LENGTH = 100
+  REQUESTS_PER_MINUTE = 60
 
   def index
-    terms = expanded_terms(params[:q].to_s.strip)
+    return unless throttle!("search", limit: REQUESTS_PER_MINUTE, period: 1.minute)
+
+    terms = expanded_terms(params[:q].to_s.strip.first(MAX_QUERY_LENGTH).strip)
     return render json: search_response([]) if terms.empty?
 
     requested_type = RESULT_TYPES.include?(params[:type]) ? params[:type] : nil

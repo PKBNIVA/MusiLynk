@@ -14,7 +14,15 @@ type Summary = {
   planCode: string; planName: string; provider: string; trialEndsAt?: string | null; currentPeriodEnd?: string | null;
   nextChargeAt?: string | null; accessEndsAt?: string | null; monthlyAmount?: number | null;
 };
-type BillingState = {subscription: any; plan: any; purchasedPlan: any; summary: Summary | null; history: any[]; testMode: boolean};
+type BillingState = {subscription: any; plan: any; purchasedPlan: any; summary: Summary | null; history: any[]; testMode: boolean; paymentMode?: PaymentMode};
+type PaymentMode = 'live' | 'test' | 'mock' | 'disabled';
+
+// Banner copy per payment mode; live payments need no banner.
+const PAYMENT_MODE_NOTICE: Partial<Record<PaymentMode, [string, string]>> = {
+  test: ['Test mode.', 'Payments on this environment use Razorpay test mode. No real money moves and no real cards are charged.'],
+  mock: ['Demo billing.', 'Razorpay is not configured on this environment, so upgrades start without any payment step.'],
+  disabled: ['Payments unavailable.', 'Paid upgrades are paused while billing is being set up. Your current plan is not affected.'],
+};
 
 const inr = (value: number) => `₹${Number(value).toLocaleString('en-IN')}`;
 const day = (value?: string | null) => value ? new Date(value).toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'}) : '';
@@ -123,6 +131,7 @@ export default function Billing() {
 
   const sub = state?.subscription;
   const summary = state?.summary || null;
+  const notice = state ? PAYMENT_MODE_NOTICE[state.paymentMode || (state.testMode ? 'test' : 'live')] : undefined;
   const currentCode = summary && !['cancelled'].includes(summary.status) ? summary.planCode : 'free';
   const cancellable = summary && ['pending', 'trialing', 'active', 'past_due'].includes(summary.status);
   const immediateCancel = summary && summary.status !== 'active';
@@ -139,9 +148,9 @@ export default function Billing() {
         {state && <Badge className="w-fit" data-testid="plan-badge">{summary ? `${summary.planName} · ${STATUS_LABEL[summary.status]}` : `${state.plan?.name || 'Free'} plan`}</Badge>}
       </div>
 
-      {state?.testMode && <div role="status" className="mt-6 flex gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+      {notice && <div role="status" className="mt-6 flex gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">
         <FlaskConical className="shrink-0 text-amber-300" size={18}/>
-        <span><b>Test mode.</b> Payments on this environment use Razorpay test mode. No real money moves and no real cards are charged.</span>
+        <span><b>{notice[0]}</b> {notice[1]}</span>
       </div>}
 
       {summary && <Card className={`mt-6 border ${summary.status === 'past_due' ? 'bg-rose-500/[.07] border-rose-400/30' : summary.status === 'trialing' ? 'bg-emerald-500/[.06] border-emerald-400/20' : 'bg-white/[.05] border-white/10'}`} data-testid="billing-status">

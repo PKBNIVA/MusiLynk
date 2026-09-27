@@ -196,15 +196,23 @@ test.describe('messages', () => {
     await page.goto('/employer/messages?c=c1');
     await expect(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
 
-    page.once('dialog', dialog => dialog.accept('asks for payment'));
+    const nativeDialogs: string[] = [];
+    page.on('dialog', dialog => { nativeDialogs.push(dialog.message()); void dialog.dismiss(); });
     await page.getByTestId('report-conversation').click();
-    await expect.poll(() => state.reports).toEqual([{entityType: 'user', entityId: 'u-2', reason: 'asks for payment', details: 'Reported from conversation c1.'}]);
+    const reportDialog = page.getByRole('dialog', {name: 'Report Pushy Person'});
+    await reportDialog.getByRole('radio', {name: 'Asks for payment'}).check();
+    await reportDialog.getByRole('button', {name: 'Send report'}).click();
+    await expect(reportDialog).toBeHidden();
+    await expect.poll(() => state.reports).toEqual([{entityType: 'user', entityId: 'u-2', reason: 'Asks for payment', details: 'Reported from conversation c1.'}]);
 
-    page.once('dialog', dialog => dialog.accept());
     await page.getByTestId('block-toggle').click();
+    const blockDialog = page.getByRole('alertdialog', {name: 'Block Pushy Person?'});
+    await blockDialog.getByRole('button', {name: 'Block'}).click();
+    await expect(blockDialog).toBeHidden();
     await expect(page.getByTestId('composer-closed')).toContainText('You blocked Pushy Person');
     await expect(page.getByRole('textbox', {name: 'Message'})).toBeHidden();
     expect(state.blocks).toEqual(['block u-2']);
+    expect(nativeDialogs).toEqual([]);
     await page.getByTestId('composer-closed').getByRole('button', {name: 'Unblock'}).click();
     await expect.poll(() => state.blocks).toEqual(['block u-2', 'unblock u-2']);
     await expect(page.getByRole('textbox', {name: 'Message'})).toBeVisible();

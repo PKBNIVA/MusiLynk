@@ -15,7 +15,8 @@ module Admin
         environment: Rails.env,
         coreReady: core_ready,
         optionalIntegrationsReady: checker.optional_integrations_ready?(checks),
-        checks:
+        checks:,
+        emailSuppressions: EmailSuppression.summary.merge(webhookConfigured: ENV["BREVO_WEBHOOK_SECRET"].present?)
       }, status: core_ready ? :ok : :service_unavailable
     end
 

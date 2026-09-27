@@ -23,6 +23,11 @@ module Admin
       release = ENV.fetch("RAILWAY_GIT_COMMIT_SHA", ENV.fetch("RENDER_GIT_COMMIT", ""))
       check.call("Release traceability", !Rails.env.production? || release.present?, release.present? ? release.first(12) : "Commit SHA unavailable", "high")
       check.call("Email delivery", !Rails.env.production? || EmailDelivery.brevo_configured? || (ENV["RESEND_API_KEY"].present? && ENV["EMAIL_FROM"].present?) || ENV["EMAIL_DELIVERY_WEBHOOK"].present?, EmailDelivery.brevo_configured? ? "Brevo configured" : ENV["RESEND_API_KEY"].present? ? "Resend configured" : ENV["EMAIL_DELIVERY_WEBHOOK"].present? ? "Webhook configured" : "Not configured", "medium")
+      suppressions = EmailSuppression.summary
+      webhook_ready = !Rails.env.production? || !EmailDelivery.brevo_configured? || ENV["BREVO_WEBHOOK_SECRET"].present?
+      reasons = suppressions[:byReason].map { |reason, count| "#{count} #{reason.tr('_', ' ')}" }.join(", ")
+      check.call("Email bounce webhook", webhook_ready,
+        "#{ENV['BREVO_WEBHOOK_SECRET'].present? ? 'Receiving Brevo events' : 'BREVO_WEBHOOK_SECRET not set'} · #{suppressions[:total]} suppressed address(es)#{reasons.present? ? " (#{reasons})" : ''}", "medium")
       check.call("Razorpay", !Rails.env.production? || ENV.values_at("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET").all?(&:present?), ENV["RAZORPAY_KEY_ID"].present? ? "Configured" : "Not configured", "medium")
       check.call("Duplicate user emails", User.group("lower(email)").having("COUNT(*) > 1").none?, "None", "high")
       invalid_payments = BookingPayment.where("amount <= 0").count

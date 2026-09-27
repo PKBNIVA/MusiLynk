@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_110100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -334,6 +334,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_110100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["owner_id"], name: "index_crew_plans_on_owner_id"
+  end
+
+  create_table "email_suppressions", id: :string, force: :cascade do |t|
+    t.string "email", null: false
+    t.string "scope", default: "none", null: false
+    t.string "reason", null: false
+    t.string "provider", default: "brevo", null: false
+    t.integer "soft_bounce_count", default: 0, null: false
+    t.string "last_event", null: false
+    t.string "last_message_id"
+    t.datetime "last_event_at", null: false
+    t.datetime "suppressed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_email_suppressions_on_email", unique: true
+    t.index ["scope"], name: "index_email_suppressions_on_scope"
   end
 
   create_table "email_tokens", id: :string, force: :cascade do |t|

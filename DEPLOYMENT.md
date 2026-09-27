@@ -169,6 +169,42 @@ Current production sender (set 2026-09-27): `BREVO_SENDER_EMAIL=no-reply@notify.
 Codes expire after 10 minutes, are single use, allow 5 attempts, and are limited to 5
 requests per email and per IP per hour. Outside production, and only when no email
 provider is configured, the request response includes `debugCode` for local QA.
+
+### Brevo bounce and complaint webhook
+
+Brevo reports hard bounces, soft bounces, spam complaints, blocks and unsubscribes to
+`POST /api/email/webhook/brevo`. Verse records each address in `email_suppressions`:
+
+| Brevo event | Effect |
+| --- | --- |
+| `hard_bounce`, `invalid_email` | No email of any kind (sign-in codes, verification, reset, notifications) |
+| `spam` (complaint), `blocked` | Same as a hard bounce |
+| `unsubscribed` | Notification emails stop; sign-in and security emails still go |
+| `soft_bounce` | Counted and shown to admins; delivery continues |
+
+A code request for a suppressed address answers 422 `EMAIL_SUPPRESSED` with a message asking
+for another address or the password, instead of silently never arriving. Admins see the counts
+in `GET /api/admin/health` (`emailSuppressions`) and `/admin/tester` ("Email bounce webhook"),
+and the sign-in doctor explains a suppressed address (`EMAIL_SUPPRESSED`). Replaying an event
+is harmless, and a weaker event never lifts a stronger one.
+
+Owner setup, once:
+
+1. Generate a secret: `openssl rand -hex 32`. Set it in Railway (Rails service) as
+   `BREVO_WEBHOOK_SECRET`. Without it the endpoint answers 503 to everything.
+2. Brevo → Transactional → Settings → Webhook → **Add a new webhook**:
+   - URL: `https://verse-music-platform-production.up.railway.app/api/email/webhook/brevo`
+   - Authentication: choose **Token** (sent as `Authorization: Bearer <secret>`) or **Basic**
+     (any username, the secret as the password). If your Brevo screen has no authentication
+     option, append `?token=<secret>` to the URL instead (the header is preferred because URLs
+     can end up in proxy logs).
+   - Events: Hard bounce, Soft bounce, Blocked, Spam (complaint), Invalid email, Unsubscribed.
+3. Use Brevo's **Test** button or send a code to a known-bad address, then check
+   `/admin/tester` shows the count.
+
+To lift a suppression after the mailbox is fixed, remove the address from Brevo's blocklist
+(Transactional → Contacts → Blocked) and delete its row:
+`bin/rails runner 'EmailSuppression.where(email: "someone@example.com").delete_all'`.
 - S3/R2: access keys, bucket, endpoint, region, and public base URL
 
 ## Provider integration acceptance
@@ -180,7 +216,7 @@ of each controlled test before declaring an integration operational.
 | Provider | Railway environment names | Controlled verification |
 | --- | --- | --- |
 | Razorpay | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `RAZORPAY_PLAN_PRO`, `RAZORPAY_PLAN_STUDIO` | Follow the **Payments (Razorpay) go-live checklist** below: dashboard field mapping, webhook URL `https://verse-music-platform-production.up.railway.app/api/billing/webhook/razorpay` and events, automatic capture, test-mode rehearsal, then live switch. Keep test and live credentials separate. |
-| Brevo | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` | Verify the sending domain and sender in Brevo, then deliver a verification and reset email to controlled addresses. Check provider acceptance, inbox receipt, bounce status, and the resulting links. |
+| Brevo | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `BREVO_WEBHOOK_SECRET` | Verify the sending domain and sender in Brevo, then deliver a verification and reset email to controlled addresses. Check provider acceptance, inbox receipt, bounce status, and the resulting links. |
 | S3-compatible storage | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_BUCKET`, `AWS_ENDPOINT_URL_S3`, `AWS_PUBLIC_BASE_URL`, optional `AWS_UPLOAD_METHOD` (see "Object storage — Cloudflare R2") | Upload, read, and delete a controlled image and audio file through the browser. Verify object durability, access policy, MIME/size rejection, CORS, and cleanup. |
 
 Keep credentials in Railway's secret settings, not in the repository or frontend
@@ -448,6 +484,13 @@ What is sent, and what is not:
 ### 3. Alert rules (Sentry → Alerts → Create alert → Issues), for each project
 
 1. **New issue** — "A new issue is created" → email the owner (and the team, if any).
+   This also covers billing mismatches: when the half-hourly reconciliation job finds an
+   attempt whose Razorpay order or subscription disagrees with Verse (wrong amount or
+   currency, or the local payment was already released), it reports one
+   `BillingReconciliationJob::Mismatch` event per run tagged
+   `source=billing_reconciliation_mismatch` with the fixed fingerprint
+   `billing-reconciliation-mismatch`, so every run groups into one issue and alerts once.
+   The event lists up to 20 attempt ids; open them in `/admin` → Billing attempts.
 2. **Spike** — "Number of events in an issue is more than 20 in 5 minutes" → email.
 3. **Regression** — "The issue changes state from resolved to unresolved" → email.
 
@@ -508,6 +551,15 @@ Railway's current trial does not provide managed backups or point-in-time recove
    major version and fails the run if the checksum, `pg_restore`, or any table is missing.
    Row-count differences (writes during the dump) are warnings.
 3. The encrypted dump, checksum and manifest are kept as a workflow artifact for 30 days.
+4. When `BACKUP_S3_BUCKET` is set, the same three files (encrypted only, never the plaintext
+   dump) are copied to Cloudflare R2 or any S3-compatible bucket under
+   `verse-db/YYYY/MM/DD/run-<run id>/`, and the dump's size is read back to confirm the upload.
+   With the secret unset the step is skipped.
+5. If the run fails or is cancelled, a second job opens a GitHub issue labelled
+   `backup-failure` (or comments on the open one), which GitHub emails to the repository owner.
+   The next green run closes it. If the `ALERT_WEBHOOK_URL` secret is set, the same alert is
+   also POSTed there as JSON (`text` and `content` fields, so Slack and Discord incoming
+   webhooks work as-is).
 
 A green run is therefore a backup that was restored successfully. Setup, once:
 
@@ -516,6 +568,28 @@ A green run is therefore a backup that was restored successfully. Setup, once:
 - Repository secret `BACKUP_PASSPHRASE`: a long random passphrase. Store a copy outside
   GitHub (password manager); without it the backups cannot be decrypted.
 - Run the workflow once by hand (Actions -> Database backup -> Run workflow) and confirm it passes.
+- GitHub → your profile → Settings → Notifications: keep email on for "Issues" on repositories
+  you own/watch, so the `backup-failure` issue reaches your inbox. Nothing else is needed for
+  the alert; it uses the workflow's built-in token.
+- Optional: repository secret `ALERT_WEBHOOK_URL` (a Slack or Discord incoming webhook URL).
+
+Off-GitHub copies in Cloudflare R2 (recommended; the GitHub artifact alone lives only 30 days
+and shares an account with the code):
+
+1. Cloudflare → R2 → **Create bucket** `verse-db-backups` (separate from the uploads bucket,
+   no public access, no custom domain).
+2. Bucket → Settings → **Object lifecycle rules** → Add rule: prefix `verse-db/`, action
+   "Delete uploaded objects" after **90 days** (use 35 if you only want a month; the dump is
+   already encrypted, so longer retention is safe). Optionally also turn on **Bucket lock**
+   for the same prefix and period so a leaked key cannot delete recent backups.
+3. R2 → **Manage API tokens** → Create token with **Object Read & Write** limited to that bucket.
+4. Repository secrets (Settings → Secrets and variables → Actions):
+   - `BACKUP_S3_BUCKET` = `verse-db-backups`
+   - `BACKUP_S3_ENDPOINT` = `https://<account id>.r2.cloudflarestorage.com`
+   - `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY` = the token's S3 credentials
+   - `BACKUP_S3_REGION` optional (defaults to `auto`, right for R2; AWS S3 needs the bucket
+     region and no endpoint)
+5. Run the workflow by hand and confirm the files appear under `verse-db/<today>/`.
 
 Restoring for real (into a new Railway Postgres, never over the live one until verified):
 
@@ -526,8 +600,10 @@ SCRATCH_DATABASE_URL=<new database URL> BACKUP_PASSPHRASE=<passphrase> \
 ```
 
 Point the Rails service's `DATABASE_URL` at the restored database only after that check passes.
-Thirty days of artifacts is not long-term retention; add Railway's paid backups or copy
-artifacts to object storage if longer history is needed.
+To restore from R2 instead of an artifact, download the three files from
+`verse-db/YYYY/MM/DD/run-<id>/` (Cloudflare dashboard, or
+`aws s3 cp --recursive --endpoint-url <endpoint> s3://<bucket>/verse-db/YYYY/MM/DD/run-<id>/ .`)
+and run the same command. Without the R2 copy, history is only the 30 days of artifacts.
 
 Rollback application code by redeploying the last known-good `production` commit.
 Database migrations must remain backward-compatible with the previous application release.

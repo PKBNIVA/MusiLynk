@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../support/sentry_test_support"
 
 class BillingReconciliationJobTest < ActiveSupport::TestCase
+  include SentryTestSupport
+
   setup do
     @user = User.create!(name: "Recon User", email: "recon-#{SecureRandom.hex(4)}@example.com", password: "StrongPass123!", role: "employer", status: "active")
     @now = Time.current
@@ -74,6 +77,48 @@ class BillingReconciliationJobTest < ActiveSupport::TestCase
     assert_equal "created", young.reload.status
     retry_payment = booking.booking_payments.create!(payer: @user, kind: "deposit", amount: 100, currency: "INR", provider: "razorpay", status: "created")
     assert retry_payment.persisted?
+  end
+
+  test "mismatches with Razorpay are reported once per run under a stable fingerprint" do
+    attempts = 2.times.map do
+      payment, = unissued_payment(created_at: 10.minutes.ago)
+      BillingAttempt.create!(user: @user, operation: "booking_order_create", provider: "razorpay", idempotency_key: "recon-mm-#{SecureRandom.hex(4)}", state: "ambiguous",
+        resource_type: "BookingPayment", resource_id: payment.id, provider_resource_id: "order_mm_#{SecureRandom.hex(3)}", created_at: 10.minutes.ago, updated_at: 10.minutes.ago)
+    end
+    # Razorpay says the order is for a different amount than Verse recorded.
+    gateway = fake_gateway(order: { "id" => "order_mm", "amount" => 999_900, "currency" => "INR" })
+
+    with_sentry do
+      result = BillingReconciliationJob.perform_now(@now, gateway:)
+      assert_equal 2, result.fetch(:mismatches)
+      assert_equal 0, result.fetch(:reconciled)
+      assert_equal 1, sentry_events.size, "one alert per run, not one per attempt"
+      payload = sentry_payloads.first
+      assert_equal ["billing-reconciliation-mismatch"], payload["fingerprint"]
+      assert_equal "billing_reconciliation_mismatch", payload.dig("tags", "source")
+      assert_equal "error", payload["level"]
+      assert_equal 2, payload.dig("extra", "mismatchCount")
+      assert_equal attempts.map(&:id).sort, payload.dig("extra", "mismatches").pluck("billingAttemptId").sort
+
+      # The next scheduled run finds the same mismatches again.
+      BillingReconciliationJob.perform_now(@now + 30.minutes, gateway:)
+      assert_equal 2, sentry_events.size
+      assert_equal 1, sentry_payloads.map { _1["fingerprint"] }.uniq.size, "later runs group into the same issue"
+    end
+    attempts.each { assert_equal "reconcile_failed", _1.reload.error_code }
+  end
+
+  test "a clean run or a transient provider error reports no mismatch" do
+    sub = Subscription.create!(user: @user, plan_code: "pro", provider: "razorpay", status: "pending")
+    create_attempt(sub, state: "ambiguous", provider_resource_id: "sub_down", updated_at: 5.minutes.ago)
+    gateway = fake_gateway(subscription: RazorpayGateway::GatewayError.new("Unavailable", code: "SERVER_ERROR", http_status: 503))
+
+    with_sentry do
+      result = BillingReconciliationJob.perform_now(@now, gateway:)
+      assert_equal 0, result.fetch(:mismatches)
+      assert_equal ["billing_reconciliation_failed"], sentry_payloads.map { _1.dig("tags", "source") }
+      refute_equal ["billing-reconciliation-mismatch"], sentry_payloads.first["fingerprint"]
+    end
   end
 
   test "is scheduled every thirty minutes" do

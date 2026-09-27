@@ -36,10 +36,12 @@ class NotificationEmail
   }.freeze
 
   # Only verified addresses are emailed (an unverified address may not belong to the account
-  # holder), and never to someone who turned notification emails off. Transactional emails
-  # (sign-in codes, verification, password reset) do not go through this class.
+  # holder), never to someone who turned notification emails off, and never to an address
+  # the provider reported as bounced, complaining or unsubscribed (EmailSuppression).
+  # Transactional emails (sign-in codes, verification, password reset) do not go through this class.
   def self.deliverable_to?(user)
-    EmailDelivery.configured? && user.email.present? && user.email_verified? && user.status == "active" && opted_in?(user)
+    EmailDelivery.configured? && user.email.present? && user.email_verified? && user.status == "active" && opted_in?(user) &&
+      !EmailSuppression.blocks_notifications?(user.email)
   end
 
   # Users without a profile row (admins) keep the column default: opted in.

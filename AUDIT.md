@@ -26,6 +26,8 @@ Labels: **R** reproduced locally · **V** verified in code · **I** inferred · 
 - **P0-1 (B)** No verified restorable production backup. DEPLOYMENT.md states the Railway trial
   has no managed backups/PITR; a single manual dump on the DB volume is not a backup. Verify
   checksum, restore into a scratch DB, then schedule encrypted off-platform dumps or buy PITR.
+  Scripts and a nightly workflow that back up, encrypt, and restore-verify each dump are in
+  `scripts/db/` and `.github/workflows/db-backup.yml`; closed once the first production run passes.
 
 ### P1
 - **P1-1 (R, fixed in #35)** Seven pages use `useEffect(load, [])` where `load` returns a Promise;

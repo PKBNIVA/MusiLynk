@@ -93,6 +93,8 @@ Rails.application.routes.draw do
     resources :conversations, only: %i[index create] do
       resources :messages, only: %i[index create], controller: "messages"
     end
+    # :id is the blocked user's id.
+    resources :blocks, only: %i[create destroy], controller: "user_blocks"
     get "public/acts", to: "acts#public_index"
     get "public/acts/:id", to: "acts#public_show"
     get "acts/me", to: "acts#mine"

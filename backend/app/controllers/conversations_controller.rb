@@ -23,7 +23,10 @@ class ConversationsController < ApplicationController
     ])
     rows = Conversation.where("candidate_id = ? OR employer_id = ?", current_user.id, current_user.id)
       .select(Conversation.arel_table[Arel.star], *LATEST_MESSAGE_SELECTS, unread_sql)
-      .includes(:candidate, :employer, :job).order(updated_at: :desc).limit(200)
+      .includes(:candidate, :employer, :job).order(updated_at: :desc).limit(200).to_a
+    counterpart_ids = rows.map { _1.counterpart_for(current_user).id }
+    @blocked_ids = UserBlock.where(blocker: current_user, blocked_id: counterpart_ids).pluck(:blocked_id).to_set
+    @blocked_by_ids = UserBlock.where(blocked: current_user, blocker_id: counterpart_ids).pluck(:blocker_id).to_set
     render json: { conversations: rows.map { serialize(_1) } }
   end
 
@@ -69,6 +72,9 @@ class ConversationsController < ApplicationController
   end
 
   def open_conversation(candidate:, employer:, job:)
+    if UserBlock.between?(candidate, employer)
+      return render_error("You can't start a conversation with this person.", :forbidden, "MESSAGING_BLOCKED")
+    end
     conversation = begin
       Conversation.find_or_create_by!(candidate:, employer:, job:)
     rescue ActiveRecord::RecordNotUnique
@@ -83,7 +89,8 @@ class ConversationsController < ApplicationController
     counterpart = conversation.counterpart_for(current_user)
     {
       id: conversation.id, candidateName: conversation.candidate.name, employerName: conversation.employer.name,
-      counterpartId: counterpart.id, counterpartName: counterpart.name,
+      counterpartId: counterpart.id, counterpartName: counterpart.name, counterpartActive: counterpart.active?,
+      blockedByMe: @blocked_ids.include?(counterpart.id), blockedMe: @blocked_by_ids.include?(counterpart.id),
       viewerSide: conversation.candidate_id == current_user.id ? "candidate" : "employer",
       jobId: conversation.job_id, jobTitle: conversation.job&.title,
       lastMessage: conversation[:last_message_body], lastMessageAt: conversation[:last_message_at],

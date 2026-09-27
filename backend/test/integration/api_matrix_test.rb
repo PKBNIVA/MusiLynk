@@ -145,6 +145,8 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/conversations", :any, { ok: { default: [201], admin: [403] }, params: ->(w, a) { a == :emp ? { candidateId: w.user(:js).id } : { employerId: w.user(:emp).id } }, bad: { candidateId: ApiMatrixWorld::MISSING_ID }, bad_status: [403, 404, 422] }],
     [:get, "/api/conversations/{conversation}/messages", :any, { ok: { default: [200], admin: [404] }, idor: true, missing: :conversation, keys: %w[messages] }],
     [:post, "/api/conversations/{conversation}/messages", :any, { ok: { default: [201], admin: [404] }, params: { body: "Hello" }, idor: true, missing: :conversation, bad: { body: "   " }, bad_status: [422] }],
+    [:post, "/api/blocks", :any, { ok: { default: [201] }, params: ->(w, a) { { userId: w.user(a == :js ? :emp : :js).id } }, bad: { userId: ApiMatrixWorld::MISSING_ID }, bad_status: [404, 422] }],
+    [:delete, "/api/blocks/matrix-not-blocked", :any, { ok: { default: [200] }, keys: %w[blocked] }],
     [:get, "/api/public/acts", :public, { keys: %w[acts] }],
     [:get, "/api/public/acts/{act}", :public, { keys: %w[act], missing: :act }],
     [:get, "/api/public/acts/{inactive_act}", :public, { ok: [404], anon: [404] }],

@@ -25,7 +25,7 @@ class ApiFrontendContractTest < ActionDispatch::IntegrationTest
     ["EmployerApplications", :emp, "/api/employer/applications", %w[applications], { "applications" => %w[id status jobId jobTitle candidateId candidateName candidateEmail candidateLocation experience skills coverLetter screeningAnswers recruiterNote recruiterRating allowedNextStatuses] }],
     ["Portfolio", :js, "/api/portfolio", %w[items], { "items" => %w[id type title url description creditedAs year featured thumbnailUrl waveformUrl visibility tags genres roles instruments mediaMetadata] }],
     ["Notifications", :js, "/api/notifications", %w[notifications unread], { "notifications" => %w[id title body link readAt createdAt type] }],
-    ["Messages", :js, "/api/conversations", %w[conversations], { "conversations" => %w[id candidateName employerName jobTitle lastMessage counterpartName unreadCount lastMessageAt lastMessageFromMe] }],
+    ["Messages", :js, "/api/conversations", %w[conversations], { "conversations" => %w[id candidateName employerName jobTitle lastMessage counterpartName unreadCount lastMessageAt lastMessageFromMe counterpartId counterpartActive blockedByMe blockedMe] }],
     ["Messages", :js, "/api/conversations/{conversation}/messages", %w[messages truncated limit], { "messages" => %w[id senderId body createdAt readAt] }],
     ["Availability", :js, "/api/availability", %w[windows], { "windows" => %w[id startAt endAt status city] }],
     ["CandidateSearch", :emp, "/api/candidates", %w[candidates], { "candidates" => %w[id name headline location skills verified bio shortlisted] }],

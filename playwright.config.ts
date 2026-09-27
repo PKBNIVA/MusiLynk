@@ -3,28 +3,30 @@ import {defineConfig, devices} from '@playwright/test';
 const liveBaseUrl = process.env.QA_BASE_URL?.replace(/\/$/, '');
 const fullMatrix = process.env.QA_FULL_MATRIX === 'true';
 const integrationRun = process.env.QA_INTEGRATION === 'true';
+// Request-only specs (no browser): live API health and the signed-in live smoke.
+const apiSpecs = /(api-health|live-account-smoke)\.spec\.ts/;
 
 const browserProjects = [
   {
     name: 'chromium-desktop',
-    testIgnore: /api-health\.spec\.ts/,
+    testIgnore: apiSpecs,
     use: {...devices['Desktop Chrome']},
   },
   {
     name: 'chromium-mobile',
-    testIgnore: /api-health\.spec\.ts/,
+    testIgnore: apiSpecs,
     use: {...devices['Pixel 7']},
   },
   ...(fullMatrix
     ? [
         {
           name: 'firefox-desktop',
-          testIgnore: /api-health\.spec\.ts/,
+          testIgnore: apiSpecs,
           use: {...devices['Desktop Firefox']},
         },
         {
           name: 'webkit-mobile',
-          testIgnore: /api-health\.spec\.ts/,
+          testIgnore: apiSpecs,
           use: {...devices['iPhone 15']},
         },
       ]
@@ -54,7 +56,7 @@ export default defineConfig({
   projects: [
     {
       name: 'api',
-      testMatch: /api-health\.spec\.ts/,
+      testMatch: apiSpecs,
       use: {},
     },
     ...browserProjects,

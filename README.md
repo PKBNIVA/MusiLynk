@@ -66,6 +66,7 @@ bundle exec bundler-audit check --update
 # Web (from the repository root)
 npm run build
 npm run test:all            # frontend source smoke tests
+npm run test:unit -- --coverage   # Vitest unit tests for src/app/lib, with a coverage floor
 npx playwright install chromium
 npm run qa:e2e              # browser tests against a local preview with a mocked API
 ```

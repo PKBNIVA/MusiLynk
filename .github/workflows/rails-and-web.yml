@@ -29,6 +29,8 @@ jobs:
       - name: Check bundle size budget
         run: npm run check:bundle
       - run: npm run test:all
+      # Vitest unit tests for src/app/lib with a coverage floor (see vitest.config.ts).
+      - run: npm run test:unit -- --coverage
 
   rails:
     runs-on: ubuntu-latest
@@ -70,7 +72,17 @@ jobs:
             echo "::error file=backend/db/schema.rb::db/schema.rb is out of date. Run bin/rails db:migrate locally and commit the regenerated schema."
             exit 1
           fi
+      # SimpleCov (test/test_helper.rb) fails this step when line or branch coverage
+      # drops under its floor; CI=true is what turns the floor on.
       - run: bin/rails test
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rails-coverage-${{ github.run_id }}
+          path: backend/coverage/
+          retention-days: 7
+          if-no-files-found: ignore
       - run: bin/rails zeitwerk:check
 
   security:

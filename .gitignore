@@ -14,3 +14,5 @@ dist-qa-*/
 backend/log/
 backend/tmp/
 backend/storage/
+backend/coverage/
+coverage/

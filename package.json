@@ -16,6 +16,8 @@
     "test:frontend-performance": "node tests/frontend-performance-smoke.mjs",
     "test:frontend-native-dialogs": "node tests/frontend-native-dialogs-smoke.mjs",
     "test:all": "npm run test:frontend-bootstrap && npm run test:frontend-request-resilience && npm run test:frontend-resilience && npm run test:frontend-monitoring && npm run test:frontend-native-dialogs && npm run test:frontend-performance",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "qa:e2e": "playwright test",
     "qa:e2e:public": "playwright test tests/e2e/public-experience.spec.ts tests/e2e/accessibility.spec.ts",
     "qa:e2e:api": "playwright test tests/e2e/api-health.spec.ts --project=api",
@@ -73,9 +75,12 @@
     "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
     "@vitejs/plugin-react": "6.1.1",
+    "@vitest/coverage-v8": "5.0.2",
+    "jsdom": "30.1.1",
     "playwright-core": "1.63.0",
     "tailwindcss": "4.3.3",
-    "vite": "8.3.0"
+    "vite": "8.3.0",
+    "vitest": "5.0.2"
   },
   "pnpm": {
     "overrides": {

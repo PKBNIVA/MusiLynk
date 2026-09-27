@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { flush } from './helpers';
+import { fakeLocation, flush } from './helpers';
 
 const { sentry, sentryModule } = vi.hoisted(() => {
   const sentry = {
     initSentry: vi.fn(),
     captureError: vi.fn(() => 'event-1'),
     captureText: vi.fn(() => 'event-2'),
+    captureVital: vi.fn(),
   };
-  const sentryModule = () => ({ initSentry: sentry.initSentry, captureError: sentry.captureError, captureText: sentry.captureText });
+  const sentryModule = () => ({ initSentry: sentry.initSentry, captureError: sentry.captureError, captureText: sentry.captureText, captureVital: sentry.captureVital });
   return { sentry, sentryModule };
 });
 vi.mock('../sentryClient', sentryModule);
@@ -26,6 +27,7 @@ beforeEach(() => {
   sentry.initSentry.mockReset();
   sentry.captureError.mockReset().mockReturnValue('event-1');
   sentry.captureText.mockReset().mockReturnValue('event-2');
+  sentry.captureVital.mockReset();
   vi.stubGlobal('requestIdleCallback', (callback: () => void) => { callback(); return 1; });
 });
 
@@ -223,5 +225,89 @@ describe('reportApiFailure', () => {
     await flush();
     await monitoring.whenMonitoringReady();
     expect(sentry.captureText).toHaveBeenCalledWith('API PATCH /profile failed (500)', expect.any(Object));
+  });
+});
+
+describe('tracesSampleRate', () => {
+  it('defaults to a small sample, honours an explicit rate and clamps it', async () => {
+    const { tracesSampleRate, DEFAULT_TRACES_SAMPLE_RATE } = await loadMonitoring();
+    expect(DEFAULT_TRACES_SAMPLE_RATE).toBeGreaterThan(0);
+    expect(DEFAULT_TRACES_SAMPLE_RATE).toBeLessThanOrEqual(0.1);
+    expect(tracesSampleRate(undefined)).toBe(DEFAULT_TRACES_SAMPLE_RATE);
+    expect(tracesSampleRate(' ')).toBe(DEFAULT_TRACES_SAMPLE_RATE);
+    expect(tracesSampleRate('lots')).toBe(DEFAULT_TRACES_SAMPLE_RATE);
+    expect(tracesSampleRate('0')).toBe(0);
+    expect(tracesSampleRate('0.5')).toBe(0.5);
+    expect(tracesSampleRate('-1')).toBe(0);
+    expect(tracesSampleRate('9')).toBe(1);
+  });
+
+  it('is used for Sentry when no rate is configured', async () => {
+    const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });
+    await monitoring.whenMonitoringReady();
+    expect(sentry.initSentry).toHaveBeenCalledWith(expect.objectContaining({ tracesSampleRate: monitoring.DEFAULT_TRACES_SAMPLE_RATE }));
+  });
+});
+
+describe('routeTemplate', () => {
+  it('replaces ids and slugs and keeps at most three segments', async () => {
+    const { routeTemplate } = await loadMonitoring();
+    expect(routeTemplate('/')).toBe('/');
+    expect(routeTemplate('/professionals/jane-doe')).toBe('/professionals/:id');
+    expect(routeTemplate('/employer/jobs/42?tab=applicants#top')).toBe('/employer/jobs/:id');
+    expect(routeTemplate('/opportunities/0f8fad5b-d9cb-469f-a165-70867728950e')).toBe('/opportunities/:id');
+    expect(routeTemplate('/auth/employer')).toBe('/auth/:id');
+    expect(routeTemplate('/jobseeker/messages/extra/deep')).toBe('/jobseeker/messages/extra');
+    expect(routeTemplate('/users/7')).toBe('/users/:id');
+  });
+});
+
+describe('reportWebVital', () => {
+  const lcp = { name: 'LCP' as const, value: 1800, rating: 'good' as const };
+
+  it('does nothing without a DSN', async () => {
+    const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: '' });
+    monitoring.reportWebVital(lcp, '/pricing');
+    monitoring.reportWebVital(lcp);
+    expect(sentry.captureVital).not.toHaveBeenCalled();
+  });
+
+  it('queues vitals before Sentry loads and sends them with the route template', async () => {
+    const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });
+    monitoring.reportWebVital(lcp, '/professionals/jane-doe');
+    expect(sentry.captureVital).not.toHaveBeenCalled();
+    await monitoring.whenMonitoringReady();
+    expect(sentry.captureVital).toHaveBeenCalledWith(lcp, '/professionals/:id');
+
+    const { location, restore } = fakeLocation('/acts/12');
+    try {
+      monitoring.reportWebVital({ name: 'CLS', value: 0.02, rating: 'good' });
+    } finally {
+      restore();
+    }
+    expect(sentry.captureVital).toHaveBeenLastCalledWith({ name: 'CLS', value: 0.02, rating: 'good' }, '/acts/:id');
+    expect(location.pathname).toBe('/acts/12');
+  });
+
+  it('starts measuring when monitoring starts and reports when the page is hidden', async () => {
+    const observers: Array<{ type: string; callback: (list: { getEntries: () => unknown[] }) => void }> = [];
+    vi.stubGlobal('PerformanceObserver', class {
+      static supportedEntryTypes = ['largest-contentful-paint'];
+      type = '';
+      constructor(public callback: (list: { getEntries: () => unknown[] }) => void) { observers.push(this as never); }
+      observe(options: { type: string }) { this.type = options.type; }
+      disconnect() {}
+    });
+    const { restore } = fakeLocation('/pricing');
+    try {
+      const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });
+      monitoring.initMonitoring();
+      await monitoring.whenMonitoringReady();
+      observers[0].callback({ getEntries: () => [{ startTime: 950 }] });
+      window.dispatchEvent(new Event('pagehide'));
+      expect(sentry.captureVital).toHaveBeenCalledWith({ name: 'LCP', value: 950, rating: 'good' }, '/pricing');
+    } finally {
+      restore();
+    }
   });
 });

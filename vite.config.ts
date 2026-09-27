@@ -23,4 +23,16 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), releaseMeta()],
   server: { proxy: { '/api': 'http://127.0.0.1:3000' } },
   preview: { proxy: {} },
+  build: {
+    rolldownOptions: {
+      output: {
+        // React, React DOM and the router change rarely, so they get their own long-cached
+        // chunk instead of being folded into the entry (which changes on every deploy).
+        // `npm run check:bundle` enforces the size budgets in bundle-budget.json.
+        codeSplitting: {
+          groups: [{ name: 'react-vendor', test: /[\\/]node_modules[\\/](react|react-dom|scheduler|react-router)[\\/]/ }],
+        },
+      },
+    },
+  },
 });

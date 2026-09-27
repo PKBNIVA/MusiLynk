@@ -39,4 +39,16 @@ module RazorpayConfig
   # Safe to show to a signed-in user: whether payments run against Razorpay test mode
   # (or the simulator). Never exposes the key itself.
   def test_mode? = usable? && mode == "test"
+
+  # How upgrades are paid for here, for the billing page banner:
+  #   "live"     real Razorpay payments
+  #   "test"     Razorpay test mode (or the simulator); no real money moves
+  #   "mock"     no keys outside production; checkout activates plans without payment
+  #   "disabled" keys missing in production, or present but refused by the key-mode guard
+  def payment_mode
+    return mode == "live" ? "live" : "test" if usable?
+    return "mock" if !key_present? && !Rails.env.production?
+
+    "disabled"
+  end
 end

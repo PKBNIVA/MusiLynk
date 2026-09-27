@@ -31,7 +31,8 @@ module Billing
       sub = current_subscription
       ended = sub ? nil : Subscription.where(user: current_user, status: "cancelled", provider: "razorpay").where.not(provider_subscription_id: nil).order(updated_at: :desc).first
       render json: { subscription: sub, plan: PLANS[effective_plan(sub)], purchasedPlan: PLANS[sub&.plan_code || "free"],
-                     summary: billing_summary(sub || ended), history: billing_history, testMode: RazorpayConfig.test_mode? || !RazorpayConfig.key_present? }
+                     summary: billing_summary(sub || ended), history: billing_history, testMode: RazorpayConfig.test_mode?,
+                     paymentMode: RazorpayConfig.payment_mode }
     end
 
     def checkout

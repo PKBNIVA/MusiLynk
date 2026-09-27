@@ -55,12 +55,14 @@ thread and a pool connection:
 
 | Process | statement_timeout | lock_timeout | Override with |
 | --- | --- | --- | --- |
-| Web (Puma, and jobs when `GOOD_JOB_EXECUTION_MODE=async`) | `15s` | `5s` | `DB_STATEMENT_TIMEOUT`, `DB_LOCK_TIMEOUT` |
-| Job worker (`good_job start`) | `5min` | `30s` | `WORKER_DB_STATEMENT_TIMEOUT`, `WORKER_DB_LOCK_TIMEOUT` |
+| Web requests (Puma) | `15s` | `5s` | `DB_STATEMENT_TIMEOUT`, `DB_LOCK_TIMEOUT` |
+| Jobs, in the worker or in-process (`async`) | `5min` | `30s` | `WORKER_DB_STATEMENT_TIMEOUT`, `WORKER_DB_LOCK_TIMEOUT` |
 | `bin/rails db:*` (migrations, pre-deploy) | none | none | `DB_MIGRATION_STATEMENT_TIMEOUT`, `DB_MIGRATION_LOCK_TIMEOUT` |
 
 Values use Postgres duration syntax (`500ms`, `15s`, `5min`); `0` means no limit; anything
-else is ignored. GoodJob's LISTEN connection waits outside any statement, so the limits never
+else is ignored. `ApplicationJob` switches its connection to the job limits for the length of
+each job and restores the previous values afterwards (a connection that cannot be restored is
+dropped from the pool), so in-process jobs never run under the 15s web limit. GoodJob's LISTEN connection waits outside any statement, so the limits never
 cut it off. A timed-out query raises `ActiveRecord::QueryCanceled` (reported to Sentry).
 
 ### Migrations before deploy

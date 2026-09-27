@@ -37,6 +37,36 @@ module DatabaseSessionSettings
     :web
   end
 
+  # Runs the block with `limits` set on `connection`, then puts back whatever the session
+  # had before. Used by ApplicationJob so jobs run in-process (GOOD_JOB_EXECUTION_MODE=async)
+  # get the worker limits instead of the web ones. If the old values cannot be restored,
+  # the connection is dropped from the pool rather than handed to a request with the
+  # longer limits.
+  def with_limits(connection, limits)
+    previous = limits.keys.to_h { [_1, connection.select_value(show_sql(_1))] }
+    apply(connection, limits)
+    yield
+  ensure
+    begin
+      apply(connection, previous) if previous
+    rescue StandardError
+      connection.throw_away!
+    end
+  end
+
+  def apply(connection, limits)
+    limits.each { |name, value| connection.execute(set_sql(name, connection.quote(value))) }
+  end
+
+  SETTING_SQL = {
+    statement_timeout: ["SHOW statement_timeout", "SET SESSION statement_timeout = %s"],
+    lock_timeout: ["SHOW lock_timeout", "SET SESSION lock_timeout = %s"]
+  }.freeze
+
+  def show_sql(name) = SETTING_SQL.fetch(name).first
+
+  def set_sql(name, quoted_value) = format(SETTING_SQL.fetch(name).last, quoted_value)
+
   def top_level_rake_tasks
     defined?(Rake.application) ? Array(Rake.application.top_level_tasks) : []
   end

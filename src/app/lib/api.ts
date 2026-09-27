@@ -299,6 +299,8 @@ export interface SignInCodeResponse {
   debugCode?: string;
 }
 export const requestSignInCode = (payload: SignInCodeRequest) => apiPost<SignInCodeResponse>('/auth/otp/request', payload);
+export interface SignInMethods { signInCodes?: boolean; password?: boolean; emailDelivery?: boolean }
+export const getSignInMethods = () => apiGet<SignInMethods>('/auth/methods');
 
 // ---- Uploads -------------------------------------------------------------
 // Mirrors backend MediaTypeSniffer / Upload::MAX_SIZE. The server re-checks the real

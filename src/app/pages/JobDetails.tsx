@@ -5,6 +5,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
+import { ReportDialog } from '../components/ReportDialog';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { toast } from 'sonner';
@@ -31,7 +32,8 @@ export default function JobDetails() {
     [cover, setCover] = useState(''),
     [answers, setAnswers] = useState<Record<number, string>>({}),
     [busy, setBusy] = useState(false),
-    [loadError, setLoadError] = useState('');
+    [loadError, setLoadError] = useState(''),
+    [reporting, setReporting] = useState(false);
   const load = () => {
     setLoadError('');
     return apiGet<any>(`/jobs/${id}`)
@@ -77,17 +79,9 @@ export default function JobDetails() {
       toast.error(e.message);
     }
   }
-  async function report() {
-    const reason = window.prompt(
-      'What is wrong with this listing? e.g. asks for payment, misleading terms, unsafe contact request',
-    );
-    if (!reason) return;
-    try {
-      await apiPost('/reports', { entityType: 'job', entityId: id, reason });
-      toast.success('Report sent to moderation');
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+  async function report({ reason, details }: { reason: string; details: string }) {
+    await apiPost('/reports', { entityType: 'job', entityId: id, reason, ...(details ? { details } : {}) });
+    toast.success('Report sent to moderation');
   }
   if (!job)
     return (
@@ -234,7 +228,7 @@ export default function JobDetails() {
                       )}
                       {job.saved ? 'Saved' : 'Save'}
                     </Button>
-                    <Button variant="ghost" size="icon" aria-label="Report listing" onClick={report}>
+                    <Button variant="ghost" size="icon" aria-label="Report listing" onClick={() => setReporting(true)}>
                       <Flag size={17} />
                     </Button>
                   </div>
@@ -253,8 +247,11 @@ export default function JobDetails() {
                             <div className="text-sm font-medium">Screening questions</div>
                             {job.screeningQuestions.map((q: string, i: number) => (
                               <div key={q}>
-                                <div className="text-xs text-slate-400 mb-1">{q}</div>
+                                <label htmlFor={`screening-${i}`} className="block text-xs text-slate-400 mb-1">
+                                  {q}
+                                </label>
                                 <Textarea
+                                  id={`screening-${i}`}
                                   value={answers[i] || ''}
                                   onChange={(e) => setAnswers({ ...answers, [i]: e.target.value })}
                                   className="min-h-20 bg-black/20 border-white/15"
@@ -263,10 +260,11 @@ export default function JobDetails() {
                             ))}
                           </div>
                         )}
-                        <label className="text-sm font-medium">
+                        <label htmlFor="cover-note" className="text-sm font-medium">
                           Short note to the employer <span className="text-slate-500">(optional)</span>
                         </label>
                         <Textarea
+                          id="cover-note"
                           value={cover}
                           onChange={(e) => setCover(e.target.value)}
                           placeholder="Why this opportunity fits your work and what relevant proof should they review…"
@@ -303,6 +301,13 @@ export default function JobDetails() {
           </aside>
         </div>
       </main>
+      <ReportDialog
+        open={reporting}
+        onOpenChange={setReporting}
+        title="Report this listing"
+        description="Tell our moderators what is wrong with this opportunity."
+        onSubmit={report}
+      />
     </div>
   );
 }

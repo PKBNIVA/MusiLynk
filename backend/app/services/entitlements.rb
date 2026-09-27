@@ -4,7 +4,7 @@
 # - `active`, or `trialing` with a trial end in the future (or none recorded);
 # - an internal (mock or admin-granted) subscription with a `current_period_end`
 #   stops granting access once that period has ended.
-# `pending`, `past_due` and `cancelled` never grant paid capacity (see SAAS_BILLING.md).
+# `pending`, `past_due` and `cancelled` never grant paid capacity (see docs/engineering/SAAS_BILLING.md).
 class Entitlements
   LIMITS = { active_posts: :activePosts, seats: :seats, shortlist: :shortlist, bookings: :bookings }.freeze
   PLAN_RANK = { "free" => 0, "pro" => 1, "studio" => 2, "enterprise" => 3 }.freeze

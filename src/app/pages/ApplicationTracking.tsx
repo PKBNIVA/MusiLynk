@@ -6,12 +6,14 @@ import { Button } from '../components/ui/button';
 import { apiDelete, apiGet } from '../lib/api';
 import { toast } from 'sonner';
 import { Link } from 'react-router';
+import { useConfirm } from '../components/booking/BookingDialogs';
 import { MapPin, Calendar, BriefcaseBusiness } from 'lucide-react';
 const ordered = ['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Offer', 'Hired'];
 export default function ApplicationTracking() {
   const [apps, setApps] = useState<any[]>([]),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    confirm = useConfirm();
   const load = () => {
     setError('');
     return apiGet<any>('/applications')
@@ -22,15 +24,18 @@ export default function ApplicationTracking() {
   useEffect(() => {
     load();
   }, []);
-  async function withdraw(id: string, title: string) {
-    if (!window.confirm(`Withdraw your application for “${title}”? The employer will no longer see it.`)) return;
-    try {
-      await apiDelete(`/applications/${id}`);
-      toast.success('Application withdrawn');
-      load();
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+  function withdraw(id: string, title: string) {
+    confirm.ask({
+      title: `Withdraw your application for “${title}”?`,
+      description: 'The employer will no longer see it.',
+      confirmLabel: 'Withdraw',
+      destructive: true,
+      action: async () => {
+        await apiDelete(`/applications/${id}`);
+        toast.success('Application withdrawn');
+        load();
+      },
+    });
   }
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -142,6 +147,7 @@ export default function ApplicationTracking() {
           </div>
         )}
       </main>
+      {confirm.element}
     </div>
   );
 }

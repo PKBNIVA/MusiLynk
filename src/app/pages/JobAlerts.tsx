@@ -7,11 +7,13 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import { Link } from 'react-router';
+import { useConfirm } from '../components/booking/BookingDialogs';
 
 export default function JobAlerts() {
   const [alerts, setAlerts] = useState<any[]>([]),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    confirm = useConfirm();
   const load = () => {
     setLoading(true);
     setError('');
@@ -30,15 +32,18 @@ export default function JobAlerts() {
       toast.error(e.message);
     }
   }
-  async function remove(alert: any) {
-    if (!window.confirm(`Delete “${alert.name || 'Saved search'}”?`)) return;
-    try {
-      await apiDelete(`/job-alerts/${alert.id}`);
-      toast.success('Alert deleted');
-      load();
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+  function remove(alert: any) {
+    confirm.ask({
+      title: `Delete “${alert.name || 'Saved search'}”?`,
+      description: 'You will stop getting notifications for this saved search.',
+      confirmLabel: 'Delete',
+      destructive: true,
+      action: async () => {
+        await apiDelete(`/job-alerts/${alert.id}`);
+        toast.success('Alert deleted');
+        load();
+      },
+    });
   }
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -117,6 +122,7 @@ export default function JobAlerts() {
           ))}
         </div>
       </main>
+      {confirm.element}
     </div>
   );
 }

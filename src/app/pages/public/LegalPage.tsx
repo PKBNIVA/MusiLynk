@@ -147,12 +147,24 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
     items: [
       ['Respect', 'No harassment, threats, hate, sexual solicitation, spam or repeated unwanted contact.'],
       [
+        'No harassment',
+        'Harassment includes insults or slurs, sexual comments or requests, threats, pressure to meet alone or outside agreed work, messaging someone again after they said no or blocked you, and sharing anyone’s private details or images. One serious incident is enough for suspension.',
+      ],
+      [
+        'No scams or fee requests',
+        'Never ask talent to pay to be considered: no “registration”, audition, portfolio, joining or security fees and no “advance” from the person being hired. Do not share UPI IDs or bank details to collect such money, and do not push people to WhatsApp or Telegram before terms are agreed. Verse flags these patterns in messages and moderators act on reports.',
+      ],
+      [
         'Professional honesty',
         'Do not fabricate credits, availability, rates, client names, verification evidence or completed work.',
       ],
       [
         'No manipulation',
         'Do not create fake reviews, fake applications, fake bookings or multiple accounts to manipulate reputation or search.',
+      ],
+      [
+        'Reporting and enforcement',
+        'Use Report on a conversation, profile or listing. Moderators review the report with the relevant messages and the account’s history, then dismiss it, send a warning or suspend the account. Blocking stops messages both ways at any time.',
       ],
     ],
   },

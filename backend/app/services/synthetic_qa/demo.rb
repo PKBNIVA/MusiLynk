@@ -38,14 +38,15 @@ module SyntheticQa
     end
 
     # Serialises the "is another demo job running?" check with the enqueue, across processes.
-    # Returns :locked when another request holds the lock.
+    # Returns :locked when another request holds the lock. The lock is transaction-scoped,
+    # so Postgres releases it at commit or rollback even if this process dies mid-request,
+    # and a pooled connection can never keep it.
     def with_admin_lock
-      connection = ApplicationRecord.lease_connection
-      locked = connection.select_value("SELECT pg_try_advisory_lock(#{ADVISORY_LOCK_KEY})")
-      return :locked unless locked
-      yield
-    ensure
-      connection.select_value("SELECT pg_advisory_unlock(#{ADVISORY_LOCK_KEY})") if locked
+      ApplicationRecord.transaction(requires_new: true) do
+        locked = ApplicationRecord.lease_connection.select_value("SELECT pg_try_advisory_xact_lock(#{ADVISORY_LOCK_KEY})")
+        next :locked unless locked
+        yield
+      end
     end
   end
 end

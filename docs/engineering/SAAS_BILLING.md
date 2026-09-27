@@ -58,10 +58,10 @@ Verse blocks creation of a different paid plan while another recurring mandate i
 Pending authorization does not unlock paid entitlements. A customer can resume the same pending checkout ("Complete setup") instead of creating another subscription. The first eligible paid plan can receive its configured free trial; subsequent paid subscriptions do not automatically receive another trial.
 
 ## Local simulator
-`RAZORPAY_SIMULATOR=true` with an `rzp_test_` key (development/test only, refused in production and with live keys) routes all Razorpay API calls to `RazorpaySimulator` and swaps checkout.js for a simulated modal. See DEPLOYMENT.md → "Local rehearsal without credentials". Rails integration tests (`razorpay_simulator_flows_test.rb`) and Playwright (`tests/e2e/payments-simulator.spec.ts`) exercise the complete flows against it, including duplicate/out-of-order webhooks, declines, refunds and lost create responses.
+`RAZORPAY_SIMULATOR=true` with an `rzp_test_` key (development/test only, refused in production and with live keys) routes all Razorpay API calls to `RazorpaySimulator` and swaps checkout.js for a simulated modal. See [DEPLOYMENT.md → "Local rehearsal without credentials"](../../DEPLOYMENT.md#local-rehearsal-without-credentials-razorpay-simulator). Rails integration tests (`razorpay_simulator_flows_test.rb`) and Playwright (`tests/e2e/payments-simulator.spec.ts`) exercise the complete flows against it, including duplicate/out-of-order webhooks, declines, refunds and lost create responses.
 
 ## Go-live
-The exact Railway ← Razorpay dashboard mapping, webhook events, capture setting and test-mode rehearsal are in DEPLOYMENT.md → "Payments (Razorpay) go-live checklist".
+The exact Railway ← Razorpay dashboard mapping, webhook events, capture setting and test-mode rehearsal are in [DEPLOYMENT.md → "Payments (Razorpay) go-live checklist"](../../DEPLOYMENT.md#payments-razorpay-go-live-checklist).
 
 ## Production requirements still needed
 GST/invoicing, dunning emails, annual plans, proration, partial refunds in the ledger, settlement/KYC, finance exports, chargebacks, immutable accounting ledger and a support tool for safe subscription recovery. Payment attribution for subscription `payment.failed` events without a local order (recorded with no user).

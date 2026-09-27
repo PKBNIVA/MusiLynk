@@ -264,7 +264,7 @@ class AuthAndJobsTest < ActionDispatch::IntegrationTest
     employer_token = register("Hiring Studio", "studio@example.com", "employer")
     candidate_token = register("Working Artist", "artist@example.com", "jobseeker")
     User.create!(name: "Verse Admin", email: "admin@example.com", password: "StrongPass123!", role: "admin", status: "active").create_profile!
-    admin_token = login("admin@example.com")
+    admin_token = admin_login("admin@example.com")
 
     post "/api/jobs", params: {
       title: "Touring Guitarist", location: "Mumbai", opportunityKind: "tour", workplace: "onsite",
@@ -538,6 +538,17 @@ class AuthAndJobsTest < ActionDispatch::IntegrationTest
 
   def login(email)
     post "/api/auth/login", params: { email:, password: "StrongPass123!" }, as: :json
+    assert_response :success
+    response.parsed_body.fetch("accessToken")
+  end
+
+  # Admin password sign-in answers with a challenge; the emailed code (shown on
+  # screen outside production when no provider is configured) completes it.
+  def admin_login(email)
+    post "/api/auth/login", params: { email:, password: "StrongPass123!" }, as: :json
+    assert_response :accepted
+    challenge = response.parsed_body
+    post "/api/auth/second-factor", params: { challengeToken: challenge.fetch("challengeToken"), code: challenge.fetch("debugCode") }, as: :json
     assert_response :success
     response.parsed_body.fetch("accessToken")
   end

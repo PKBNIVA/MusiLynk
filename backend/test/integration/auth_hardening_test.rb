@@ -92,7 +92,7 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
 
   test "setting a user to pending or suspended revokes their sessions" do
     admin = User.create!(name: "Admin", email: "admin-hardening@example.com", password: PASSWORD, role: "admin", status: "active")
-    admin_token = login_token(admin.email)
+    admin_token = admin_login_token(admin.email)
 
     %w[pending suspended].each do |status|
       @user.reload.update!(status: "active")
@@ -218,6 +218,15 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
 
   def login_token(email)
     login(email, PASSWORD)
+    assert_response :success
+    response.parsed_body.fetch("accessToken")
+  end
+
+  def admin_login_token(email)
+    with_env(NO_PROVIDER_ENV) { login(email, PASSWORD) }
+    assert_response :accepted
+    challenge = response.parsed_body
+    post "/api/auth/second-factor", params: { challengeToken: challenge.fetch("challengeToken"), code: challenge.fetch("debugCode") }, as: :json
     assert_response :success
     response.parsed_body.fetch("accessToken")
   end

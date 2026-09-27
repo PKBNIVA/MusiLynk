@@ -5,6 +5,13 @@ default: &default
   # notifier/scheduler and ad-hoc connections.
   pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5).to_i + ENV.fetch("GOOD_JOB_MAX_THREADS", 2).to_i + 3 %>
   url: <%= ENV["DATABASE_URL"] %>
+  # statement_timeout / lock_timeout per process kind (web, GoodJob worker, db:* tasks);
+  # see config/database_session_settings.rb for the defaults and env overrides.
+<% require Rails.root.join("config/database_session_settings").to_s %>
+<% session_limits = DatabaseSessionSettings.variables %>
+  variables:
+    statement_timeout: "<%= session_limits[:statement_timeout] %>"
+    lock_timeout: "<%= session_limits[:lock_timeout] %>"
 
 development:
   <<: *default

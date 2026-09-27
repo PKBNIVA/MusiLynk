@@ -30,7 +30,22 @@ type Lookup = {
   recentAuthEvents?: Array<{ action: string; at: string; ip?: string }>;
   recentFailedLogins?: { count: number | null; windowMinutes: number };
   signInCodes?: { outstanding: number; lastRequestedAt?: string | null; requestedLast24Hours?: number } | null;
+  emailSuppression?: {
+    scope: 'all' | 'notifications' | 'none';
+    reason: string;
+    lastEventAt?: string | null;
+    softBounces: number;
+  } | null;
 };
+
+// What the email provider last reported for the address (bounces, complaints, unsubscribes).
+function deliverability(s: Lookup['emailSuppression']): string {
+  if (!s) return 'No bounces or complaints';
+  const reason = s.reason.replace(/_/g, ' ');
+  if (s.scope === 'all') return `Suppressed: ${reason}`;
+  if (s.scope === 'notifications') return 'Notification emails off (unsubscribed)';
+  return `${s.softBounces} soft bounce(s)`;
+}
 
 const tone: Record<Diagnosis['level'], { icon: any; cls: string; label: string }> = {
   error: { icon: XCircle, cls: 'border-rose-400/30 bg-rose-500/10 text-rose-100', label: 'Blocker' },
@@ -163,6 +178,7 @@ export function SignInDoctor() {
                           : `${result.recentFailedLogins.count} in ${result.recentFailedLogins.windowMinutes} min`,
                       ],
                       ['Email provider', result.emailProviderConfigured ? 'Configured' : 'Not configured'],
+                      ['Email deliverability', deliverability(result.emailSuppression)],
                     ] as const
                   ).map(([k, v]) => (
                     <div key={k} className="rounded-lg bg-white/[.04] p-3">

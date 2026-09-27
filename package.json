@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
     "dev": "vite",
     "dev:web": "vite",
     "typecheck": "tsc --noEmit",
@@ -16,7 +17,11 @@
     "test:frontend-request-resilience": "node tests/frontend-request-resilience-smoke.mjs",
     "test:frontend-resilience": "node tests/frontend-resilience-smoke.mjs",
     "test:frontend-monitoring": "node tests/frontend-monitoring-smoke.mjs",
-    "test:all": "npm run test:frontend-bootstrap && npm run test:frontend-request-resilience && npm run test:frontend-resilience && npm run test:frontend-monitoring",
+    "test:frontend-performance": "node tests/frontend-performance-smoke.mjs",
+    "test:frontend-native-dialogs": "node tests/frontend-native-dialogs-smoke.mjs",
+    "test:all": "npm run test:frontend-bootstrap && npm run test:frontend-request-resilience && npm run test:frontend-resilience && npm run test:frontend-monitoring && npm run test:frontend-native-dialogs && npm run test:frontend-performance",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "qa:e2e": "playwright test",
     "qa:e2e:public": "playwright test tests/e2e/public-experience.spec.ts tests/e2e/accessibility.spec.ts",
     "qa:e2e:api": "playwright test tests/e2e/api-health.spec.ts --project=api",
@@ -78,15 +83,18 @@
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
     "@vitejs/plugin-react": "6.1.1",
+    "@vitest/coverage-v8": "5.0.2",
     "eslint": "9.39.5",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.12.0",
+    "jsdom": "30.1.1",
     "playwright-core": "1.63.0",
     "prettier": "3.9.9",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
     "typescript-eslint": "8.70.1",
-    "vite": "8.3.0"
+    "vite": "8.3.0",
+    "vitest": "5.0.2"
   },
   "pnpm": {
     "overrides": {

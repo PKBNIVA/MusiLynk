@@ -1,8 +1,14 @@
+# Web (API) service. A separate job worker service uses railway.worker.toml instead
+# (see DEPLOYMENT.md, "Separate job worker").
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "backend/Dockerfile"
 
 [deploy]
+# Runs once per deploy in its own container, before the new release takes traffic; a
+# failure stops the deploy and the old release keeps serving. The web container also runs
+# db:prepare on boot until SKIP_DB_PREPARE_ON_BOOT=true is set on the service.
+preDeployCommand = "bin/rails db:prepare"
 healthcheckPath = "/api/live"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

@@ -11,6 +11,7 @@ import { useAuth } from '../lib/authContext';
 import { toast } from 'sonner';
 import { ShieldCheck, MailCheck } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
+import { DebugLinkDialog, VerificationRequestDialog } from '../components/VerificationDialogs';
 // List fields arrive as arrays and are edited as text: comma-separated, credits one per line.
 const joinList = (v: any, sep: string) => (Array.isArray(v) ? v.join(sep) : String(v ?? ''));
 const toForm = (user: any) => ({
@@ -30,7 +31,9 @@ export default function ProfileSetup() {
   const [f, setF] = useState<any>({}),
     [saving, setSaving] = useState(false),
     [loaded, setLoaded] = useState(false),
-    [loadError, setLoadError] = useState('');
+    [loadError, setLoadError] = useState(''),
+    [verifying, setVerifying] = useState(false),
+    [debugLink, setDebugLink] = useState<string | null>(null);
   const load = () => {
     setLoadError('');
     apiGet<any>('/me')
@@ -77,21 +80,13 @@ export default function ProfileSetup() {
       setSaving(false);
     }
   }
-  async function verify() {
-    const evidenceUrl = window.prompt(
-      'Add a public proof URL: official website, credit page, label/studio page, professional profile or other verifiable source.',
-    );
-    if (evidenceUrl === null) return;
-    try {
-      await apiPost('/verification-requests', {
-        kind: 'professional',
-        evidenceUrl,
-        note: 'Professional verification request',
-      });
-      toast.success('Verification request submitted for review');
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+  async function verify(evidenceUrl: string) {
+    await apiPost('/verification-requests', {
+      kind: 'professional',
+      evidenceUrl,
+      note: 'Professional verification request',
+    });
+    toast.success('Verification request submitted for review');
   }
   async function verifyEmail() {
     try {
@@ -99,7 +94,7 @@ export default function ProfileSetup() {
       if (d.alreadyVerified) toast.success('Email already verified');
       else {
         toast.success('Verification email requested');
-        if (d.debugLink) window.prompt('Development verification link', d.debugLink);
+        if (d.debugLink) setDebugLink(d.debugLink);
       }
     } catch (e: any) {
       toast.error(e.message);
@@ -134,7 +129,7 @@ export default function ProfileSetup() {
                 Verified professional
               </Badge>
             ) : (
-              <Button variant="outline" onClick={verify}>
+              <Button variant="outline" onClick={() => setVerifying(true)}>
                 <ShieldCheck size={16} className="mr-2" />
                 Request verification
               </Button>
@@ -159,8 +154,9 @@ export default function ProfileSetup() {
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
               <div>
-                <Label>Professional headline</Label>
+                <Label htmlFor="profile-headline">Professional headline</Label>
                 <Input
+                  id="profile-headline"
                   value={f.headline || ''}
                   onChange={(e) => set('headline', e.target.value)}
                   placeholder="Playback singer · Vocal producer · Hindi / Punjabi"
@@ -168,8 +164,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Base location</Label>
+                <Label htmlFor="profile-location">Base location</Label>
                 <Input
+                  id="profile-location"
                   value={f.location || ''}
                   onChange={(e) => set('location', e.target.value)}
                   placeholder="Mumbai, Maharashtra"
@@ -177,8 +174,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Experience</Label>
+                <Label htmlFor="profile-experience">Experience</Label>
                 <Input
+                  id="profile-experience"
                   value={f.experience || ''}
                   onChange={(e) => set('experience', e.target.value)}
                   placeholder="5 years / 30+ sessions / emerging"
@@ -186,8 +184,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Availability</Label>
+                <Label htmlFor="profile-availability">Availability</Label>
                 <Input
+                  id="profile-availability"
                   value={f.availability || ''}
                   onChange={(e) => set('availability', e.target.value)}
                   placeholder="Available weekends / touring Oct–Dec"
@@ -195,8 +194,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div className="md:col-span-2">
-                <Label>Bio</Label>
+                <Label htmlFor="profile-bio">Bio</Label>
                 <Textarea
+                  id="profile-bio"
                   value={f.bio || ''}
                   onChange={(e) => set('bio', e.target.value)}
                   placeholder="What you do, the contexts you work best in, notable experience and what you are looking for next."
@@ -211,8 +211,9 @@ export default function ProfileSetup() {
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
               <div>
-                <Label>Skills</Label>
+                <Label htmlFor="profile-skills">Skills</Label>
                 <Input
+                  id="profile-skills"
                   value={f.skills || ''}
                   onChange={(e) => set('skills', e.target.value)}
                   placeholder="Mixing, toplining, vocal production"
@@ -220,8 +221,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Genres</Label>
+                <Label htmlFor="profile-genres">Genres</Label>
                 <Input
+                  id="profile-genres"
                   value={f.genres || ''}
                   onChange={(e) => set('genres', e.target.value)}
                   placeholder="Bollywood, Indie Pop, Hip-Hop"
@@ -229,8 +231,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Instruments / voice</Label>
+                <Label htmlFor="profile-instruments">Instruments / voice</Label>
                 <Input
+                  id="profile-instruments"
                   value={f.instruments || ''}
                   onChange={(e) => set('instruments', e.target.value)}
                   placeholder="Vocals, guitar, keys"
@@ -238,8 +241,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Languages</Label>
+                <Label htmlFor="profile-languages">Languages</Label>
                 <Input
+                  id="profile-languages"
                   value={f.languages || ''}
                   onChange={(e) => set('languages', e.target.value)}
                   placeholder="Hindi, English, Punjabi"
@@ -247,8 +251,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div className="md:col-span-2">
-                <Label>Open to</Label>
+                <Label htmlFor="profile-openTo">Open to</Label>
                 <Input
+                  id="profile-openTo"
                   value={f.openTo || ''}
                   onChange={(e) => set('openTo', e.target.value)}
                   placeholder="Sessions, touring, full-time, sync, collaborations"
@@ -256,8 +261,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Professional roles</Label>
+                <Label htmlFor="profile-roles">Professional roles</Label>
                 <Input
+                  id="profile-roles"
                   value={f.roles || ''}
                   onChange={(e) => set('roles', e.target.value)}
                   placeholder="Session Bassist, Musical Director, FOH Engineer"
@@ -265,8 +271,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Gear / consoles / instruments</Label>
+                <Label htmlFor="profile-gear">Gear / consoles / instruments</Label>
                 <Input
+                  id="profile-gear"
                   value={f.gear || ''}
                   onChange={(e) => set('gear', e.target.value)}
                   placeholder="Fender Jazz V, DiGiCo Quantum, IEM rig"
@@ -274,8 +281,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Software / DAWs</Label>
+                <Label htmlFor="profile-software">Software / DAWs</Label>
                 <Input
+                  id="profile-software"
                   value={f.software || ''}
                   onChange={(e) => set('software', e.target.value)}
                   placeholder="Pro Tools, Logic Pro, Ableton Live"
@@ -283,8 +291,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Years of experience</Label>
+                <Label htmlFor="profile-yearsExperience">Years of experience</Label>
                 <Input
+                  id="profile-yearsExperience"
                   type="number"
                   min="0"
                   value={f.yearsExperience || ''}
@@ -318,10 +327,11 @@ export default function ProfileSetup() {
                 </label>
               </div>
               <div className="md:col-span-2">
-                <Label>
+                <Label htmlFor="profile-credits">
                   Selected credits <span className="text-slate-500">(one per line)</span>
                 </Label>
                 <Textarea
+                  id="profile-credits"
                   value={f.credits || ''}
                   onChange={(e) => set('credits', e.target.value)}
                   placeholder="Track / project — role — artist / company — year"
@@ -336,24 +346,27 @@ export default function ProfileSetup() {
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
               <div>
-                <Label>Website</Label>
+                <Label htmlFor="profile-website">Website</Label>
                 <Input
+                  id="profile-website"
                   value={f.website || ''}
                   onChange={(e) => set('website', e.target.value)}
                   className="mt-2 bg-black/20 border-white/15"
                 />
               </div>
               <div>
-                <Label>Primary portfolio / showreel URL</Label>
+                <Label htmlFor="profile-portfolioUrl">Primary portfolio / showreel URL</Label>
                 <Input
+                  id="profile-portfolioUrl"
                   value={f.portfolioUrl || ''}
                   onChange={(e) => set('portfolioUrl', e.target.value)}
                   className="mt-2 bg-black/20 border-white/15"
                 />
               </div>
               <div>
-                <Label>Hourly rate</Label>
+                <Label htmlFor="profile-hourlyRate">Hourly rate</Label>
                 <Input
+                  id="profile-hourlyRate"
                   type="number"
                   min="0"
                   value={f.hourlyRate || ''}
@@ -362,8 +375,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Session rate</Label>
+                <Label htmlFor="profile-sessionRate">Session rate</Label>
                 <Input
+                  id="profile-sessionRate"
                   type="number"
                   min="0"
                   value={f.sessionRate || ''}
@@ -372,8 +386,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Show rate</Label>
+                <Label htmlFor="profile-showRate">Show rate</Label>
                 <Input
+                  id="profile-showRate"
                   type="number"
                   min="0"
                   value={f.showRate || ''}
@@ -382,8 +397,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Tour day rate</Label>
+                <Label htmlFor="profile-tourDayRate">Tour day rate</Label>
                 <Input
+                  id="profile-tourDayRate"
                   type="number"
                   min="0"
                   value={f.tourDayRate || ''}
@@ -392,8 +408,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Typical day / session rate</Label>
+                <Label htmlFor="profile-dayRate">Typical day / session rate</Label>
                 <Input
+                  id="profile-dayRate"
                   type="number"
                   min="0"
                   value={f.dayRate || ''}
@@ -402,8 +419,9 @@ export default function ProfileSetup() {
                 />
               </div>
               <div>
-                <Label>Currency</Label>
+                <Label htmlFor="profile-currency">Currency</Label>
                 <select
+                  id="profile-currency"
                   value={f.currency || 'INR'}
                   onChange={(e) => set('currency', e.target.value)}
                   className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
@@ -414,8 +432,9 @@ export default function ProfileSetup() {
                 </select>
               </div>
               <div>
-                <Label>Phone</Label>
+                <Label htmlFor="profile-phone">Phone</Label>
                 <Input
+                  id="profile-phone"
                   value={f.phone || ''}
                   onChange={(e) => set('phone', e.target.value)}
                   className="mt-2 bg-black/20 border-white/15"
@@ -428,6 +447,8 @@ export default function ProfileSetup() {
           </Button>
         </form>
       </main>
+      <VerificationRequestDialog open={verifying} onOpenChange={setVerifying} onSubmit={verify} />
+      <DebugLinkDialog link={debugLink} onClose={() => setDebugLink(null)} />
     </div>
   );
 }

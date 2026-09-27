@@ -24,10 +24,12 @@ module Admin
       email_provider = EmailDelivery.configured?
       failed_logins = recent_login_failures(email)
       codes = sign_in_codes(email)
+      suppression = email_suppression(email)
       unless user
         diagnosis = [{ level: "error", code: "NO_ACCOUNT", message: "No account uses this email. Check the spelling, other addresses they may have used, or ask them to register." }]
         diagnosis << code_note(codes, email_provider) if codes && codes[:outstanding].positive?
-        return render(json: { email:, exists: false, emailProviderConfigured: email_provider, recentFailedLogins: failed_logins, signInCodes: codes, diagnosis: diagnosis.compact })
+        diagnosis << suppression_note(suppression)
+        return render(json: { email:, exists: false, emailProviderConfigured: email_provider, recentFailedLogins: failed_logins, signInCodes: codes, emailSuppression: suppression, diagnosis: diagnosis.compact })
       end
 
       now = Time.current
@@ -40,7 +42,7 @@ module Admin
       events = AuditLog.where(entity_type: "User", entity_id: user.id).where("action LIKE 'auth.%' OR action LIKE 'admin.user.%'").where.not(action: "admin.user.lookup")
         .order(created_at: :desc).limit(20).map { { action: _1.action, at: _1.created_at, ip: masked_ip(_1.metadata.is_a?(Hash) ? (_1.metadata["ip"] || _1.metadata["remoteIp"]) : nil) }.compact }
       facts = { status: user.status, email_verified: user.email_verified?, password_set: user.password_digest.present?, last_login_at: user.last_login_at,
-                active_sessions:, recent_sessions:, tokens:, email_provider:, failed_logins:, codes: }
+                active_sessions:, recent_sessions:, tokens:, email_provider:, failed_logins:, codes:, suppression: }
 
       render json: {
         email:, exists: true,
@@ -48,7 +50,7 @@ module Admin
                 passwordSet: facts[:password_set], createdAt: user.created_at, lastLoginAt: user.last_login_at },
         sessions: { active: active_sessions, createdLast7Days: recent_sessions, cap: AuthController::MAX_LIVE_SESSIONS },
         emailTokens: tokens, signInCodes: codes, recentAuthEvents: events, recentFailedLogins: failed_logins,
-        emailProviderConfigured: email_provider, diagnosis: diagnose(user, facts)
+        emailProviderConfigured: email_provider, emailSuppression: suppression, diagnosis: diagnose(user, facts)
       }
     end
 
@@ -98,7 +100,7 @@ module Admin
       elsif failures.positive?
         add.call("info", "RECENT_FAILURES", "#{failures} recent failed attempt(s) — probably a mistyped or outdated password.")
       end
-      if (note = code_note(facts[:codes], facts[:email_provider]))
+      [code_note(facts[:codes], facts[:email_provider]), suppression_note(facts[:suppression])].compact.each do |note|
         add.call(note[:level], note[:code], note[:message])
       end
       add.call("warn", "NEVER_SIGNED_IN", "Has never signed in successfully since registering.") if facts[:last_login_at].nil?
@@ -110,6 +112,14 @@ module Admin
         add.call("warn", "RESET_NOT_COMPLETED", "#{unused_resets} password reset(s) requested in the last 7 days but not completed — check spam or the address.")
       end
       add.call("warn", "EMAIL_PROVIDER_MISSING", "No email provider is configured: verification and reset emails cannot be delivered.") if !facts[:email_provider] && unused_resets.zero?
+      if user.admin?
+        case AuthController.admin_second_factor_state(user.email)
+        when :skipped
+          add.call("warn", "ADMIN_SECOND_FACTOR_SKIPPED", facts[:email_provider] ? AuthController::SECOND_FACTOR_SUPPRESSED_WARNING : AuthController::SECOND_FACTOR_SKIPPED_WARNING)
+        when :off then add.call("warn", "ADMIN_SECOND_FACTOR_OFF", AuthController::SECOND_FACTOR_DISABLED_WARNING)
+        when :unavailable then add.call("error", "ADMIN_SECOND_FACTOR_UNAVAILABLE", "ADMIN_SECOND_FACTOR=required but the code cannot be emailed to this admin (no email provider, or the address is suppressed), so their password sign-in is refused. Fix email, or set ADMIN_SECOND_FACTOR=auto.")
+        end
+      end
       cap = AuthController::MAX_LIVE_SESSIONS
       add.call("warn", "SESSION_CAP", "#{facts[:active_sessions]} active sessions (cap #{cap}): each new sign-in signs out the oldest device.") if facts[:active_sessions] >= cap
       add.call("warn", "FREQUENT_RELOGINS", "#{facts[:recent_sessions]} sign-ins in 7 days — sessions are being lost (cleared browser storage, private windows or the session cap).") if facts[:recent_sessions] >= 15
@@ -131,6 +141,24 @@ module Admin
         { level: "warn", code: "SIGN_IN_CODE_UNUSED", message: "Sign-in code requested but not used — check email delivery (spam folder, typo in the address)." }
       else
         { level: "error", code: "SIGN_IN_CODE_UNDELIVERABLE", message: "Sign-in code requested but no email provider is configured, so it was never sent." }
+      end
+    end
+
+    # What the email provider reported for this address (EmailSuppression), or nil.
+    def email_suppression(email)
+      row = EmailSuppression.find_by(email:)
+      row && { scope: row.scope, reason: row.reason, lastEvent: row.last_event, lastEventAt: row.last_event_at,
+               suppressedAt: row.suppressed_at, softBounces: row.soft_bounce_count }
+    end
+
+    def suppression_note(suppression)
+      case suppression&.dig(:scope)
+      when "all"
+        { level: "error", code: "EMAIL_SUPPRESSED", message: "Email to this address is suppressed (#{suppression[:reason].tr('_', ' ')} reported by the email provider), so sign-in codes, verification and reset emails are not sent. They need a different address or their password; if the mailbox is fixed, remove the address from the provider's blocklist and from email suppressions." }
+      when "notifications"
+        { level: "info", code: "EMAIL_UNSUBSCRIBED", message: "Unsubscribed at the email provider: notification emails are not sent. Sign-in and security emails still are." }
+      when "none"
+        { level: "info", code: "EMAIL_SOFT_BOUNCES", message: "#{suppression[:softBounces]} temporary delivery failure(s) (mailbox full or greylisted). Delivery is still attempted." }
       end
     end
 

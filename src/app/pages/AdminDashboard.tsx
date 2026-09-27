@@ -39,6 +39,7 @@ import {
 } from '../components/ui/dialog';
 import DemoDataPanel from '../components/admin/DemoDataPanel';
 import { SignInDoctor } from '../components/admin/SignInDoctor';
+import { ReportReview } from '../components/admin/ReportReview';
 
 // Each panel loads independently: one failing endpoint must not blank the whole console.
 const SOURCES = {
@@ -113,6 +114,7 @@ export default function AdminDashboard() {
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [grant, setGrant] = useState<Grant | null>(null);
   const [userQuery, setUserQuery] = useState('');
+  const [reviewing, setReviewing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -444,6 +446,17 @@ export default function AdminDashboard() {
 
           <TabsContent value="reports" className="space-y-3 mt-5">
             <Panel error={errors.reports} onRetry={retry} loading={loading}>
+              {!errors.stats && (
+                <p className="text-sm text-slate-400 flex items-center gap-2" data-testid="flagged-messages">
+                  <AlertTriangle
+                    size={15}
+                    aria-hidden="true"
+                    className={stats.flaggedMessages ? 'text-amber-300' : 'text-slate-500'}
+                  />
+                  {stats.flaggedMessages ?? 0} message{stats.flaggedMessages === 1 ? '' : 's'} flagged for scam patterns
+                  in the last 30 days. Recipients see a safety notice; open a report to see flags in context.
+                </p>
+              )}
               {openReports.length === 0 && <Empty text="No open safety reports." />}
               {openReports.map((r) => {
                 const href = entityLink(r.entity_type, r.entity_id);
@@ -471,21 +484,10 @@ export default function AdminDashboard() {
                         <Button
                           size="sm"
                           disabled={!!busy}
-                          onClick={() =>
-                            patch(`rep:${r.id}`, `/admin/reports/${r.id}`, { status: 'resolved' }, 'Report resolved')
-                          }
+                          onClick={() => setReviewing(r.id)}
+                          aria-label={`Review report: ${r.reason}`}
                         >
-                          Resolve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={!!busy}
-                          onClick={() =>
-                            patch(`rep:${r.id}`, `/admin/reports/${r.id}`, { status: 'dismissed' }, 'Report dismissed')
-                          }
-                        >
-                          Dismiss
+                          Review
                         </Button>
                       </div>
                     </CardContent>
@@ -880,6 +882,14 @@ export default function AdminDashboard() {
         </Tabs>
       </main>
       <ConfirmDialog value={confirm} onClose={() => setConfirm(null)} />
+      <ReportReview
+        reportId={reviewing}
+        onClose={() => setReviewing(null)}
+        onDecided={async (message) => {
+          toast.success(message);
+          await load();
+        }}
+      />
       <GrantPlanDialog
         value={grant}
         busy={!!busy}

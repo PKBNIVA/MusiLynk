@@ -17,11 +17,23 @@ export interface User {
   credits?: string[];
   openTo?: string[];
 }
+/* Admin password sign-in answers with this instead of a session; the code emailed to the admin completes it. */
+export interface SecondFactorChallenge {
+  secondFactorRequired: true;
+  method: 'email_code';
+  challengeToken: string;
+  message: string;
+  expiresIn: number;
+  debugCode?: string;
+}
+export const isSecondFactorChallenge = (value: unknown): value is SecondFactorChallenge =>
+  Boolean(value && (value as any).secondFactorRequired === true && typeof (value as any).challengeToken === 'string');
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string) => Promise<User | SecondFactorChallenge>;
+  completeSecondFactor: (challengeToken: string, code: string) => Promise<User>;
   register: (p: { name: string; email: string; password: string; role: 'jobseeker' | 'employer' }) => Promise<User>;
   verifyCode: (email: string, code: string) => Promise<User>;
   logout: () => Promise<void>;
@@ -73,7 +85,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [],
   );
   const login = async (email: string, password: string) => {
-    const d = await apiPost<{ user: User; accessToken: string }>('/auth/login', { email, password });
+    const d = await apiPost<{ user: User; accessToken: string } | SecondFactorChallenge>('/auth/login', {
+      email,
+      password,
+    });
+    if (isSecondFactorChallenge(d)) return d;
     generation.current += 1;
     setAccessToken(d.accessToken);
     setUser(d.user);
@@ -97,6 +113,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
       return d.user;
     };
+  const completeSecondFactor = async (challengeToken: string, code: string) => {
+    const d = await apiPost<{ user: User; accessToken: string }>('/auth/second-factor', { challengeToken, code });
+    generation.current += 1;
+    setAccessToken(d.accessToken);
+    setUser(d.user);
+    setLoading(false);
+    return d.user;
+  };
   const logout = async () => {
     try {
       await apiPost('/auth/logout');
@@ -109,7 +133,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <AuthContext.Provider
       value={useMemo(
-        () => ({ user, loading, isAuthenticated: !!user, login, register, verifyCode, logout, refresh, setUser }),
+        () => ({
+          user,
+          loading,
+          isAuthenticated: !!user,
+          login,
+          register,
+          verifyCode,
+          completeSecondFactor,
+          logout,
+          refresh,
+          setUser,
+        }),
         [user, loading],
       )}
     >

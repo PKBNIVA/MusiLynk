@@ -1,5 +1,7 @@
 # Verse Launch Hardening — v0.3.0
 
+> **Historical snapshot.** Written during the v0.x Node/SQLite prototype, since replaced by the Rails API in `backend/`. The product intent still applies; implementation details (SQLite, Elasticsearch, `server/`, `node tests/…` scripts) do not. Current docs: [docs/README.md](../README.md).
+
 This revision implements the highest-impact gaps identified in the product/SEO/operations audit without pretending that external infrastructure or regulatory work is already complete.
 
 ## Implemented in this revision

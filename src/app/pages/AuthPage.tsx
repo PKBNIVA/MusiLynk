@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router';
-import { motion } from 'motion/react';
 import { ArrowLeft, Briefcase, Eye, EyeOff, Mail, ShieldCheck, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { useAuth } from '../lib/authContext';
+import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge } from '../lib/authContext';
 import { consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
 import { toast } from 'sonner';
 import { BrandMark } from '../components/BrandMark';
@@ -21,11 +20,13 @@ export default function AuthPage() {
   const role = userType === 'employer' ? 'employer' : 'jobseeker';
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register, verifyCode } = useAuth();
+  const { login, register, verifyCode, completeSecondFactor } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   /* Email codes are the primary path; passwords remain a fallback until email delivery is proven in production. */
   const [method, setMethod] = useState<'code' | 'password'>('code');
   const [codeStep, setCodeStep] = useState<'email' | 'code'>('email');
+  /* Set when an admin's password was accepted and the emailed second-step code is still needed. */
+  const [challenge, setChallenge] = useState<SecondFactorChallenge | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -99,6 +100,23 @@ export default function AuthPage() {
     setCodeStep('email');
     setCode('');
     setError('');
+    setChallenge(null);
+  };
+  const leaveChallenge = () => {
+    setChallenge(null);
+    setCodeStep('email');
+    setCode('');
+    setDebugCode(undefined);
+    setError('');
+  };
+  const startChallenge = (next: SecondFactorChallenge) => {
+    setChallenge(next);
+    setDebugCode(next.debugCode);
+    setCode('');
+    setError('');
+    setCodeStep('code');
+    setCooldown(RESEND_COOLDOWN_SECONDS);
+    toast.success('Check your email for a 6-digit code');
   };
   const switchMode = () => {
     setMode(mode === 'login' ? 'register' : 'login');
@@ -112,7 +130,12 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      const u = mode === 'login' ? await login(email, password) : await register({ name, email, password, role });
+      const result = mode === 'login' ? await login(email, password) : await register({ name, email, password, role });
+      if (isSecondFactorChallenge(result)) {
+        startChallenge(result);
+        return;
+      }
+      const u = result;
       toast.success(mode === 'login' ? 'Welcome back' : 'Your Verse profile is ready');
       go(u.role, u.profileComplete);
     } catch (e: any) {
@@ -122,8 +145,24 @@ export default function AuthPage() {
     }
   }
 
+  /* A new admin challenge needs the password step again; it emails a fresh code. */
+  async function resendChallenge() {
+    if (loading || cooldown > 0) return;
+    setLoading(true);
+    setError('');
+    try {
+      const result = await login(email, password);
+      if (isSecondFactorChallenge(result)) startChallenge(result);
+    } catch (e: any) {
+      fail(e, 'Could not send a code. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function sendCode(e?: React.FormEvent) {
     e?.preventDefault();
+    if (challenge) return resendChallenge();
     if (loading || cooldown > 0) return;
     setLoading(true);
     setError('');
@@ -155,10 +194,18 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      const u = await verifyCode(email, value);
+      const u = challenge
+        ? await completeSecondFactor(challenge.challengeToken, value)
+        : await verifyCode(email, value);
       toast.success(mode === 'register' ? 'Your Verse profile is ready' : 'Welcome back');
       go(u.role, u.profileComplete);
     } catch (e: any) {
+      /* An expired or unusable challenge cannot be retried; start again from the password. */
+      if (challenge && e?.code === 'SECOND_FACTOR_EXPIRED') {
+        leaveChallenge();
+        toast.error(e.message);
+        return;
+      }
       setCode('');
       focusCode();
       fail(e, 'Invalid or expired code.');
@@ -241,10 +288,17 @@ export default function AuthPage() {
         className="space-y-4"
         aria-busy={loading}
       >
-        <p className="text-sm leading-6 text-slate-300" aria-live="polite">
-          If <span className="font-semibold text-white">{email}</span> can be used on Verse, a 6-digit code is on its
-          way. It expires in 10 minutes.
-        </p>
+        {challenge ? (
+          <p className="text-sm leading-6 text-slate-300" aria-live="polite">
+            Admin sign-in needs one more step. We emailed a 6-digit code to{' '}
+            <span className="font-semibold text-white">{email}</span>. It expires in 10 minutes.
+          </p>
+        ) : (
+          <p className="text-sm leading-6 text-slate-300" aria-live="polite">
+            If <span className="font-semibold text-white">{email}</span> can be used on Verse, a 6-digit code is on its
+            way. It expires in 10 minutes.
+          </p>
+        )}
         <div>
           <Label htmlFor="auth-code" className="text-slate-200">
             Sign-in code
@@ -292,17 +346,23 @@ export default function AuthPage() {
               : 'Verify and sign in'}
         </Button>
         <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              setCodeStep('email');
-              setCode('');
-              setError('');
-            }}
-            className={linkButton}
-          >
-            Use a different email
-          </button>
+          {challenge ? (
+            <button type="button" onClick={leaveChallenge} className={linkButton}>
+              Back to sign in
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setCodeStep('email');
+                setCode('');
+                setError('');
+              }}
+              className={linkButton}
+            >
+              Use a different email
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void sendCode()}
@@ -385,14 +445,15 @@ export default function AuthPage() {
               Discover work, prove your craft, build teams and manage every conversation in one professional home.
             </p>
           </div>
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+          {/* A CSS fade-in (the global reduced-motion rule shortens it); the motion library cost ~42 kB gzip for this alone. */}
+          <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
             <Card className="verse-surface border-white/15 bg-transparent shadow-2xl">
               <CardHeader className="text-center">
                 <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-500/30 to-violet-500/25 text-violet-200">
                   {isAdmin ? <ShieldCheck /> : role === 'employer' ? <Briefcase /> : <Users />}
                 </div>
                 <CardTitle className="mt-2 text-2xl font-black text-white">
-                  {method === 'code' && codeStep === 'code'
+                  {(method === 'code' || challenge) && codeStep === 'code'
                     ? 'Check your email'
                     : mode === 'login'
                       ? 'Welcome back'
@@ -425,7 +486,7 @@ export default function AuthPage() {
                     </Link>
                   </div>
                 )}
-                {method === 'code' ? codeForms : passwordForm}
+                {method === 'code' || challenge ? codeForms : passwordForm}
                 {codeStep === 'email' && (
                   <div className="mt-3 flex items-center justify-between gap-3">
                     {(method === 'code' || codesAvailable) && (
@@ -469,7 +530,7 @@ export default function AuthPage() {
                 )}
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

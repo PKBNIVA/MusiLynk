@@ -4,6 +4,10 @@
 // the first render (a separate chunk), so pages without a DSN never download it and the
 // main bundle stays small. Errors raised before it loads are queued and sent once ready.
 // Expected API errors (4xx) are never reported; 5xx/network failures are rate limited.
+// Core Web Vitals (LCP, INP, CLS) are measured in the browser and sent as Sentry metrics,
+// again only when a DSN is set.
+
+import { startWebVitals, type Vital } from './webVitals.ts';
 
 export type ReportLevel = 'error' | 'warning' | 'info';
 export type ReportContext = {
@@ -16,13 +20,22 @@ export type ReportContext = {
 type SentryClient = typeof import('./sentryClient');
 type Pending =
   | { kind: 'exception'; error: unknown; context?: ReportContext }
-  | { kind: 'message'; message: string; context?: ReportContext };
+  | { kind: 'message'; message: string; context?: ReportContext }
+  | { kind: 'vital'; vital: Vital; route: string };
 
 const env = (import.meta as any).env || {};
 export const SENTRY_DSN = String(env.VITE_SENTRY_DSN || '').trim();
 export const RELEASE = String(env.VITE_RELEASE || '').trim();
 const ENVIRONMENT = String(env.VITE_SENTRY_ENVIRONMENT || env.MODE || 'production').trim();
-const TRACES_SAMPLE_RATE = Math.min(Math.max(Number(env.VITE_SENTRY_TRACES_SAMPLE_RATE) || 0, 0), 1);
+// Performance tracing: a small default sample when monitoring is on, overridable (0 turns it off).
+export const DEFAULT_TRACES_SAMPLE_RATE = 0.05;
+export function tracesSampleRate(value: unknown): number {
+  const raw = String(value ?? '').trim();
+  if (raw === '') return DEFAULT_TRACES_SAMPLE_RATE;
+  const rate = Number(raw);
+  return Number.isFinite(rate) ? Math.min(Math.max(rate, 0), 1) : DEFAULT_TRACES_SAMPLE_RATE;
+}
+const TRACES_SAMPLE_RATE = tracesSampleRate(env.VITE_SENTRY_TRACES_SAMPLE_RATE);
 
 const MAX_QUEUE = 20;
 // At most one event per API failure kind (e.g. 503, NETWORK_ERROR) per window, and a
@@ -88,6 +101,25 @@ export function reportMessage(message: string, context?: ReportContext) {
   else enqueue({ kind: 'message', message, context });
 }
 
+/** Page path with ids and slugs replaced, e.g. /professionals/jane-doe -> /professionals/:id. */
+export function routeTemplate(path: string): string {
+  const segments = path.split(/[?#]/)[0].split('/').filter(Boolean).slice(0, 3);
+  const templated = segments.map((segment, index) => {
+    if (/^(\d+|[0-9a-f]{8}-[0-9a-f-]{27,})$/i.test(segment)) return ':id';
+    if (index > 0 && /^(opportunities|professionals|acts|jobs|auth)$/.test(segments[index - 1])) return ':id';
+    return segment;
+  });
+  return '/' + templated.join('/');
+}
+
+/** A Core Web Vital for the current page. Sent as a metric, never as an error event. */
+export function reportWebVital(vital: Vital, path = typeof location !== 'undefined' ? location.pathname : '/') {
+  if (!SENTRY_DSN) return;
+  const route = routeTemplate(path);
+  if (client) client.captureVital(vital, route);
+  else enqueue({ kind: 'vital', vital, route });
+}
+
 /** A failed API call the user saw (5xx, timeout, network). Reported sparingly. */
 export function reportApiFailure(details: {
   status: number;
@@ -139,6 +171,7 @@ function loadSentry(): Promise<boolean> {
       client = module;
       for (const item of queue.splice(0)) {
         if (item.kind === 'exception') module.captureError(item.error, item.context);
+        else if (item.kind === 'vital') module.captureVital(item.vital, item.route);
         else module.captureText(item.message, item.context);
       }
       return true;
@@ -158,6 +191,7 @@ export function initMonitoring() {
   if (!SENTRY_DSN || loading || typeof window === 'undefined') return;
   window.addEventListener('error', onEarlyError);
   window.addEventListener('unhandledrejection', onEarlyRejection);
+  startWebVitals((vital) => reportWebVital(vital));
   loading = new Promise<boolean>((resolve) => {
     const start = () => {
       void loadSentry().then(resolve);

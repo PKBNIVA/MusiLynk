@@ -165,3 +165,48 @@ test('with a DSN expected API errors are not reported and repeated 5xx failures 
   expect(events.join('\n')).not.toMatch(/\(404\)|\(401\)|Authentication required/);
   await page.context().close();
 });
+
+test('with a DSN Core Web Vitals are sent as metrics when the page is hidden, never as error events', async ({
+  browser,
+  request,
+}) => {
+  const { page } = await runPage(browser);
+  await page.addInitScript((value) => localStorage.setItem('verse_access_token', value), token);
+  await page.route(isAppApi, (route) =>
+    route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Authentication required"}' }),
+  );
+  const vitalBodies = async () =>
+    ((await (await request.get(`${sinkUrl}/__envelopes`)).json()) as string[]).filter(
+      (body) => body.includes('web_vital.') && body.includes('/pricing'),
+    );
+  const before = (await vitalBodies()).length;
+
+  await page.goto(`${sentryBaseUrl}/pricing?token=url-secret-88`);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  // Sentry loads once the browser is idle; the vitals are only sent after that.
+  await expect
+    .poll(
+      () => page.evaluate(() => performance.getEntriesByType('resource').some((e) => /sentryClient/.test(e.name))),
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+  await page.waitForTimeout(500);
+  await page.mouse.click(5, 300); // an interaction, for INP
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+
+  await expect.poll(async () => (await vitalBodies()).length, { timeout: 15_000 }).toBeGreaterThan(before);
+  const bodies = (await vitalBodies()).slice(before).join('\n');
+  expect(bodies).toContain('"web_vital.lcp"');
+  expect(bodies).toContain('"web_vital.cls"');
+  expect(bodies).toContain('"/pricing"'); // the route template attribute
+  expect(bodies).toMatch(/"rating"/);
+  expect(bodies).toContain('"infer_ip":"never"'); // no IP address, as for error events
+  expect(bodies).not.toContain('"infer_ip":"auto"');
+  expect(bodies).not.toContain('"type":"event"');
+  expect(bodies).not.toContain(token);
+  expect(bodies).not.toContain('url-secret-88');
+  await page.context().close();
+});

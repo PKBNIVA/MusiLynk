@@ -160,10 +160,22 @@ test('withdrawing an application asks first and titles link to the opportunity',
     return undefined;
   });
   await page.goto('/jobseeker/applications');
-  page.once('dialog', (dialog) => dialog.dismiss());
+  const nativeDialogs: string[] = [];
+  page.on('dialog', (dialog) => {
+    nativeDialogs.push(dialog.message());
+    void dialog.dismiss();
+  });
   await page.getByRole('button', { name: 'Withdraw' }).click();
-  await page.waitForTimeout(300);
+  const confirm = page.getByRole('alertdialog', { name: 'Withdraw your application for “Tour Drummer”?' });
+  await expect(confirm).toContainText('The employer will no longer see it.');
+  await page.keyboard.press('Escape');
+  await expect(confirm).toBeHidden();
   expect(deletes).toBe(0);
+  await page.getByRole('button', { name: 'Withdraw' }).click();
+  await confirm.getByRole('button', { name: 'Withdraw' }).click();
+  await expect(confirm).toBeHidden();
+  expect(deletes).toBe(1);
+  expect(nativeDialogs).toEqual([]);
   await expect(page.getByRole('link', { name: 'Tour Drummer' })).toHaveAttribute('href', '/jobseeker/jobs/job-9');
 });
 

@@ -12,6 +12,7 @@ Rails.application.routes.draw do
     post "auth/reset-password", to: "auth#reset_password"
     post "auth/otp/request", to: "auth#otp_request"
     post "auth/otp/verify", to: "auth#otp_verify"
+    post "auth/second-factor", to: "auth#second_factor"
     get "auth/methods", to: "auth#sign_in_methods"
     get "me", to: "auth#me"
     get "account/export", to: "account#export"
@@ -46,7 +47,12 @@ Rails.application.routes.draw do
       resources :jobs, only: %i[index update]
       resources :reviews, only: %i[index update]
       resources :verifications, only: %i[index update]
-      resources :reports, only: %i[index update]
+      resources :reports, only: %i[index update] do
+        member do
+          get :context
+          post :moderate
+        end
+      end
       get :audit, to: "operations#audit"
       get :subscriptions, to: "operations#subscriptions"
       get "billing-attempts", to: "operations#billing_attempts"
@@ -68,6 +74,7 @@ Rails.application.routes.draw do
     patch "notifications/preferences", to: "notifications#update_preferences"
     get "notifications/unsubscribe", to: "notifications#unsubscribe"
     post "notifications/unsubscribe", to: "notifications#unsubscribe"
+    post "email/webhook/brevo", to: "email_webhooks#brevo"
     resources :notifications, only: %i[index update]
     resources :reports, only: :create
     resources :verification_requests, path: "verification-requests", only: :create

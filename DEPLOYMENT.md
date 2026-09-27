@@ -33,15 +33,104 @@ Configure one service from `backend/Dockerfile`:
 - Production branch: `production`
 - Config file: `railway.toml`
 - PostgreSQL must expose `DATABASE_URL` to the Rails service.
-- The container runs `db:prepare` before Puma.
+- Migrations: `railway.toml` sets `preDeployCommand = "bin/rails db:prepare"`, which Railway
+  runs once per deploy in a separate container before the new release takes traffic. If it
+  fails, the deploy stops and the previous release keeps serving. The web container
+  (`backend/bin/web`) also runs `db:prepare` before Puma unless
+  `SKIP_DB_PREPARE_ON_BOOT=true` (see "Migrations before deploy" below).
 - Railway's liveness probe is `/api/live`.
 - Operational checks are `/api/health` and `/api/readiness`.
 
 GoodJob initially runs inside the web service with
 `GOOD_JOB_EXECUTION_MODE=async`, `GOOD_JOB_MAX_THREADS=2`, and
-`GOOD_JOB_ENABLE_CRON=true`. Run cron on exactly one process. Move to a separate worker
-with `bundle exec good_job start` and `GOOD_JOB_EXECUTION_MODE=external` when queue
-volume or web latency justifies it.
+`GOOD_JOB_ENABLE_CRON=true`. Run cron on exactly one process. "Separate job worker" below
+moves jobs and cron to their own service.
+
+### Database timeouts
+
+Every connection sets Postgres `statement_timeout` and `lock_timeout`
+(`backend/config/database_session_settings.rb`, applied through `variables:` in
+`database.yml`), so a runaway query or a blocked lock fails fast instead of holding a Puma
+thread and a pool connection:
+
+| Process | statement_timeout | lock_timeout | Override with |
+| --- | --- | --- | --- |
+| Web requests (Puma) | `15s` | `5s` | `DB_STATEMENT_TIMEOUT`, `DB_LOCK_TIMEOUT` |
+| Jobs, in the worker or in-process (`async`) | `5min` | `30s` | `WORKER_DB_STATEMENT_TIMEOUT`, `WORKER_DB_LOCK_TIMEOUT` |
+| `bin/rails db:*` (migrations, pre-deploy) | none | none | `DB_MIGRATION_STATEMENT_TIMEOUT`, `DB_MIGRATION_LOCK_TIMEOUT` |
+
+Values use Postgres duration syntax (`500ms`, `15s`, `5min`); `0` means no limit; anything
+else is ignored. `ApplicationJob` switches its connection to the job limits for the length of
+each job and restores the previous values afterwards (a connection that cannot be restored is
+dropped from the pool), so in-process jobs never run under the 15s web limit. GoodJob's LISTEN connection waits outside any statement, so the limits never
+cut it off. A timed-out query raises `ActiveRecord::QueryCanceled` (reported to Sentry).
+
+### Migrations before deploy
+
+Today migrations run twice per deploy: in the pre-deploy step and again on web boot (a
+no-op the second time). To run them only before deploy:
+
+1. Confirm a deploy's logs show the pre-deploy step running `bin/rails db:prepare`
+   successfully (Railway → web service → Deployments → the deploy → "Pre-deploy" logs).
+   If the step is missing, check service Settings → Deploy → "Pre-deploy command" shows
+   `bin/rails db:prepare` (it comes from `railway.toml`; set it there by hand if not).
+2. Set `SKIP_DB_PREPARE_ON_BOOT=true` on the web service and redeploy.
+3. Check `/api/readiness` returns 200 and the boot logs no longer show `db:prepare`.
+
+Roll back: delete `SKIP_DB_PREPARE_ON_BOOT` (or set it to `false`) and redeploy; boot
+migrations resume. Migrations must stay backward-compatible with the previous release,
+because the old release keeps serving while the pre-deploy step migrates.
+
+### Separate job worker
+
+Prerequisite: uploads on R2 (`AWS_BUCKET` set, see "Object storage"). Disk uploads live on
+the web service's volume, which a second service cannot mount; `bin/worker` refuses to start
+in production without `AWS_BUCKET` (override: `WORKER_ALLOW_DISK_UPLOADS=true`, which means
+upload cleanup jobs delete rows but leave their files on the web volume).
+
+1. **Create the service.** Railway project → New → GitHub Repo → this repository, name it
+   e.g. `verse-worker`. In its Settings: Source branch `production`; Config-as-code →
+   Railway config file path `railway.worker.toml`. That file builds the same Dockerfile and
+   starts `gosu rails bin/worker`, with no healthcheck and no public domain (do not generate
+   one). `bin/worker` waits up to `WORKER_MIGRATION_WAIT_SECONDS` (default 600) for the web
+   service's pre-deploy migrations, then runs `bin/good_job start`.
+2. **Worker variables.** Jobs send email, talk to Razorpay and R2 and report to Sentry, so
+   the worker needs the same configuration as the web service: web service → Variables →
+   Raw Editor → copy everything, paste into the worker's Raw Editor (or use Railway shared
+   variables so both stay in sync). Then set on the worker:
+   - `GOOD_JOB_ENABLE_CRON=true`
+   - `GOOD_JOB_MAX_THREADS=5` (the database pool follows it automatically)
+   - `GOOD_JOB_SHUTDOWN_TIMEOUT=25` (finish in-flight jobs within `drainingSeconds = 30`)
+   `GOOD_JOB_EXECUTION_MODE` is ignored by `good_job start`, so a copied `async` is harmless.
+3. **Deploy and check it is alive.** The worker's logs show
+   `GoodJob ... started scheduler with queues=* max_threads=5` and
+   `Notifier subscribed with LISTEN`. Until step 4 both services run jobs and cron; that is
+   safe (a job is locked by one process, and GoodJob's unique `cron_key`/`cron_at` index
+   enqueues each cron tick once), just do step 4 soon after.
+4. **Switch the web service off jobs.** On the web service set
+   `GOOD_JOB_EXECUTION_MODE=external` and `GOOD_JOB_ENABLE_CRON=false`, then redeploy.
+   From now on `/api/readiness` (and `/api/admin/health` → `checks.backgroundJobs`) returns
+   not-ready if no worker has checked in within GoodJob's 5-minute heartbeat window;
+   `activeWorkers` and `lastWorkerHeartbeatAt` say what it saw. Point an uptime monitor at
+   `/api/readiness` to be alerted. Railway's own healthcheck stays on `/api/live`, so a dead
+   worker never restarts or blocks the web service.
+5. **Verify.** `/api/admin/health` → `checks.backgroundJobs` shows `ok: true` and
+   `activeWorkers: 1`. Trigger an email (e.g. request a sign-in code) and confirm it arrives
+   and the worker's logs show the job performed.
+
+Roll back: set `GOOD_JOB_EXECUTION_MODE=async` and `GOOD_JOB_ENABLE_CRON=true` on the web
+service (or delete both) and redeploy, then remove or pause the worker service. Do the web
+change first so jobs are never left without a runner. Queued jobs stay in Postgres and are
+picked up by whichever process runs next.
+
+### Replicas
+
+The web service must stay at **one replica** while `PERSISTENT_UPLOADS=true` and the upload
+volume are in use (a Railway volume attaches to one instance). After R2 is configured and the
+volume removed ("Object storage", step 8), the web service can run more replicas: set
+Settings → Deploy → Replicas, and keep `RAILS_MAX_THREADS × replicas` plus the worker's pool
+under the Postgres plan's connection limit. Run exactly one worker replica unless cron is
+disabled on all but one.
 
 ## Required launch configuration
 
@@ -80,6 +169,63 @@ Current production sender (set 2026-09-27): `BREVO_SENDER_EMAIL=no-reply@notify.
 Codes expire after 10 minutes, are single use, allow 5 attempts, and are limited to 5
 requests per email and per IP per hour. Outside production, and only when no email
 provider is configured, the request response includes `debugCode` for local QA.
+
+### Admin two-step sign-in and `ADMIN_SECOND_FACTOR`
+
+When the second step applies, an admin who signs in with a password gets `202` from
+`POST /api/auth/login` with `secondFactorRequired: true` and a 10-minute `challengeToken`, and
+is emailed a 6-digit code; `POST /api/auth/second-factor {challengeToken, code}` completes
+sign-in. Admins who sign in with an email code never need it (the code proves inbox control).
+
+| `ADMIN_SECOND_FACTOR` | With email delivery | Without email delivery (production) |
+| --- | --- | --- |
+| `auto` (default; also any unrecognised value) | Code required | Password alone works; audited as `auth.admin_second_factor_skipped`; `/admin/tester` and the sign-in doctor warn "Admin 2-step sign-in is off because email delivery is not configured" |
+| `required` | Code required | Password sign-in refused: 503 `SECOND_FACTOR_UNAVAILABLE` |
+| `off` | Emergency disable: password alone, audited as `secondFactor: "disabled"`, flagged in the doctor and tester | Same |
+
+An admin whose own address is suppressed (bounced or complained, see the Brevo webhook
+below) is treated as "without email delivery" too, and the sign-in doctor says so.
+Outside production the on-screen `debugCode` counts as delivery. Recommended order: add
+`BREVO_API_KEY` (the second step then turns on by itself under `auto`), confirm an admin
+receives the code, then set `ADMIN_SECOND_FACTOR=required` so a later email outage fails
+closed instead of silently skipping the step. Use `off` only in an emergency and remove it
+afterwards.
+
+### Brevo bounce and complaint webhook
+
+Brevo reports hard bounces, soft bounces, spam complaints, blocks and unsubscribes to
+`POST /api/email/webhook/brevo`. Verse records each address in `email_suppressions`:
+
+| Brevo event | Effect |
+| --- | --- |
+| `hard_bounce`, `invalid_email` | No email of any kind (sign-in codes, verification, reset, notifications) |
+| `spam` (complaint), `blocked` | Same as a hard bounce |
+| `unsubscribed` | Notification emails stop; sign-in and security emails still go |
+| `soft_bounce` | Counted and shown to admins; delivery continues |
+
+A code request for a suppressed address answers 422 `EMAIL_SUPPRESSED` with a message asking
+for another address or the password, instead of silently never arriving. Admins see the counts
+in `GET /api/admin/health` (`emailSuppressions`) and `/admin/tester` ("Email bounce webhook"),
+and the sign-in doctor explains a suppressed address (`EMAIL_SUPPRESSED`). Replaying an event
+is harmless, and a weaker event never lifts a stronger one.
+
+Owner setup, once:
+
+1. Generate a secret: `openssl rand -hex 32`. Set it in Railway (Rails service) as
+   `BREVO_WEBHOOK_SECRET`. Without it the endpoint answers 503 to everything.
+2. Brevo → Transactional → Settings → Webhook → **Add a new webhook**:
+   - URL: `https://verse-music-platform-production.up.railway.app/api/email/webhook/brevo`
+   - Authentication: choose **Token** (sent as `Authorization: Bearer <secret>`) or **Basic**
+     (any username, the secret as the password). If your Brevo screen has no authentication
+     option, append `?token=<secret>` to the URL instead (the header is preferred because URLs
+     can end up in proxy logs).
+   - Events: Hard bounce, Soft bounce, Blocked, Spam (complaint), Invalid email, Unsubscribed.
+3. Use Brevo's **Test** button or send a code to a known-bad address, then check
+   `/admin/tester` shows the count.
+
+To lift a suppression after the mailbox is fixed, remove the address from Brevo's blocklist
+(Transactional → Contacts → Blocked) and delete its row:
+`bin/rails runner 'EmailSuppression.where(email: "someone@example.com").delete_all'`.
 - S3/R2: access keys, bucket, endpoint, region, and public base URL
 
 ## Provider integration acceptance
@@ -91,7 +237,7 @@ of each controlled test before declaring an integration operational.
 | Provider | Railway environment names | Controlled verification |
 | --- | --- | --- |
 | Razorpay | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `RAZORPAY_PLAN_PRO`, `RAZORPAY_PLAN_STUDIO` | Follow the **Payments (Razorpay) go-live checklist** below: dashboard field mapping, webhook URL `https://verse-music-platform-production.up.railway.app/api/billing/webhook/razorpay` and events, automatic capture, test-mode rehearsal, then live switch. Keep test and live credentials separate. |
-| Brevo | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` | Verify the sending domain and sender in Brevo, then deliver a verification and reset email to controlled addresses. Check provider acceptance, inbox receipt, bounce status, and the resulting links. |
+| Brevo | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `BREVO_WEBHOOK_SECRET` | Verify the sending domain and sender in Brevo, then deliver a verification and reset email to controlled addresses. Check provider acceptance, inbox receipt, bounce status, and the resulting links. |
 | S3-compatible storage | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_BUCKET`, `AWS_ENDPOINT_URL_S3`, `AWS_PUBLIC_BASE_URL`, optional `AWS_UPLOAD_METHOD` (see "Object storage — Cloudflare R2") | Upload, read, and delete a controlled image and audio file through the browser. Verify object durability, access policy, MIME/size rejection, CORS, and cleanup. |
 
 Keep credentials in Railway's secret settings, not in the repository or frontend
@@ -268,6 +414,7 @@ npm ci
 npm audit --omit=dev --audit-level=high
 npm run build
 npm run test:all
+npm run test:unit -- --coverage
 npm run qa:e2e
 cd backend
 bundle install
@@ -282,6 +429,18 @@ CI (`.github/workflows/rails-and-web.yml`) runs these as the `frontend`, `rails`
 and `integrated-journeys` jobs. The `rails` job also migrates an empty database and fails if
 `backend/db/schema.rb` differs from the committed file. `npm run test:all` runs only the
 frontend source smoke tests; the legacy Node server and its tests were removed.
+
+Coverage floors: `bin/rails test` measures line and branch coverage with SimpleCov
+(`backend/coverage/index.html`) and, on CI, fails when either drops below the floor in
+`backend/test/test_helper.rb` (set `COVERAGE_FLOOR=1` to enforce it locally on a full run).
+`npm run test:unit -- --coverage` does the same for `src/app/lib` with the thresholds in
+`vitest.config.ts`. Raise a floor when coverage goes up; never lower it to get a build green.
+
+Signed-in live smoke: the scheduled and manual `Verse QA Agent` live run also signs in as a
+dedicated jobseeker test account, saves and deletes a job alert, and signs out
+(`tests/e2e/live-account-smoke.spec.ts`). It skips itself until the `QA_SMOKE_EMAIL` and
+`QA_SMOKE_PASSWORD` repository secrets are set. Use an account created only for this, with
+no real profile data, and keep `PASSWORD_LOGIN_ENABLED` on (it signs in with a password).
 
 The Railway image (`backend/Dockerfile`, build context = repository root) installs exactly the
 gems in `backend/Gemfile.lock` with the Bundler version recorded there, in frozen deployment
@@ -330,10 +489,10 @@ initialises Sentry and the web app never downloads it (zero requests to Sentry).
 | --- | --- | --- |
 | Railway (Rails service) | `SENTRY_DSN` | `verse-api` DSN |
 | Railway | `SENTRY_ENVIRONMENT` | optional, defaults to `RAILS_ENV` (`production`) |
-| Railway | `SENTRY_TRACES_SAMPLE_RATE` | optional, default `0` (errors only). `0.05` samples 5% of requests for performance data |
+| Railway | `SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.02` once `SENTRY_DSN` is set (2% of requests traced for performance data); `0` turns tracing off |
 | Vercel (Production environment) | `VITE_SENTRY_DSN` | `verse-web` DSN |
 | Vercel (Production environment) | `VITE_SENTRY_ENVIRONMENT` | `production` (Preview deployments can use `preview`, or leave the DSN unset there) |
-| Vercel | `VITE_SENTRY_TRACES_SAMPLE_RATE` | optional, default `0` |
+| Vercel | `VITE_SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.05` once `VITE_SENTRY_DSN` is set; `0` turns tracing off. Core Web Vitals are sent as metrics either way (see docs/PERFORMANCE.md) |
 
 Releases are automatic: the API reports `RAILWAY_GIT_COMMIT_SHA` and the web build uses
 `VERCEL_GIT_COMMIT_SHA` (exposed as `<meta name="verse-release">`). `VITE_*` values are read
@@ -359,6 +518,13 @@ What is sent, and what is not:
 ### 3. Alert rules (Sentry → Alerts → Create alert → Issues), for each project
 
 1. **New issue** — "A new issue is created" → email the owner (and the team, if any).
+   This also covers billing mismatches: when the half-hourly reconciliation job finds an
+   attempt whose Razorpay order or subscription disagrees with Verse (wrong amount or
+   currency, or the local payment was already released), it reports one
+   `BillingReconciliationJob::Mismatch` event per run tagged
+   `source=billing_reconciliation_mismatch` with the fixed fingerprint
+   `billing-reconciliation-mismatch`, so every run groups into one issue and alerts once.
+   The event lists up to 20 attempt ids; open them in `/admin` → Billing attempts.
 2. **Spike** — "Number of events in an issue is more than 20 in 5 minutes" → email.
 3. **Regression** — "The issue changes state from resolved to unresolved" → email.
 
@@ -369,7 +535,7 @@ install the Sentry mobile app if you want push alerts.
 
 The free Developer plan includes a fixed monthly error quota (about 5k errors at the time of
 writing) and one user; check sentry.io/pricing for current limits. To stay inside it:
-tracing defaults to 0, replay is off, API failure bursts in the browser are rate limited, and
+tracing samples only 2% (API) and 5% (web) by default, replay is off, API failure bursts in the browser are rate limited, and
 expected 4xx are dropped. Set a spike-protection/quota limit per project in Sentry
 (Settings → Subscription/Spend) so a bad deploy cannot exhaust the month. Raise
 `SENTRY_TRACES_SAMPLE_RATE` / `VITE_SENTRY_TRACES_SAMPLE_RATE` only deliberately.
@@ -419,6 +585,15 @@ Railway's current trial does not provide managed backups or point-in-time recove
    major version and fails the run if the checksum, `pg_restore`, or any table is missing.
    Row-count differences (writes during the dump) are warnings.
 3. The encrypted dump, checksum and manifest are kept as a workflow artifact for 30 days.
+4. When `BACKUP_S3_BUCKET` is set, the same three files (encrypted only, never the plaintext
+   dump) are copied to Cloudflare R2 or any S3-compatible bucket under
+   `verse-db/YYYY/MM/DD/run-<run id>/`, and the dump's size is read back to confirm the upload.
+   With the secret unset the step is skipped.
+5. If the run fails or is cancelled, a second job opens a GitHub issue labelled
+   `backup-failure` (or comments on the open one), which GitHub emails to the repository owner.
+   The next green run closes it. If the `ALERT_WEBHOOK_URL` secret is set, the same alert is
+   also POSTed there as JSON (`text` and `content` fields, so Slack and Discord incoming
+   webhooks work as-is).
 
 A green run is therefore a backup that was restored successfully. Setup, once:
 
@@ -427,6 +602,28 @@ A green run is therefore a backup that was restored successfully. Setup, once:
 - Repository secret `BACKUP_PASSPHRASE`: a long random passphrase. Store a copy outside
   GitHub (password manager); without it the backups cannot be decrypted.
 - Run the workflow once by hand (Actions -> Database backup -> Run workflow) and confirm it passes.
+- GitHub → your profile → Settings → Notifications: keep email on for "Issues" on repositories
+  you own/watch, so the `backup-failure` issue reaches your inbox. Nothing else is needed for
+  the alert; it uses the workflow's built-in token.
+- Optional: repository secret `ALERT_WEBHOOK_URL` (a Slack or Discord incoming webhook URL).
+
+Off-GitHub copies in Cloudflare R2 (recommended; the GitHub artifact alone lives only 30 days
+and shares an account with the code):
+
+1. Cloudflare → R2 → **Create bucket** `verse-db-backups` (separate from the uploads bucket,
+   no public access, no custom domain).
+2. Bucket → Settings → **Object lifecycle rules** → Add rule: prefix `verse-db/`, action
+   "Delete uploaded objects" after **90 days** (use 35 if you only want a month; the dump is
+   already encrypted, so longer retention is safe). Optionally also turn on **Bucket lock**
+   for the same prefix and period so a leaked key cannot delete recent backups.
+3. R2 → **Manage API tokens** → Create token with **Object Read & Write** limited to that bucket.
+4. Repository secrets (Settings → Secrets and variables → Actions):
+   - `BACKUP_S3_BUCKET` = `verse-db-backups`
+   - `BACKUP_S3_ENDPOINT` = `https://<account id>.r2.cloudflarestorage.com`
+   - `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY` = the token's S3 credentials
+   - `BACKUP_S3_REGION` optional (defaults to `auto`, right for R2; AWS S3 needs the bucket
+     region and no endpoint)
+5. Run the workflow by hand and confirm the files appear under `verse-db/<today>/`.
 
 Restoring for real (into a new Railway Postgres, never over the live one until verified):
 
@@ -437,8 +634,10 @@ SCRATCH_DATABASE_URL=<new database URL> BACKUP_PASSPHRASE=<passphrase> \
 ```
 
 Point the Rails service's `DATABASE_URL` at the restored database only after that check passes.
-Thirty days of artifacts is not long-term retention; add Railway's paid backups or copy
-artifacts to object storage if longer history is needed.
+To restore from R2 instead of an artifact, download the three files from
+`verse-db/YYYY/MM/DD/run-<id>/` (Cloudflare dashboard, or
+`aws s3 cp --recursive --endpoint-url <endpoint> s3://<bucket>/verse-db/YYYY/MM/DD/run-<id>/ .`)
+and run the same command. Without the R2 copy, history is only the 30 days of artifacts.
 
 Rollback application code by redeploying the last known-good `production` commit.
 Database migrations must remain backward-compatible with the previous application release.

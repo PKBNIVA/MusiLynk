@@ -53,11 +53,22 @@ class ReadinessChecks
     !Rails.env.production? || (RazorpayConfig.usable? && ENV["RAZORPAY_WEBHOOK_SECRET"].present?)
   end
 
+  # With GOOD_JOB_EXECUTION_MODE=external this process runs no jobs, so jobs (and cron) only
+  # run if a separate `good_job start` worker is alive. GoodJob keeps one row per running
+  # process in good_job_processes, held by an advisory lock and refreshed every 30s;
+  # GoodJob::Process.active is its own definition of "still running".
   def background_jobs_check
     adapter = ActiveJob::Base.queue_adapter_name
     schema_ready = @connection_provider.call.data_source_exists?("good_jobs")
-    check(!Rails.env.production? || (adapter == "good_job" && schema_ready), required: Rails.env.production?, adapter:, schemaReady: schema_ready,
-      executionMode: ENV.fetch("GOOD_JOB_EXECUTION_MODE", Rails.env.production? ? "async" : "external"))
+    execution_mode = ENV.fetch("GOOD_JOB_EXECUTION_MODE", Rails.env.production? ? "async" : "external")
+    details = { adapter:, schemaReady: schema_ready, executionMode: execution_mode }
+    worker_ok = true
+    if execution_mode == "external" && schema_ready
+      details[:activeWorkers] = GoodJob::Process.active.count
+      details[:lastWorkerHeartbeatAt] = GoodJob::Process.maximum(:updated_at)&.iso8601
+      worker_ok = details[:activeWorkers].positive?
+    end
+    check(!Rails.env.production? || (adapter == "good_job" && schema_ready && worker_ok), required: Rails.env.production?, **details)
   rescue StandardError
     check(false, required: Rails.env.production?, adapter: adapter || "unknown", schemaReady: false)
   end

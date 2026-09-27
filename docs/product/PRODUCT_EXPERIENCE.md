@@ -1,5 +1,7 @@
 # Verse Product Experience System — v0.4
 
+> **Historical snapshot.** Written during the v0.x Node/SQLite prototype, since replaced by the Rails API in `backend/`. The product intent still applies; implementation details (SQLite, Elasticsearch, `server/`, `node tests/…` scripts) do not. Current docs: [docs/README.md](../README.md).
+
 ## Experience principle
 A user should not need to understand Verse before getting value. The primary navigation is therefore goal-led:
 

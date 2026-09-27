@@ -127,12 +127,14 @@ export default function JobSearch() {
               className="grid lg:grid-cols-[1.4fr_1fr_auto_auto] gap-3"
             >
               <Input
+                aria-label="Search opportunities"
                 value={f.q}
                 onChange={(e) => set('q', e.target.value)}
                 placeholder="Role, skill, company, instrument…"
                 className="bg-black/20 border-white/15"
               />
               <Input
+                aria-label="Location"
                 value={f.location}
                 onChange={(e) => set('location', e.target.value)}
                 placeholder="City, state or remote"
@@ -150,6 +152,7 @@ export default function JobSearch() {
             {showFilters && (
               <div className="grid md:grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/10">
                 <select
+                  aria-label="Opportunity type"
                   value={f.kind}
                   onChange={(e) => set('kind', e.target.value)}
                   className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
@@ -161,6 +164,7 @@ export default function JobSearch() {
                   ))}
                 </select>
                 <select
+                  aria-label="Function"
                   value={f.functionArea}
                   onChange={(e) => set('functionArea', e.target.value)}
                   className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
@@ -172,6 +176,7 @@ export default function JobSearch() {
                   ))}
                 </select>
                 <select
+                  aria-label="Workplace"
                   value={f.workplace}
                   onChange={(e) => set('workplace', e.target.value)}
                   className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"

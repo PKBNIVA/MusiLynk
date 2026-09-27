@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { apiGet } from '../lib/api';
@@ -15,10 +15,15 @@ export default function CandidateCompare() {
     [loaded, setLoaded] = useState(false),
     { user } = useAuth();
   const backTo = user?.role === 'jobseeker' ? '/jobseeker/hiring/talent' : '/employer/candidates';
-  const ids = (sp.get('ids') || '')
-    .split(',')
-    .map((x) => x.trim())
-    .filter(Boolean);
+  const idsParam = sp.get('ids') || '';
+  const ids = useMemo(
+    () =>
+      idsParam
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean),
+    [idsParam],
+  );
   useEffect(() => {
     setError('');
     setLoaded(false);
@@ -32,7 +37,7 @@ export default function CandidateCompare() {
         setLoaded(true);
       })
       .catch((e) => setError(e.message));
-  }, [sp]);
+  }, [ids]);
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />

@@ -46,10 +46,10 @@ export function initSentry(options: InitOptions) {
       const verdict = classifyError(hint?.originalException);
       if (verdict.action === 'ignore') return null;
       if (verdict.action === 'sample' && !allowSampled(verdict.key)) return null;
-      return scrubEvent(event as any, secrets()) as typeof event;
+      return scrubEvent(event, secrets());
     },
     // Spans (only when tracing is on) carry URLs in their names and attributes.
-    beforeSendSpan(span: any) {
+    beforeSendSpan(span) {
       return scrubValue(span, secrets());
     },
     beforeBreadcrumb(breadcrumb) {

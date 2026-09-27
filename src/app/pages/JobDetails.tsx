@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent } from '../components/ui/card';
@@ -34,7 +34,7 @@ export default function JobDetails() {
     [busy, setBusy] = useState(false),
     [loadError, setLoadError] = useState(''),
     [reporting, setReporting] = useState(false);
-  const load = () => {
+  const load = useCallback(() => {
     setLoadError('');
     return apiGet<any>(`/jobs/${id}`)
       .then((d) => {
@@ -42,11 +42,11 @@ export default function JobDetails() {
         setJob(d.job);
       })
       .catch((e: any) => setLoadError(e?.message || 'This opportunity could not be loaded.'));
-  };
+  }, [id]);
   useEffect(() => {
     setJob(undefined);
     load();
-  }, [id]);
+  }, [load]);
   const backTo = user?.role === 'employer' ? '/employer' : '/jobseeker/jobs';
   async function messageEmployer() {
     try {

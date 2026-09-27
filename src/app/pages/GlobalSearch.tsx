@@ -34,9 +34,9 @@ export default function GlobalSearch() {
     }
   });
 
+  const query = sp.get('q') || '';
+  const selectedType = sp.get('type') || 'all';
   useEffect(() => {
-    const query = sp.get('q') || '';
-    const selectedType = sp.get('type') || 'all';
     setQ(query);
     setType(selectedType);
     if (!query.trim()) {
@@ -54,13 +54,15 @@ export default function GlobalSearch() {
         if (!current) return;
         setResults(d.results || []);
         setInterpreted(d.interpretedAs || []);
-        const next = [query.trim(), ...recent.filter((x) => x !== query.trim())].slice(0, 6);
-        setRecent(next);
-        try {
-          localStorage.setItem('verse_recent_searches', JSON.stringify(next));
-        } catch {
-          /* storage blocked: keep in memory */
-        }
+        setRecent((previous) => {
+          const next = [query.trim(), ...previous.filter((x) => x !== query.trim())].slice(0, 6);
+          try {
+            localStorage.setItem('verse_recent_searches', JSON.stringify(next));
+          } catch {
+            /* storage blocked: keep in memory */
+          }
+          return next;
+        });
       })
       .catch(() => {
         if (current) setError('Search is taking a breather. Please try again in a moment.');
@@ -71,7 +73,7 @@ export default function GlobalSearch() {
     return () => {
       current = false;
     };
-  }, [sp.toString()]);
+  }, [query, selectedType]);
 
   const searchFor = (value: string) => setSp({ q: value, ...(type !== 'all' ? { type } : {}) });
   const submit = (event: FormEvent) => {

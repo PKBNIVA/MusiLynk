@@ -27,9 +27,41 @@ type Options = { description: string; amountLabel?: string };
 
 const CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
 
+/** The checkout.js options this module passes (https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/). */
+export type RazorpayOptions = {
+  key: string;
+  subscription_id?: string;
+  order_id?: string;
+  amount?: number;
+  currency?: string;
+  name?: string;
+  description: string;
+  handler: (response: Record<string, string>) => void;
+  modal: { ondismiss: () => void };
+  theme?: { color: string };
+};
+
+/** The payload checkout.js passes to a `payment.failed` listener. */
+export type RazorpayPaymentFailed = { error?: { description?: string } };
+
+/** The slice of checkout.js (window.Razorpay) this module uses. */
+interface RazorpayInstance {
+  on(event: 'payment.failed', handler: (event: RazorpayPaymentFailed) => void): void;
+  open(): void;
+}
+type RazorpayConstructor = new (options: RazorpayOptions) => RazorpayInstance;
+declare global {
+  interface Window {
+    Razorpay?: RazorpayConstructor;
+  }
+}
+
+/** POST /dev/razorpay/checkout: a signed handler payload, or the simulated decline. */
+type SimulatorResult = { response?: Record<string, string>; error?: { description?: string } };
+
 function loadCheckoutScript(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if ((window as any).Razorpay) return resolve();
+    if (window.Razorpay) return resolve();
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${CHECKOUT_SRC}"]`);
     const script = existing || document.createElement('script');
     script.addEventListener('load', () => resolve(), { once: true });
@@ -53,7 +85,8 @@ export async function openRazorpayCheckout(
   await loadCheckoutScript();
   return new Promise<CheckoutResult>((resolve) => {
     let lastError: string | undefined;
-    const rz = new (window as any).Razorpay({
+    // loadCheckoutScript() resolved, so checkout.js has defined window.Razorpay.
+    const rz = new window.Razorpay!({
       key: checkout.keyId,
       ...(checkout.subscriptionId
         ? { subscription_id: checkout.subscriptionId }
@@ -65,7 +98,7 @@ export async function openRazorpayCheckout(
       theme: { color: '#7c3aed' },
     });
     // Razorpay keeps the modal open after a decline so the customer can retry.
-    rz.on('payment.failed', (event: any) => {
+    rz.on('payment.failed', (event) => {
       lastError = event?.error?.description || 'The payment was declined.';
     });
     rz.open();
@@ -123,13 +156,13 @@ function openSimulatedCheckout(checkout: RazorpayCheckoutConfig, options: Option
         button.disabled = true;
       });
       try {
-        const result: any = await apiPost('/dev/razorpay/checkout', { ...target, outcome });
+        const result = await apiPost<SimulatorResult>('/dev/razorpay/checkout', { ...target, outcome });
         if (result.response) return close({ status: 'success', response: result.response });
         lastError = result.error?.description || 'The payment was declined.';
         errorBox.textContent = `${lastError} You can try again or close checkout.`;
         errorBox.classList.remove('hidden');
-      } catch (error: any) {
-        errorBox.textContent = error?.message || 'Simulator request failed.';
+      } catch (error) {
+        errorBox.textContent = (error instanceof Error && error.message) || 'Simulator request failed.';
         errorBox.classList.remove('hidden');
       } finally {
         busy = false;

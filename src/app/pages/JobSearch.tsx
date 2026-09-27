@@ -8,6 +8,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Search, MapPin, Briefcase, Bookmark, BookmarkCheck, Bell, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
+import { useLatestCallback } from '../lib/useLatestCallback';
 import { toast } from 'sonner';
 
 const kinds = ['', 'job', 'gig', 'audition', 'session', 'tour', 'internship', 'collaboration'];
@@ -53,7 +54,7 @@ export default function JobSearch() {
   }, [f]);
   const latest = useRef(0);
   // Only the newest search may update the list, so a slow earlier response cannot overwrite it.
-  async function load() {
+  const load = useLatestCallback(async () => {
     const n = ++latest.current;
     setLoading(true);
     try {
@@ -64,11 +65,11 @@ export default function JobSearch() {
     } finally {
       if (n === latest.current) setLoading(false);
     }
-  }
+  });
   // Filters apply as soon as they change; typed text still waits for Search/Enter.
   useEffect(() => {
     load();
-  }, [f.kind, f.functionArea, f.workplace, f.paid, f.verified]);
+  }, [load, f.kind, f.functionArea, f.workplace, f.paid, f.verified]);
   async function toggleSave(j: any) {
     try {
       j.saved ? await apiDelete(`/saved-jobs/${j.id}`) : await apiPost(`/saved-jobs/${j.id}`);

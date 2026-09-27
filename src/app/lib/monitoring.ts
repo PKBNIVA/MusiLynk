@@ -23,7 +23,8 @@ type Pending =
   | { kind: 'message'; message: string; context?: ReportContext }
   | { kind: 'vital'; vital: Vital; route: string };
 
-const env = (import.meta as any).env || {};
+// `|| {}`: the Node smoke tests import this module without Vite, where import.meta.env is undefined.
+const env: Partial<ImportMetaEnv> = import.meta.env || {};
 export const SENTRY_DSN = String(env.VITE_SENTRY_DSN || '').trim();
 export const RELEASE = String(env.VITE_RELEASE || '').trim();
 const ENVIRONMENT = String(env.VITE_SENTRY_ENVIRONMENT || env.MODE || 'production').trim();
@@ -196,8 +197,8 @@ export function initMonitoring() {
     const start = () => {
       void loadSentry().then(resolve);
     };
-    const idle = (window as any).requestIdleCallback as
-      ((cb: () => void, options?: { timeout: number }) => number) | undefined;
+    // Not every browser has requestIdleCallback (Safari), whatever the DOM typings say.
+    const idle: typeof window.requestIdleCallback | undefined = window.requestIdleCallback;
     if (idle) idle(start, { timeout: 2_000 });
     else window.setTimeout(start, 1_000);
   });

@@ -78,10 +78,10 @@ describe('scrubValue', () => {
 
     let deep: Record<string, unknown> = { leaf: 'x' };
     for (let i = 0; i < 15; i += 1) deep = { next: deep };
-    let cursor: any = scrubValue(deep);
+    let cursor: unknown = scrubValue(deep);
     let depth = 0;
     while (cursor && typeof cursor === 'object') {
-      cursor = cursor.next;
+      cursor = (cursor as Record<string, unknown>).next;
       depth += 1;
     }
     expect(cursor).toBe(FILTERED);

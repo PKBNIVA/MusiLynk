@@ -26,15 +26,23 @@ export interface SecondFactorChallenge {
   expiresIn: number;
   debugCode?: string;
 }
-export const isSecondFactorChallenge = (value: unknown): value is SecondFactorChallenge =>
-  Boolean(value && (value as any).secondFactorRequired === true && typeof (value as any).challengeToken === 'string');
+export const isSecondFactorChallenge = (value: unknown): value is SecondFactorChallenge => {
+  const candidate = value as Partial<SecondFactorChallenge> | null | undefined;
+  return Boolean(candidate && candidate.secondFactorRequired === true && typeof candidate.challengeToken === 'string');
+};
+export interface RegisterPayload {
+  name: string;
+  email: string;
+  password: string;
+  role: 'jobseeker' | 'employer';
+}
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User | SecondFactorChallenge>;
   completeSecondFactor: (challengeToken: string, code: string) => Promise<User>;
-  register: (p: { name: string; email: string; password: string; role: 'jobseeker' | 'employer' }) => Promise<User>;
+  register: (p: RegisterPayload) => Promise<User>;
   verifyCode: (email: string, code: string) => Promise<User>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -96,7 +104,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(false);
     return d.user;
   };
-  const register = async (payload: any) => {
+  const register = async (payload: RegisterPayload) => {
     const d = await apiPost<{ user: User; accessToken: string }>('/auth/register', payload);
     generation.current += 1;
     setAccessToken(d.accessToken);

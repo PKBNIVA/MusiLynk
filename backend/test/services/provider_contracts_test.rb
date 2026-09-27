@@ -40,6 +40,25 @@ class ProviderContractsTest < ActiveSupport::TestCase
     end
   end
 
+  test "an authentication rejection logs the provider's reason; other rejections never log the body" do
+    with_env("BREVO_API_KEY" => "test-api-key", "BREVO_SENDER_EMAIL" => "sender@example.invalid") do
+      unauthorized = '{"code":"unauthorized","message":"We have detected you are using an unrecognised IP address 203.0.113.9."}'
+      echoed = '{"code":"invalid_parameter","message":"Your code is 482913 for recipient@example.invalid"}'
+      logs = capture_logs do
+        Faraday.stub(:post, ->(_url, &configure) { configure.call(fake_request); Response.new(401, unauthorized) }) do
+          EmailDelivery.call(to: "recipient@example.invalid", template: "sign_in_code", data: { code: "482913" })
+        end
+        Faraday.stub(:post, ->(_url, &configure) { configure.call(fake_request); Response.new(400, echoed) }) do
+          EmailDelivery.call(to: "recipient@example.invalid", template: "sign_in_code", data: { code: "482913" })
+        end
+      end
+      assert_includes logs, '"status":401,"reason":"unauthorized: We have detected you are using an unrecognised IP address 203.0.113.9."'
+      assert_includes logs, '"status":400}'
+      assert_not_includes logs, "482913"
+      assert_not_includes logs, "test-api-key"
+    end
+  end
+
   test "Razorpay order sends integer paise with server-side Basic authentication" do
     with_env("RAZORPAY_KEY_ID" => "rzp_test_id", "RAZORPAY_KEY_SECRET" => "test-secret") do
       stubs = Faraday::Adapter::Test::Stubs.new do |stub|
@@ -104,5 +123,15 @@ class ProviderContractsTest < ActiveSupport::TestCase
     yield
   ensure
     old&.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+  end
+
+  def capture_logs
+    io = StringIO.new
+    previous = Rails.logger
+    Rails.logger = ActiveSupport::Logger.new(io)
+    yield
+    io.string
+  ensure
+    Rails.logger = previous
   end
 end

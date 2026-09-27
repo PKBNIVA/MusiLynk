@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_110100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -527,8 +527,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_110100) do
     t.datetime "read_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "safety_flags", default: [], null: false, array: true
     t.index ["conversation_id", "created_at"], name: "index_messages_on_conversation_id_and_created_at"
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+    t.index ["created_at"], name: "index_messages_flagged_on_created_at", where: "(safety_flags <> '{}'::character varying[])"
+    t.index ["sender_id"], name: "index_messages_flagged_on_sender_id", where: "(safety_flags <> '{}'::character varying[])"
     t.index ["sender_id"], name: "index_messages_on_sender_id"
   end
 
@@ -664,6 +667,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_110100) do
     t.datetime "resolved_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "action_taken"
+    t.text "resolution_note"
+    t.index ["entity_type", "entity_id"], name: "index_reports_on_entity_type_and_entity_id"
     t.index ["reporter_id"], name: "index_reports_on_reporter_id"
     t.index ["resolved_by_id"], name: "index_reports_on_resolved_by_id"
   end

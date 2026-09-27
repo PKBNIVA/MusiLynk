@@ -87,6 +87,12 @@ class Notifier
       user.notifications.where(kind: MESSAGE_KIND, link: message_link(conversation), read_at: nil).update_all(read_at: Time.current, updated_at: Time.current)
     end
 
+    # A moderator's warning after a report. In-app only; links to the rules that apply.
+    def moderation_warning(user, note = nil)
+      notify(user, kind: "moderation_warning", title: "A warning from Verse moderation", link: "/community-guidelines",
+        body: note || "We received a report about your activity on Verse. Please review the community guidelines; repeated or serious breaches lead to suspension.")
+    end
+
     def message_link(conversation) = "/messages?c=#{conversation.id}"
 
     private

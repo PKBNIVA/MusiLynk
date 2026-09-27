@@ -14,7 +14,8 @@ type Conversation = {
   counterpartActive?: boolean; blockedByMe?: boolean; blockedMe?: boolean;
   jobTitle?: string | null; lastMessage?: string | null; lastMessageAt?: string | null; lastMessageFromMe?: boolean; unreadCount?: number;
 };
-type Message = {id: string; senderId: string; body: string; createdAt: string; readAt?: string | null};
+// safetyFlags: scam-pattern signals, only ever sent to the recipient (see backend ScamSignals).
+type Message = {id: string; senderId: string; body: string; createdAt: string; readAt?: string | null; safetyFlags?: string[]};
 
 const MESSAGE_MAX_LENGTH = 5000;
 const THREAD_POLL_MS = 10_000;
@@ -27,6 +28,24 @@ const errorMessage = (e: any, fallback: string) => {
 const byTime = (a: Message, b: Message) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
 const formatTime = (value?: string | null) => { if (!value) return ''; const d = new Date(value); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(); };
 const isDesktop = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 768px)').matches;
+
+const SAFETY_TIPS: Record<string, string> = {
+  upfront_fee: 'Genuine opportunities on Verse never ask you to pay a registration, audition or joining fee.',
+  payment_details: 'Be careful about sending money to UPI IDs or bank accounts shared in chat.',
+  off_platform: 'Be cautious about moving to WhatsApp or Telegram before you have met or checked this person.',
+};
+
+// A gentle, non-blocking notice under a received message that matched a common scam pattern.
+function SafetyNotice({flags}: {flags: string[]}) {
+  const tips = flags.map(f => SAFETY_TIPS[f]).filter(Boolean);
+  return <div role="note" data-testid="safety-notice" className="mt-2 rounded-lg border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+    <p className="font-medium">Stay safe: this message looks like a common scam pattern.</p>
+    {tips.map(t => <p key={t} className="mt-1">{t}</p>)}
+    <p className="mt-1">
+      Read our <Link to="/community-guidelines" target="_blank" className="underline underline-offset-2">community guidelines</Link> and <Link to="/safety" target="_blank" className="underline underline-offset-2">safety tips</Link>. If something feels wrong, report this conversation.
+    </p>
+  </div>;
+}
 
 export default function Messages() {
   const {user} = useAuth();
@@ -265,6 +284,7 @@ export default function Messages() {
                     {truncated && <div className="text-center"><Button type="button" variant="outline" size="sm" disabled={loadingOlder} aria-busy={loadingOlder} onClick={() => void loadOlder()} data-testid="load-older">{loadingOlder ? 'Loading…' : 'Load earlier messages'}</Button></div>}
                     {msgs.map(m => { const mine = m.senderId === user?.id; return <div key={m.id} data-testid="message" data-mine={mine ? 'true' : 'false'} className={`max-w-[85%] md:max-w-[75%] w-fit rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-violet-600' : 'bg-white/10'}`}>
                       <div className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]" data-testid="message-body">{m.body}</div>
+                      {!mine && !!m.safetyFlags?.length && <SafetyNotice flags={m.safetyFlags}/>}
                       <div className="text-[11px] opacity-70 mt-1 flex gap-2 justify-end"><time dateTime={m.createdAt}>{formatTime(m.createdAt)}</time>{mine && m.id === lastMineId && <span data-testid="read-receipt">{m.readAt ? `Seen ${formatTime(m.readAt)}` : 'Sent'}</span>}</div>
                     </div>; })}
                   </>}

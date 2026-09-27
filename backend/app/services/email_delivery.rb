@@ -97,10 +97,24 @@ class EmailDelivery
   end
 
   # Logs only the provider, template and status code: provider response bodies
-  # can echo the message (and therefore the token link or code) back.
+  # can echo the message (and therefore the token link or code) back. Authentication
+  # failures (401/403) are rejected before the message is read, so their reason is
+  # logged too (e.g. Brevo's "unrecognised IP address"), truncated.
+  AUTH_FAILURE_STATUSES = [401, 403].freeze
+
   def self.log_rejection(provider, template, response)
     return if response.success?
-    Rails.logger.warn({ event: "email_delivery_rejected", provider:, template:, status: response.status }.to_json)
+    entry = { event: "email_delivery_rejected", provider:, template:, status: response.status }
+    entry[:reason] = provider_reason(response) if AUTH_FAILURE_STATUSES.include?(response.status)
+    Rails.logger.warn(entry.compact.to_json)
+  end
+
+  def self.provider_reason(response)
+    body = JSON.parse(response.body.to_s)
+    body = body.is_a?(Hash) ? body : {}
+    [body["code"], body["message"] || body["name"]].compact.join(": ").truncate(240).presence
+  rescue JSON::ParserError
+    nil
   end
 
   # Link templates require data[:link]; code templates require data[:code].

@@ -410,9 +410,35 @@ deploy. `window.__VERSE_RELEASE__` in the browser console shows the running web 
 
 ## Backups and rollback
 
-Railway's current trial does not provide managed backups or point-in-time recovery.
-Production launch requires a paid backup/PITR plan or an independently scheduled,
-encrypted, off-platform PostgreSQL backup with a tested restore procedure.
+Railway's current trial does not provide managed backups or point-in-time recovery, so
+`.github/workflows/db-backup.yml` takes a nightly (03:00 IST) off-Railway backup:
+
+1. `scripts/db/backup.sh` runs `pg_dump --format=custom`, records a SHA-256 checksum and a
+   manifest of per-table row counts, and encrypts the dump with GPG (AES-256).
+2. `scripts/db/restore-verify.sh` restores that dump into a throwaway PostgreSQL of the same
+   major version and fails the run if the checksum, `pg_restore`, or any table is missing.
+   Row-count differences (writes during the dump) are warnings.
+3. The encrypted dump, checksum and manifest are kept as a workflow artifact for 30 days.
+
+A green run is therefore a backup that was restored successfully. Setup, once:
+
+- Repository secret `PRODUCTION_DATABASE_URL`: the Railway Postgres service's
+  `DATABASE_PUBLIC_URL` (public networking must be on).
+- Repository secret `BACKUP_PASSPHRASE`: a long random passphrase. Store a copy outside
+  GitHub (password manager); without it the backups cannot be decrypted.
+- Run the workflow once by hand (Actions -> Database backup -> Run workflow) and confirm it passes.
+
+Restoring for real (into a new Railway Postgres, never over the live one until verified):
+
+```bash
+# Download and unzip the artifact from the chosen run, then:
+SCRATCH_DATABASE_URL=<new database URL> BACKUP_PASSPHRASE=<passphrase> \
+  scripts/db/restore-verify.sh verse-<stamp>.dump.gpg
+```
+
+Point the Rails service's `DATABASE_URL` at the restored database only after that check passes.
+Thirty days of artifacts is not long-term retention; add Railway's paid backups or copy
+artifacts to object storage if longer history is needed.
 
 Rollback application code by redeploying the last known-good `production` commit.
 Database migrations must remain backward-compatible with the previous application release.

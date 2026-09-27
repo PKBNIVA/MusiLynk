@@ -53,6 +53,7 @@ Rails.application.routes.draw do
           post :moderate
         end
       end
+      get :operations, to: "operations#show"
       get :audit, to: "operations#audit"
       get :subscriptions, to: "operations#subscriptions"
       get "billing-attempts", to: "operations#billing_attempts"

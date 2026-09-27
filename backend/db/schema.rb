@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_163000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -688,6 +688,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_140000) do
     t.index ["entity_type", "entity_id"], name: "index_reports_on_entity_type_and_entity_id"
     t.index ["reporter_id"], name: "index_reports_on_reporter_id"
     t.index ["resolved_by_id"], name: "index_reports_on_resolved_by_id"
+  end
+
+  create_table "request_metric_minutes", id: false, force: :cascade do |t|
+    t.datetime "minute", null: false
+    t.integer "requests", default: 0, null: false
+    t.integer "server_errors", default: 0, null: false
+    t.integer "latency_histogram", default: [], null: false, array: true
+    t.index ["minute"], name: "index_request_metric_minutes_on_minute", unique: true
   end
 
   create_table "reviews", id: :string, force: :cascade do |t|

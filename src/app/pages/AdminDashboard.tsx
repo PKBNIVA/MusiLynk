@@ -40,6 +40,7 @@ import {
 import DemoDataPanel from '../components/admin/DemoDataPanel';
 import { SignInDoctor } from '../components/admin/SignInDoctor';
 import { ReportReview } from '../components/admin/ReportReview';
+import OperationsPanel from '../components/admin/OperationsPanel';
 
 // Each panel loads independently: one failing endpoint must not blank the whole console.
 const SOURCES = {
@@ -296,6 +297,9 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="commerce" className="flex-none">
               Commerce
+            </TabsTrigger>
+            <TabsTrigger value="operations" className="flex-none">
+              Operations
             </TabsTrigger>
             <TabsTrigger value="audit" className="flex-none">
               Audit
@@ -844,6 +848,10 @@ export default function AdminDashboard() {
                 </Panel>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="operations" className="mt-5">
+            <OperationsPanel />
           </TabsContent>
 
           <TabsContent value="demo" className="mt-5">

@@ -209,6 +209,7 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 | GET | `/admin/health` | — | `{ok, coreReady, optionalIntegrationsReady, checks, …}`; 503 not ready |
 | GET | `/admin/stats` | — | `{stats: {users, jobseekers, employers, …}}` |
 | GET | `/admin/tester` | — | `{summary, checks, generatedAt}` |
+| GET | `/admin/operations` | — | `{generatedAt, requests: {lastHour, last24Hours, collectingSince}, jobs, payments, email}`; see DEPLOYMENT.md → Operations view |
 | GET | `/admin/users` | — | `{users}` ≤ 500 (≈560 KB with 500 users) |
 | PATCH/PUT | `/admin/users/:id` | `status: active\|suspended\|pending` | `{ok}`; suspending revokes sessions; 409 self |
 | POST | `/admin/users/:id/grant-plan` | `planCode: pro\|studio\|enterprise, days (clamped 1-366)` | 201 `{id}` |

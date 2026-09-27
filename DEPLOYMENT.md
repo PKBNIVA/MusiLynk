@@ -574,6 +574,43 @@ workflow's commit, and `tests/e2e/api-health.spec.ts` polls for up to 5 minutes 
 that commit. Scheduled runs skip this check because they may legitimately test an older
 deploy. `window.__VERSE_RELEASE__` in the browser console shows the running web build.
 
+### 8. Operations view (`/admin` → Operations)
+
+A first look at production health without opening Railway, Sentry or GoodJob. The tab
+calls `GET /api/admin/operations` (admins only; everyone else gets 401/403) and refreshes
+every minute.
+
+| Panel | What it shows | Where it comes from |
+| --- | --- | --- |
+| API traffic | Request count, p95 latency and 5xx rate for the last hour and last 24 hours | `request_metric_minutes` (below) |
+| Background jobs | Queued, oldest queued age, running, scheduled or waiting to retry, failed in 24 h (by job class), errored runs in 24 h | GoodJob tables |
+| Payments (24 h) | Booking deposits failed / still pending; billing attempts failed / unresolved | `booking_payments`, `billing_attempts` |
+| Email (24 h) | Email jobs GoodJob gave up on, sends that errored and were retried, addresses the provider reported (hard/soft bounce, complaint, blocked, unsubscribed), suppressed addresses, and a warning when the bounce webhook is not configured | GoodJob tables, `email_suppressions` |
+
+Figures turn amber when they need a look: 5xx rate at or above 1%, p95 over 1 s, a job
+queued for 10 minutes or more, or any failed job, payment or email delivery. They are
+prompts, not alerts; Sentry (above) remains the alerting path.
+
+How request metrics are collected: `RequestMetrics::Middleware`
+(`backend/config/initializers/request_metrics.rb`) sits outside Rails' exception handling,
+so it sees the status the client actually got. Each `/api` request (except the
+`/api/health`, `/api/live` and `/api/readiness` probes) adds a few integers to an in-memory
+buffer in its web process. At most every `REQUEST_METRICS_FLUSH_SECONDS` (default 10) one
+request writes the buffer to `request_metric_minutes` with a single upsert that sums into
+the minute's row (so several web processes or replicas add up) and deletes rows older than
+25 hours; the table never holds more than about 1,500 rows. A failed write is logged as
+`request_metrics_write_failed` and that batch is dropped; the request is never affected,
+and at most 30 minutes are buffered in memory. Latency is kept as a histogram with bucket
+edges from 5 ms to 10 s, so p95 is shown as "≤ the bucket's upper edge" (or "> 10 s").
+Numbers start from the first deploy that includes this table, and a process restart loses
+at most its last few seconds of counts.
+
+Not shown: the nightly database backup runs in GitHub Actions and leaves nothing in the
+app's database. Check **Actions → Database backup**; a failed run opens an issue labelled
+`backup-failure` and, when `ALERT_WEBHOOK_URL` is set, posts to it (see Backups and
+rollback below). Email provider rejections (4xx from Brevo) are logged as `email_delivery_skipped` /
+`notification_email_skipped` rather than counted.
+
 ## Backups and rollback
 
 Railway's current trial does not provide managed backups or point-in-time recovery, so

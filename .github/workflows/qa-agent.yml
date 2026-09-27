@@ -66,6 +66,11 @@ jobs:
       # waits up to 5 minutes for /api/health and the web app to report this commit.
       # Scheduled runs may legitimately test an older deploy, so they leave it empty.
       QA_EXPECTED_RELEASE: ${{ github.event_name == 'workflow_dispatch' && github.sha || '' }}
+      # Signed-in smoke (tests/e2e/live-account-smoke.spec.ts): signs in as a dedicated
+      # jobseeker test account, saves and deletes a job alert, then signs out. It skips
+      # itself until both repository secrets exist.
+      QA_SMOKE_EMAIL: ${{ secrets.QA_SMOKE_EMAIL }}
+      QA_SMOKE_PASSWORD: ${{ secrets.QA_SMOKE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v7
@@ -79,6 +84,13 @@ jobs:
       - name: Install full browser matrix
         if: env.QA_FULL_MATRIX == 'true'
         run: npx playwright install --with-deps chromium firefox webkit
+      - name: Report whether the signed-in smoke will run
+        run: |
+          if [ -n "$QA_SMOKE_EMAIL" ] && [ -n "$QA_SMOKE_PASSWORD" ]; then
+            echo "::notice::Signed-in live smoke enabled (QA_SMOKE_EMAIL is set)."
+          else
+            echo "::notice::Signed-in live smoke skipped: add the QA_SMOKE_EMAIL and QA_SMOKE_PASSWORD repository secrets to enable it."
+          fi
       - run: npm run qa:e2e
       - name: Upload failure evidence
         if: failure()

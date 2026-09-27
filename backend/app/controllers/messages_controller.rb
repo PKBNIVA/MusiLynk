@@ -45,7 +45,8 @@ class MessagesController < ApplicationController
     return unless within_user_rate_limit?("message", limit: SEND_LIMIT_PER_HOUR, period: 1.hour)
 
     message = Message.transaction do
-      @conversation.messages.create!(sender: current_user, body:).tap { Notifier.new_message(_1) }
+      # Scam signals never block sending; they drive a notice for the recipient and a moderator count.
+      @conversation.messages.new(sender: current_user, body:).tap { _1.flag_scam_signals; _1.save! }.tap { Notifier.new_message(_1) }
     end
     render json: { message: serialize(message) }, status: :created
   end
@@ -57,5 +58,10 @@ class MessagesController < ApplicationController
     render_error("Conversation not found", :not_found) unless @conversation&.includes_user?(current_user)
   end
 
-  def serialize(message) = { id: message.id, senderId: message.sender_id, body: message.body, createdAt: message.created_at, readAt: message.read_at }
+  # Only the recipient sees safety flags (as a gentle notice); telling the sender would teach evasion.
+  def serialize(message)
+    payload = { id: message.id, senderId: message.sender_id, body: message.body, createdAt: message.created_at, readAt: message.read_at }
+    payload[:safetyFlags] = message.safety_flags if message.sender_id != current_user.id && message.safety_flags.present?
+    payload
+  end
 end

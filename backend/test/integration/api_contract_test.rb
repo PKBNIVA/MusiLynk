@@ -143,7 +143,9 @@ class ApiContractTest < ActionDispatch::IntegrationTest
     frontend_root = Rails.root.join("..", "src", "app")
     pattern = /api(Get|Post|Put|Patch|Delete)(?:<[^>]*>)?\(\s*([`'"])(.*?)\2/m
 
-    Dir.glob(frontend_root.join("**", "*.{ts,tsx}")).flat_map do |source|
+    # Vitest unit tests (src/**/__tests__, *.test.ts) call a mocked fetch with made-up paths.
+    sources = Dir.glob(frontend_root.join("**", "*.{ts,tsx}")).reject { _1.include?("/__tests__/") || _1.match?(/\.test\.tsx?\z/) }
+    sources.flat_map do |source|
       File.read(source).scan(pattern).filter_map do |verb, _, raw_path|
         next unless raw_path.start_with?("/")
 

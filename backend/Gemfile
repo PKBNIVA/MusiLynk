@@ -22,3 +22,8 @@ group :development, :test do
   gem "brakeman", require: false
   gem "bundler-audit", require: false
 end
+
+group :test do
+  # Line and branch coverage for bin/rails test; the floor lives in test/test_helper.rb.
+  gem "simplecov", require: false
+end

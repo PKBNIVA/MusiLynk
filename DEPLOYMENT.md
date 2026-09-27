@@ -170,6 +170,27 @@ Codes expire after 10 minutes, are single use, allow 5 attempts, and are limited
 requests per email and per IP per hour. Outside production, and only when no email
 provider is configured, the request response includes `debugCode` for local QA.
 
+### Admin two-step sign-in and `ADMIN_SECOND_FACTOR`
+
+When the second step applies, an admin who signs in with a password gets `202` from
+`POST /api/auth/login` with `secondFactorRequired: true` and a 10-minute `challengeToken`, and
+is emailed a 6-digit code; `POST /api/auth/second-factor {challengeToken, code}` completes
+sign-in. Admins who sign in with an email code never need it (the code proves inbox control).
+
+| `ADMIN_SECOND_FACTOR` | With email delivery | Without email delivery (production) |
+| --- | --- | --- |
+| `auto` (default; also any unrecognised value) | Code required | Password alone works; audited as `auth.admin_second_factor_skipped`; `/admin/tester` and the sign-in doctor warn "Admin 2-step sign-in is off because email delivery is not configured" |
+| `required` | Code required | Password sign-in refused: 503 `SECOND_FACTOR_UNAVAILABLE` |
+| `off` | Emergency disable: password alone, audited as `secondFactor: "disabled"`, flagged in the doctor and tester | Same |
+
+An admin whose own address is suppressed (bounced or complained, see the Brevo webhook
+below) is treated as "without email delivery" too, and the sign-in doctor says so.
+Outside production the on-screen `debugCode` counts as delivery. Recommended order: add
+`BREVO_API_KEY` (the second step then turns on by itself under `auto`), confirm an admin
+receives the code, then set `ADMIN_SECOND_FACTOR=required` so a later email outage fails
+closed instead of silently skipping the step. Use `off` only in an emergency and remove it
+afterwards.
+
 ### Brevo bounce and complaint webhook
 
 Brevo reports hard bounces, soft bounces, spam complaints, blocks and unsubscribes to
@@ -393,6 +414,7 @@ npm ci
 npm audit --omit=dev --audit-level=high
 npm run build
 npm run test:all
+npm run test:unit -- --coverage
 npm run qa:e2e
 cd backend
 bundle install
@@ -407,6 +429,18 @@ CI (`.github/workflows/rails-and-web.yml`) runs these as the `frontend`, `rails`
 and `integrated-journeys` jobs. The `rails` job also migrates an empty database and fails if
 `backend/db/schema.rb` differs from the committed file. `npm run test:all` runs only the
 frontend source smoke tests; the legacy Node server and its tests were removed.
+
+Coverage floors: `bin/rails test` measures line and branch coverage with SimpleCov
+(`backend/coverage/index.html`) and, on CI, fails when either drops below the floor in
+`backend/test/test_helper.rb` (set `COVERAGE_FLOOR=1` to enforce it locally on a full run).
+`npm run test:unit -- --coverage` does the same for `src/app/lib` with the thresholds in
+`vitest.config.ts`. Raise a floor when coverage goes up; never lower it to get a build green.
+
+Signed-in live smoke: the scheduled and manual `Verse QA Agent` live run also signs in as a
+dedicated jobseeker test account, saves and deletes a job alert, and signs out
+(`tests/e2e/live-account-smoke.spec.ts`). It skips itself until the `QA_SMOKE_EMAIL` and
+`QA_SMOKE_PASSWORD` repository secrets are set. Use an account created only for this, with
+no real profile data, and keep `PASSWORD_LOGIN_ENABLED` on (it signs in with a password).
 
 The Railway image (`backend/Dockerfile`, build context = repository root) installs exactly the
 gems in `backend/Gemfile.lock` with the Bundler version recorded there, in frozen deployment

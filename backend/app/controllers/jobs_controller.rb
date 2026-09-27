@@ -25,7 +25,7 @@ class JobsController < ApplicationController
     jobs = jobs.where(paid: true) if params[:paid] == "true"
     jobs = jobs.joins(employer: :profile).where(profiles: { verified: true }) if params[:verified] == "true"
     saved = current_user&.jobseeker? ? SavedJob.where(user: current_user).pluck(:job_id).to_set : Set.new
-    render json: { jobs: jobs.limit(250).map { |job| job.api_json.merge(saved: saved.include?(job.id)) } }
+    render json: { jobs: jobs.limit(250).map { |job| job.api_json(current_user).merge(saved: saved.include?(job.id)) } }
   end
 
   def show
@@ -36,7 +36,7 @@ class JobsController < ApplicationController
     end
     applied = current_user&.jobseeker? && Application.exists?(candidate: current_user, job:)
     saved = current_user&.jobseeker? && SavedJob.exists?(user: current_user, job:)
-    render json: { job: job.api_json.merge(applied:, saved:) }
+    render json: { job: job.api_json(current_user).merge(applied:, saved:) }
   end
 
   def create
@@ -85,7 +85,7 @@ class JobsController < ApplicationController
 
   def saved
     return unless authenticate!("jobseeker")
-    render json: { jobs: Job.joins(:saved_jobs).where(saved_jobs: { user_id: current_user.id }).with_applications_count.includes(employer: :profile).order("saved_jobs.created_at DESC").limit(LIST_LIMIT).map(&:api_json) }
+    render json: { jobs: Job.joins(:saved_jobs).where(saved_jobs: { user_id: current_user.id }).with_applications_count.includes(employer: :profile).order("saved_jobs.created_at DESC").limit(LIST_LIMIT).map { _1.api_json(current_user) } }
   end
 
   def save

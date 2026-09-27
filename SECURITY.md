@@ -10,8 +10,14 @@ Authentication and sessions
 - bcrypt password hashing (`has_secure_password`); email one-time codes (10-minute,
   single-use, 5 attempts, digests keyed from `SECRET_KEY_BASE`) as the primary sign-in;
   password sign-in as a fallback (`PASSWORD_LOGIN_ENABLED`).
-- Random bearer tokens stored only as SHA-256 digests; 30-day expiry; at most 10 live
+- Random bearer tokens stored only as SHA-256 digests; sliding expiry of 7 days idle under a
+  30-day cap (admins: 12 hours idle, 7-day cap); sessions bound to the creating browser family
+  (a replayed admin token is revoked, others are flagged in the audit log); at most 10 live
   sessions per user; logout revokes; suspended or pending accounts get `403 ACCOUNT_INACTIVE`.
+  Details, and the plan to move the token into an HttpOnly cookie, are in
+  [docs/engineering/SESSIONS.md](docs/engineering/SESSIONS.md).
+- Admin two-step sign-in: an admin password sign-in also needs a code emailed to the admin
+  (`ADMIN_SECOND_FACTOR`, see [DEPLOYMENT.md](DEPLOYMENT.md)).
 - Admin "revoke sessions" for any user and a Sign-in doctor that explains lockouts without
   exposing secrets. Both are audited.
 - Email verification and password reset with short-lived single-use tokens.
@@ -45,7 +51,8 @@ Platform
 
 ## Not yet in place
 
-- Admin MFA and narrower admin/support roles.
+- An authenticator-app or passkey second factor for admins, and narrower admin/support roles.
+- HttpOnly cookie sessions (the token is in `localStorage`; see docs/engineering/SESSIONS.md).
 - Malware scanning of uploaded files.
 - WAF/bot management in front of the API.
 - Point-in-time database recovery (backups are nightly).

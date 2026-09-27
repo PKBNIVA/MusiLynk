@@ -150,7 +150,8 @@ export default function Messages() {
     <main className="max-w-6xl mx-auto px-4 md:px-6 pt-24 md:pt-28 pb-28 lg:pb-16">
       <h1 className={`text-3xl md:text-4xl font-bold mb-5 md:mb-7 ${activeId ? 'hidden md:block' : ''}`}>Messages</h1>
       <Card className="bg-white/[.05] border-white/10 overflow-hidden">
-        <CardContent className="p-0 grid md:grid-cols-[320px_minmax(0,1fr)] md:h-[640px]">
+        {/* The single grid row is capped at the panel height so the message list scrolls instead of growing past it. */}
+        <CardContent className="p-0 grid md:grid-cols-[320px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:h-[640px]">
           <aside aria-label="Conversations" className={`md:border-r border-white/10 md:h-full md:overflow-y-auto ${activeId ? 'hidden md:block' : ''}`}>
             {convsLoading ? <div className="p-6 text-sm text-slate-400" role="status">Loading conversations…</div>
               : convsError && convs.length === 0 ? <div className="p-6 text-sm" role="alert"><p className="text-rose-300">{convsError}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => { setConvsLoading(true); void loadConvs(); }}>Try again</Button></div>
@@ -168,7 +169,7 @@ export default function Messages() {
                   <div className={`text-sm mt-2 truncate ${(c.unreadCount || 0) > 0 ? 'text-slate-200 font-medium' : 'text-slate-500'}`}>{c.lastMessage ? `${c.lastMessageFromMe ? 'You: ' : ''}${c.lastMessage}` : 'No messages yet'}</div>
                 </button></li>)}</ul>}
           </aside>
-          <section aria-label="Conversation" className={`flex-col min-w-0 md:h-full ${activeId ? 'flex' : 'hidden md:flex'}`}>
+          <section aria-label="Conversation" className={`flex-col min-w-0 md:h-full md:min-h-0 ${activeId ? 'flex' : 'hidden md:flex'}`}>
             {activeId && <header className="flex items-center gap-3 border-b border-white/10 p-3 md:p-4">
               <Button type="button" variant="ghost" size="icon" className="md:hidden" aria-label="Back to conversations" onClick={() => select(null)}><ArrowLeft size={18}/></Button>
               <div className="min-w-0"><div className="font-semibold truncate" data-testid="thread-name">{active ? nameOf(active) : threadState === 'missing' ? 'Conversation' : ' '}</div>{active && <div className="text-xs text-violet-300 truncate">{active.jobTitle || 'General conversation'}</div>}</div>

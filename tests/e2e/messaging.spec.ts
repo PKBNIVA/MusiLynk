@@ -169,6 +169,31 @@ test.describe('messages', () => {
     await expect(page.getByTestId('message-body').last()).toHaveText('bulk 200');
   });
 
+  test('a long thread scrolls inside the desktop panel, opens at the newest message and keeps the composer visible', async ({page}) => {
+    // Regression: the list grew past the fixed-height panel, clipping the newest messages and the composer.
+    const long = Array.from({length: 30}, (_, i) => ({id: `m${i}`, senderId: i % 2 ? ME : 'other', body: `message ${i + 1}`, createdAt: new Date(Date.UTC(2026, 8, 1, 0, i)).toISOString(), readAt: null}));
+    const state = await mockApi(page, 'jobseeker', {conversations: [conversation('c1')], threads: {c1: long}});
+    for (const viewport of [{width: 1440, height: 900}, {width: 1024, height: 768}]) {
+      await page.setViewportSize(viewport);
+      await page.goto('/jobseeker/messages?c=c1');
+      const log = page.getByRole('log', {name: 'Messages'});
+      await expect(page.getByTestId('message-body').last()).toHaveText('message 30');
+      const box = await log.evaluate(el => ({scrollable: el.scrollHeight > el.clientHeight + 1, atBottom: el.scrollHeight - el.scrollTop - el.clientHeight < 2}));
+      expect(box, `list scrolls and opens at the newest message at ${viewport.width}px`).toEqual({scrollable: true, atBottom: true});
+      await expect(page.getByTestId('message-body').last()).toBeInViewport();
+      const composer = page.getByRole('textbox', {name: 'Message'});
+      await expect(composer).toBeInViewport();
+      const card = await page.getByRole('region', {name: 'Conversation'}).boundingBox();
+      const input = await composer.boundingBox();
+      expect(input!.y + input!.height, 'composer sits inside the conversation panel').toBeLessThanOrEqual(card!.y + card!.height + 1);
+    }
+    await page.getByRole('textbox', {name: 'Message'}).fill('reply after scrolling');
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('message-body').last()).toHaveText('reply after scrolling');
+    await expect(page.getByTestId('message-body').last()).toBeInViewport();
+    expect(state.sent).toEqual(['reply after scrolling']);
+  });
+
   test('empty inbox, unknown deep link and mobile list/thread navigation', async ({page}) => {
     const state = await mockApi(page, 'jobseeker');
     await page.goto('/jobseeker/messages');

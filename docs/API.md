@@ -1,6 +1,6 @@
 # Verse API contract
 
-Rails 7.2 API in `backend/`, served under `/api`. The contract below is enforced by
+Rails 8.1 API in `backend/`, served under `/api`. The contract below is enforced by
 `backend/test/integration/api_matrix_test.rb` (every route x every role),
 `api_frontend_contract_test.rb` (keys the React pages read), `api_error_shape_test.rb`,
 `api_security_probes_test.rb` and `api_query_budget_test.rb`. A route added without a matrix
@@ -78,7 +78,7 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 | Method | Path | Auth | Params | Response / errors |
 | --- | --- | --- | --- | --- |
 | POST | `/auth/register` | public | `name, email, password (≥10), role: jobseeker\|employer` | 201 `{user, accessToken, verificationRequired, verificationDelivery}`; 422 `INVALID_ROLE`/validation; 409 duplicate |
-| POST | `/auth/login` | public | `email, password` | `{user, accessToken}`; admins get 202 `{secondFactorRequired, method, challengeToken, message, expiresIn}` instead and a code by email (`debugCode` only outside production without email); 503 `SECOND_FACTOR_UNAVAILABLE` for admins in production without an email provider; 401; 403 inactive; 429 |
+| POST | `/auth/login` | public | `email, password` | `{user, accessToken}`; admins get 202 `{secondFactorRequired, method, challengeToken, message, expiresIn}` instead and a code by email (`debugCode` only outside production without email); without email delivery in production the admin gets `{user, accessToken}` under the default `ADMIN_SECOND_FACTOR=auto` (audited) or 503 `SECOND_FACTOR_UNAVAILABLE` under `required`; 401; 403 inactive; 429 |
 | POST | `/auth/logout` | public | bearer token | `{ok}` |
 | POST | `/auth/request-email-verification` | any | — | `{ok, alreadyVerified?, debugLink?}` |
 | POST | `/auth/verify-email` | public | `token` | `{ok}`; 400 `TOKEN_INVALID` |

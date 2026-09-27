@@ -17,6 +17,7 @@ class AuthController < ApplicationController
   OTP_UNAVAILABLE_MESSAGE = "Email sign-in codes are temporarily unavailable. Use your password instead.".freeze
   OTP_REQUEST_MESSAGE = "If this email can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.".freeze
   OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
+  EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so Verse can no longer send to it. Use a different email address, or sign in with your password.".freeze
   PRODUCTION_FRONTEND_URL = "https://verse-music-platform.vercel.app".freeze
   # Admin password sign-in needs a second step: a code emailed to the admin.
   SECOND_FACTOR_PURPOSE = :admin_second_factor
@@ -29,6 +30,7 @@ class AuthController < ApplicationController
   SECOND_FACTOR_EXPIRED_MESSAGE = "This sign-in step has expired. Sign in with your password again.".freeze
   SECOND_FACTOR_UNAVAILABLE_MESSAGE = "Admin sign-in needs an emailed code, but email delivery is not configured on the server. Configure an email provider to sign in.".freeze
   SECOND_FACTOR_SKIPPED_WARNING = "Admin 2-step sign-in is off because email delivery is not configured. Add an email provider (BREVO_API_KEY), then set ADMIN_SECOND_FACTOR=required.".freeze
+  SECOND_FACTOR_SUPPRESSED_WARNING = "Admin 2-step sign-in is off for this admin because email to their address is suppressed (bounced or reported as spam). Fix the address, then lift the suppression.".freeze
   SECOND_FACTOR_DISABLED_WARNING = "Admin 2-step sign-in is turned off (ADMIN_SECOND_FACTOR=off). Remove that setting once the emergency is over.".freeze
 
   # ADMIN_SECOND_FACTOR selects how an admin password sign-in is treated:
@@ -39,13 +41,19 @@ class AuthController < ApplicationController
   #   "required": always require the code; without email delivery the password
   #     step fails closed (503 SECOND_FACTOR_UNAVAILABLE).
   #   "off": emergency disable only; every such sign-in is audited.
-  # Outside production the on-screen debugCode counts as delivery.
+  # Outside production the on-screen debugCode counts as delivery. With an email
+  # address, a suppressed (bounced or complained) address counts as undeliverable.
   # Returns :enforced, :unavailable (required but undeliverable), :skipped or :off.
-  def self.admin_second_factor_state
+  def self.admin_second_factor_state(email = nil)
     mode = ENV.fetch("ADMIN_SECOND_FACTOR", "auto").strip.downcase
     return :off if mode == "off"
-    return :enforced if EmailDelivery.configured? || !Rails.env.production?
+    return :enforced if admin_code_deliverable?(email)
     mode == "required" ? :unavailable : :skipped
+  end
+
+  def self.admin_code_deliverable?(email)
+    return !Rails.env.production? unless EmailDelivery.configured?
+    email.blank? || !EmailSuppression.blocks_all?(email)
   end
 
   def register
@@ -78,15 +86,16 @@ class AuthController < ApplicationController
       return render_error("Incorrect email or password.", :unauthorized)
     end
     return render_error("This account is not active.", :forbidden) unless user.active?
-    second_factor = user.admin? ? self.class.admin_second_factor_state : nil
+    second_factor = user.admin? ? self.class.admin_second_factor_state(user.email) : nil
     return start_second_factor(user) if second_factor == :enforced
     if second_factor == :unavailable
       Rails.logger.error({ event: "admin_second_factor_unavailable", userId: user.id }.to_json)
       return render_error(SECOND_FACTOR_UNAVAILABLE_MESSAGE, :service_unavailable, "SECOND_FACTOR_UNAVAILABLE")
     end
     if second_factor == :skipped
-      Rails.logger.warn({ event: "admin_second_factor_skipped", userId: user.id, reason: "email_delivery_not_configured" }.to_json)
-      audit!("auth.admin_second_factor_skipped", user, { reason: "email_delivery_not_configured", ip: request.remote_ip })
+      reason = EmailDelivery.configured? ? "email_suppressed" : "email_delivery_not_configured"
+      Rails.logger.warn({ event: "admin_second_factor_skipped", userId: user.id, reason: }.to_json)
+      audit!("auth.admin_second_factor_skipped", user, { reason:, ip: request.remote_ip })
     end
 
     user.update!(last_login_at: Time.current)
@@ -144,6 +153,9 @@ class AuthController < ApplicationController
     scopes = { email: [email, OTP_REQUESTS_PER_EMAIL], ip: [request.remote_ip, OTP_REQUESTS_PER_IP] }
     return if failure_budget_exhausted?("otp-request", scopes, period: OTP_REQUEST_PERIOD)
     record_failure!("otp-request", scopes, period: OTP_REQUEST_PERIOD)
+    # A code sent to a hard-bounced or complaining address can never arrive: say so instead
+    # of leaving the person waiting. Checked after the throttle so it cannot be probed quickly.
+    return render_error(EMAIL_SUPPRESSED_MESSAGE, :unprocessable_content, "EMAIL_SUPPRESSED") if EmailSuppression.blocks_all?(email)
 
     user = User.find_by(email:)
     pending = user ? {} : sign_up.to_h
@@ -384,6 +396,7 @@ class AuthController < ApplicationController
   def queue_email(user, template, link)
     return { queued: false, delivered: false, reason: "Recipient unavailable" } if user&.email.blank?
     return { queued: false, delivered: false, reason: "Email provider not configured" } unless EmailDelivery.configured?
+    return { queued: false, delivered: false, reason: "Email address suppressed" } if EmailSuppression.blocks_all?(user.email)
     EmailDeliveryJob.enqueue(user:, template:, link:)
     { queued: true }
   rescue StandardError => error

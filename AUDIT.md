@@ -121,6 +121,51 @@ refund; Rails 7.2 is past security support (upgrade to 8.x); act-member invitati
 offer accept/decline for candidates; error tracking/alerting (Sentry or similar); Redis for shared
 rate limits across replicas.
 
+## Status on 27 Sep 2026
+
+Checked against `production` @ `4987a3e` (PR #55) and the GitHub Actions history. The
+sections above are left as written; this list supersedes their "Still open" items.
+
+**Closed since the hardening pass**
+
+- **P0-1 backup: closed.** `.github/workflows/db-backup.yml` backs up production nightly
+  (03:00 IST), encrypts the dump (GPG AES-256), restores it into a scratch PostgreSQL and
+  checks every table (`scripts/db/backup.sh`, `scripts/db/restore-verify.sh`). The first
+  successful run against the production database was run 36308546990 on 27 Sep 2026
+  (09:11 UTC); runs 1–4 failed on a mis-pasted database URL secret, which #53 now diagnoses. Recovery point today: 24 h.
+  Procedure: [docs/engineering/RUNBOOK.md](docs/engineering/RUNBOOK.md#4-restore-from-backup).
+- **Rails upgrade: closed.** The backend runs Rails 8.1.4 (`backend/Gemfile`,
+  `Gemfile.lock`; #45, see [docs/RAILS8_UPGRADE.md](docs/RAILS8_UPGRADE.md)). The earlier
+  "Rails 7.2 is past security support" item no longer applies.
+- **Error tracking: built, waiting on the owner.** Sentry is wired into the API
+  (`backend/config/initializers/sentry.rb`, GoodJob failures included) and the web app (#45),
+  with PII scrubbing and an admin test button. It is inert until `SENTRY_DSN` (Railway) and
+  `VITE_SENTRY_DSN` (Vercel) are set; see DEPLOYMENT.md "Error alerting and uptime".
+- **Shared rate limits: closed without Redis.** Throttle counters live in Solid Cache on the
+  primary PostgreSQL database (#51), so they survive restarts and are shared by every
+  process and replica. `REDIS_URL` still takes precedence if it is ever set.
+- **Public search abuse: closed.** `/api/search` is limited to 60 requests per minute per IP
+  and 100-character queries, and every result type keeps a fair share of results (#52, #54).
+- **Messaging safety: closed.** Users can block (both directions) and report a conversation
+  partner; sends to suspended accounts are refused (#54).
+- **Account deletion and data export: closed.** `GET /api/account/export` and
+  `DELETE /api/account` with a "Your data & account" page; deletion anonymises the user row
+  so RESTRICT foreign keys and billing records are kept (#55).
+- **Branch protection: closed.** `production` is protected; changes land by pull request.
+
+**Still open**
+
+- Owner accounts: add `BREVO_API_KEY` and confirm a real sign-in code reaches an inbox
+  (sender domain DNS was verified on 27 Sep 2026); set the Sentry DSNs and alert rules; add
+  uptime monitors; create the R2 bucket; make one real low-value Razorpay deposit and refund.
+- Backups keep 30 days of artifacts only and the recovery point is 24 h; longer retention or
+  point-in-time recovery needs Railway paid backups or an off-GitHub copy.
+- Act-member invitation/consent flow (owners add confirmed members directly) and offer
+  accept/decline for candidates.
+- Search still uses `ILIKE '%term%'` (sequential scans); see
+  [docs/engineering/SEARCH.md](docs/engineering/SEARCH.md).
+- P3/P4 polish items above.
+
 ## Access checklist (tokens live in environment settings, never in chat or the repo)
 
 | Variable | Source | Scope |

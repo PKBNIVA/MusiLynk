@@ -197,6 +197,23 @@ class AdminSecondFactorTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a suppressed admin address counts as undeliverable: skipped under auto, refused under required" do
+    EmailSuppression.create!(email: @admin.email, scope: "all", reason: "hard_bounce", last_event: "hard_bounce", last_event_at: Time.current, suppressed_at: Time.current)
+    production = ActiveSupport::EnvironmentInquirer.new("production")
+    with_env(PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => nil)) do
+      Rails.stub(:env, production) { password_login(@admin.email) }
+      assert_response :success
+      assert_equal "email_suppressed", AuditLog.where(action: "auth.admin_second_factor_skipped").sole.metadata["reason"]
+      get "/api/admin/users/lookup", params: { email: @admin.email }, headers: bearer(response.parsed_body.fetch("accessToken"))
+      note = response.parsed_body["diagnosis"].find { _1["code"] == "ADMIN_SECOND_FACTOR_SKIPPED" }
+      assert_match "suppressed", note["message"]
+    end
+    with_env(PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => "required")) do
+      Rails.stub(:env, production) { password_login(@admin.email) }
+      assert_response :service_unavailable
+    end
+  end
+
   test "the tester reports the second step as on when it is enforced" do
     token = with_env("ADMIN_SECOND_FACTOR" => "off") { password_login(@admin.email) && response.parsed_body.fetch("accessToken") }
     with_env(PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => "required")) { get "/api/admin/tester", headers: bearer(token) }

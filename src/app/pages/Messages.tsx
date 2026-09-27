@@ -5,6 +5,8 @@ import {toast} from 'sonner';
 import {Navigation} from '../components/Navigation';
 import {Card, CardContent} from '../components/ui/card';
 import {Button} from '../components/ui/button';
+import {ReportDialog} from '../components/ReportDialog';
+import {useConfirm} from '../components/booking/BookingDialogs';
 import {apiDelete, apiGet, apiPost} from '../lib/api';
 import {useAuth} from '../lib/authContext';
 import {announceUnreadChanged, useVisiblePolling} from '../lib/usePolling';
@@ -43,6 +45,8 @@ export default function Messages() {
   const [truncated, setTruncated] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [safetyBusy, setSafetyBusy] = useState(false);
+  const [reporting, setReporting] = useState<Conversation | null>(null);
+  const confirm = useConfirm();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
@@ -149,17 +153,31 @@ export default function Messages() {
 
   const patchConv = (id: string, change: Partial<Conversation>) => setConvs(prev => prev.map(c => c.id === id ? {...c, ...change} : c));
 
+  async function applyBlock(c: Conversation) {
+    const name = nameOf(c);
+    if (c.blockedByMe) await apiDelete(`/blocks/${encodeURIComponent(c.counterpartId!)}`);
+    else await apiPost('/blocks', {userId: c.counterpartId});
+    patchConv(c.id, {blockedByMe: !c.blockedByMe});
+    toast.success(c.blockedByMe ? `${name} is unblocked` : `${name} is blocked`);
+    void loadConvs();
+  }
+
   async function toggleBlock(c: Conversation) {
     if (!c.counterpartId || safetyBusy) return;
-    const name = nameOf(c);
-    if (!c.blockedByMe && !window.confirm(`Block ${name}? Neither of you will be able to send messages in this conversation, and they can't start a new one with you. You can unblock them later.`)) return;
+    if (!c.blockedByMe) {
+      // Blocking asks first in an in-app dialog; errors stay inside the dialog.
+      confirm.ask({
+        title: `Block ${nameOf(c)}?`,
+        description: "Neither of you will be able to send messages in this conversation, and they can't start a new one with you. You can unblock them later.",
+        confirmLabel: 'Block',
+        destructive: true,
+        action: () => applyBlock(c).catch((e: any) => { throw new Error(errorMessage(e, 'Unable to update this block.')); }),
+      });
+      return;
+    }
     setSafetyBusy(true);
     try {
-      if (c.blockedByMe) await apiDelete(`/blocks/${encodeURIComponent(c.counterpartId)}`);
-      else await apiPost('/blocks', {userId: c.counterpartId});
-      patchConv(c.id, {blockedByMe: !c.blockedByMe});
-      toast.success(c.blockedByMe ? `${name} is unblocked` : `${name} is blocked`);
-      void loadConvs();
+      await applyBlock(c);
     } catch (e: any) {
       toast.error(errorMessage(e, 'Unable to update this block.'));
     } finally {
@@ -167,19 +185,14 @@ export default function Messages() {
     }
   }
 
-  async function report(c: Conversation) {
-    if (!c.counterpartId || safetyBusy) return;
-    const reason = window.prompt(`What is wrong with ${nameOf(c)}'s messages? e.g. harassment, asks for payment, spam, unsafe contact request`);
-    if (!reason?.trim()) return;
-    setSafetyBusy(true);
+  async function sendReport(c: Conversation, report: {reason: string; details: string}) {
+    const context = `Reported from conversation ${c.id}.`;
     try {
-      await apiPost('/reports', {entityType: 'user', entityId: c.counterpartId, reason: reason.trim().slice(0, 200), details: `Reported from conversation ${c.id}.`});
-      toast.success('Report sent to moderation. You can also block this person.');
+      await apiPost('/reports', {entityType: 'user', entityId: c.counterpartId, reason: report.reason.slice(0, 200), details: report.details ? `${report.details}\n\n${context}` : context});
     } catch (e: any) {
-      toast.error(errorMessage(e, 'Unable to send your report.'));
-    } finally {
-      setSafetyBusy(false);
+      throw new Error(errorMessage(e, 'Unable to send your report.'));
     }
+    toast.success('Report sent to moderation. You can also block this person.');
   }
   const onScroll = () => { const el = scroller.current; if (el) stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; };
 
@@ -251,7 +264,7 @@ export default function Messages() {
               <Button type="button" variant="ghost" size="icon" className="md:hidden" aria-label="Back to conversations" onClick={() => select(null)}><ArrowLeft size={18}/></Button>
               <div className="min-w-0 flex-1"><div className="font-semibold truncate" data-testid="thread-name">{active ? nameOf(active) : threadState === 'missing' ? 'Conversation' : ' '}</div>{active && <div className="text-xs text-violet-300 truncate">{active.jobTitle || 'General conversation'}</div>}</div>
               {active?.counterpartId && <div className="flex shrink-0 gap-1">
-                <Button type="button" variant="ghost" size="sm" disabled={safetyBusy} onClick={() => void report(active)} data-testid="report-conversation"><Flag size={14} aria-hidden="true"/><span className="sr-only sm:not-sr-only sm:ml-1">Report</span></Button>
+                <Button type="button" variant="ghost" size="sm" disabled={safetyBusy} onClick={() => setReporting(active)} data-testid="report-conversation"><Flag size={14} aria-hidden="true"/><span className="sr-only sm:not-sr-only sm:ml-1">Report</span></Button>
                 <Button type="button" variant="ghost" size="sm" disabled={safetyBusy} onClick={() => void toggleBlock(active)} data-testid="block-toggle"><Ban size={14} aria-hidden="true"/><span className="sr-only sm:not-sr-only sm:ml-1">{active.blockedByMe ? 'Unblock' : 'Block'}</span></Button>
               </div>}
             </header>}
@@ -287,5 +300,13 @@ export default function Messages() {
         </CardContent>
       </Card>
     </main>
+    <ReportDialog
+      open={Boolean(reporting)}
+      onOpenChange={open => { if (!open) setReporting(null); }}
+      title={`Report ${reporting ? nameOf(reporting) : 'this person'}`}
+      description="Tell our moderators what is wrong with these messages."
+      onSubmit={report => sendReport(reporting!, report)}
+    />
+    {confirm.element}
   </div>;
 }

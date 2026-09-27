@@ -65,5 +65,8 @@ An admin password sign-in answers 202 with `secondFactorRequired` and a 10-minut
 `challengeToken` bound to the admin and to one emailed sign-in code; `POST
 /api/auth/second-factor` completes it (5 guesses per code, 10 failures per admin and 25 per
 IP per 15 minutes, 5 challenges per admin per hour). Email-code sign-in needs no second step.
-In production without an email provider it fails closed (503 `SECOND_FACTOR_UNAVAILABLE`);
-`ADMIN_SECOND_FACTOR=off` is the audited emergency escape hatch (see DEPLOYMENT.md).
+`ADMIN_SECOND_FACTOR` picks the mode: `auto` (default) requires the code when email can be
+delivered and otherwise lets the admin in with the password alone, audited and flagged in the
+admin tester and sign-in doctor, so a missing email provider never locks the owner out;
+`required` fails closed (503 `SECOND_FACTOR_UNAVAILABLE`); `off` is the audited emergency
+disable. See DEPLOYMENT.md.

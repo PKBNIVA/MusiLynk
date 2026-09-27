@@ -114,6 +114,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/notifications/preferences", :any, { params: { emailNotifications: false }, bad: { emailNotifications: "no" }, bad_status: [400], keys: %w[emailNotifications] }],
     [:get, "/api/notifications/unsubscribe", :public, { ok: [400], params: { token: "not-a-token" }, note: "valid tokens are covered in messaging_notifications_test" }],
     [:post, "/api/notifications/unsubscribe", :public, { ok: [400], params: { token: "not-a-token" } }],
+    [:post, "/api/email/webhook/brevo", :public, { ok: [401, 503], note: "a call without the shared secret is refused; events are covered in email_suppression_test" }],
     [:get, "/api/notifications", :any, { keys: %w[notifications unread] }],
     [:patch, "/api/notifications/{notification}", :any, { idor: true, missing: :notification }],
     [:put, "/api/notifications/{notification}", :any, { idor: true }],

@@ -47,21 +47,43 @@ class ApplicationJobDatabaseLimitsTest < ActionDispatch::IntegrationTest
   end
 
   test "a connection whose limits cannot be restored is dropped instead of reused" do
+    assert restore_failure_throws_away?(transaction_open: false)
+  end
+
+  test "inside a caller's transaction a failed restore leaves the connection to the caller" do
+    assert_not restore_failure_throws_away?(transaction_open: true)
+  end
+
+  test "nested jobs keep the worker limits until the outer job finishes" do
+    outer = Class.new(ApplicationJob) do
+      def perform
+        ProbeJob.perform_now
+        ProbeJob.seen = ActiveRecord::Base.lease_connection.uncached { ActiveRecord::Base.lease_connection.select_value("SHOW statement_timeout") }
+      end
+    end
+    ActiveRecord::Base.cache { outer.perform_now }
+    assert_equal DatabaseSessionSettings.variables(role: :worker)[:statement_timeout], ProbeJob.seen
+  end
+
+  private
+
+  def restore_failure_throws_away?(transaction_open:)
     connection = ActiveRecord::Base.lease_connection
     thrown_away = false
     calls = 0
     original_execute = connection.method(:execute)
-    connection.stub(:throw_away!, -> { thrown_away = true }) do
-      connection.stub(:execute, ->(sql, *args) { (calls += 1) > 2 ? raise(ActiveRecord::ConnectionNotEstablished) : original_execute.call(sql, *args) }) do
-        DatabaseSessionSettings.with_limits(connection, DatabaseSessionSettings.variables(role: :worker)) { :ran }
+    failing_execute = ->(sql, *args) { (calls += 1) > 2 ? raise(ActiveRecord::ConnectionNotEstablished) : original_execute.call(sql, *args) }
+    connection.stub(:transaction_open?, transaction_open) do
+      connection.stub(:throw_away!, -> { thrown_away = true }) do
+        connection.stub(:execute, failing_execute) do
+          DatabaseSessionSettings.with_limits(connection, DatabaseSessionSettings.variables(role: :worker)) { :ran }
+        end
       end
     end
-    assert thrown_away
+    thrown_away
   ensure
     DatabaseSessionSettings.apply(connection, DatabaseSessionSettings.variables(role: :web))
   end
-
-  private
 
   # A request through the app's own middleware stack and connection handling.
   def get_probe

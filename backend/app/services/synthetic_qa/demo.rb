@@ -39,13 +39,15 @@ module SyntheticQa
 
     # Serialises the "is another demo job running?" check with the enqueue, across processes.
     # Returns :locked when another request holds the lock.
+    # Both statements bypass the query cache: a cached "true" from an earlier lock or unlock
+    # in the same cache scope would skip the real call and leave the session lock held.
     def with_admin_lock
       connection = ApplicationRecord.lease_connection
-      locked = connection.select_value("SELECT pg_try_advisory_lock(#{ADVISORY_LOCK_KEY})")
+      locked = connection.uncached { connection.select_value("SELECT pg_try_advisory_lock(#{ADVISORY_LOCK_KEY})") }
       return :locked unless locked
       yield
     ensure
-      connection.select_value("SELECT pg_advisory_unlock(#{ADVISORY_LOCK_KEY})") if locked
+      connection.uncached { connection.select_value("SELECT pg_advisory_unlock(#{ADVISORY_LOCK_KEY})") } if locked
     end
   end
 end

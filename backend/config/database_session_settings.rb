@@ -39,18 +39,21 @@ module DatabaseSessionSettings
 
   # Runs the block with `limits` set on `connection`, then puts back whatever the session
   # had before. Used by ApplicationJob so jobs run in-process (GOOD_JOB_EXECUTION_MODE=async)
-  # get the worker limits instead of the web ones. If the old values cannot be restored,
-  # the connection is dropped from the pool rather than handed to a request with the
-  # longer limits.
+  # get the worker limits instead of the web ones. SHOW bypasses the query cache so a
+  # nested job reads the live value. If the old values cannot be restored outside a
+  # transaction, the connection is dropped from the pool rather than handed to a request
+  # with the longer limits. Inside a caller's transaction a failed restore means that
+  # transaction is aborted; its rollback undoes the SETs, and dropping the connection would
+  # break the caller.
   def with_limits(connection, limits)
-    previous = limits.keys.to_h { [_1, connection.select_value(show_sql(_1))] }
+    previous = connection.uncached { limits.keys.to_h { [_1, connection.select_value(show_sql(_1))] } }
     apply(connection, limits)
     yield
   ensure
     begin
       apply(connection, previous) if previous
     rescue StandardError
-      connection.throw_away!
+      connection.throw_away! unless connection.transaction_open?
     end
   end
 

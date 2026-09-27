@@ -150,8 +150,45 @@ concurrent clients, 15 s per scenario. KB is the uncompressed JSON size.
   Solid Cache (PostgreSQL), which costs one small transaction per search. That is by design
   (limits must be shared and survive restarts) and costs a few milliseconds.
 - **Follow-ups worth doing** (not done here, they change behaviour):
-  1. Paginate `GET /api/jobs` (for example 30 per page with a cursor) and send a slimmer
-     listing shape; the list page does not need every column of every opportunity.
+  1. ~~Paginate `GET /api/jobs`~~ (done, see "Job list paging" below). A slimmer listing
+     shape (fewer columns per opportunity) would shrink each page further.
   2. Run two Puma worker processes on Railway (`WEB_CONCURRENCY=2` plus a `workers` line
      in `config/puma.rb`, with GoodJob kept in one process) once traffic grows. One Ruby
      process uses one CPU core, so CPU-heavy list requests queue behind each other.
+
+## Job list paging
+
+`GET /api/jobs` returns one page at a time instead of up to 250 opportunities:
+
+- `?limit=` sets the page size: 30 by default, between 1 and 100 (a number outside that
+  range is moved to the nearest end; one that is not a whole number means the default).
+- The response is `{ jobs, nextCursor, total }`. `nextCursor` is an opaque string for the
+  next page (`?cursor=`), `null` on the last page; `total` is how many opportunities match
+  the filters. An unreadable cursor is a 400 `INVALID_CURSOR`.
+- Paging is by keyset (featured, created date, id), not by offset, so page 10 costs the same
+  as page 1 and a job posted while someone is paging does not shift the pages they have not
+  loaded yet. Every filter (`q`, `location`, `kind`, `function`, `workplace`, `experience`,
+  `paid`, `verified`) applies to every page and to `total`.
+- The `jobs` key and each job's shape are unchanged, so an older client still gets a valid
+  first page.
+- Job search (`/jobseeker/jobs`) and the public list (`/music-jobs`) show "Showing X of Y"
+  (announced to screen readers) and a "Load more opportunities" button; focus moves to the
+  first new result. The shared logic is `src/app/lib/usePagedJobs.ts`.
+
+Load test before and after, run back to back on the same machine and data (450 published
+opportunities from a copy of the demo-data database, one Puma process with 5 threads,
+`RAILS_ENV=production`, 10 concurrent clients, 15 s per scenario, load average about 2 to 3).
+"next page" requests the second page with the cursor from the first.
+
+| Scenario | Requests | Req/s | p50 ms | p95 ms | p99 ms | Avg DB ms | Avg KB (JSON) | Errors |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| jobs (all), before: 250 per response | 168 | 10.5 | 928 | 1161 | 1235 | 330.8 | 351.7 | 0 |
+| jobs (all), after: first page of 30 | 653 | 43.1 | 225 | 298 | 320 | 72.0 | 42.4 | 0 |
+| jobs (next page), after | 603 | 39.6 | 249 | 328 | 355 | 75.2 | 42.3 | 0 |
+| jobs (filtered), before | 444 | 28.6 | 320 | 579 | 697 | 106.8 | 104.5 | 0 |
+| jobs (filtered), after | 737 | 48.7 | 205 | 280 | 323 | 60.1 | 35.4 | 0 |
+
+The unfiltered list now serves about 4 times as many requests per second with a p95 about
+4 times lower, and a first page is 42 kB of JSON (about 5 kB gzipped) instead of 352 kB
+(about 33 kB gzipped). It costs one extra query (the `total` count, 4 in all), which
+takes a few milliseconds.

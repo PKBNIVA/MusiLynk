@@ -52,7 +52,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:delete, "/api/account", :any, { ok: [422], params: { confirmEmail: "someone-else@example.com" } }],
     [:put, "/api/profile", :talent, { params: { headline: "Updated headline" }, bad: { website: "javascript:alert(1)" }, bad_status: [422], keys: %w[user] }],
 
-    [:get, "/api/jobs", :public, { keys: %w[jobs] }],
+    [:get, "/api/jobs", :public, { keys: %w[jobs nextCursor total] }],
     [:get, "/api/jobs/{job}", :public, { keys: %w[job], missing: :job }],
     [:get, "/api/jobs/{draft_job}", :public, { ok: { default: [200], admin: [200] }, anon: [404], idor: true, note: "drafts are visible to their owner and admins only" }],
     [:post, "/api/jobs", :talent, { ok: [201], params: job_params, bad: { title: "", status: "draft" }, bad_status: [422], keys: %w[id status moderationFlags] }],

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -7,7 +7,9 @@ import { Badge } from '../components/ui/badge';
 import { Checkbox } from '../components/ui/checkbox';
 import { Search, MapPin, Briefcase, Bookmark, BookmarkCheck, Bell, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router';
-import { apiDelete, apiGet, apiPost } from '../lib/api';
+import { apiDelete, apiPost } from '../lib/api';
+import { LoadMoreJobs } from '../components/LoadMoreJobs';
+import { usePagedJobs } from '../lib/usePagedJobs';
 import { toast } from 'sonner';
 
 const kinds = ['', 'job', 'gig', 'audition', 'session', 'tour', 'internship', 'collaboration'];
@@ -28,9 +30,9 @@ const workplaces = ['', 'onsite', 'hybrid', 'remote', 'travel'];
 const label = (s: string) => (s ? s.replace(/(^|\s)\S/g, (m) => m.toUpperCase()) : 'All');
 
 export default function JobSearch() {
-  const [jobs, setJobs] = useState<any[]>([]),
-    [loading, setLoading] = useState(true),
-    [showFilters, setShowFilters] = useState(false);
+  const list = usePagedJobs<any>();
+  const { jobs, setJobs, loading, total } = list;
+  const [showFilters, setShowFilters] = useState(false);
   const [f, setF] = useState({
     q: '',
     location: '',
@@ -51,19 +53,11 @@ export default function JobSearch() {
     });
     return p.toString();
   }, [f]);
-  const latest = useRef(0);
-  // Only the newest search may update the list, so a slow earlier response cannot overwrite it.
+  // Starts a new search from the first page. Only the newest search may update the list
+  // (usePagedJobs), so a slow earlier response cannot overwrite it.
   async function load() {
-    const n = ++latest.current;
-    setLoading(true);
-    try {
-      const d = await apiGet<any>(`/jobs?${params}`);
-      if (n === latest.current) setJobs(d.jobs || []);
-    } catch (e: any) {
-      if (n === latest.current) toast.error(e.message);
-    } finally {
-      if (n === latest.current) setLoading(false);
-    }
+    const error = await list.search(params);
+    if (error) toast.error(error);
   }
   // Filters apply as soon as they change; typed text still waits for Search/Enter.
   useEffect(() => {
@@ -201,7 +195,7 @@ export default function JobSearch() {
         </Card>
         <div className="flex justify-between items-center mb-4">
           <div className="text-sm text-slate-400">
-            {loading ? 'Searching…' : `${jobs.length} ${jobs.length === 1 ? 'opportunity' : 'opportunities'} found`}
+            {loading ? 'Searching…' : `${total} ${total === 1 ? 'opportunity' : 'opportunities'} found`}
           </div>
           <Link to="/jobseeker/saved" className="text-sm text-violet-300 hover:text-violet-200">
             View saved opportunities
@@ -224,11 +218,15 @@ export default function JobSearch() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {jobs.map((j) => (
+            {jobs.map((j, index) => (
               <Card key={j.id} className="bg-white/[.055] border-white/10 hover:bg-white/[.075] transition">
                 <CardContent className="p-5 md:p-6">
                   <div className="flex gap-4 justify-between">
-                    <Link className="min-w-0 flex-1" to={`/jobseeker/jobs/${j.id}`}>
+                    <Link
+                      className="min-w-0 flex-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                      to={`/jobseeker/jobs/${j.id}`}
+                      data-job-item={index}
+                    >
                       <div className="flex flex-wrap items-center gap-2 mb-2">
                         <Badge variant="secondary">{label(j.opportunity_kind || 'job')}</Badge>
                         {j.employerVerified && (
@@ -287,6 +285,16 @@ export default function JobSearch() {
               </Card>
             ))}
           </div>
+        )}
+        {!loading && (
+          <LoadMoreJobs
+            shown={jobs.length}
+            total={total}
+            hasMore={list.hasMore}
+            loading={list.loadingMore}
+            error={list.moreError}
+            onLoadMore={list.loadMore}
+          />
         )}
       </main>
     </div>

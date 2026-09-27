@@ -8,7 +8,8 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
-import { apiGet } from '../../lib/api';
+import { LoadMoreJobs } from '../../components/LoadMoreJobs';
+import { usePagedJobs } from '../../lib/usePagedJobs';
 
 const kinds = ['jobs', 'gigs', 'auditions', 'sessions', 'tours'] as const;
 
@@ -18,31 +19,21 @@ export default function PublicJobs() {
     'Browse open music jobs, gigs, studio sessions, auditions and tours across performance, production and live events.',
   );
   const [sp, setSp] = useSearchParams();
-  const [jobs, setJobs] = useState<any[]>([]),
-    [q, setQ] = useState(sp.get('q') || ''),
+  const list = usePagedJobs<any>();
+  const { jobs, loading, error } = list;
+  const [q, setQ] = useState(sp.get('q') || ''),
     [location, setLocation] = useState(sp.get('location') || ''),
     [kind, setKind] = useState(() => {
       const k = sp.get('kind') || '';
       return k && !k.endsWith('s') ? `${k}s` : k;
     });
-  const [loading, setLoading] = useState(true),
-    [error, setError] = useState('');
   async function load(nextKind = kind) {
     const p = new URLSearchParams();
     if (q) p.set('q', q);
     if (location) p.set('location', location);
     if (nextKind) p.set('kind', nextKind.replace(/s$/, ''));
     setSp(p, { replace: true });
-    setLoading(true);
-    setError('');
-    try {
-      const d = await apiGet<any>(`/jobs?${p}`);
-      setJobs(d.jobs || []);
-    } catch (e: any) {
-      setError(e.message || 'Unable to load opportunities');
-    } finally {
-      setLoading(false);
-    }
+    await list.search(p.toString());
   }
   useEffect(() => {
     void load(kind);
@@ -127,8 +118,13 @@ export default function PublicJobs() {
         ) : (
           <>
             <div className="grid gap-4 mt-8">
-              {jobs.map((j) => (
-                <Link key={j.id} to={`/opportunities/${j.id}`}>
+              {jobs.map((j, index) => (
+                <Link
+                  key={j.id}
+                  to={`/opportunities/${j.id}`}
+                  data-job-item={index}
+                  className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                >
                   <Card className="bg-white/[.05] border-white/10 hover:bg-white/[.075]">
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between gap-4">
@@ -168,6 +164,14 @@ export default function PublicJobs() {
                 </Link>
               ))}
             </div>
+            <LoadMoreJobs
+              shown={jobs.length}
+              total={list.total}
+              hasMore={list.hasMore}
+              loading={list.loadingMore}
+              error={list.moreError}
+              onLoadMore={list.loadMore}
+            />
             {!jobs.length && (
               <div className="text-center py-16">
                 <p className="text-slate-500">No matching public opportunities yet.</p>

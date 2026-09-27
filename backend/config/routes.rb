@@ -73,6 +73,7 @@ Rails.application.routes.draw do
     patch "notifications/preferences", to: "notifications#update_preferences"
     get "notifications/unsubscribe", to: "notifications#unsubscribe"
     post "notifications/unsubscribe", to: "notifications#unsubscribe"
+    post "email/webhook/brevo", to: "email_webhooks#brevo"
     resources :notifications, only: %i[index update]
     resources :reports, only: :create
     resources :verification_requests, path: "verification-requests", only: :create

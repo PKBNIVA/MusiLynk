@@ -27,6 +27,7 @@ class EmailDelivery
   # so it can retry transient failures).
   def self.call(to:, template:, data:, raise_errors: false)
     return { delivered: false, reason: "Recipient unavailable" } if to.blank?
+    return { delivered: false, reason: "Recipient suppressed" } if EmailSuppression.blocks_all?(to)
     return deliver_with_brevo(to:, template:, data:) if brevo_configured?
     return deliver_with_resend(to:, template:, data:) if ENV["RESEND_API_KEY"].present?
 
@@ -145,6 +146,7 @@ class EmailDelivery
   # provider. Same result/raise_errors contract as .call; logs never include content.
   def self.deliver_rendered(to:, template:, subject:, html:, text:, headers: {}, raise_errors: false)
     return { delivered: false, reason: "Recipient unavailable" } if to.blank?
+    return { delivered: false, reason: "Recipient suppressed" } if EmailSuppression.blocks_notifications?(to)
 
     provider_name = provider
     return { delivered: false, reason: "Email provider not configured" } unless provider_name

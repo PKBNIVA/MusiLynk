@@ -9,6 +9,10 @@
 # 3. Razorpay booking payments stuck in `created` without an order are failed so the partial
 #    unique index on active deposits no longer blocks a retry.
 #
+# Attempts whose Razorpay resource disagrees with Verse (wrong amount or currency, or the local
+# resource was already released) are mismatches: they need a person, so each run that finds
+# any reports them to the error tracker under one fixed fingerprint, which alerts once.
+#
 # Every row is claimed with FOR UPDATE SKIP LOCKED and its state is re-checked under the lock,
 # so overlapping runs (or a concurrent request) never process the same row twice.
 class BillingReconciliationJob < ApplicationJob
@@ -17,14 +21,21 @@ class BillingReconciliationJob < ApplicationJob
   # Leave very recent attempts to the request that is still finishing them.
   SETTLE_AFTER = 2.minutes
   BATCH = 200
+  MISMATCH_FINGERPRINT = %w[billing-reconciliation-mismatch].freeze
+  # Local state and the provider disagree; retrying will not fix it.
+  MISMATCH_ERRORS = [ArgumentError, ActiveRecord::RecordNotFound].freeze
+
+  class Mismatch < StandardError; end
 
   def perform(now = Time.current, gateway: nil)
     @now = now
     @gateway = gateway
     @recovered = 0
+    @mismatches = []
     reconciled = reconcile_known
     stale = resolve_unknown
-    { reconciled: reconciled + @recovered, stale:, expiredPayments: expire_unissued_payments }
+    report_mismatches
+    { reconciled: reconciled + @recovered, stale:, expiredPayments: expire_unissued_payments, mismatches: @mismatches.size }
   end
 
   private
@@ -42,7 +53,7 @@ class BillingReconciliationJob < ApplicationJob
       rescue RazorpayGateway::GatewayError, ArgumentError, ActiveRecord::RecordNotFound => error
         attempt.update!(error_code: error.is_a?(RazorpayGateway::GatewayError) ? error.code : "reconcile_failed", error_message: error.message.first(500), last_attempted_at: @now)
         Rails.logger.warn("billing reconciliation failed attempt=#{attempt.id} error=#{error.class}")
-        ErrorReporter.capture(error, tags: { source: "billing_reconciliation_failed" }, level: :warning, billingAttemptId: attempt.id)
+        record_failure(attempt, error)
         false
       end
     end
@@ -68,7 +79,7 @@ class BillingReconciliationJob < ApplicationJob
             # Confirmed absent at Razorpay: fail it once it is old enough.
           rescue RazorpayGateway::GatewayError, ArgumentError, ActiveRecord::RecordNotFound => error
             attempt.update!(error_code: error.is_a?(RazorpayGateway::GatewayError) ? error.code : "reconcile_failed", error_message: error.message.first(500), last_attempted_at: @now)
-            ErrorReporter.capture(error, tags: { source: "billing_reconciliation_failed" }, level: :warning, billingAttemptId: attempt.id)
+            record_failure(attempt, error)
             next false if error.is_a?(RazorpayGateway::GatewayError)
           end
         end
@@ -87,6 +98,25 @@ class BillingReconciliationJob < ApplicationJob
     ids.count do |id|
       claim(BookingPayment, id) { |payment| payment.expire_unissued!(now: @now) }
     end
+  end
+
+  # Provider errors are transient and reported per attempt as warnings; mismatches are
+  # collected and reported together once the run finishes.
+  def record_failure(attempt, error)
+    if MISMATCH_ERRORS.any? { error.is_a?(_1) }
+      @mismatches << { billingAttemptId: attempt.id, operation: attempt.operation, error: error.message.first(200) }
+    else
+      ErrorReporter.capture(error, tags: { source: "billing_reconciliation_failed" }, level: :warning, billingAttemptId: attempt.id)
+    end
+  end
+
+  def report_mismatches
+    return if @mismatches.empty?
+
+    Rails.logger.error({ event: "billing_reconciliation_mismatch", count: @mismatches.size, billingAttemptIds: @mismatches.map { _1[:billingAttemptId] }.first(20) }.to_json)
+    ErrorReporter.capture(Mismatch.new("Billing reconciliation found attempts that do not match Razorpay"),
+      tags: { source: "billing_reconciliation_mismatch" }, level: :error, fingerprint: MISMATCH_FINGERPRINT,
+      mismatchCount: @mismatches.size, mismatches: @mismatches.first(20))
   end
 
   def release_resource!(attempt)

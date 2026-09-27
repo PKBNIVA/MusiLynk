@@ -1,6 +1,6 @@
 # Verse API contract
 
-Rails 7.2 API in `backend/`, served under `/api`. The contract below is enforced by
+Rails 8.1 API in `backend/`, served under `/api`. The contract below is enforced by
 `backend/test/integration/api_matrix_test.rb` (every route x every role),
 `api_frontend_contract_test.rb` (keys the React pages read), `api_error_shape_test.rb`,
 `api_security_probes_test.rb` and `api_query_budget_test.rb`. A route added without a matrix

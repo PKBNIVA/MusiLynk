@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Job worker entrypoint for a separate Railway service (railway.worker.toml).
+# Runs GoodJob's own process: it executes queued jobs and, with GOOD_JOB_ENABLE_CRON=true,
+# the cron schedule. The web service must then use GOOD_JOB_EXECUTION_MODE=external so
+# jobs and cron run in exactly one place. `good_job start` always runs as an external
+# executor, whatever GOOD_JOB_EXECUTION_MODE says, and gets the worker database limits
+# (config/database_session_settings.rb).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+bin/rails worker:preflight
+exec bin/good_job start

@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 class ReadinessChecksTest < ActiveSupport::TestCase
   test "database readiness executes a real query" do
@@ -44,7 +45,51 @@ class ReadinessChecksTest < ActiveSupport::TestCase
     ENV["BREVO_SENDER_EMAIL"] = previous_sender
   end
 
+  test "external job execution without a live worker is not ready in production" do
+    checks = production_background_jobs("external")
+    assert_equal false, checks[:ok]
+    assert_equal true, checks[:required]
+    assert_equal 0, checks[:activeWorkers]
+    assert_nil checks[:lastWorkerHeartbeatAt]
+  end
+
+  test "external job execution with a worker heartbeat inside GoodJob's window is ready" do
+    GoodJob::Process.create!(state: { "hostname" => "worker" }, lock_type: nil)
+
+    checks = production_background_jobs("external")
+    assert_equal true, checks[:ok]
+    assert_equal 1, checks[:activeWorkers]
+    assert checks[:lastWorkerHeartbeatAt].present?
+  end
+
+  test "a worker whose heartbeat expired does not count" do
+    GoodJob::Process.create!(state: { "hostname" => "worker" }, lock_type: nil, updated_at: 10.minutes.ago)
+
+    checks = production_background_jobs("external")
+    assert_equal false, checks[:ok]
+    assert_equal 0, checks[:activeWorkers]
+    assert checks[:lastWorkerHeartbeatAt].present?
+  end
+
+  test "in-process (async) jobs do not need a separate worker" do
+    checks = production_background_jobs("async")
+    assert_equal true, checks[:ok]
+    assert_not checks.key?(:activeWorkers)
+  end
+
   private
+
+  def production_background_jobs(mode)
+    previous_mode = ENV["GOOD_JOB_EXECUTION_MODE"]
+    ENV["GOOD_JOB_EXECUTION_MODE"] = mode
+    Rails.stub(:env, ActiveSupport::EnvironmentInquirer.new("production")) do
+      ActiveJob::Base.stub(:queue_adapter_name, "good_job") do
+        ReadinessChecks.new.call.fetch(:backgroundJobs)
+      end
+    end
+  ensure
+    ENV["GOOD_JOB_EXECUTION_MODE"] = previous_mode
+  end
 
   def fake_connection(&query)
     Object.new.tap do |connection|

@@ -33,15 +33,102 @@ Configure one service from `backend/Dockerfile`:
 - Production branch: `production`
 - Config file: `railway.toml`
 - PostgreSQL must expose `DATABASE_URL` to the Rails service.
-- The container runs `db:prepare` before Puma.
+- Migrations: `railway.toml` sets `preDeployCommand = "bin/rails db:prepare"`, which Railway
+  runs once per deploy in a separate container before the new release takes traffic. If it
+  fails, the deploy stops and the previous release keeps serving. The web container
+  (`backend/bin/web`) also runs `db:prepare` before Puma unless
+  `SKIP_DB_PREPARE_ON_BOOT=true` (see "Migrations before deploy" below).
 - Railway's liveness probe is `/api/live`.
 - Operational checks are `/api/health` and `/api/readiness`.
 
 GoodJob initially runs inside the web service with
 `GOOD_JOB_EXECUTION_MODE=async`, `GOOD_JOB_MAX_THREADS=2`, and
-`GOOD_JOB_ENABLE_CRON=true`. Run cron on exactly one process. Move to a separate worker
-with `bundle exec good_job start` and `GOOD_JOB_EXECUTION_MODE=external` when queue
-volume or web latency justifies it.
+`GOOD_JOB_ENABLE_CRON=true`. Run cron on exactly one process. "Separate job worker" below
+moves jobs and cron to their own service.
+
+### Database timeouts
+
+Every connection sets Postgres `statement_timeout` and `lock_timeout`
+(`backend/config/database_session_settings.rb`, applied through `variables:` in
+`database.yml`), so a runaway query or a blocked lock fails fast instead of holding a Puma
+thread and a pool connection:
+
+| Process | statement_timeout | lock_timeout | Override with |
+| --- | --- | --- | --- |
+| Web (Puma, and jobs when `GOOD_JOB_EXECUTION_MODE=async`) | `15s` | `5s` | `DB_STATEMENT_TIMEOUT`, `DB_LOCK_TIMEOUT` |
+| Job worker (`good_job start`) | `5min` | `30s` | `WORKER_DB_STATEMENT_TIMEOUT`, `WORKER_DB_LOCK_TIMEOUT` |
+| `bin/rails db:*` (migrations, pre-deploy) | none | none | `DB_MIGRATION_STATEMENT_TIMEOUT`, `DB_MIGRATION_LOCK_TIMEOUT` |
+
+Values use Postgres duration syntax (`500ms`, `15s`, `5min`); `0` means no limit; anything
+else is ignored. GoodJob's LISTEN connection waits outside any statement, so the limits never
+cut it off. A timed-out query raises `ActiveRecord::QueryCanceled` (reported to Sentry).
+
+### Migrations before deploy
+
+Today migrations run twice per deploy: in the pre-deploy step and again on web boot (a
+no-op the second time). To run them only before deploy:
+
+1. Confirm a deploy's logs show the pre-deploy step running `bin/rails db:prepare`
+   successfully (Railway → web service → Deployments → the deploy → "Pre-deploy" logs).
+   If the step is missing, check service Settings → Deploy → "Pre-deploy command" shows
+   `bin/rails db:prepare` (it comes from `railway.toml`; set it there by hand if not).
+2. Set `SKIP_DB_PREPARE_ON_BOOT=true` on the web service and redeploy.
+3. Check `/api/readiness` returns 200 and the boot logs no longer show `db:prepare`.
+
+Roll back: delete `SKIP_DB_PREPARE_ON_BOOT` (or set it to `false`) and redeploy; boot
+migrations resume. Migrations must stay backward-compatible with the previous release,
+because the old release keeps serving while the pre-deploy step migrates.
+
+### Separate job worker
+
+Prerequisite: uploads on R2 (`AWS_BUCKET` set, see "Object storage"). Disk uploads live on
+the web service's volume, which a second service cannot mount; `bin/worker` refuses to start
+in production without `AWS_BUCKET` (override: `WORKER_ALLOW_DISK_UPLOADS=true`, which means
+upload cleanup jobs delete rows but leave their files on the web volume).
+
+1. **Create the service.** Railway project → New → GitHub Repo → this repository, name it
+   e.g. `verse-worker`. In its Settings: Source branch `production`; Config-as-code →
+   Railway config file path `railway.worker.toml`. That file builds the same Dockerfile and
+   starts `gosu rails bin/worker`, with no healthcheck and no public domain (do not generate
+   one). `bin/worker` waits up to `WORKER_MIGRATION_WAIT_SECONDS` (default 600) for the web
+   service's pre-deploy migrations, then runs `bin/good_job start`.
+2. **Worker variables.** Jobs send email, talk to Razorpay and R2 and report to Sentry, so
+   the worker needs the same configuration as the web service: web service → Variables →
+   Raw Editor → copy everything, paste into the worker's Raw Editor (or use Railway shared
+   variables so both stay in sync). Then set on the worker:
+   - `GOOD_JOB_ENABLE_CRON=true`
+   - `GOOD_JOB_MAX_THREADS=5` (the database pool follows it automatically)
+   - `GOOD_JOB_SHUTDOWN_TIMEOUT=25` (finish in-flight jobs within `drainingSeconds = 30`)
+   `GOOD_JOB_EXECUTION_MODE` is ignored by `good_job start`, so a copied `async` is harmless.
+3. **Deploy and check it is alive.** The worker's logs show
+   `GoodJob ... started scheduler with queues=* max_threads=5` and
+   `Notifier subscribed with LISTEN`. Until step 4 both services run jobs and cron; that is
+   safe (a job is locked by one process, and GoodJob's unique `cron_key`/`cron_at` index
+   enqueues each cron tick once), just do step 4 soon after.
+4. **Switch the web service off jobs.** On the web service set
+   `GOOD_JOB_EXECUTION_MODE=external` and `GOOD_JOB_ENABLE_CRON=false`, then redeploy.
+   From now on `/api/readiness` (and `/api/admin/health` → `checks.backgroundJobs`) returns
+   not-ready if no worker has checked in within GoodJob's 5-minute heartbeat window;
+   `activeWorkers` and `lastWorkerHeartbeatAt` say what it saw. Point an uptime monitor at
+   `/api/readiness` to be alerted. Railway's own healthcheck stays on `/api/live`, so a dead
+   worker never restarts or blocks the web service.
+5. **Verify.** `/api/admin/health` → `checks.backgroundJobs` shows `ok: true` and
+   `activeWorkers: 1`. Trigger an email (e.g. request a sign-in code) and confirm it arrives
+   and the worker's logs show the job performed.
+
+Roll back: set `GOOD_JOB_EXECUTION_MODE=async` and `GOOD_JOB_ENABLE_CRON=true` on the web
+service (or delete both) and redeploy, then remove or pause the worker service. Do the web
+change first so jobs are never left without a runner. Queued jobs stay in Postgres and are
+picked up by whichever process runs next.
+
+### Replicas
+
+The web service must stay at **one replica** while `PERSISTENT_UPLOADS=true` and the upload
+volume are in use (a Railway volume attaches to one instance). After R2 is configured and the
+volume removed ("Object storage", step 8), the web service can run more replicas: set
+Settings → Deploy → Replicas, and keep `RAILS_MAX_THREADS × replicas` plus the worker's pool
+under the Postgres plan's connection limit. Run exactly one worker replica unless cron is
+disabled on all but one.
 
 ## Required launch configuration
 

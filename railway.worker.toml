@@ -1,0 +1,16 @@
+# Job worker service (GoodJob). Point a second Railway service at this file:
+# service Settings -> Config-as-code -> Railway config file = "railway.worker.toml".
+# Owner steps, env vars and rollback: DEPLOYMENT.md, "Separate job worker".
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"
+
+[deploy]
+# No preDeployCommand: the web service migrates; bin/worker waits for that to finish.
+# No healthcheckPath: the worker serves no HTTP. The web service's /api/readiness reports
+# a missing worker once the web runs with GOOD_JOB_EXECUTION_MODE=external.
+startCommand = "gosu rails bin/worker"
+restartPolicyType = "ALWAYS"
+# GoodJob finishes in-flight jobs on SIGTERM; give it time before SIGKILL
+# (pair with GOOD_JOB_SHUTDOWN_TIMEOUT=25 on the service).
+drainingSeconds = 30

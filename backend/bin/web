@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Web service entrypoint (backend/Dockerfile CMD).
+# Migrations run in Railway's pre-deploy step (railway.toml preDeployCommand). Until the
+# owner sets SKIP_DB_PREPARE_ON_BOOT=true they also run here on every boot, which is
+# harmless (db:prepare is a no-op when the schema is current) and keeps the old behaviour.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if [ "${SKIP_DB_PREPARE_ON_BOOT:-false}" != "true" ]; then
+  bin/rails db:prepare
+fi
+
+exec bundle exec puma -C config/puma.rb

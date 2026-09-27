@@ -1,0 +1,9 @@
+{
+  "note": "Gzip byte limits checked by scripts/check-bundle-size.mjs after `npm run build` (CI frontend job). Set a little above the sizes measured on 2026-09-27 (entry 7.3 kB, initial JS 99.1 kB, largest chunk 75.0 kB = react-vendor, CSS 23.0 kB). Raise a limit only in the PR that intentionally grows the bundle.",
+  "gzipBytes": {
+    "entryChunk": 9000,
+    "initialJs": 106000,
+    "largestChunk": 80000,
+    "css": 25000
+  }
+}

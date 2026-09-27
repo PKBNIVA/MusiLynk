@@ -1,7 +1,8 @@
 // Loaded on demand by monitoring.ts, only when VITE_SENTRY_DSN is set.
-import { addIntegration, captureException, captureMessage, init, withScope } from '@sentry/react';
+import { addIntegration, captureException, captureMessage, flush, init, metrics, withScope } from '@sentry/react';
 import { allowSampled, classifyError, type ReportContext } from './monitoring';
 import { scrubEvent, scrubString, scrubValue } from './sentryScrub';
+import type { Vital } from './webVitals';
 
 type InitOptions = { dsn: string; release: string; environment: string; tracesSampleRate: number };
 
@@ -23,6 +24,9 @@ export function initSentry(options: InitOptions) {
     release: options.release || undefined,
     environment: options.environment,
     sendDefaultPii: false,
+    // sendDefaultPii alone still lets Sentry infer the visitor's IP address and user agent
+    // on ingest (errors, metrics); Verse never sends either.
+    dataCollection: { userInfo: false },
     tracesSampleRate: options.tracesSampleRate,
     // Session replay stays off (privacy and cost); tracing is added below only when a rate is configured.
     replaysSessionSampleRate: 0,
@@ -76,4 +80,17 @@ export function captureText(message: string, context?: ReportContext): string {
     applyContext(scope, context);
     return captureMessage(message);
   });
+}
+
+/**
+ * Records a Core Web Vital as a distribution metric (web_vital.lcp / .inp / .cls) tagged
+ * with the page's route template and rating. Vitals arrive when the page is being hidden,
+ * so the metric buffer is flushed straight away rather than on the next interval.
+ */
+export function captureVital(vital: Vital, route: string) {
+  metrics.distribution(`web_vital.${vital.name.toLowerCase()}`, vital.value, {
+    unit: vital.name === 'CLS' ? 'none' : 'millisecond',
+    attributes: { route, rating: vital.rating },
+  });
+  void flush(2_000).catch(() => undefined);
 }

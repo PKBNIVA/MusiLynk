@@ -26,6 +26,8 @@ jobs:
       - name: Audit production npm dependencies
         run: npm audit --omit=dev --audit-level=high
       - run: npm run build
+      - name: Check bundle size budget
+        run: npm run check:bundle
       - run: npm run test:all
 
   rails:

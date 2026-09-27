@@ -4,29 +4,23 @@ import { flush } from './helpers';
 const { apiPost } = vi.hoisted(() => ({ apiPost: vi.fn() }));
 vi.mock('../api', () => ({ apiPost }));
 
-import { openRazorpayCheckout, type RazorpayCheckoutConfig } from '../razorpayCheckout';
+import {
+  openRazorpayCheckout,
+  type RazorpayCheckoutConfig,
+  type RazorpayOptions,
+  type RazorpayPaymentFailed,
+} from '../razorpayCheckout';
 
 const CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
 
-type RazorpayOptions = {
-  key: string;
-  subscription_id?: string;
-  order_id?: string;
-  amount?: number;
-  currency?: string;
-  description: string;
-  handler: (response: Record<string, string>) => void;
-  modal: { ondismiss: () => void };
-};
-
 class FakeRazorpay {
   static last: FakeRazorpay;
-  handlers: Record<string, (event: unknown) => void> = {};
+  handlers: Record<string, (event: RazorpayPaymentFailed) => void> = {};
   opened = false;
   constructor(public options: RazorpayOptions) {
     FakeRazorpay.last = this;
   }
-  on(name: string, handler: (event: unknown) => void) {
+  on(name: string, handler: (event: RazorpayPaymentFailed) => void) {
     this.handlers[name] = handler;
   }
   open() {
@@ -46,11 +40,11 @@ const order: RazorpayCheckoutConfig = {
 beforeEach(() => {
   apiPost.mockReset();
   document.body.innerHTML = '';
-  delete (window as any).Razorpay;
+  delete window.Razorpay;
 });
 
 afterEach(() => {
-  delete (window as any).Razorpay;
+  delete window.Razorpay;
 });
 
 describe('openRazorpayCheckout with Razorpay', () => {
@@ -58,7 +52,7 @@ describe('openRazorpayCheckout with Razorpay', () => {
     const result = openRazorpayCheckout(subscription, { description: 'Pro plan' });
     const script = document.querySelector<HTMLScriptElement>(`script[src="${CHECKOUT_SRC}"]`)!;
     expect(script).not.toBeNull();
-    (window as any).Razorpay = FakeRazorpay;
+    window.Razorpay = FakeRazorpay;
     script.dispatchEvent(new Event('load'));
     await flush();
 
@@ -80,7 +74,7 @@ describe('openRazorpayCheckout with Razorpay', () => {
   });
 
   it('reuses an already-loaded SDK for an order and reports the last decline on dismiss', async () => {
-    (window as any).Razorpay = FakeRazorpay;
+    window.Razorpay = FakeRazorpay;
     const result = openRazorpayCheckout(order, { description: 'Booking deposit' });
     await flush();
 
@@ -101,7 +95,7 @@ describe('openRazorpayCheckout with Razorpay', () => {
 
     const result = openRazorpayCheckout(subscription, { description: 'Pro' });
     expect(document.querySelectorAll('script')).toHaveLength(1);
-    (window as any).Razorpay = FakeRazorpay;
+    window.Razorpay = FakeRazorpay;
     existing.dispatchEvent(new Event('load'));
     await flush();
     FakeRazorpay.last.options.modal.ondismiss();

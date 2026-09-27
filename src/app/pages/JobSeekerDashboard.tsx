@@ -7,7 +7,7 @@ import { Progress } from '../components/ui/progress';
 import { apiGet } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { Link } from 'react-router';
-import { Briefcase, Calendar, Search, User, Bookmark, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Briefcase, Calendar, Search, Bookmark, ArrowRight, ShieldCheck } from 'lucide-react';
 export default function JobSeekerDashboard() {
   const { user } = useAuth();
   const [d, setD] = useState<any>({ recommendedJobs: [] }),

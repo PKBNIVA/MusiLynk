@@ -12,6 +12,7 @@ export default tseslint.config(
       'backend',
       'playwright-report',
       'test-results',
+      'coverage',
       '.qa-stack',
       '*.local.config.ts',
     ],
@@ -27,7 +28,7 @@ export default tseslint.config(
     rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      // The API layer returns loosely typed JSON; `any` is allowed until those responses are typed.
+      // Pages still read untyped JSON through apiGet<any>; the shared data layer below is any-free.
       '@typescript-eslint/no-explicit-any': 'off',
       // `a ? doThis() : doThat()` as a statement is an existing idiom in the pages.
       '@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true, allowTernary: true }],
@@ -36,6 +37,11 @@ export default tseslint.config(
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' },
       ],
     },
+  },
+  {
+    // The shared data layer (API client, auth, monitoring, payments) is fully typed; keep it that way.
+    files: ['src/app/lib/**/*.{ts,tsx}'],
+    rules: { '@typescript-eslint/no-explicit-any': 'error' },
   },
   {
     // `catch {}` marks deliberately ignored failures (blocked storage, optional parsing).

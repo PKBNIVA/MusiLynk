@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { apiGet } from '../../lib/api';
+import { useLatestCallback } from '../../lib/useLatestCallback';
 
 const kinds = ['jobs', 'gigs', 'auditions', 'sessions', 'tours'] as const;
 
@@ -27,7 +28,7 @@ export default function PublicJobs() {
     });
   const [loading, setLoading] = useState(true),
     [error, setError] = useState('');
-  async function load(nextKind = kind) {
+  const load = useLatestCallback(async (nextKind: string = kind) => {
     const p = new URLSearchParams();
     if (q) p.set('q', q);
     if (location) p.set('location', location);
@@ -43,10 +44,10 @@ export default function PublicJobs() {
     } finally {
       setLoading(false);
     }
-  }
+  });
   useEffect(() => {
-    void load(kind);
-  }, []);
+    void load();
+  }, [load]);
   const chooseKind = (next: string) => {
     setKind(next);
     void load(next);

@@ -95,7 +95,6 @@ function SafetyNotice({ flags }: { flags: string[] }) {
 
 export default function Messages() {
   const { user } = useAuth();
-  const base = user?.role === 'employer' ? '/employer' : '/jobseeker';
   const [search, setSearch] = useSearchParams();
   // ?c=<id> is the canonical deep link; ?conversation=<id> is kept for older links.
   const activeId = search.get('c') || search.get('conversation');

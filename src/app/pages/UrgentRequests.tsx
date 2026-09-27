@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/badge';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
+import { useLatestCallback } from '../lib/useLatestCallback';
 import { Field, FormDialog, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
 import { Clock3, Zap } from 'lucide-react';
 
@@ -63,7 +64,7 @@ export default function UrgentRequests() {
     // The mutation in flight ("create" or a request id); others wait so nothing is submitted twice.
     [pending, setPending] = useState<string | null>(null);
   const { ask, element: confirmDialog } = useConfirm();
-  async function load() {
+  const load = useLatestCallback(async () => {
     const p = new URLSearchParams();
     if (city.trim()) p.set('city', city.trim());
     if (role.trim()) p.set('role', role.trim());
@@ -76,10 +77,10 @@ export default function UrgentRequests() {
     } finally {
       setLoading(false);
     }
-  }
+  });
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
   async function create() {
     if (!draft || pending) return;
     const problem = draftProblem(draft);

@@ -66,7 +66,8 @@ const clientSource = await readFile(new URL('../src/app/lib/sentryClient.ts', im
 assert.match(main, /initMonitoring\(\)/, 'main.tsx starts monitoring');
 assert.doesNotMatch(main, /@sentry/, 'Sentry must not be imported eagerly by the entry point');
 assert.match(monitoringSource, /import\('\.\/sentryClient'\)/, 'Sentry is loaded with a dynamic import');
-assert.match(clientSource, /sendDefaultPii:\s*false/);
+// Sentry 11 ignores the old sendDefaultPii option; dataCollection.userInfo is what stops IP inference.
+assert.match(clientSource, /dataCollection:\s*\{\s*userInfo:\s*false\s*\}/);
 assert.match(clientSource, /replaysSessionSampleRate:\s*0/);
 assert.match(clientSource, /replaysOnErrorSampleRate:\s*0/);
 

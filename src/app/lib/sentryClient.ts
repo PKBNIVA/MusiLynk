@@ -1,5 +1,5 @@
 // Loaded on demand by monitoring.ts, only when VITE_SENTRY_DSN is set.
-import { addIntegration, captureException, captureMessage, init, withScope } from '@sentry/react';
+import { addIntegration, captureException, captureMessage, init, withScope, type Scope } from '@sentry/react';
 import { allowSampled, classifyError, type ReportContext } from './monitoring';
 import { scrubEvent, scrubString, scrubValue } from './sentryScrub';
 
@@ -22,7 +22,8 @@ export function initSentry(options: InitOptions) {
     dsn: options.dsn,
     release: options.release || undefined,
     environment: options.environment,
-    sendDefaultPii: false,
+    // No IP address or other user details inferred for the reporter (Sentry 11 replaced sendDefaultPii with this).
+    dataCollection: { userInfo: false },
     tracesSampleRate: options.tracesSampleRate,
     // Session replay stays off (privacy and cost); tracing is added below only when a rate is configured.
     replaysSessionSampleRate: 0,
@@ -56,7 +57,7 @@ export function initSentry(options: InitOptions) {
   }
 }
 
-function applyContext(scope: Parameters<Parameters<typeof withScope>[0]>[0], context?: ReportContext) {
+function applyContext(scope: Scope, context?: ReportContext) {
   if (!context) return;
   if (context.level) scope.setLevel(context.level);
   if (context.tags) scope.setTags(context.tags);

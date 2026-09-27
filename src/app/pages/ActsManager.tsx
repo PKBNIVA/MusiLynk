@@ -60,8 +60,14 @@ export default function ActsManager() {
     const minFee = f.minFee === "" ? null : Number(f.minFee);
     const maxFee = f.maxFee === "" ? null : Number(f.maxFee);
     if ((minFee !== null && (!Number.isInteger(minFee) || minFee < 0)) || (maxFee !== null && (!Number.isInteger(maxFee) || maxFee < 0)))
-      return toast.error("Fees must be whole numbers of 0 or more.");
-    if (minFee !== null && maxFee !== null && maxFee < minFee) return toast.error("Max fee must be at least the min fee.");
+    {
+      toast.error("Fees must be whole numbers of 0 or more.");
+      return;
+    }
+    if (minFee !== null && maxFee !== null && maxFee < minFee) {
+      toast.error("Max fee must be at least the min fee.");
+      return;
+    }
     setCreating(true);
     try {
       await apiPost("/acts", {

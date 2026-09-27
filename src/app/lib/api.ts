@@ -136,7 +136,7 @@ function wait(ms: number, signal?: AbortSignal | null) {
     if (signal?.aborted) return reject(signal.reason || new DOMException('Aborted', 'AbortError'));
     const onAbort = () => {
       window.clearTimeout(timer);
-      reject(signal.reason || new DOMException('Aborted', 'AbortError'));
+      reject(signal?.reason || new DOMException('Aborted', 'AbortError'));
     };
     const timer = window.setTimeout(() => {
       signal?.removeEventListener('abort', onAbort);

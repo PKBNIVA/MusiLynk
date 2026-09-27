@@ -27,7 +27,7 @@ export default function DemoDataPanel(){
   const[data,setData]=useState<Overview>(),[error,setError]=useState(''),[size,setSize]=useState('small'),[submitting,setSubmitting]=useState(false),[confirmOpen,setConfirmOpen]=useState(false);
   const[tracked,setTracked]=useState<string>();
   const announced=useRef<Set<string>>(new Set());
-  const load=useCallback(async()=>{try{const d=await apiGet<Overview>('/admin/demo-data');setData(d);setError('');return d}catch(e:any){setError(e.message||'Unable to load demo data status.')}},[]);
+  const load=useCallback(async()=>{try{const d=await apiGet<Overview>('/admin/demo-data');setData(d);setError('');return d}catch(e:any){setError(e.message||'Unable to load demo data status.');return undefined}},[]);
   useEffect(()=>{void load()},[load]);
 
   const latest=data?.jobs?.[0];

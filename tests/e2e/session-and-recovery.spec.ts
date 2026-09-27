@@ -9,7 +9,7 @@ const job = {
   description: 'Record guitar parts for a film score.', skills: [], status: 'published', createdAt: '2026-09-01T00:00:00Z',
 };
 
-type Handler = (pathname: string, route: Route) => Promise<void> | void | false;
+type Handler = (pathname: string, route: Route) => Promise<void | false> | void | false;
 
 /** Answers every /api request: `/me` succeeds only while a token is sent, everything else returns fixtures. */
 function apiMock(extra?: Handler) {
@@ -188,6 +188,7 @@ test('password reset request is a labelled form that cannot be submitted twice',
     requests += 1;
     await released;
     await route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify({ok: true})});
+    return undefined;
   }));
 
   await page.goto('/forgot-password');

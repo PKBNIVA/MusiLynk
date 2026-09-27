@@ -35,7 +35,10 @@ export default function Availability() {
   }, []);
 
   async function add() {
-    if (!validRange) return toast.error("Choose an end time after the start time.");
+    if (!validRange) {
+      toast.error("Choose an end time after the start time.");
+      return;
+    }
     setSaving(true);
     try {
       // datetime-local has no zone; send an absolute instant so the server does not read it as UTC.

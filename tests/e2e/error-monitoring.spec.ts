@@ -45,8 +45,8 @@ function trackSentryTraffic(page: Page) {
 }
 
 /**
- * A page whose user agent carries a unique run id. Sentry sends the user agent (but, with
- * sendDefaultPii off, not the query string), so the sink's envelopes can be matched per test.
+ * A page whose user agent carries a unique run id. Sentry sends the user agent, so the sink's
+ * envelopes can be matched per test.
  */
 async function runPage(browser: Browser) {
   const runId = `qa_run_${randomUUID().replaceAll('-', '')}`;
@@ -91,6 +91,8 @@ test('with a DSN a crashing route is reported, without the access token or email
   expect(events).toContain('route_error');
   expect(events).toContain('[email]');
   expect(events).toContain('qa-sentry-build'); // release
+  // Sentry must not attach or infer the reporter's IP address (dataCollection.userInfo off).
+  expect(events).toContain('"infer_ip":"never"');
   expect(publicSentry).toEqual([]);
   await page.context().close();
 });

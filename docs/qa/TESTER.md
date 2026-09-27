@@ -1,74 +1,63 @@
-# Verse Tester & Release Gate — v0.5.0
+# Verse testers and release gate
 
-Verse now has two complementary tester layers.
+Verse has three layers of automated checking plus a live admin tester. The release gate
+commands are in [DEPLOYMENT.md → Release gate](../../DEPLOYMENT.md#release-gate).
 
-## 1. Live admin tester
+## 1. Live admin tester (`/admin/tester`)
 
-Sign in as an admin and open `/admin/tester` (or use the **Live Tester** button in Trust & Operations).
+Sign in as an admin and open `/admin/tester`. It calls `GET /api/admin/tester` and
+`GET /api/admin/health` and is read-only (it creates no users, jobs, bookings, charges or
+messages), so it is safe to run on production at any time. Checks
+(`backend/app/controllers/admin/tester_controller.rb`):
 
-The live tester is non-destructive. It checks:
-- SQLite foreign-key integrity
-- critical database tables
-- duplicate account emails
-- orphan portfolio records
-- writable runtime data directory
-- production URL / HTTPS readiness
-- secure-cookie readiness
-- search provider configuration
-- email delivery configuration
-- object-storage configuration
+| Check | Severity |
+| --- | --- |
+| PostgreSQL connection and query latency | critical |
+| Core tables present (users, profiles, jobs, applications, portfolio_items, acts, booking_requests, subscriptions, recent_activities, crew_plans, audit_logs) | high |
+| Production `FRONTEND_URL` is https | high |
+| Upload storage configured (R2/S3 or persistent disk) | high |
+| Release traceability (`RAILWAY_GIT_COMMIT_SHA` present) | high |
+| Email delivery provider configured | medium |
+| Razorpay key, secret and webhook secret present | medium |
+| No duplicate user emails; no non-positive booking payments | high |
+| Payment idempotency indexes present | high |
+| Expired session backlog under 1,000 | low |
 
-It is intended to be safe to run repeatedly on staging or production. It does not create jobs, bookings, charges, users or messages.
+The same page has an **Error alerting** panel that sends a tagged test error to Sentry
+(see [DEPLOYMENT.md → Error alerting and uptime](../../DEPLOYMENT.md#error-alerting-and-uptime)).
 
-## 2. Automated full regression
+## 2. Rails tests (`cd backend && bin/rails test`)
 
-Run:
+Integration tests in `backend/test/integration/` cover every API route for every role
+(`api_matrix_test.rb`; a new route without a matrix spec fails the inventory test), the
+keys the React pages read (`api_frontend_contract_test.rb`), error shapes, security probes,
+query budgets, billing and the Razorpay simulator end to end, uploads, sign-in codes,
+messaging, account export and deletion, and rate limits. Job and model tests sit beside them.
 
-```bash
-npm run test:all
-```
+## 3. Browser tests (Playwright, `tests/e2e/`)
 
-This executes the original hiring test, platform/SaaS/payment test, launch-hardening test, product-experience test, and the v0.5 full regression test.
+- `npm run qa:e2e` runs the specs against a local Vite preview with a mocked API
+  (projects `chromium-desktop` and `chromium-mobile`; Firefox and WebKit are optional).
+- `integration-journeys.spec.ts` runs against a real Rails API and PostgreSQL in the
+  `integrated-journeys` CI job.
+- `payments-simulator.spec.ts` needs a local API with `RAZORPAY_SIMULATOR=true`.
+- `api-health.spec.ts` (project `api`) checks the live API; the scheduled
+  **Verse QA Agent** workflow (`.github/workflows/qa-agent.yml`) runs the live checks nightly
+  and on demand.
 
-The v0.5 regression additionally checks:
-- Node source syntax
-- every TS/TSX source file via TypeScript transpile diagnostics
-- real local media upload with valid WAV data
-- ffprobe media metadata extraction when available
-- waveform generation when ffmpeg is available
-- uploaded `/uploads/...` URLs can actually be saved as portfolio samples
-- tagged portfolio persistence
-- layman synonym search (`sound guy` -> FOH/live-sound concepts)
-- talent-search synonym behavior
-- recent profile activity
-- 2-person candidate comparison with portfolio/availability
-- Build My Crew recommendation rules
-- Build My Crew -> Band Builder conversion
-- robots.txt and sitemap essentials
-- protected/search page `noindex`
-- the live admin tester endpoint
-- source regression scan for dummy OTP/mock auth/old token patterns
-- accidental duplicate request-parser declaration
+`npm run test:all` runs the frontend source smoke tests in `tests/frontend-*.mjs`.
 
-## Release gate
+## 4. CI
 
-Do not ship a release when:
-- `npm run test:all` fails
-- `/admin/tester` has a failed critical/high-severity check
-- production is using SQLite for multi-instance scale
-- production email, object storage or Razorpay are expected but not configured
-- Search Console / sitemap / canonical domain are not configured for the real domain
+`.github/workflows/rails-and-web.yml` runs the `frontend`, `rails` (tests plus a schema
+drift check), `security` (Brakeman, bundler-audit, npm audit) and `integrated-journeys`
+jobs on every pull request. `.github/workflows/qa-agent.yml` runs the mocked browser suite
+on pull requests and the live synthetic checks on a schedule.
 
 ## What automation cannot prove
 
-No automated tester can honestly prove “nothing can ever be missed.” Before a high-traffic commercial launch, also perform:
-- real-browser testing on Chrome/Safari/Firefox/Edge
-- Android + iPhone responsive testing
-- accessibility testing with keyboard and screen reader
-- load/concurrency testing on the production database/search cluster
-- real Razorpay Test Mode subscription, cancellation, webhook and booking-payment tests
-- object-storage malware/content validation tests
-- transactional-email deliverability tests
-- backup restore drill
-- legal/privacy/cancellation policy review
-- security penetration test
+Before a high-traffic launch, also do: real-device testing on Safari/iOS and Android,
+screen-reader passes, load testing against production-sized data, a real Razorpay live
+deposit and refund, inbox delivery of real transactional email, a backup restore drill
+([RUNBOOK.md](../engineering/RUNBOOK.md#4-restore-from-backup)), a legal/privacy review and
+a security penetration test.

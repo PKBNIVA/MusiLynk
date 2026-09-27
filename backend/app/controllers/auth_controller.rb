@@ -18,6 +18,16 @@ class AuthController < ApplicationController
   OTP_REQUEST_MESSAGE = "If this email can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.".freeze
   OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
   PRODUCTION_FRONTEND_URL = "https://verse-music-platform.vercel.app".freeze
+  # Admin password sign-in needs a second step: a code emailed to the admin.
+  SECOND_FACTOR_PURPOSE = :admin_second_factor
+  SECOND_FACTOR_CHALLENGES_PER_EMAIL = 5
+  SECOND_FACTOR_CHALLENGE_PERIOD = 1.hour
+  SECOND_FACTOR_FAILURES_PER_USER = 10
+  SECOND_FACTOR_FAILURES_PER_IP = 25
+  SECOND_FACTOR_FAILURE_PERIOD = 15.minutes
+  SECOND_FACTOR_MESSAGE = "Admin sign-in needs one more step. We emailed a 6-digit code to your address. It expires in 10 minutes.".freeze
+  SECOND_FACTOR_EXPIRED_MESSAGE = "This sign-in step has expired. Sign in with your password again.".freeze
+  SECOND_FACTOR_UNAVAILABLE_MESSAGE = "Admin sign-in needs an emailed code, but email delivery is not configured on the server. Configure an email provider to sign in.".freeze
 
   def register
     # Shared campus, office and mobile-carrier IPs sign up many real users; keep bulk abuse bounded.
@@ -49,9 +59,39 @@ class AuthController < ApplicationController
       return render_error("Incorrect email or password.", :unauthorized)
     end
     return render_error("This account is not active.", :forbidden) unless user.active?
+    return start_second_factor(user) if user.admin? && admin_second_factor_enforced?
+
     user.update!(last_login_at: Time.current)
     token = sign_in(user)
-    audit!("auth.login", user)
+    audit!("auth.login", user, user.admin? ? { secondFactor: "disabled" } : {})
+    render json: { user: public_user(user), accessToken: token }
+  end
+
+  # POST /auth/second-factor {challengeToken, code} -> same shape as /auth/login.
+  # Completes an admin password sign-in with the code emailed by the password step.
+  def second_factor
+    ip_scope = { ip: [request.remote_ip, SECOND_FACTOR_FAILURES_PER_IP] }
+    return if failure_budget_exhausted?("second-factor-failure", ip_scope, period: SECOND_FACTOR_FAILURE_PERIOD)
+
+    challenge = read_second_factor_challenge(params[:challengeToken])
+    user = challenge && User.find_by(id: challenge["user"])
+    code = user && SignInCode.find_by(id: challenge["code"], email: user.email)
+    unless code
+      record_failure!("second-factor-failure", ip_scope, period: SECOND_FACTOR_FAILURE_PERIOD)
+      return render_error(SECOND_FACTOR_EXPIRED_MESSAGE, :unauthorized, "SECOND_FACTOR_EXPIRED")
+    end
+
+    scopes = ip_scope.merge(user: [user.id, SECOND_FACTOR_FAILURES_PER_USER])
+    return if failure_budget_exhausted?("second-factor-failure", scopes, period: SECOND_FACTOR_FAILURE_PERIOD)
+    unless consume_code(code, params[:code])
+      record_failure!("second-factor-failure", scopes, period: SECOND_FACTOR_FAILURE_PERIOD)
+      return render_error(OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID")
+    end
+    return render_error("This account is not active.", :forbidden) unless user.active?
+
+    user.update!(last_login_at: Time.current)
+    token = sign_in(user)
+    audit!("auth.login", user, { method: "password", secondFactor: "email_code" })
     render json: { user: public_user(user), accessToken: token }
   end
 
@@ -181,7 +221,7 @@ class AuthController < ApplicationController
 
   def sign_in(user)
     raw = SecureRandom.urlsafe_base64(48)
-    user.sessions.create!(token_digest: digest(raw), expires_at: 30.days.from_now)
+    Session.start!(user, token_digest: digest(raw), user_agent: request.user_agent)
     user.sessions.where(id: user.sessions.order(created_at: :desc).offset(MAX_LIVE_SESSIONS).select(:id)).delete_all
     raw
   end
@@ -227,7 +267,10 @@ class AuthController < ApplicationController
       SignInCode.new(id: "sign_placeholder", code_digest: "").matches?(raw)
       return nil
     end
+    consume_code(candidate, raw)
+  end
 
+  def consume_code(candidate, raw)
     matched = false
     candidate.with_lock do
       next if candidate.used_at? || candidate.expires_at <= Time.current || candidate.attempts >= SignInCode::MAX_ATTEMPTS
@@ -238,6 +281,38 @@ class AuthController < ApplicationController
     end
     candidate if matched
   end
+
+  # ADMIN_SECOND_FACTOR=off is an emergency escape hatch only (for example, the
+  # email provider is down and no admin can sign in). Anything else enforces it.
+  def admin_second_factor_enforced? = ENV.fetch("ADMIN_SECOND_FACTOR", "on").strip.downcase != "off"
+
+  # The password was right; answer with a short-lived challenge instead of a
+  # session and email the admin a code that completes it.
+  def start_second_factor(user)
+    unless sign_in_codes_available?
+      Rails.logger.error({ event: "admin_second_factor_unavailable", userId: user.id }.to_json)
+      return render_error(SECOND_FACTOR_UNAVAILABLE_MESSAGE, :service_unavailable, "SECOND_FACTOR_UNAVAILABLE")
+    end
+    scopes = { email: [user.email, SECOND_FACTOR_CHALLENGES_PER_EMAIL] }
+    return if failure_budget_exhausted?("second-factor-challenge", scopes, period: SECOND_FACTOR_CHALLENGE_PERIOD)
+    record_failure!("second-factor-challenge", scopes, period: SECOND_FACTOR_CHALLENGE_PERIOD)
+
+    record, code = SignInCode.issue!(email: user.email)
+    queue_sign_in_code(user:, email: user.email, code:)
+    audit!("auth.second_factor_challenge", user, { ip: request.remote_ip })
+    challenge = second_factor_verifier.generate({ "user" => user.id, "code" => record.id }, purpose: SECOND_FACTOR_PURPOSE, expires_in: SignInCode::LIFETIME)
+    result = { secondFactorRequired: true, method: "email_code", challengeToken: challenge, message: SECOND_FACTOR_MESSAGE, expiresIn: SignInCode::LIFETIME.to_i }
+    result[:debugCode] = code if !Rails.env.production? && !EmailDelivery.configured?
+    render json: result, status: :accepted
+  end
+
+  def read_second_factor_challenge(token)
+    return nil unless token.is_a?(String) && token.length <= 1024
+    payload = second_factor_verifier.verified(token, purpose: SECOND_FACTOR_PURPOSE)
+    payload if payload.is_a?(Hash)
+  end
+
+  def second_factor_verifier = Rails.application.message_verifier("admin-second-factor")
 
   def create_user_from_code(code)
     user = User.transaction do

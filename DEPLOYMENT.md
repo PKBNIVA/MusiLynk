@@ -80,6 +80,18 @@ Current production sender (set 2026-09-27): `BREVO_SENDER_EMAIL=no-reply@notify.
 Codes expire after 10 minutes, are single use, allow 5 attempts, and are limited to 5
 requests per email and per IP per hour. Outside production, and only when no email
 provider is configured, the request response includes `debugCode` for local QA.
+
+### Admin two-step sign-in and `ADMIN_SECOND_FACTOR`
+
+An admin who signs in with a password gets a second step: `POST /api/auth/login` answers
+202 with `secondFactorRequired: true` and a 10-minute `challengeToken`, and emails the admin
+a 6-digit code; `POST /api/auth/second-factor {challengeToken, code}` completes sign-in.
+Admins who sign in with an email code skip it (the code already proved inbox control).
+In production without an email provider the password step fails closed with 503
+`SECOND_FACTOR_UNAVAILABLE`, so **add `BREVO_API_KEY` before deploying this**, or admins
+cannot sign in at all. `ADMIN_SECOND_FACTOR=off` on Railway turns the second step off; it
+is an emergency escape hatch only (for example the email provider is down), every such
+sign-in is audited with `secondFactor: "disabled"`, and it must be removed again afterwards.
 - S3/R2: access keys, bucket, endpoint, region, and public base URL
 
 ## Provider integration acceptance

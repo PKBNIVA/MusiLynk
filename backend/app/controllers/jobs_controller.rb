@@ -1,14 +1,23 @@
 class JobsController < ApplicationController
   include JobAuthoring
-  FILTER_PARAMS = %i[q location kind function workplace experience paid verified].freeze
+  FILTER_PARAMS = %i[q location kind function workplace experience paid verified limit cursor].freeze
   LIST_LIMIT = 200
+  # The public listing is paged with a keyset cursor: `?limit=` (default PAGE_SIZE, at most
+  # MAX_PAGE_SIZE; anything else falls back to the default) and `?cursor=` from the previous
+  # page's `nextCursor`.
+  PAGE_SIZE = 30
+  MAX_PAGE_SIZE = 100
 
   def index
     # ?location[]=a or ?kind[x]=y arrive as arrays/hashes; the filters below expect text.
     if (bad = FILTER_PARAMS.find { params.key?(_1) && !params[_1].is_a?(String) })
       return render_error("Search filter \"#{bad}\" must be a single text value.", :bad_request, "INVALID_FILTER")
     end
-    jobs = Job.published.with_applications_count.includes(employer: :profile).order(featured: :desc, created_at: :desc)
+    limit = page_size
+    after = decode_cursor(params[:cursor])
+    return render_error("This list position is no longer valid. Start the search again.", :bad_request, "INVALID_CURSOR") if after == false
+    # `id` breaks ties so the order (and so the cursor) is total.
+    jobs = Job.published.with_applications_count.includes(employer: :profile).order(featured: :desc, created_at: :desc, id: :desc)
     # Same rule as talent: non-demo synthetic QA batches are only listed to synthetic viewers.
     jobs = SyntheticQa::Demo.publicly_listed(jobs.joins(:employer)) unless current_user&.synthetic_batch.present?
     query = params[:q].to_s.strip
@@ -24,8 +33,17 @@ class JobsController < ApplicationController
     { kind: :opportunity_kind, function: :function_area, workplace: :workplace, experience: :experience_level }.each { |key, column| jobs = jobs.where(column => params[key]) if params[key].present? }
     jobs = jobs.where(paid: true) if params[:paid] == "true"
     jobs = jobs.joins(employer: :profile).where(profiles: { verified: true }) if params[:verified] == "true"
-    saved = current_user&.jobseeker? ? SavedJob.where(user: current_user).pluck(:job_id).to_set : Set.new
-    render json: { jobs: jobs.limit(250).map { |job| job.api_json(current_user).merge(saved: saved.include?(job.id)) } }
+    total = jobs.except(:select, :order, :includes).count
+    jobs = jobs.where("(jobs.featured, jobs.created_at, jobs.id) < (?, ?, ?)", *after) if after
+    page = jobs.limit(limit + 1).to_a
+    more = page.length > limit
+    page = page.first(limit)
+    saved = current_user&.jobseeker? ? SavedJob.where(user: current_user, job_id: page.map(&:id)).pluck(:job_id).to_set : Set.new
+    render json: {
+      jobs: page.map { |job| job.api_json(current_user).merge(saved: saved.include?(job.id)) },
+      nextCursor: more ? encode_cursor(page.last) : nil,
+      total:
+    }
   end
 
   def show
@@ -103,5 +121,29 @@ class JobsController < ApplicationController
     return unless authenticate!("jobseeker")
     SavedJob.where(user: current_user, job_id: params[:id]).delete_all
     render json: { ok: true }
+  end
+
+  private
+
+  # A whole number is clamped to 1..MAX_PAGE_SIZE; a missing or unreadable one means PAGE_SIZE.
+  def page_size
+    Integer(params[:limit].to_s, 10).clamp(1, MAX_PAGE_SIZE)
+  rescue ArgumentError
+    PAGE_SIZE
+  end
+
+  # Opaque to clients: the sort key of the last job on the page.
+  def encode_cursor(job)
+    Base64.urlsafe_encode64([job.featured, job.created_at.utc.iso8601(6), job.id].to_json, padding: false)
+  end
+
+  # nil without a cursor, false when it cannot be read, else [featured, created_at, id].
+  def decode_cursor(raw)
+    return nil if raw.blank?
+    featured, created_at, id = JSON.parse(Base64.urlsafe_decode64(raw.to_s))
+    return false unless [true, false].include?(featured) && created_at.is_a?(String) && id.is_a?(String) && id.present?
+    [featured, Time.iso8601(created_at), id]
+  rescue ArgumentError, JSON::ParserError, TypeError
+    false
   end
 end

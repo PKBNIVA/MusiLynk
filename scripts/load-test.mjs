@@ -5,7 +5,7 @@
 //   node scripts/load-test.mjs --base http://127.0.0.1:3000/api \
 //     [--duration 20] [--concurrency 10] [--only search,jobs] [--markdown]
 //
-// Scenarios: search, job listing (all and filtered), public talent list and profiles,
+// Scenarios: search, job listing (first page, next page and filtered), public talent list and profiles,
 // public acts, and an authenticated inbox (conversation list + one thread). The inbox
 // needs LOAD_EMAIL and LOAD_PASSWORD (any account with conversations, e.g. one from
 // `bin/rails synthetic_qa:seed BATCH=demo-load SYNTHETIC_QA_PASSWORD=...`); without them it
@@ -56,12 +56,14 @@ async function login() {
 async function discover(token) {
   const talent = (await request('/public/talent')).json().talent || [];
   const acts = (await request('/public/acts')).json().acts || [];
+  // The job list is paged; the cursor of the first page drives the "next page" scenario.
+  const jobsCursor = (await request('/jobs')).json().nextCursor || null;
   let conversation = null;
   if (token) {
     const conversations = (await request('/conversations', { authorization: `Bearer ${token}` })).json().conversations || [];
     conversation = conversations[0]?.id || null;
   }
-  return { talentIds: talent.map(t => t.id).slice(0, 50), actIds: acts.map(a => a.id).slice(0, 20), conversation };
+  return { talentIds: talent.map(t => t.id).slice(0, 50), actIds: acts.map(a => a.id).slice(0, 20), conversation, jobsCursor };
 }
 
 function scenarios(ctx, token) {
@@ -70,6 +72,7 @@ function scenarios(ctx, token) {
   const all = [
     { name: 'search', path: () => `/search?q=${encodeURIComponent(pick(SEARCH_TERMS))}` },
     { name: 'jobs (all)', path: () => '/jobs' },
+    { name: 'jobs (next page)', path: () => `/jobs?cursor=${encodeURIComponent(ctx.jobsCursor)}`, skip: !ctx.jobsCursor },
     { name: 'jobs (filtered)', path: () => `/jobs?q=${encodeURIComponent(pick(SEARCH_TERMS))}` },
     { name: 'public talent list', path: () => '/public/talent' },
     { name: 'public profile', path: () => `/public/talent/${pick(ctx.talentIds)}`, skip: ctx.talentIds.length === 0 },

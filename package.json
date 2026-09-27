@@ -9,7 +9,7 @@
     "dev": "vite",
     "dev:web": "vite",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,mjs}\" \"*.{ts,js,mjs}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,mjs}\" \"*.{ts,js,mjs}\"",
     "test:rails": "cd backend && bin/rails test",

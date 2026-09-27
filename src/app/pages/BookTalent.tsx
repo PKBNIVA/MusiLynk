@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { apiGet, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
+import { useLatestCallback } from '../lib/useLatestCallback';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -66,7 +67,7 @@ export default function BookTalent() {
     [sending, setSending] = useState(false);
   const preselected = useRef<string | null>(null);
 
-  async function load() {
+  const load = useLatestCallback(async () => {
     setLoading(true);
     try {
       const d = await apiGet<any>(`/acts?q=${encodeURIComponent(q.trim())}&city=${encodeURIComponent(city.trim())}`);
@@ -77,28 +78,33 @@ export default function BookTalent() {
     } finally {
       setLoading(false);
     }
-  }
+  });
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
-  const openEnquiry = (a: any) => {
-    setFormError('');
-    setBooking({
-      id: a.id,
-      name: a.name,
-      eventType: 'wedding',
-      eventDate: '',
-      eventCity: city || a.city || '',
-      venueName: '',
-      budgetMin: '',
-      budgetMax: '',
-      requirements: '',
-    });
-  };
+  const openEnquiry = useCallback(
+    (a: any) => {
+      setFormError('');
+      setBooking({
+        id: a.id,
+        name: a.name,
+        eventType: 'wedding',
+        eventDate: '',
+        eventCity: city || a.city || '',
+        venueName: '',
+        budgetMin: '',
+        budgetMax: '',
+        requirements: '',
+      });
+    },
+    [city],
+  );
 
   // Coming from a public act page (?act=<id>): open the enquiry for that act straight away.
   const actParam = params.get('act');
+  const userId = user?.id;
+  // The ref guard opens the enquiry once per act, however often the dependencies change.
   useEffect(() => {
     if (!actParam || preselected.current === actParam) return;
     preselected.current = actParam;
@@ -106,7 +112,7 @@ export default function BookTalent() {
       .then((d) => {
         const act = d.act;
         if (!act || act.status !== 'active') throw new Error('This act is not currently taking bookings.');
-        if (user && act.owner_id === user.id) throw new Error('This is your own act, so it cannot be booked.');
+        if (userId && act.owner_id === userId) throw new Error('This is your own act, so it cannot be booked.');
         openEnquiry(act);
       })
       .catch((e: any) =>
@@ -114,7 +120,7 @@ export default function BookTalent() {
           e?.status === 404 ? 'That act is no longer available for booking.' : e.message || 'Unable to open that act.',
         ),
       );
-  }, [actParam, user?.id]);
+  }, [actParam, userId, openEnquiry]);
 
   const closeEnquiry = () => {
     setBooking(null);

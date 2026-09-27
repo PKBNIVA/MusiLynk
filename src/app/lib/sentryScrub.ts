@@ -38,9 +38,8 @@ export function scrubValue<T>(value: T, secrets: readonly string[] = [], depth =
 }
 
 type ScrubbableEvent = {
-  user?: Record<string, unknown> | null;
+  user?: object | null;
   request?: { cookies?: unknown; data?: unknown } | null;
-  [key: string]: unknown;
 };
 
 /** Scrubs a whole Sentry event (or transaction) and keeps only an id/role user. */

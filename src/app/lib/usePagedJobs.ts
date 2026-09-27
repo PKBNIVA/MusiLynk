@@ -16,7 +16,7 @@ const pathFor = (q: string, after?: string | null) => {
   return text ? `/jobs?${text}` : '/jobs';
 };
 
-const fetchJobs = (path: string) => apiGet<JobPage<any>>(path);
+const fetchJobs = <T>(path: string) => apiGet<JobPage<T>>(path);
 
 /**
  * The paged opportunity list behind job search and the public jobs page.

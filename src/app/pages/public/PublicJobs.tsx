@@ -10,6 +10,7 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { LoadMoreJobs } from '../../components/LoadMoreJobs';
 import { usePagedJobs } from '../../lib/usePagedJobs';
+import { useLatestCallback } from '../../lib/useLatestCallback';
 
 const kinds = ['jobs', 'gigs', 'auditions', 'sessions', 'tours'] as const;
 
@@ -27,17 +28,17 @@ export default function PublicJobs() {
       const k = sp.get('kind') || '';
       return k && !k.endsWith('s') ? `${k}s` : k;
     });
-  async function load(nextKind = kind) {
+  const load = useLatestCallback(async (nextKind: string = kind) => {
     const p = new URLSearchParams();
     if (q) p.set('q', q);
     if (location) p.set('location', location);
     if (nextKind) p.set('kind', nextKind.replace(/s$/, ''));
     setSp(p, { replace: true });
     await list.search(p.toString());
-  }
+  });
   useEffect(() => {
-    void load(kind);
-  }, []);
+    void load();
+  }, [load]);
   const chooseKind = (next: string) => {
     setKind(next);
     void load(next);

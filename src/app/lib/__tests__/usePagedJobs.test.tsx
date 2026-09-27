@@ -6,7 +6,7 @@ import { usePagedJobs, type JobPage } from '../usePagedJobs';
 vi.mock('../api', () => ({ apiGet: vi.fn() }));
 import { apiGet } from '../api';
 
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 type Job = { id: string; title?: string };
 type Hook = ReturnType<typeof usePagedJobs<Job>>;

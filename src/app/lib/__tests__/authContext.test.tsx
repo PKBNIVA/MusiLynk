@@ -1,16 +1,17 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { User } from '../authContext';
 import { jsonResponse } from './helpers';
 
 vi.mock('../monitoring', () => ({ reportApiFailure: vi.fn() }));
 
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 type AuthModule = typeof import('../authContext');
 type ApiModule = typeof import('../api');
 
-const asha = {
+const asha: User = {
   id: 'u1',
   name: 'Asha',
   email: 'asha@example.com',
@@ -209,7 +210,7 @@ describe('AuthProvider', () => {
   it('exposes setUser for profile edits', async () => {
     await mount();
     await settle();
-    act(() => auth.setUser(asha as any));
+    act(() => auth.setUser(asha));
     expect(auth.isAuthenticated).toBe(true);
   });
 });

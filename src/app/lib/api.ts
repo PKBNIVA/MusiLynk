@@ -1,6 +1,7 @@
 import { reportApiFailure } from './monitoring';
 
-export const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api';
+// `?.`: the Node smoke tests import this module without Vite, where import.meta.env is undefined.
+export const API_BASE = import.meta.env?.VITE_API_URL || '/api';
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const MIN_RETRY_ATTEMPT_MS = 250;
@@ -88,6 +89,14 @@ function announcePlanLimit(message?: string) {
   }
 }
 
+/** The JSON body the API sends with an error status (see ApplicationController#render_error). */
+export interface ApiErrorBody {
+  error?: string;
+  code?: string;
+  requestId?: string;
+  request_id?: string;
+}
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -102,7 +111,7 @@ export class ApiError extends Error {
   }
 }
 
-function requestIdFor(response: Response, data?: any) {
+function requestIdFor(response: Response, data?: ApiErrorBody) {
   return response.headers.get('x-request-id') || data?.requestId || data?.request_id;
 }
 
@@ -166,7 +175,7 @@ async function fetchWithTimeout(url: string, options: ApiOptions) {
   }
 }
 
-export async function api<T = any>(path: string, options: ApiOptions = {}): Promise<T> {
+export async function api<T = unknown>(path: string, options: ApiOptions = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
   if (options.body !== undefined && !(options.body instanceof FormData))
     headers.set('Content-Type', 'application/json');
@@ -206,7 +215,7 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
       // SPA's index.html served for /api/* when VITE_API_URL is missing). Treat it as an error
       // instead of rendering empty data as if everything worked.
       const isJson = /json/i.test(response.headers.get('content-type') || '');
-      const parsed = isJson ? await response.json().catch(() => undefined) : undefined;
+      const parsed: unknown = isJson ? await response.json().catch(() => undefined) : undefined;
       if (response.ok && parsed === undefined) {
         reportApiFailure({
           status: response.status,
@@ -222,11 +231,12 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
           requestIdFor(response),
         );
       }
-      const data = parsed ?? {};
+      // The caller's T describes a success body; an error status carries ApiErrorBody instead.
+      const data = (parsed ?? {}) as T & ApiErrorBody;
       const requestId = requestIdFor(response, data);
       if (response.status === 401) redirectAfterUnauthorized(path, token, skipAuthRedirect);
       if (!response.ok) {
-        if (response.status === 402 && PLAN_LIMIT_CODES.has(data.code)) announcePlanLimit(data.error);
+        if (response.status === 402 && PLAN_LIMIT_CODES.has(data.code ?? '')) announcePlanLimit(data.error);
         if (response.status >= 500)
           reportApiFailure({ status: response.status, code: data.code, method, path, requestId });
         throw new ApiError(data.error || `Request failed (${response.status})`, response.status, data.code, requestId);
@@ -307,14 +317,15 @@ export function consumeReturnTo() {
   return path;
 }
 
-export const apiGet = <T = any>(path: string, options: ApiOptions = {}) => api<T>(path, { ...options, method: 'GET' });
-export const apiPost = <T = any>(path: string, body?: unknown, options: ApiOptions = {}) =>
+export const apiGet = <T = unknown>(path: string, options: ApiOptions = {}) =>
+  api<T>(path, { ...options, method: 'GET' });
+export const apiPost = <T = unknown>(path: string, body?: unknown, options: ApiOptions = {}) =>
   api<T>(path, { ...options, method: 'POST', body: JSON.stringify(body ?? {}) });
-export const apiPut = <T = any>(path: string, body?: unknown, options: ApiOptions = {}) =>
+export const apiPut = <T = unknown>(path: string, body?: unknown, options: ApiOptions = {}) =>
   api<T>(path, { ...options, method: 'PUT', body: JSON.stringify(body ?? {}) });
-export const apiPatch = <T = any>(path: string, body?: unknown, options: ApiOptions = {}) =>
+export const apiPatch = <T = unknown>(path: string, body?: unknown, options: ApiOptions = {}) =>
   api<T>(path, { ...options, method: 'PATCH', body: JSON.stringify(body ?? {}) });
-export const apiDelete = <T = any>(path: string, options: ApiOptions = {}) =>
+export const apiDelete = <T = unknown>(path: string, options: ApiOptions = {}) =>
   api<T>(path, { ...options, method: 'DELETE' });
 
 /** Email sign-in codes. The response is identical whether or not an account exists. */
@@ -370,7 +381,7 @@ export type UploadResult = {
   url: string;
   contentType?: string;
   byteSize?: number;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   thumbnailUrl?: string;
   waveformUrl?: string;
 };
@@ -399,7 +410,38 @@ export function validateUploadFile(file: File) {
     );
 }
 
-type XhrResult = { status: number; data: any; requestId?: string };
+/** A stored file as the API describes it (Upload#api_json). */
+export interface UploadRecord {
+  id: string;
+  url: string;
+  status: string;
+  contentType: string;
+  byteSize: number;
+  filename: string;
+}
+
+/** POST /uploads/presign: either signed bucket instructions or the API's own streaming endpoint. */
+type PresignResponse =
+  | {
+      mode: 'direct';
+      id: string;
+      method?: 'PUT' | 'POST';
+      uploadUrl: string;
+      headers?: Record<string, string>;
+      fields?: Record<string, string>;
+      publicUrl?: string;
+      completeUrl?: string;
+      expiresIn?: number;
+    }
+  | { mode: 'proxied'; uploadUrl: string };
+
+/** POST /uploads/:id/complete */
+type CompleteResponse = { upload?: UploadRecord; url: string };
+
+/** PUT /uploads/local: the success fields are present on a 2xx, the error fields otherwise. */
+type ProxiedUploadBody = ApiErrorBody & { id: string; url: string; upload?: UploadRecord };
+
+type XhrResult = { status: number; data: ProxiedUploadBody; requestId?: string };
 
 // fetch() has no upload progress events, so file bodies go through XMLHttpRequest.
 function sendWithProgress(
@@ -422,14 +464,12 @@ function sendWithProgress(
     const done = () => options.signal?.removeEventListener('abort', onAbort);
     xhr.onload = () => {
       done();
-      let data: any = {};
+      let data = {} as ProxiedUploadBody;
       try {
-        data =
-          xhr.responseText && xhr.getResponseHeader('content-type')?.includes('json')
-            ? JSON.parse(xhr.responseText)
-            : {};
+        if (xhr.responseText && xhr.getResponseHeader('content-type')?.includes('json'))
+          data = JSON.parse(xhr.responseText) as ProxiedUploadBody;
       } catch {
-        data = {};
+        data = {} as ProxiedUploadBody;
       }
       resolve({ status: xhr.status, data, requestId: xhr.getResponseHeader('x-request-id') || data?.requestId });
     };
@@ -464,7 +504,7 @@ export async function uploadMedia(
   validateUploadFile(file);
   const contentType = uploadContentType(file)!;
   options.onProgress?.(0);
-  const prep = await apiPost<any>(
+  const prep = await apiPost<PresignResponse>(
     '/uploads/presign',
     { filename: file.name, contentType, size: file.size },
     { signal: options.signal },
@@ -495,7 +535,7 @@ export async function uploadMedia(
         'UPLOAD_FAILED',
       );
     }
-    const done = await apiPost<any>(`/uploads/${prep.id}/complete`, {}, { signal: options.signal });
+    const done = await apiPost<CompleteResponse>(`/uploads/${prep.id}/complete`, {}, { signal: options.signal });
     options.onProgress?.(100);
     return {
       id: done.upload?.id || prep.id,

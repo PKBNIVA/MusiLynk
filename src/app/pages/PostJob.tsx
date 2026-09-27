@@ -111,6 +111,7 @@ export default function PostJob() {
     [formError, setFormError] = useState(''),
     [pipelineKey, setPipelineKey] = useState(0);
   const set = (k: string, v: any) => setF((x: any) => ({ ...x, [k]: v }));
+  const userId = user?.id;
   useEffect(() => {
     setFormError('');
     if (!editId) {
@@ -123,14 +124,14 @@ export default function PostJob() {
     setLoadError('');
     apiGet<any>(`/jobs/${encodeURIComponent(editId)}`)
       .then((d) => {
-        if (!d.job || (user?.id && d.job.employer_id && d.job.employer_id !== user.id))
+        if (!d.job || (userId && d.job.employer_id && d.job.employer_id !== userId))
           throw new Error('Opportunity not found');
         setJob(d.job);
         setF(toForm(d.job));
       })
       .catch((e: any) => setLoadError(e.message || 'This opportunity could not be loaded.'))
       .finally(() => setLoadingJob(false));
-  }, [editId]);
+  }, [editId, userId]);
   const status = job?.status as string | undefined;
   const primary =
     !job || status === 'draft'

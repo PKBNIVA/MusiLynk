@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UNREAD_CHANGED_EVENT, announceUnreadChanged, useVisiblePolling } from '../usePolling';
 
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 let visibility: DocumentVisibilityState = 'visible';
 let container: HTMLDivElement;
@@ -140,14 +140,15 @@ describe('useVisiblePolling', () => {
 
   it('restarts with a new interval', () => {
     const tick = vi.fn();
+    let setInterval: (ms: number) => void = () => undefined;
     function Switcher() {
       const [ms, setMs] = useState(1_000);
-      (Switcher as any).set = setMs;
+      setInterval = setMs;
       useVisiblePolling(tick, ms);
       return null;
     }
     act(() => root.render(<Switcher />));
-    act(() => (Switcher as any).set(5_000));
+    act(() => setInterval(5_000));
     act(() => {
       vi.advanceTimersByTime(4_000);
     });

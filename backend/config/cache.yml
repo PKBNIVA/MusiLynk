@@ -1,0 +1,18 @@
+# Solid Cache (used in production unless REDIS_URL is set). No `database:` key, so entries
+# live in the primary database's solid_cache_entries table and survive restarts and deploys.
+# The cache only holds rate-limit counters; the longest window is 1 hour, so a day of
+# retention is plenty and the table stays small.
+default: &default
+  store_options:
+    max_age: <%= 1.day.to_i %>
+    max_size: <%= 256.megabytes %>
+    namespace: <%= Rails.env %>
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

@@ -400,10 +400,10 @@ initialises Sentry and the web app never downloads it (zero requests to Sentry).
 | --- | --- | --- |
 | Railway (Rails service) | `SENTRY_DSN` | `verse-api` DSN |
 | Railway | `SENTRY_ENVIRONMENT` | optional, defaults to `RAILS_ENV` (`production`) |
-| Railway | `SENTRY_TRACES_SAMPLE_RATE` | optional, default `0` (errors only). `0.05` samples 5% of requests for performance data |
+| Railway | `SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.02` once `SENTRY_DSN` is set (2% of requests traced for performance data); `0` turns tracing off |
 | Vercel (Production environment) | `VITE_SENTRY_DSN` | `verse-web` DSN |
 | Vercel (Production environment) | `VITE_SENTRY_ENVIRONMENT` | `production` (Preview deployments can use `preview`, or leave the DSN unset there) |
-| Vercel | `VITE_SENTRY_TRACES_SAMPLE_RATE` | optional, default `0` |
+| Vercel | `VITE_SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.05` once `VITE_SENTRY_DSN` is set; `0` turns tracing off. Core Web Vitals are sent as metrics either way (see docs/PERFORMANCE.md) |
 
 Releases are automatic: the API reports `RAILWAY_GIT_COMMIT_SHA` and the web build uses
 `VERCEL_GIT_COMMIT_SHA` (exposed as `<meta name="verse-release">`). `VITE_*` values are read
@@ -446,7 +446,7 @@ install the Sentry mobile app if you want push alerts.
 
 The free Developer plan includes a fixed monthly error quota (about 5k errors at the time of
 writing) and one user; check sentry.io/pricing for current limits. To stay inside it:
-tracing defaults to 0, replay is off, API failure bursts in the browser are rate limited, and
+tracing samples only 2% (API) and 5% (web) by default, replay is off, API failure bursts in the browser are rate limited, and
 expected 4xx are dropped. Set a spike-protection/quota limit per project in Sentry
 (Settings → Subscription/Spend) so a bad deploy cannot exhaust the month. Raise
 `SENTRY_TRACES_SAMPLE_RATE` / `VITE_SENTRY_TRACES_SAMPLE_RATE` only deliberately.

@@ -8,7 +8,8 @@
 # Variables (Railway):
 #   SENTRY_DSN                  verse-api project DSN; unset = disabled
 #   SENTRY_ENVIRONMENT          defaults to RAILS_ENV
-#   SENTRY_TRACES_SAMPLE_RATE   0.0..1.0, default 0.0 (performance tracing costs quota)
+#   SENTRY_TRACES_SAMPLE_RATE   0.0..1.0, default 0.02 (2% of requests traced for performance
+#                               data; tracing costs quota, 0 turns it off)
 #   RAILWAY_GIT_COMMIT_SHA      set by Railway; used as the release
 module VerseSentry
   # Expected client errors: rescue_from turns these into 4xx responses. They are listed so a
@@ -37,11 +38,16 @@ module VerseSentry
     env["SENTRY_DSN"].to_s.strip.present? && !rails_env.test?
   end
 
+  # Only used once SENTRY_DSN is set, so without a DSN nothing is traced at all.
+  DEFAULT_TRACES_SAMPLE_RATE = 0.02
+
   def traces_sample_rate(value)
-    rate = Float(value.to_s.strip.presence || "0")
-    rate.clamp(0.0, 1.0)
+    raw = value.to_s.strip
+    return DEFAULT_TRACES_SAMPLE_RATE if raw.empty?
+
+    Float(raw).clamp(0.0, 1.0)
   rescue ArgumentError, TypeError
-    0.0
+    DEFAULT_TRACES_SAMPLE_RATE
   end
 
   def configure(config, env: ENV)

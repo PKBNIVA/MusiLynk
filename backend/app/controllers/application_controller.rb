@@ -1,4 +1,8 @@
 class ApplicationController < ActionController::API
+  # Requests slower than this (ms) are logged at warn level with slow: true, so they can be
+  # filtered in Railway's log view. SLOW_REQUEST_MS overrides the default.
+  class_attribute :slow_request_ms, default: Integer(ENV.fetch("SLOW_REQUEST_MS", "500"), exception: false) || 500
+
   around_action :log_request
   before_action :require_verified_email_for_mutation
   rescue_from ActiveRecord::RecordNotFound, with: -> { render_error("Not found", :not_found) }
@@ -15,16 +19,33 @@ class ApplicationController < ActionController::API
 
   private
 
+  # One JSON line per API request (total and database time, query count) plus a
+  # Server-Timing header, so slow endpoints show up in the logs and in browser dev tools.
   def log_request
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     yield
   ensure
-    duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1_000).round(1)
-    Rails.logger.info({
+    timing = request_timing(started_at)
+    # Headers can no longer change once a body is streaming (e.g. send_file).
+    unless response.committed?
+      response.headers["Server-Timing"] = "db;dur=#{timing[:dbMs]};desc=\"#{timing[:dbQueries]} queries\", app;dur=#{timing[:durationMs]}"
+    end
+    slow = timing[:durationMs] >= slow_request_ms
+    Rails.logger.public_send(slow ? :warn : :info, {
       event: "http_request", requestId: request.request_id, method: request.method,
-      path: request.path, status: response.status, durationMs: duration_ms,
-      userId: @current_user&.id
+      path: request.path, route: "#{controller_name}##{action_name}", status: response.status,
+      **timing, slow: (true if slow), userId: @current_user&.id
     }.compact.to_json)
+  end
+
+  # Active Record moves SQL time into db_runtime whenever a view renders, so both are added.
+  def request_timing(started_at)
+    stats = ActiveRecord::RuntimeRegistry.stats
+    {
+      durationMs: ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1_000).round(1),
+      dbMs: (db_runtime.to_f + stats.sql_runtime).round(1),
+      dbQueries: stats.queries_count
+    }
   end
 
   def require_verified_email_for_mutation

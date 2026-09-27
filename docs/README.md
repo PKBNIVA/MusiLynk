@@ -19,6 +19,7 @@ everything else lives here.
 - [engineering/SAAS_BILLING.md](engineering/SAAS_BILLING.md): plans, entitlements, Razorpay event handling, reconciliation, cancellation rules.
 - [engineering/SEARCH.md](engineering/SEARCH.md): how `/api/search` works (PostgreSQL, synonyms, limits) and its known limits.
 - [engineering/SESSIONS.md](engineering/SESSIONS.md): session expiry and browser binding, admin two-step sign-in, and the HttpOnly cookie migration plan.
+- [PERFORMANCE.md](PERFORMANCE.md): bundle budget, Core Web Vitals, tracing defaults, request timing logs, and load-test results.
 - [RAILS8_UPGRADE.md](RAILS8_UPGRADE.md): the Rails 7.2 → 8.1.4 upgrade and the framework defaults now in effect.
 
 ## QA

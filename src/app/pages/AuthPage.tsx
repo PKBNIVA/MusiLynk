@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router';
-import { motion } from 'motion/react';
 import { ArrowLeft, Briefcase, Eye, EyeOff, Mail, ShieldCheck, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -177,7 +176,8 @@ export default function AuthPage() {
       <div className="flex items-center justify-between"><Link to="/"><BrandMark /></Link><Link to="/" className="inline-flex items-center text-sm text-slate-300 hover:text-white"><ArrowLeft className="mr-2 h-4 w-4"/>Back to home</Link></div>
       <div className="grid flex-1 items-center gap-14 py-12 lg:grid-cols-[1fr_480px]">
         <div className="hidden lg:block"><div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.05] px-3 py-1.5 text-sm text-slate-300"><ShieldCheck size={15} className="text-emerald-300"/>Your account and work stay protected</div><h1 className="mt-6 max-w-xl text-6xl font-black leading-[1] tracking-[-.05em]">One login. Your whole <span className="verse-gradient-text">music world.</span></h1><p className="mt-5 max-w-lg text-lg leading-8 text-slate-300">Discover work, prove your craft, build teams and manage every conversation in one professional home.</p></div>
-        <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}}>
+        {/* A CSS fade-in (the global reduced-motion rule shortens it); the motion library cost ~42 kB gzip for this alone. */}
+        <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
           <Card className="verse-surface border-white/15 bg-transparent shadow-2xl">
             <CardHeader className="text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-500/30 to-violet-500/25 text-violet-200">{isAdmin?<ShieldCheck/>:role==='employer'?<Briefcase/>:<Users/>}</div><CardTitle className="mt-2 text-2xl font-black text-white">{(method==='code'||challenge)&&codeStep==='code'?'Check your email':mode==='login'?'Welcome back':'Create your Verse account'}</CardTitle><CardDescription className="text-slate-300">{isAdmin?'Verse trust and operations':role==='employer'?'Hire music talent and manage every candidate':'Find work and build a career people can hear'}</CardDescription></CardHeader>
             <CardContent>
@@ -191,7 +191,7 @@ export default function AuthPage() {
               {mode==='register'&&<p className="mt-4 text-center text-xs leading-5 text-slate-400">By joining, you agree to our <Link className="text-slate-200 underline" to="/terms">Terms</Link> and <Link className="text-slate-200 underline" to="/privacy">Privacy Policy</Link>.</p>}
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
     </div>
   </div>;

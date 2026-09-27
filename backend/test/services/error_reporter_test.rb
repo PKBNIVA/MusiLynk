@@ -46,13 +46,15 @@ class ErrorReporterTest < ActiveSupport::TestCase
       assert_includes config.excluded_exceptions, name
     end
 
-    assert_equal 0.0, VerseSentry.traces_sample_rate(nil)
-    assert_equal 0.0, VerseSentry.traces_sample_rate("lots")
+    assert_in_delta 0.02, VerseSentry.traces_sample_rate(nil), 1e-9, "a small default sample once a DSN is set"
+    assert_in_delta 0.02, VerseSentry.traces_sample_rate("  "), 1e-9
+    assert_in_delta 0.02, VerseSentry.traces_sample_rate("lots"), 1e-9
+    assert_equal 0.0, VerseSentry.traces_sample_rate("0"), "an explicit 0 turns tracing off"
     assert_equal 1.0, VerseSentry.traces_sample_rate("7")
     default = Sentry::Configuration.new
     VerseSentry.configure(default, env: { "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN })
     assert_equal Rails.env.to_s, default.environment
-    assert_equal 0.0, default.traces_sample_rate
+    assert_in_delta 0.02, default.traces_sample_rate, 1e-9
   end
 
   test "capture is a no-op without a DSN" do

@@ -5,7 +5,9 @@ describe('scrubString', () => {
   it('removes auth headers, secrets in query strings and email addresses', () => {
     expect(scrubString('Authorization: Bearer abc.def-ghi')).toBe(`Authorization: Bearer ${FILTERED}`);
     expect(scrubString('basic dXNlcjpwYXNz')).toBe(`basic ${FILTERED}`);
-    expect(scrubString('/auth/verify?email=a%40b.co&code=123456&next=/jobs')).toBe(`/auth/verify?email=${FILTERED}&code=${FILTERED}&next=/jobs`);
+    expect(scrubString('/auth/verify?email=a%40b.co&code=123456&next=/jobs')).toBe(
+      `/auth/verify?email=${FILTERED}&code=${FILTERED}&next=/jobs`,
+    );
     expect(scrubString('GET /reset?reset_token=xyz#top')).toBe(`GET /reset?reset_token=${FILTERED}#top`);
     expect(scrubString('Contact jane.doe+band@example.co.uk now')).toBe('Contact [email] now');
     expect(scrubString('encoded jane%40example.com')).toBe('encoded [email]');
@@ -24,7 +26,24 @@ describe('scrubString', () => {
 
 describe('isSensitiveKey', () => {
   it('flags credential and personal-data keys but not look-alikes', () => {
-    for (const key of ['password', 'passwd', 'accessToken', 'client_secret', 'x-signature', 'otp', 'Authorization', 'Cookie', 'api_key', 'accessKey', 'credentials', 'sessionId', 'email', 'code', 'body', 'dsn']) {
+    for (const key of [
+      'password',
+      'passwd',
+      'accessToken',
+      'client_secret',
+      'x-signature',
+      'otp',
+      'Authorization',
+      'Cookie',
+      'api_key',
+      'accessKey',
+      'credentials',
+      'sessionId',
+      'email',
+      'code',
+      'body',
+      'dsn',
+    ]) {
       expect(isSensitiveKey(key), key).toBe(true);
     }
     for (const key of ['statusCode', 'name', 'bodyType', 'role', 'url']) {
@@ -35,7 +54,13 @@ describe('isSensitiveKey', () => {
 
 describe('scrubValue', () => {
   it('scrubs nested objects and arrays, filtering sensitive keys', () => {
-    const input = { user: { email: 'a@b.co', name: 'Asha' }, list: ['ok', 'mail me at a@b.co'], headers: { authorization: 'Bearer x' }, count: 3, nothing: null };
+    const input = {
+      user: { email: 'a@b.co', name: 'Asha' },
+      list: ['ok', 'mail me at a@b.co'],
+      headers: { authorization: 'Bearer x' },
+      count: 3,
+      nothing: null,
+    };
     expect(scrubValue(input)).toEqual({
       user: { email: FILTERED, name: 'Asha' },
       list: ['ok', 'mail me at [email]'],
@@ -55,7 +80,10 @@ describe('scrubValue', () => {
     for (let i = 0; i < 15; i += 1) deep = { next: deep };
     let cursor: any = scrubValue(deep);
     let depth = 0;
-    while (cursor && typeof cursor === 'object') { cursor = cursor.next; depth += 1; }
+    while (cursor && typeof cursor === 'object') {
+      cursor = cursor.next;
+      depth += 1;
+    }
     expect(cursor).toBe(FILTERED);
     expect(depth).toBe(13);
   });

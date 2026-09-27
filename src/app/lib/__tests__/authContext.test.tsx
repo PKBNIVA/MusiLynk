@@ -10,7 +10,14 @@ vi.mock('../monitoring', () => ({ reportApiFailure: vi.fn() }));
 type AuthModule = typeof import('../authContext');
 type ApiModule = typeof import('../api');
 
-const asha = { id: 'u1', name: 'Asha', email: 'asha@example.com', role: 'jobseeker', status: 'active', profileComplete: true };
+const asha = {
+  id: 'u1',
+  name: 'Asha',
+  email: 'asha@example.com',
+  role: 'jobseeker',
+  status: 'active',
+  profileComplete: true,
+};
 const ravi = { ...asha, id: 'u2', name: 'Ravi', role: 'employer' };
 
 let container: HTMLDivElement;
@@ -31,11 +38,20 @@ async function mount() {
     auth = useAuth();
     return null;
   }
-  await act(async () => root.render(<AuthProvider><Probe /></AuthProvider>));
+  await act(async () =>
+    root.render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    ),
+  );
 }
 
 /** Resolves the pending fetch promises and lets React commit the results. */
-const settle = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+const settle = () =>
+  act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 
 beforeEach(async () => {
   localStorage.clear();
@@ -87,19 +103,25 @@ describe('AuthProvider', () => {
     await settle();
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ user: asha, accessToken: 'pw-token' }));
-    await act(async () => { await expect(auth.login('asha@example.com', 'pw')).resolves.toEqual(asha); });
+    await act(async () => {
+      await expect(auth.login('asha@example.com', 'pw')).resolves.toEqual(asha);
+    });
     expect(auth.user).toEqual(asha);
     expect(localStorage.getItem('verse_access_token')).toBe('pw-token');
     expect(fetchMock.mock.calls[0][0]).toBe('/api/auth/login');
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ user: ravi, accessToken: 'code-token' }));
-    await act(async () => { await auth.verifyCode('ravi@example.com', '123456'); });
+    await act(async () => {
+      await auth.verifyCode('ravi@example.com', '123456');
+    });
     expect(auth.user).toEqual(ravi);
     expect(fetchMock.mock.calls[1][0]).toBe('/api/auth/otp/verify');
     expect(localStorage.getItem('verse_access_token')).toBe('code-token');
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ user: asha, accessToken: 'new-token' }));
-    await act(async () => { await auth.register({ name: 'Asha', email: 'asha@example.com', password: 'longpassword', role: 'jobseeker' }); });
+    await act(async () => {
+      await auth.register({ name: 'Asha', email: 'asha@example.com', password: 'longpassword', role: 'jobseeker' });
+    });
     expect(fetchMock.mock.calls[2][0]).toBe('/api/auth/register');
     expect(localStorage.getItem('verse_access_token')).toBe('new-token');
   });
@@ -111,7 +133,9 @@ describe('AuthProvider', () => {
     await settle();
 
     fetchMock.mockRejectedValueOnce(new TypeError('offline'));
-    await act(async () => { await auth.logout().catch(() => undefined); });
+    await act(async () => {
+      await auth.logout().catch(() => undefined);
+    });
     expect(auth.user).toBeNull();
     expect(modules.api.hasAccessToken()).toBe(false);
   });
@@ -119,11 +143,18 @@ describe('AuthProvider', () => {
   it('never lets a slow, older /me response overwrite a newer sign-in', async () => {
     modules.api.setAccessToken('old');
     let resolveMe!: (response: Response) => void;
-    fetchMock.mockImplementationOnce(() => new Promise<Response>(resolve => { resolveMe = resolve; }));
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveMe = resolve;
+        }),
+    );
     await mount();
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ user: ravi, accessToken: 'new' }));
-    await act(async () => { await auth.login('ravi@example.com', 'pw'); });
+    await act(async () => {
+      await auth.login('ravi@example.com', 'pw');
+    });
     resolveMe(jsonResponse({ user: asha }));
     await settle();
 
@@ -133,11 +164,18 @@ describe('AuthProvider', () => {
   it('ignores a stale /me failure after a newer sign-in', async () => {
     modules.api.setAccessToken('old');
     let resolveMe!: (response: Response) => void;
-    fetchMock.mockImplementationOnce(() => new Promise<Response>(resolve => { resolveMe = resolve; }));
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveMe = resolve;
+        }),
+    );
     await mount();
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ user: ravi, accessToken: 'new' }));
-    await act(async () => { await auth.login('ravi@example.com', 'pw'); });
+    await act(async () => {
+      await auth.login('ravi@example.com', 'pw');
+    });
     resolveMe(jsonResponse({ error: 'gone' }, 403));
     await settle();
 
@@ -152,14 +190,18 @@ describe('AuthProvider', () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ user: asha }));
     localStorage.setItem('verse_access_token', 'other-tab');
     await act(async () => {
-      window.dispatchEvent(new StorageEvent('storage', { key: 'verse_access_token', newValue: 'other-tab', storageArea: localStorage }));
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: 'verse_access_token', newValue: 'other-tab', storageArea: localStorage }),
+      );
     });
     await settle();
     expect(auth.user).toEqual(asha);
 
     localStorage.removeItem('verse_access_token');
     await act(async () => {
-      window.dispatchEvent(new StorageEvent('storage', { key: 'verse_access_token', newValue: null, storageArea: localStorage }));
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: 'verse_access_token', newValue: null, storageArea: localStorage }),
+      );
     });
     expect(auth).toMatchObject({ user: null, loading: false });
   });

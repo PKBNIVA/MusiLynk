@@ -33,7 +33,8 @@ function initOptions() {
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
-  for (const fn of [...Object.values(sdk), ...Object.values(scope), sdk.metrics.distribution]) if (typeof fn === 'function') fn.mockClear();
+  for (const fn of [...Object.values(sdk), ...Object.values(scope), sdk.metrics.distribution])
+    if (typeof fn === 'function') fn.mockClear();
 });
 
 describe('initSentry', () => {
@@ -44,7 +45,6 @@ describe('initSentry', () => {
       dsn: baseOptions.dsn,
       release: undefined,
       environment: 'production',
-      sendDefaultPii: false,
       dataCollection: { userInfo: false },
       tracesSampleRate: 0,
       replaysSessionSampleRate: 0,
@@ -91,22 +91,31 @@ describe('initSentry', () => {
     initSentry(baseOptions);
     const { beforeSendSpan, beforeBreadcrumb } = initOptions();
 
-    expect(beforeSendSpan({ description: 'GET /api/me?token=abc', data: { 'http.url': 'x?legacy-session-token' } })).toEqual({
+    expect(
+      beforeSendSpan({ description: 'GET /api/me?token=abc', data: { 'http.url': 'x?legacy-session-token' } }),
+    ).toEqual({
       description: 'GET /api/me?token=[Filtered]',
       data: { 'http.url': 'x?[Filtered]' },
     });
 
-    expect(beforeBreadcrumb({
-      message: 'Signed in as a@b.co',
-      data: { url: '/auth?code=1', from: '/a', to: '/verify?email=a%40b.co', status_code: 200 },
-    })).toEqual({
+    expect(
+      beforeBreadcrumb({
+        message: 'Signed in as a@b.co',
+        data: { url: '/auth?code=1', from: '/a', to: '/verify?email=a%40b.co', status_code: 200 },
+      }),
+    ).toEqual({
       message: 'Signed in as [email]',
       data: { url: '/auth?code=[Filtered]', from: '/a', to: '/verify?email=[Filtered]', status_code: 200 },
     });
     expect(beforeBreadcrumb({ category: 'ui.click' })).toEqual({ category: 'ui.click' });
 
     const original = Object.getOwnPropertyDescriptor(window, 'localStorage')!;
-    Object.defineProperty(window, 'localStorage', { configurable: true, get: () => { throw new DOMException('blocked', 'SecurityError'); } });
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get: () => {
+        throw new DOMException('blocked', 'SecurityError');
+      },
+    });
     try {
       expect(beforeBreadcrumb({ message: 'still works' })).toEqual({ message: 'still works' });
     } finally {
@@ -119,7 +128,9 @@ describe('capture helpers', () => {
   it('apply level, tags, extras and fingerprint in a scope', async () => {
     const { captureError, captureText } = await loadClient();
     const error = new Error('x');
-    expect(captureError(error, { level: 'warning', tags: { a: 'b' }, extra: { id: 1 }, fingerprint: ['f'] })).toBe('exception-id');
+    expect(captureError(error, { level: 'warning', tags: { a: 'b' }, extra: { id: 1 }, fingerprint: ['f'] })).toBe(
+      'exception-id',
+    );
     expect(sdk.captureException).toHaveBeenCalledWith(error);
     expect(scope.setLevel).toHaveBeenCalledWith('warning');
     expect(scope.setTags).toHaveBeenCalledWith({ a: 'b' });
@@ -153,6 +164,9 @@ describe('captureVital', () => {
     sdk.flush.mockReturnValueOnce(Promise.reject(new Error('offline')));
     captureVital({ name: 'CLS', value: 0.3, rating: 'poor' }, '/');
     await flush();
-    expect(sdk.metrics.distribution).toHaveBeenCalledWith('web_vital.cls', 0.3, { unit: 'none', attributes: { route: '/', rating: 'poor' } });
+    expect(sdk.metrics.distribution).toHaveBeenCalledWith('web_vital.cls', 0.3, {
+      unit: 'none',
+      attributes: { route: '/', rating: 'poor' },
+    });
   });
 });

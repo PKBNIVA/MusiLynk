@@ -1,5 +1,14 @@
 // Loaded on demand by monitoring.ts, only when VITE_SENTRY_DSN is set.
-import { addIntegration, captureException, captureMessage, flush, init, metrics, withScope } from '@sentry/react';
+import {
+  addIntegration,
+  captureException,
+  captureMessage,
+  flush,
+  init,
+  metrics,
+  withScope,
+  type Scope,
+} from '@sentry/react';
 import { allowSampled, classifyError, type ReportContext } from './monitoring';
 import { scrubEvent, scrubString, scrubValue } from './sentryScrub';
 import type { Vital } from './webVitals';
@@ -13,7 +22,9 @@ function secrets(): string[] {
     try {
       const token = window[store].getItem('verse_access_token');
       if (token) found.push(token);
-    } catch { /* storage blocked */ }
+    } catch {
+      /* storage blocked */
+    }
   }
   return found;
 }
@@ -23,9 +34,8 @@ export function initSentry(options: InitOptions) {
     dsn: options.dsn,
     release: options.release || undefined,
     environment: options.environment,
-    sendDefaultPii: false,
-    // sendDefaultPii alone still lets Sentry infer the visitor's IP address and user agent
-    // on ingest (errors, metrics); Verse never sends either.
+    // No IP address or user agent inferred for the reporter on ingest (errors, metrics); Verse never sends either.
+    // Sentry 11 replaced sendDefaultPii with this.
     dataCollection: { userInfo: false },
     tracesSampleRate: options.tracesSampleRate,
     // Session replay stays off (privacy and cost); tracing is added below only when a rate is configured.
@@ -56,11 +66,13 @@ export function initSentry(options: InitOptions) {
   });
   // Performance tracing is its own chunk so error-only builds (the default) never download it.
   if (options.tracesSampleRate > 0) {
-    void import('./sentryTracing').then(module => addIntegration(module.browserTracingIntegration())).catch(() => undefined);
+    void import('./sentryTracing')
+      .then((module) => addIntegration(module.browserTracingIntegration()))
+      .catch(() => undefined);
   }
 }
 
-function applyContext(scope: Parameters<Parameters<typeof withScope>[0]>[0], context?: ReportContext) {
+function applyContext(scope: Scope, context?: ReportContext) {
   if (!context) return;
   if (context.level) scope.setLevel(context.level);
   if (context.tags) scope.setTags(context.tags);
@@ -69,14 +81,14 @@ function applyContext(scope: Parameters<Parameters<typeof withScope>[0]>[0], con
 }
 
 export function captureError(error: unknown, context?: ReportContext): string {
-  return withScope(scope => {
+  return withScope((scope) => {
     applyContext(scope, context);
     return captureException(error);
   });
 }
 
 export function captureText(message: string, context?: ReportContext): string {
-  return withScope(scope => {
+  return withScope((scope) => {
     applyContext(scope, context);
     return captureMessage(message);
   });

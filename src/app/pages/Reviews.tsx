@@ -1,33 +1,33 @@
-import { useEffect, useState } from "react";
-import { Navigation } from "../components/Navigation";
-import { Card, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { apiGet, apiPost } from "../lib/api";
-import { toast } from "sonner";
-import { Star } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { Navigation } from '../components/Navigation';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { apiGet, apiPost } from '../lib/api';
+import { toast } from 'sonner';
+import { Star } from 'lucide-react';
 export default function Reviews() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [employers, setEmployers] = useState<any[]>([]);
-  const [employerId, setEmployerId] = useState("");
+  const [employerId, setEmployerId] = useState('');
   const [rating, setRating] = useState(5);
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [loadError, setLoadError] = useState("");
+  const [loadError, setLoadError] = useState('');
   const load = () =>
-    apiGet<any>("/reviews").then((d) => {
-      const eligible = d.eligibleEmployers || [];
-      setLoadError("");
-      setReviews(d.reviews || []);
-      setEmployers(eligible);
-      setEmployerId((current) =>
-        eligible.some((employer: any) => employer.id === current)
-          ? current
-          : eligible[0]?.id || "",
-      );
-    }).catch((e: any) => setLoadError(e?.message || "Reviews could not be loaded."));
+    apiGet<any>('/reviews')
+      .then((d) => {
+        const eligible = d.eligibleEmployers || [];
+        setLoadError('');
+        setReviews(d.reviews || []);
+        setEmployers(eligible);
+        setEmployerId((current) =>
+          eligible.some((employer: any) => employer.id === current) ? current : eligible[0]?.id || '',
+        );
+      })
+      .catch((e: any) => setLoadError(e?.message || 'Reviews could not be loaded.'));
   useEffect(() => {
     load();
   }, []);
@@ -36,10 +36,10 @@ export default function Reviews() {
     if (submitting) return;
     setSubmitting(true);
     try {
-      await apiPost("/reviews", { employerId, rating, title, body });
-      setTitle("");
-      setBody("");
-      toast.success("Review submitted for moderation");
+      await apiPost('/reviews', { employerId, rating, title, body });
+      setTitle('');
+      setBody('');
+      toast.success('Review submitted for moderation');
       await load();
     } catch (e: any) {
       toast.error(e.message);
@@ -52,9 +52,7 @@ export default function Reviews() {
       <Navigation />
       <main className="max-w-6xl mx-auto px-6 pt-28 pb-16">
         <h1 className="text-4xl font-bold">Employer reviews</h1>
-        <p className="text-slate-400 mt-2 mb-7">
-          Published reviews are moderated to reduce abuse and spam.
-        </p>
+        <p className="text-slate-400 mt-2 mb-7">Published reviews are moderated to reduce abuse and spam.</p>
         <div className="grid lg:grid-cols-[360px_1fr] gap-6">
           <Card className="bg-white/[.06] border-white/10 h-fit">
             <CardContent className="p-5">
@@ -62,22 +60,24 @@ export default function Reviews() {
               <form onSubmit={submit} className="space-y-3">
                 {employers.length === 0 && (
                   <p className="text-sm text-slate-400">
-                    You can review an employer after a completed hire. Employers
-                    you have already reviewed are not shown.
+                    You can review an employer after a completed hire. Employers you have already reviewed are not
+                    shown.
                   </p>
                 )}
-                {employers.length > 0 && <select
-                  aria-label="Employer"
-                  value={employerId}
-                  onChange={(e) => setEmployerId(e.target.value)}
-                  className="w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {employers.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.companyName || e.name}
-                    </option>
-                  ))}
-                </select>}
+                {employers.length > 0 && (
+                  <select
+                    aria-label="Employer"
+                    value={employerId}
+                    onChange={(e) => setEmployerId(e.target.value)}
+                    className="w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
+                  >
+                    {employers.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.companyName || e.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <select
                   aria-label="Rating"
                   value={rating}
@@ -105,13 +105,8 @@ export default function Reviews() {
                   placeholder="Share a useful, factual experience…"
                   className="bg-black/20 border-white/15 min-h-28"
                 />
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={!employerId || submitting}
-                  aria-busy={submitting}
-                >
-                  {submitting ? "Submitting…" : "Submit review"}
+                <Button type="submit" className="w-full" disabled={!employerId || submitting} aria-busy={submitting}>
+                  {submitting ? 'Submitting…' : 'Submit review'}
                 </Button>
               </form>
             </CardContent>
@@ -129,9 +124,7 @@ export default function Reviews() {
             )}
             {loadError ? null : reviews.length === 0 ? (
               <Card className="bg-white/5 border-white/10">
-                <CardContent className="p-8 text-slate-400">
-                  No published reviews yet.
-                </CardContent>
+                <CardContent className="p-8 text-slate-400">No published reviews yet.</CardContent>
               </Card>
             ) : (
               reviews.map((r) => (
@@ -144,9 +137,7 @@ export default function Reviews() {
                         {r.rating}/5
                       </div>
                     </div>
-                    <div className="text-sm text-slate-500 mt-1">
-                      by {r.authorName}
-                    </div>
+                    <div className="text-sm text-slate-500 mt-1">by {r.authorName}</div>
                     {r.title && <h3 className="font-medium mt-4">{r.title}</h3>}
                     <p className="text-slate-300 mt-2">{r.body}</p>
                   </CardContent>

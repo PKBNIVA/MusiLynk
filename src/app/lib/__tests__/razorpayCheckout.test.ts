@@ -35,7 +35,13 @@ class FakeRazorpay {
 }
 
 const subscription: RazorpayCheckoutConfig = { mode: 'razorpay', keyId: 'rzp_test_1', subscriptionId: 'sub_1' };
-const order: RazorpayCheckoutConfig = { mode: 'razorpay', keyId: 'rzp_test_1', orderId: 'order_1', amount: 50_000, currency: 'INR' };
+const order: RazorpayCheckoutConfig = {
+  mode: 'razorpay',
+  keyId: 'rzp_test_1',
+  orderId: 'order_1',
+  amount: 50_000,
+  currency: 'INR',
+};
 
 beforeEach(() => {
   apiPost.mockReset();
@@ -58,11 +64,19 @@ describe('openRazorpayCheckout with Razorpay', () => {
 
     const rz = FakeRazorpay.last;
     expect(rz.opened).toBe(true);
-    expect(rz.options).toMatchObject({ key: 'rzp_test_1', subscription_id: 'sub_1', description: 'Pro plan', name: 'Verse' });
+    expect(rz.options).toMatchObject({
+      key: 'rzp_test_1',
+      subscription_id: 'sub_1',
+      description: 'Pro plan',
+      name: 'Verse',
+    });
     expect(rz.options.order_id).toBeUndefined();
     rz.options.handler({ razorpay_payment_id: 'pay_1', razorpay_signature: 'sig' });
 
-    await expect(result).resolves.toEqual({ status: 'success', response: { razorpay_payment_id: 'pay_1', razorpay_signature: 'sig' } });
+    await expect(result).resolves.toEqual({
+      status: 'success',
+      response: { razorpay_payment_id: 'pay_1', razorpay_signature: 'sig' },
+    });
   });
 
   it('reuses an already-loaded SDK for an order and reports the last decline on dismiss', async () => {
@@ -120,7 +134,10 @@ describe('openRazorpayCheckout simulator', () => {
     expect(document.activeElement).toBe(button('success'));
 
     button('success').click();
-    await expect(result).resolves.toEqual({ status: 'success', response: { razorpay_subscription_id: 'sub_1', razorpay_signature: 's' } });
+    await expect(result).resolves.toEqual({
+      status: 'success',
+      response: { razorpay_subscription_id: 'sub_1', razorpay_signature: 's' },
+    });
     expect(apiPost).toHaveBeenCalledWith('/dev/razorpay/checkout', { subscriptionId: 'sub_1', outcome: 'success' });
     expect(dialog()).toBeNull();
     expect(document.activeElement).toBe(opener);
@@ -128,7 +145,12 @@ describe('openRazorpayCheckout simulator', () => {
 
   it('shows a decline, lets the user retry, then closes with the last error', async () => {
     let finish!: (value: unknown) => void;
-    apiPost.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    apiPost.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
 
     const result = openRazorpayCheckout({ ...order, simulator: true }, { description: 'Deposit' });
     expect(document.querySelector('[data-role="amount"]')!.textContent).toBe('');

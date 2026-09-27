@@ -21,9 +21,15 @@ export function fakeLocation(pathname: string, search = '') {
 export function blockStorage(name: 'localStorage' | 'sessionStorage') {
   const original = Object.getOwnPropertyDescriptor(window, name)!;
   const blocked = {
-    getItem: () => { throw new DOMException('blocked', 'SecurityError'); },
-    setItem: () => { throw new DOMException('blocked', 'SecurityError'); },
-    removeItem: () => { throw new DOMException('blocked', 'SecurityError'); },
+    getItem: () => {
+      throw new DOMException('blocked', 'SecurityError');
+    },
+    setItem: () => {
+      throw new DOMException('blocked', 'SecurityError');
+    },
+    removeItem: () => {
+      throw new DOMException('blocked', 'SecurityError');
+    },
   };
   Object.defineProperty(window, name, { configurable: true, get: () => blocked });
   return () => Object.defineProperty(window, name, original);
@@ -42,7 +48,9 @@ export class FakeXhr {
   body: unknown;
   requestHeaders: Record<string, string> = {};
   responseHeaders: Record<string, string> = {};
-  upload: { onprogress: ((event: { lengthComputable: boolean; loaded: number; total: number }) => void) | null } = { onprogress: null };
+  upload: { onprogress: ((event: { lengthComputable: boolean; loaded: number; total: number }) => void) | null } = {
+    onprogress: null,
+  };
   onload: XhrListener = null;
   onerror: XhrListener = null;
   ontimeout: XhrListener = null;
@@ -93,4 +101,4 @@ export class FakeXhr {
 }
 
 /** Resolves once pending microtasks (and a macrotask turn) have run. */
-export const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+export const flush = () => new Promise((resolve) => setTimeout(resolve, 0));

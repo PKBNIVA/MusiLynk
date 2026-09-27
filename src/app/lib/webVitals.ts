@@ -74,22 +74,29 @@ export function startWebVitals(report: Reporter): () => void {
   const interactions = new Map<number, number>();
   const observers: PerformanceObserver[] = [];
 
-  const observe = (type: string, callback: (entries: PerformanceEntry[]) => void, options: Record<string, unknown> = {}) => {
+  const observe = (
+    type: string,
+    callback: (entries: PerformanceEntry[]) => void,
+    options: Record<string, unknown> = {},
+  ) => {
     if (!supported.includes(type)) return;
     try {
-      const observer = new PerformanceObserver(list => callback(list.getEntries()));
+      const observer = new PerformanceObserver((list) => callback(list.getEntries()));
       observer.observe({ type, buffered: true, ...options } as PerformanceObserverInit);
       observers.push(observer);
-    } catch { /* unsupported option in this browser */ }
+    } catch {
+      /* unsupported option in this browser */
+    }
   };
 
-  observe('largest-contentful-paint', entries => {
+  observe('largest-contentful-paint', (entries) => {
     if (lcpFinal || startedHidden) return;
     const last = entries[entries.length - 1];
     if (last) lcp = last.startTime;
   });
-  observe('layout-shift', entries => {
-    for (const entry of entries as unknown as Shift[]) shifts.push({ value: entry.value, startTime: entry.startTime, hadRecentInput: entry.hadRecentInput });
+  observe('layout-shift', (entries) => {
+    for (const entry of entries as unknown as Shift[])
+      shifts.push({ value: entry.value, startTime: entry.startTime, hadRecentInput: entry.hadRecentInput });
   });
   const onInteractionEntries = (entries: PerformanceEntry[]) => {
     for (const entry of entries as unknown as Array<{ interactionId?: number; duration: number }>) {
@@ -101,7 +108,9 @@ export function startWebVitals(report: Reporter): () => void {
   observe('first-input', onInteractionEntries);
 
   // LCP stops at the first user input: later paints are caused by the visitor, not the load.
-  const finalizeLcp = () => { lcpFinal = true; };
+  const finalizeLcp = () => {
+    lcpFinal = true;
+  };
   window.addEventListener('keydown', finalizeLcp, { once: true, capture: true });
   window.addEventListener('pointerdown', finalizeLcp, { once: true, capture: true });
 
@@ -131,7 +140,11 @@ export function startWebVitals(report: Reporter): () => void {
       vitals.push({ name: 'CLS', value: cls, rating: rateVital('CLS', cls) });
     }
     for (const vital of vitals) {
-      try { report(vital); } catch { /* reporting must never break the page */ }
+      try {
+        report(vital);
+      } catch {
+        /* reporting must never break the page */
+      }
     }
   }
   function onPending(entries: PerformanceEntry[]) {

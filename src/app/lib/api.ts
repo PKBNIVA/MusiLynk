@@ -81,7 +81,11 @@ export type ApiOptions = RequestInit & { timeoutMs?: number; skipAuthRedirect?: 
 export const PLAN_LIMIT_EVENT = 'verse:plan-limit';
 const PLAN_LIMIT_CODES = new Set(['PLAN_LIMIT_REACHED', 'PLAN_LIMIT']);
 function announcePlanLimit(message?: string) {
-  try { window.dispatchEvent(new CustomEvent(PLAN_LIMIT_EVENT, {detail: {message}})); } catch { /* non-browser */ }
+  try {
+    window.dispatchEvent(new CustomEvent(PLAN_LIMIT_EVENT, { detail: { message } }));
+  } catch {
+    /* non-browser */
+  }
 }
 
 export class ApiError extends Error {
@@ -136,7 +140,7 @@ function wait(ms: number, signal?: AbortSignal | null) {
     if (signal?.aborted) return reject(signal.reason || new DOMException('Aborted', 'AbortError'));
     const onAbort = () => {
       window.clearTimeout(timer);
-      reject(signal.reason || new DOMException('Aborted', 'AbortError'));
+      reject(signal?.reason || new DOMException('Aborted', 'AbortError'));
     };
     const timer = window.setTimeout(() => {
       signal?.removeEventListener('abort', onAbort);
@@ -164,7 +168,8 @@ async function fetchWithTimeout(url: string, options: ApiOptions) {
 
 export async function api<T = any>(path: string, options: ApiOptions = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
-  if (options.body !== undefined && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
+  if (options.body !== undefined && !(options.body instanceof FormData))
+    headers.set('Content-Type', 'application/json');
   const token = readToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
@@ -179,7 +184,12 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
       const remainingMs = Math.max(0, deadlineAt - Date.now());
       if (remainingMs === 0) throw new RequestDeadlineError();
       const response = await fetchWithTimeout(`${API_BASE}${path}`, {
-        ...requestOptions, method, headers, credentials: 'omit', timeoutMs: remainingMs, signal,
+        ...requestOptions,
+        method,
+        headers,
+        credentials: 'omit',
+        timeoutMs: remainingMs,
+        signal,
       });
       lastResponse = response;
 
@@ -198,15 +208,27 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
       const isJson = /json/i.test(response.headers.get('content-type') || '');
       const parsed = isJson ? await response.json().catch(() => undefined) : undefined;
       if (response.ok && parsed === undefined) {
-        reportApiFailure({ status: response.status, code: 'INVALID_RESPONSE', method, path, requestId: requestIdFor(response) });
-        throw new ApiError('Verse received an unexpected response. Please try again shortly.', response.status, 'INVALID_RESPONSE', requestIdFor(response));
+        reportApiFailure({
+          status: response.status,
+          code: 'INVALID_RESPONSE',
+          method,
+          path,
+          requestId: requestIdFor(response),
+        });
+        throw new ApiError(
+          'Verse received an unexpected response. Please try again shortly.',
+          response.status,
+          'INVALID_RESPONSE',
+          requestIdFor(response),
+        );
       }
       const data = parsed ?? {};
       const requestId = requestIdFor(response, data);
       if (response.status === 401) redirectAfterUnauthorized(path, token, skipAuthRedirect);
       if (!response.ok) {
         if (response.status === 402 && PLAN_LIMIT_CODES.has(data.code)) announcePlanLimit(data.error);
-        if (response.status >= 500) reportApiFailure({ status: response.status, code: data.code, method, path, requestId });
+        if (response.status >= 500)
+          reportApiFailure({ status: response.status, code: data.code, method, path, requestId });
         throw new ApiError(data.error || `Request failed (${response.status})`, response.status, data.code, requestId);
       }
       return data;
@@ -227,7 +249,9 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
       const timedOut = error instanceof DOMException && error.name === 'AbortError';
       reportApiFailure({ status: 0, code: timedOut ? 'REQUEST_TIMEOUT' : 'NETWORK_ERROR', method, path });
       throw new ApiError(
-        timedOut ? 'Request timed out. Please try again.' : 'Network request failed. Check your connection and try again.',
+        timedOut
+          ? 'Request timed out. Please try again.'
+          : 'Network request failed. Check your connection and try again.',
         0,
         timedOut ? 'REQUEST_TIMEOUT' : 'NETWORK_ERROR',
       );
@@ -284,13 +308,21 @@ export function consumeReturnTo() {
 }
 
 export const apiGet = <T = any>(path: string, options: ApiOptions = {}) => api<T>(path, { ...options, method: 'GET' });
-export const apiPost = <T = any>(path: string, body?: unknown, options: ApiOptions = {}) => api<T>(path, { ...options, method: 'POST', body: JSON.stringify(body ?? {}) });
-export const apiPut = <T = any>(path: string, body?: unknown, options: ApiOptions = {}) => api<T>(path, { ...options, method: 'PUT', body: JSON.stringify(body ?? {}) });
-export const apiPatch = <T = any>(path: string, body?: unknown, options: ApiOptions = {}) => api<T>(path, { ...options, method: 'PATCH', body: JSON.stringify(body ?? {}) });
-export const apiDelete = <T = any>(path: string, options: ApiOptions = {}) => api<T>(path, { ...options, method: 'DELETE' });
+export const apiPost = <T = any>(path: string, body?: unknown, options: ApiOptions = {}) =>
+  api<T>(path, { ...options, method: 'POST', body: JSON.stringify(body ?? {}) });
+export const apiPut = <T = any>(path: string, body?: unknown, options: ApiOptions = {}) =>
+  api<T>(path, { ...options, method: 'PUT', body: JSON.stringify(body ?? {}) });
+export const apiPatch = <T = any>(path: string, body?: unknown, options: ApiOptions = {}) =>
+  api<T>(path, { ...options, method: 'PATCH', body: JSON.stringify(body ?? {}) });
+export const apiDelete = <T = any>(path: string, options: ApiOptions = {}) =>
+  api<T>(path, { ...options, method: 'DELETE' });
 
 /** Email sign-in codes. The response is identical whether or not an account exists. */
-export interface SignInCodeRequest { email: string; name?: string; role?: 'jobseeker' | 'employer' }
+export interface SignInCodeRequest {
+  email: string;
+  name?: string;
+  role?: 'jobseeker' | 'employer';
+}
 export interface SignInCodeResponse {
   ok: boolean;
   message: string;
@@ -298,25 +330,50 @@ export interface SignInCodeResponse {
   /** Local QA only: returned outside production when no email provider is configured. */
   debugCode?: string;
 }
-export const requestSignInCode = (payload: SignInCodeRequest) => apiPost<SignInCodeResponse>('/auth/otp/request', payload);
-export interface SignInMethods { signInCodes?: boolean; password?: boolean; emailDelivery?: boolean }
+export const requestSignInCode = (payload: SignInCodeRequest) =>
+  apiPost<SignInCodeResponse>('/auth/otp/request', payload);
+export interface SignInMethods {
+  signInCodes?: boolean;
+  password?: boolean;
+  emailDelivery?: boolean;
+}
 export const getSignInMethods = () => apiGet<SignInMethods>('/auth/methods');
 
 // ---- Uploads -------------------------------------------------------------
 // Mirrors backend MediaTypeSniffer / Upload::MAX_SIZE. The server re-checks the real
 // bytes; these checks only give the user an immediate, specific error.
 export const UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
-export const UPLOAD_ACCEPT = 'audio/mpeg,audio/wav,video/mp4,image/jpeg,image/png,image/webp,application/pdf,.mp3,.wav,.mp4,.jpg,.jpeg,.png,.webp,.pdf';
+export const UPLOAD_ACCEPT =
+  'audio/mpeg,audio/wav,video/mp4,image/jpeg,image/png,image/webp,application/pdf,.mp3,.wav,.mp4,.jpg,.jpeg,.png,.webp,.pdf';
 const UPLOAD_TYPE_ALIASES: Record<string, string> = {
-  'audio/mp3': 'audio/mpeg', 'audio/x-wav': 'audio/wav', 'audio/wave': 'audio/wav', 'audio/vnd.wave': 'audio/wav',
-  'image/jpg': 'image/jpeg', 'image/pjpeg': 'image/jpeg',
+  'audio/mp3': 'audio/mpeg',
+  'audio/x-wav': 'audio/wav',
+  'audio/wave': 'audio/wav',
+  'audio/vnd.wave': 'audio/wav',
+  'image/jpg': 'image/jpeg',
+  'image/pjpeg': 'image/jpeg',
 };
 const UPLOAD_TYPES_BY_EXTENSION: Record<string, string> = {
-  mp3: 'audio/mpeg', wav: 'audio/wav', mp4: 'video/mp4', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  mp4: 'video/mp4',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  pdf: 'application/pdf',
 };
 const UPLOAD_TYPES = new Set(Object.values(UPLOAD_TYPES_BY_EXTENSION));
 
-export type UploadResult = { id?: string; url: string; contentType?: string; byteSize?: number; metadata?: any; thumbnailUrl?: string; waveformUrl?: string };
+export type UploadResult = {
+  id?: string;
+  url: string;
+  contentType?: string;
+  byteSize?: number;
+  metadata?: any;
+  thumbnailUrl?: string;
+  waveformUrl?: string;
+};
 export type UploadOptions = { onProgress?: (pct: number) => void; signal?: AbortSignal };
 
 /** Canonical upload MIME type for a file, or null when the platform does not accept it. */
@@ -331,15 +388,27 @@ export function uploadContentType(file: File): string | null {
 
 /** Throws a user-facing ApiError when the file cannot be uploaded at all. */
 export function validateUploadFile(file: File) {
-  if (!uploadContentType(file)) throw new ApiError('Unsupported file type. Upload MP3, WAV, MP4, JPEG, PNG, WebP or PDF.', 422, 'UNSUPPORTED_TYPE');
+  if (!uploadContentType(file))
+    throw new ApiError('Unsupported file type. Upload MP3, WAV, MP4, JPEG, PNG, WebP or PDF.', 422, 'UNSUPPORTED_TYPE');
   if (file.size === 0) throw new ApiError('This file is empty.', 422, 'FILE_EMPTY');
-  if (file.size > UPLOAD_MAX_BYTES) throw new ApiError(`File is too large (${Math.ceil(file.size / 1024 / 1024)} MB). The limit is 100 MB.`, 422, 'FILE_TOO_LARGE');
+  if (file.size > UPLOAD_MAX_BYTES)
+    throw new ApiError(
+      `File is too large (${Math.ceil(file.size / 1024 / 1024)} MB). The limit is 100 MB.`,
+      422,
+      'FILE_TOO_LARGE',
+    );
 }
 
 type XhrResult = { status: number; data: any; requestId?: string };
 
 // fetch() has no upload progress events, so file bodies go through XMLHttpRequest.
-function sendWithProgress(method: string, url: string, body: Document | XMLHttpRequestBodyInit, headers: Record<string, string>, options: UploadOptions): Promise<XhrResult> {
+function sendWithProgress(
+  method: string,
+  url: string,
+  body: Document | XMLHttpRequestBodyInit,
+  headers: Record<string, string>,
+  options: UploadOptions,
+): Promise<XhrResult> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open(method, url);
@@ -354,12 +423,28 @@ function sendWithProgress(method: string, url: string, body: Document | XMLHttpR
     xhr.onload = () => {
       done();
       let data: any = {};
-      try { data = xhr.responseText && xhr.getResponseHeader('content-type')?.includes('json') ? JSON.parse(xhr.responseText) : {}; } catch { data = {}; }
+      try {
+        data =
+          xhr.responseText && xhr.getResponseHeader('content-type')?.includes('json')
+            ? JSON.parse(xhr.responseText)
+            : {};
+      } catch {
+        data = {};
+      }
       resolve({ status: xhr.status, data, requestId: xhr.getResponseHeader('x-request-id') || data?.requestId });
     };
-    xhr.onerror = () => { done(); reject(new ApiError('Upload interrupted. Check your connection and retry.', 0, 'NETWORK_ERROR')); };
-    xhr.ontimeout = () => { done(); reject(new ApiError('Upload timed out. Please retry.', 0, 'REQUEST_TIMEOUT')); };
-    xhr.onabort = () => { done(); reject(new ApiError('Upload cancelled.', 0, 'UPLOAD_CANCELLED')); };
+    xhr.onerror = () => {
+      done();
+      reject(new ApiError('Upload interrupted. Check your connection and retry.', 0, 'NETWORK_ERROR'));
+    };
+    xhr.ontimeout = () => {
+      done();
+      reject(new ApiError('Upload timed out. Please retry.', 0, 'REQUEST_TIMEOUT'));
+    };
+    xhr.onabort = () => {
+      done();
+      reject(new ApiError('Upload cancelled.', 0, 'UPLOAD_CANCELLED'));
+    };
     if (options.signal?.aborted) return xhr.abort();
     xhr.send(body);
   });
@@ -370,12 +455,20 @@ function sendWithProgress(method: string, url: string, body: Document | XMLHttpR
  * Direct mode: presign -> browser POST/PUT to the bucket -> /uploads/:id/complete.
  * Proxied mode: streamed PUT to the API, which verifies before storing.
  */
-export async function uploadMedia(file: File, onProgressOrOptions?: ((pct: number) => void) | UploadOptions): Promise<UploadResult> {
-  const options: UploadOptions = typeof onProgressOrOptions === 'function' ? { onProgress: onProgressOrOptions } : onProgressOrOptions || {};
+export async function uploadMedia(
+  file: File,
+  onProgressOrOptions?: ((pct: number) => void) | UploadOptions,
+): Promise<UploadResult> {
+  const options: UploadOptions =
+    typeof onProgressOrOptions === 'function' ? { onProgress: onProgressOrOptions } : onProgressOrOptions || {};
   validateUploadFile(file);
   const contentType = uploadContentType(file)!;
   options.onProgress?.(0);
-  const prep = await apiPost<any>('/uploads/presign', { filename: file.name, contentType, size: file.size }, { signal: options.signal });
+  const prep = await apiPost<any>(
+    '/uploads/presign',
+    { filename: file.name, contentType, size: file.size },
+    { signal: options.signal },
+  );
 
   if (prep.mode === 'direct') {
     let body: XMLHttpRequestBodyInit = file;
@@ -385,26 +478,57 @@ export async function uploadMedia(file: File, onProgressOrOptions?: ((pct: numbe
       form.append('file', file); // S3 requires the file to be the last field.
       body = form;
     }
-    const sent = await sendWithProgress(prep.method || 'PUT', prep.uploadUrl, body, prep.method === 'POST' ? {} : prep.headers || { 'Content-Type': contentType }, options);
+    const sent = await sendWithProgress(
+      prep.method || 'PUT',
+      prep.uploadUrl,
+      body,
+      prep.method === 'POST' ? {} : prep.headers || { 'Content-Type': contentType },
+      options,
+    );
     if (sent.status < 200 || sent.status >= 300) {
       await apiDelete(`/uploads/${prep.id}`, { skipAuthRedirect: true }).catch(() => undefined);
-      throw new ApiError(sent.status === 403 ? 'Storage refused the file (size or type did not match, or the link expired). Please retry.' : `Upload failed (${sent.status}). Please retry.`, sent.status, 'UPLOAD_FAILED');
+      throw new ApiError(
+        sent.status === 403
+          ? 'Storage refused the file (size or type did not match, or the link expired). Please retry.'
+          : `Upload failed (${sent.status}). Please retry.`,
+        sent.status,
+        'UPLOAD_FAILED',
+      );
     }
     const done = await apiPost<any>(`/uploads/${prep.id}/complete`, {}, { signal: options.signal });
     options.onProgress?.(100);
-    return { id: done.upload?.id || prep.id, url: done.url, contentType: done.upload?.contentType, byteSize: done.upload?.byteSize };
+    return {
+      id: done.upload?.id || prep.id,
+      url: done.url,
+      contentType: done.upload?.contentType,
+      byteSize: done.upload?.byteSize,
+    };
   }
 
   const token = readToken();
   const safeFilename = file.name.replace(/[^A-Za-z0-9_.-]/g, '_') || 'upload';
   const headers: Record<string, string> = { 'Content-Type': contentType, 'X-Filename': safeFilename };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const uploadUrl = prep.uploadUrl.startsWith('http') ? prep.uploadUrl : `${API_BASE.replace(/\/api\/?$/, '')}${prep.uploadUrl}`;
+  const uploadUrl = prep.uploadUrl.startsWith('http')
+    ? prep.uploadUrl
+    : `${API_BASE.replace(/\/api\/?$/, '')}${prep.uploadUrl}`;
   const sent = await sendWithProgress('PUT', uploadUrl, file, headers, options);
   if (sent.status === 401) redirectAfterUnauthorized('/uploads/local', token);
-  if (sent.status < 200 || sent.status >= 300) throw new ApiError(sent.data.error || `Upload failed (${sent.status})`, sent.status, sent.data.code, sent.requestId);
+  if (sent.status < 200 || sent.status >= 300)
+    throw new ApiError(
+      sent.data.error || `Upload failed (${sent.status})`,
+      sent.status,
+      sent.data.code,
+      sent.requestId,
+    );
   options.onProgress?.(100);
-  return { ...sent.data, id: sent.data.id, url: sent.data.url, contentType: sent.data.upload?.contentType, byteSize: sent.data.upload?.byteSize };
+  return {
+    ...sent.data,
+    id: sent.data.id,
+    url: sent.data.url,
+    contentType: sent.data.upload?.contentType,
+    byteSize: sent.data.upload?.byteSize,
+  };
 }
 
 /** Discards an uploaded file that was never saved to a work sample. */

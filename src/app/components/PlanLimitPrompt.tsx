@@ -1,5 +1,5 @@
-import {lazy, Suspense, useEffect, useState} from 'react';
-import {PLAN_LIMIT_EVENT} from '../lib/api';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { PLAN_LIMIT_EVENT } from '../lib/api';
 
 const PlanLimitDialog = lazy(() => import('./PlanLimitDialog'));
 
@@ -21,5 +21,9 @@ export function PlanLimitPrompt() {
   }, []);
 
   if (!needed) return null;
-  return <Suspense fallback={null}><PlanLimitDialog message={message} onClose={() => setMessage(null)} /></Suspense>;
+  return (
+    <Suspense fallback={null}>
+      <PlanLimitDialog message={message} onClose={() => setMessage(null)} />
+    </Suspense>
+  );
 }

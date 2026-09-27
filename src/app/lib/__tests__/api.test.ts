@@ -99,19 +99,30 @@ describe('api() requests', () => {
 describe('api() error mapping', () => {
   it('maps a 4xx JSON error to ApiError with code and request id, without reporting it', async () => {
     const { api, ApiError } = await loadApi();
-    fetchMock.mockResolvedValue(jsonResponse({ error: 'Title is required', code: 'VALIDATION' }, 422, { 'x-request-id': 'req-9' }));
+    fetchMock.mockResolvedValue(
+      jsonResponse({ error: 'Title is required', code: 'VALIDATION' }, 422, { 'x-request-id': 'req-9' }),
+    );
 
-    const error = await api('/jobs', { method: 'POST', body: '{}' }).catch(e => e);
+    const error = await api('/jobs', { method: 'POST', body: '{}' }).catch((e) => e);
 
     expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({ name: 'ApiError', message: 'Title is required', status: 422, code: 'VALIDATION', requestId: 'req-9' });
+    expect(error).toMatchObject({
+      name: 'ApiError',
+      message: 'Title is required',
+      status: 422,
+      code: 'VALIDATION',
+      requestId: 'req-9',
+    });
     expect(reportApiFailure).not.toHaveBeenCalled();
   });
 
   it('falls back to a generic message and a body request id', async () => {
     const { api } = await loadApi();
     fetchMock.mockResolvedValue(jsonResponse({ request_id: 'body-id' }, 409));
-    await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({ message: 'Request failed (409)', requestId: 'body-id' });
+    await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({
+      message: 'Request failed (409)',
+      requestId: 'body-id',
+    });
   });
 
   it('reports 5xx failures', async () => {
@@ -119,26 +130,40 @@ describe('api() error mapping', () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: 'Boom', code: 'INTERNAL', requestId: 'r1' }, 500));
 
     await expect(api('/jobs/12', { method: 'DELETE' })).rejects.toMatchObject({ status: 500, message: 'Boom' });
-    expect(reportApiFailure).toHaveBeenCalledWith({ status: 500, code: 'INTERNAL', method: 'DELETE', path: '/jobs/12', requestId: 'r1' });
+    expect(reportApiFailure).toHaveBeenCalledWith({
+      status: 500,
+      code: 'INTERNAL',
+      method: 'DELETE',
+      path: '/jobs/12',
+      requestId: 'r1',
+    });
   });
 
   it('treats a non-JSON success (SPA served for /api) as INVALID_RESPONSE', async () => {
     const { api } = await loadApi();
-    fetchMock.mockResolvedValue(new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } }));
+    fetchMock.mockResolvedValue(
+      new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } }),
+    );
 
     await expect(api('/me')).rejects.toMatchObject({ code: 'INVALID_RESPONSE', status: 200 });
-    expect(reportApiFailure).toHaveBeenCalledWith(expect.objectContaining({ code: 'INVALID_RESPONSE', path: '/me', method: 'GET' }));
+    expect(reportApiFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'INVALID_RESPONSE', path: '/me', method: 'GET' }),
+    );
   });
 
   it('treats malformed JSON on success as INVALID_RESPONSE', async () => {
     const { api } = await loadApi();
-    fetchMock.mockResolvedValue(new Response('{not json', { status: 200, headers: { 'content-type': 'application/json' } }));
+    fetchMock.mockResolvedValue(
+      new Response('{not json', { status: 200, headers: { 'content-type': 'application/json' } }),
+    );
     await expect(api('/me')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 
   it('maps a non-JSON error body to a generic message', async () => {
     const { api } = await loadApi();
-    fetchMock.mockResolvedValue(new Response('Bad gateway', { status: 400, headers: { 'content-type': 'text/plain' } }));
+    fetchMock.mockResolvedValue(
+      new Response('Bad gateway', { status: 400, headers: { 'content-type': 'text/plain' } }),
+    );
     await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({ status: 400, message: 'Request failed (400)' });
   });
 
@@ -171,13 +196,21 @@ describe('api() error mapping', () => {
 
     await expect(apiPost('/messages', { body: 'hi' })).rejects.toMatchObject({ status: 0, code: 'NETWORK_ERROR' });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(reportApiFailure).toHaveBeenCalledWith({ status: 0, code: 'NETWORK_ERROR', method: 'POST', path: '/messages' });
+    expect(reportApiFailure).toHaveBeenCalledWith({
+      status: 0,
+      code: 'NETWORK_ERROR',
+      method: 'POST',
+      path: '/messages',
+    });
   });
 
   it('maps a raw AbortError from fetch to REQUEST_TIMEOUT', async () => {
     const { apiPost } = await loadApi();
     fetchMock.mockRejectedValue(new DOMException('aborted', 'AbortError'));
-    await expect(apiPost('/x')).rejects.toMatchObject({ code: 'REQUEST_TIMEOUT', message: 'Request timed out. Please try again.' });
+    await expect(apiPost('/x')).rejects.toMatchObject({
+      code: 'REQUEST_TIMEOUT',
+      message: 'Request timed out. Please try again.',
+    });
   });
 });
 
@@ -231,7 +264,7 @@ describe('api() retries and deadlines', () => {
     const { apiGet } = await loadApi();
     fetchMock.mockImplementation(async () => jsonResponse({ error: 'down' }, 503));
 
-    const result = apiGet('/jobs').catch(e => e);
+    const result = apiGet('/jobs').catch((e) => e);
     await vi.advanceTimersByTimeAsync(500);
 
     expect(await result).toMatchObject({ status: 503, message: 'down' });
@@ -262,25 +295,36 @@ describe('api() retries and deadlines', () => {
   it('turns a hung request into REQUEST_TIMEOUT at the deadline', async () => {
     vi.useFakeTimers();
     const { apiPost } = await loadApi();
-    fetchMock.mockImplementation((_url: string, init: RequestInit) => new Promise((_resolve, reject) => {
-      init.signal!.addEventListener('abort', () => reject(init.signal!.reason));
-    }));
+    fetchMock.mockImplementation(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal!.addEventListener('abort', () => reject(init.signal!.reason));
+        }),
+    );
 
-    const result = apiPost('/slow', {}, { timeoutMs: 5_000 }).catch(e => e);
+    const result = apiPost('/slow', {}, { timeoutMs: 5_000 }).catch((e) => e);
     await vi.advanceTimersByTimeAsync(5_000);
 
     expect(await result).toMatchObject({ name: 'ApiError', code: 'REQUEST_TIMEOUT', status: 0 });
-    expect(reportApiFailure).toHaveBeenCalledWith({ status: 0, code: 'REQUEST_TIMEOUT', method: 'POST', path: '/slow' });
+    expect(reportApiFailure).toHaveBeenCalledWith({
+      status: 0,
+      code: 'REQUEST_TIMEOUT',
+      method: 'POST',
+      path: '/slow',
+    });
   });
 
   it('rethrows the caller abort unchanged and reports nothing', async () => {
     const { apiGet } = await loadApi();
     const controller = new AbortController();
-    fetchMock.mockImplementation((_url: string, init: RequestInit) => new Promise((_resolve, reject) => {
-      init.signal!.addEventListener('abort', () => reject(init.signal!.reason));
-    }));
+    fetchMock.mockImplementation(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal!.addEventListener('abort', () => reject(init.signal!.reason));
+        }),
+    );
 
-    const result = apiGet('/jobs', { signal: controller.signal }).catch(e => e);
+    const result = apiGet('/jobs', { signal: controller.signal }).catch((e) => e);
     const reason = new DOMException('left the page', 'AbortError');
     controller.abort(reason);
 
@@ -305,7 +349,7 @@ describe('api() retries and deadlines', () => {
     const controller = new AbortController();
     fetchMock.mockResolvedValue(jsonResponse({}, 503, { 'retry-after': '1' }));
 
-    const result = apiGet('/jobs', { signal: controller.signal }).catch(e => e);
+    const result = apiGet('/jobs', { signal: controller.signal }).catch((e) => e);
     await vi.advanceTimersByTimeAsync(10);
     controller.abort();
 
@@ -370,11 +414,15 @@ describe('session token handling', () => {
     const stop = onAccessTokenChange(listener);
 
     window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated', newValue: 'x', storageArea: localStorage }));
-    window.dispatchEvent(new StorageEvent('storage', { key: 'verse_access_token', newValue: 'x', storageArea: sessionStorage }));
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: 'verse_access_token', newValue: 'x', storageArea: sessionStorage }),
+    );
     expect(listener).not.toHaveBeenCalled();
 
     localStorage.setItem('verse_access_token', 'other-tab');
-    window.dispatchEvent(new StorageEvent('storage', { key: 'verse_access_token', newValue: 'other-tab', storageArea: localStorage }));
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: 'verse_access_token', newValue: 'other-tab', storageArea: localStorage }),
+    );
     expect(listener).toHaveBeenLastCalledWith(true);
     expect(hasAccessToken()).toBe(true);
 
@@ -383,7 +431,9 @@ describe('session token handling', () => {
     expect(listener).toHaveBeenLastCalledWith(false);
 
     stop();
-    window.dispatchEvent(new StorageEvent('storage', { key: 'verse_access_token', newValue: 'again', storageArea: localStorage }));
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: 'verse_access_token', newValue: 'again', storageArea: localStorage }),
+    );
     expect(listener).toHaveBeenCalledTimes(2);
   });
 
@@ -393,7 +443,12 @@ describe('session token handling', () => {
     const stop = onAccessTokenChange(listener);
     const original = Object.getOwnPropertyDescriptor(window, 'localStorage')!;
     const event = new StorageEvent('storage', { key: 'verse_access_token', newValue: 'x' });
-    Object.defineProperty(window, 'localStorage', { configurable: true, get: () => { throw new DOMException('blocked', 'SecurityError'); } });
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get: () => {
+        throw new DOMException('blocked', 'SecurityError');
+      },
+    });
     try {
       window.dispatchEvent(event);
     } finally {

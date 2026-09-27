@@ -58,15 +58,29 @@ describe('uploadContentType', () => {
 describe('validateUploadFile', () => {
   it('rejects unsupported, empty and oversized files with specific errors', async () => {
     const { validateUploadFile, UPLOAD_MAX_BYTES } = await loadApi();
-    expect(() => validateUploadFile(fileOf('a.gif', 'image/gif'))).toThrow(expect.objectContaining({ code: 'UNSUPPORTED_TYPE', status: 422 }));
-    expect(() => validateUploadFile(fileOf('a.png', 'image/png', 0))).toThrow(expect.objectContaining({ code: 'FILE_EMPTY' }));
-    expect(() => validateUploadFile(fileOf('a.mp4', 'video/mp4', UPLOAD_MAX_BYTES + 1))).toThrow('File is too large (101 MB). The limit is 100 MB.');
+    expect(() => validateUploadFile(fileOf('a.gif', 'image/gif'))).toThrow(
+      expect.objectContaining({ code: 'UNSUPPORTED_TYPE', status: 422 }),
+    );
+    expect(() => validateUploadFile(fileOf('a.png', 'image/png', 0))).toThrow(
+      expect.objectContaining({ code: 'FILE_EMPTY' }),
+    );
+    expect(() => validateUploadFile(fileOf('a.mp4', 'video/mp4', UPLOAD_MAX_BYTES + 1))).toThrow(
+      'File is too large (101 MB). The limit is 100 MB.',
+    );
     expect(() => validateUploadFile(fileOf('a.mp4', 'video/mp4', UPLOAD_MAX_BYTES))).not.toThrow();
   });
 
   it('keeps the accept list in step with the validator', async () => {
     const { UPLOAD_ACCEPT } = await loadApi();
-    for (const type of ['audio/mpeg', 'audio/wav', 'video/mp4', 'image/jpeg', 'image/png', 'image/webp', 'application/pdf']) {
+    for (const type of [
+      'audio/mpeg',
+      'audio/wav',
+      'video/mp4',
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/pdf',
+    ]) {
       expect(UPLOAD_ACCEPT.split(',')).toContain(type);
     }
   });
@@ -82,8 +96,20 @@ describe('uploadMedia', () => {
   it('uploads directly to storage with PUT and completes the upload', async () => {
     const { uploadMedia } = await loadApi();
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ mode: 'direct', id: 'up1', uploadUrl: 'https://bucket.example/put', headers: { 'Content-Type': 'audio/mpeg', 'x-amz-acl': 'private' } }))
-      .mockResolvedValueOnce(jsonResponse({ url: 'https://cdn.example/a.mp3', upload: { id: 'up1', contentType: 'audio/mpeg', byteSize: 3 } }));
+      .mockResolvedValueOnce(
+        jsonResponse({
+          mode: 'direct',
+          id: 'up1',
+          uploadUrl: 'https://bucket.example/put',
+          headers: { 'Content-Type': 'audio/mpeg', 'x-amz-acl': 'private' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          url: 'https://cdn.example/a.mp3',
+          upload: { id: 'up1', contentType: 'audio/mpeg', byteSize: 3 },
+        }),
+      );
     const progress = vi.fn();
 
     const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg'), progress);
@@ -94,9 +120,18 @@ describe('uploadMedia', () => {
     xhr.upload.onprogress!({ lengthComputable: false, loaded: 1, total: 0 });
     xhr.respond(200);
 
-    await expect(result).resolves.toEqual({ id: 'up1', url: 'https://cdn.example/a.mp3', contentType: 'audio/mpeg', byteSize: 3 });
-    expect(progress.mock.calls.map(call => call[0])).toEqual([0, 99, 100]);
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ filename: 'a.mp3', contentType: 'audio/mpeg', size: 3 });
+    await expect(result).resolves.toEqual({
+      id: 'up1',
+      url: 'https://cdn.example/a.mp3',
+      contentType: 'audio/mpeg',
+      byteSize: 3,
+    });
+    expect(progress.mock.calls.map((call) => call[0])).toEqual([0, 99, 100]);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      filename: 'a.mp3',
+      contentType: 'audio/mpeg',
+      size: 3,
+    });
     expect(fetchMock.mock.calls[1][0]).toBe('/api/uploads/up1/complete');
   });
 
@@ -116,7 +151,15 @@ describe('uploadMedia', () => {
   it('sends S3 POST policies as multipart with the file as the last field', async () => {
     const { uploadMedia } = await loadApi();
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ mode: 'direct', method: 'POST', id: 'up2', uploadUrl: 'https://bucket.example/', fields: { key: 'k/1', policy: 'p' } }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          mode: 'direct',
+          method: 'POST',
+          id: 'up2',
+          uploadUrl: 'https://bucket.example/',
+          fields: { key: 'k/1', policy: 'p' },
+        }),
+      )
       .mockResolvedValueOnce(jsonResponse({ url: 'u', upload: { id: 'up2' } }));
 
     const result = uploadMedia(fileOf('a.pdf', 'application/pdf'));
@@ -135,10 +178,14 @@ describe('uploadMedia', () => {
       .mockResolvedValueOnce(jsonResponse({ mode: 'direct', id: 'up3', uploadUrl: 'https://bucket.example/put' }))
       .mockResolvedValueOnce(jsonResponse(null, 204));
 
-    const result = uploadMedia(fileOf('a.webp', 'image/webp')).catch(e => e);
+    const result = uploadMedia(fileOf('a.webp', 'image/webp')).catch((e) => e);
     (await nextXhr()).respond(403);
 
-    expect(await result).toMatchObject({ status: 403, code: 'UPLOAD_FAILED', message: expect.stringContaining('Storage refused the file') });
+    expect(await result).toMatchObject({
+      status: 403,
+      code: 'UPLOAD_FAILED',
+      message: expect.stringContaining('Storage refused the file'),
+    });
     expect(fetchMock.mock.calls[1][0]).toBe('/api/uploads/up3');
     expect(fetchMock.mock.calls[1][1].method).toBe('DELETE');
   });
@@ -149,7 +196,7 @@ describe('uploadMedia', () => {
       .mockResolvedValueOnce(jsonResponse({ mode: 'direct', id: 'up4', uploadUrl: 'https://bucket.example/put' }))
       .mockRejectedValueOnce(new TypeError('offline'));
 
-    const result = uploadMedia(fileOf('a.webp', 'image/webp')).catch(e => e);
+    const result = uploadMedia(fileOf('a.webp', 'image/webp')).catch((e) => e);
     (await nextXhr()).respond(500);
     expect(await result).toMatchObject({ status: 500, message: 'Upload failed (500). Please retry.' });
   });
@@ -162,29 +209,44 @@ describe('uploadMedia', () => {
     const result = uploadMedia(fileOf('my demo (final).mp3', 'audio/mpeg'));
     const xhr = await nextXhr();
     expect(xhr.url).toBe('/api/uploads/local/abc');
-    expect(xhr.requestHeaders).toEqual({ 'Content-Type': 'audio/mpeg', 'X-Filename': 'my_demo__final_.mp3', Authorization: 'Bearer tok' });
-    xhr.respond(201, { id: 'p1', url: '/media/p1', upload: { contentType: 'audio/mpeg', byteSize: 3 } }, { 'x-request-id': 'r' });
+    expect(xhr.requestHeaders).toEqual({
+      'Content-Type': 'audio/mpeg',
+      'X-Filename': 'my_demo__final_.mp3',
+      Authorization: 'Bearer tok',
+    });
+    xhr.respond(
+      201,
+      { id: 'p1', url: '/media/p1', upload: { contentType: 'audio/mpeg', byteSize: 3 } },
+      { 'x-request-id': 'r' },
+    );
 
     await expect(result).resolves.toMatchObject({ id: 'p1', url: '/media/p1', contentType: 'audio/mpeg', byteSize: 3 });
   });
 
   it('keeps absolute proxied upload URLs and surfaces server errors', async () => {
     const { uploadMedia } = await loadApi();
-    fetchMock.mockResolvedValueOnce(jsonResponse({ mode: 'proxy', uploadUrl: 'https://api.example/api/uploads/local/x' }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ mode: 'proxy', uploadUrl: 'https://api.example/api/uploads/local/x' }),
+    );
 
-    const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg')).catch(e => e);
+    const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg')).catch((e) => e);
     const xhr = await nextXhr();
     expect(xhr.url).toBe('https://api.example/api/uploads/local/x');
     expect(xhr.requestHeaders.Authorization).toBeUndefined();
     xhr.respond(422, { error: 'That is not really an MP3', code: 'TYPE_MISMATCH', requestId: 'rid' });
 
-    expect(await result).toMatchObject({ status: 422, code: 'TYPE_MISMATCH', message: 'That is not really an MP3', requestId: 'rid' });
+    expect(await result).toMatchObject({
+      status: 422,
+      code: 'TYPE_MISMATCH',
+      message: 'That is not really an MP3',
+      requestId: 'rid',
+    });
   });
 
   it('tolerates an unreadable error body', async () => {
     const { uploadMedia } = await loadApi();
     fetchMock.mockResolvedValueOnce(jsonResponse({ mode: 'proxy', uploadUrl: '/api/uploads/local/x' }));
-    const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg')).catch(e => e);
+    const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg')).catch((e) => e);
     (await nextXhr()).respond(500, '{broken');
     expect(await result).toMatchObject({ status: 500, message: 'Upload failed (500)' });
   });
@@ -194,7 +256,7 @@ describe('uploadMedia', () => {
     setAccessToken('expired');
     fetchMock.mockResolvedValueOnce(jsonResponse({ mode: 'proxy', uploadUrl: '/api/uploads/local/x' }));
 
-    const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg')).catch(e => e);
+    const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg')).catch((e) => e);
     (await nextXhr()).respond(401, { error: 'Unauthorized' });
 
     expect(await result).toMatchObject({ status: 401 });
@@ -207,7 +269,7 @@ describe('uploadMedia', () => {
   ] as const)('maps xhr %s to %s', async (handler, code, message) => {
     const { uploadMedia } = await loadApi();
     fetchMock.mockResolvedValueOnce(jsonResponse({ mode: 'proxy', uploadUrl: '/api/uploads/local/x' }));
-    const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg')).catch(e => e);
+    const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg')).catch((e) => e);
     (await nextXhr())[handler]!();
     expect(await result).toMatchObject({ code, message });
   });
@@ -217,7 +279,7 @@ describe('uploadMedia', () => {
     const controller = new AbortController();
     fetchMock.mockResolvedValueOnce(jsonResponse({ mode: 'proxy', uploadUrl: '/api/uploads/local/x' }));
 
-    const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg'), { signal: controller.signal }).catch(e => e);
+    const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg'), { signal: controller.signal }).catch((e) => e);
     const xhr = await nextXhr();
     controller.abort();
 
@@ -233,7 +295,7 @@ describe('uploadMedia', () => {
       return jsonResponse({ mode: 'proxy', uploadUrl: '/api/uploads/local/x' });
     });
 
-    const result = await uploadMedia(fileOf('a.mp3', 'audio/mpeg'), { signal: controller.signal }).catch(e => e);
+    const result = await uploadMedia(fileOf('a.mp3', 'audio/mpeg'), { signal: controller.signal }).catch((e) => e);
     expect(result).toMatchObject({ code: 'UPLOAD_CANCELLED' });
     expect(FakeXhr.latest().sent).toBe(false);
   });

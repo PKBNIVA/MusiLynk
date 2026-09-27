@@ -25,13 +25,7 @@ export function FloatingCard({ children, delay = 0, className = '', tiltEnabled 
   }
 
   return (
-    <ReactParallaxTilt
-      tiltMaxAngleX={8}
-      tiltMaxAngleY={8}
-      perspective={1000}
-      scale={1.02}
-      transitionSpeed={2000}
-    >
+    <ReactParallaxTilt tiltMaxAngleX={8} tiltMaxAngleY={8} perspective={1000} scale={1.02} transitionSpeed={2000}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

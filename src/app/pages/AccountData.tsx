@@ -1,17 +1,17 @@
-import {useState} from 'react';
-import {Download, ShieldAlert} from 'lucide-react';
-import {toast} from 'sonner';
-import {Navigation} from '../components/Navigation';
-import {Button} from '../components/ui/button';
-import {Card, CardContent, CardHeader, CardTitle} from '../components/ui/card';
-import {Input} from '../components/ui/input';
-import {Label} from '../components/ui/label';
-import {api, apiDelete, setAccessToken} from '../lib/api';
-import {useAuth} from '../lib/authContext';
+import { useState } from 'react';
+import { Download, ShieldAlert } from 'lucide-react';
+import { toast } from 'sonner';
+import { Navigation } from '../components/Navigation';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { api, apiDelete, setAccessToken } from '../lib/api';
+import { useAuth } from '../lib/authContext';
 
 /** Download a copy of your data, or delete your account (DPDP Act rights to access and erasure). */
 export default function AccountData() {
-  const {user} = useAuth();
+  const { user } = useAuth();
   const [exporting, setExporting] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -21,8 +21,8 @@ export default function AccountData() {
   async function download() {
     setExporting(true);
     try {
-      const data = await api<unknown>('/account/export', {method: 'GET'});
-      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const data = await api<unknown>('/account/export', { method: 'GET' });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -45,7 +45,7 @@ export default function AccountData() {
     setDeleting(true);
     setDeleteError('');
     try {
-      await apiDelete('/account', {body: JSON.stringify({confirmEmail: confirmEmail.trim()})});
+      await apiDelete('/account', { body: JSON.stringify({ confirmEmail: confirmEmail.trim() }) });
       // A full reload to the home page: an in-app navigation races the route guard,
       // which would send the now signed-out user to the sign-in page instead.
       setAccessToken(null);
@@ -65,7 +65,10 @@ export default function AccountData() {
           <h1 className="text-4xl font-bold">Account and privacy</h1>
           <p className="text-slate-400 mt-2">
             Download everything Verse holds about you, or delete your account. Read the{' '}
-            <a href="/privacy" className="underline hover:text-white">privacy policy</a> for how long we keep records.
+            <a href="/privacy" className="underline hover:text-white">
+              privacy policy
+            </a>{' '}
+            for how long we keep records.
           </p>
         </div>
 
@@ -96,9 +99,13 @@ export default function AccountData() {
             <form onSubmit={deleteAccount} className="space-y-4 text-sm text-slate-300">
               <p>This cannot be undone. When you delete your account:</p>
               <ul className="list-disc pl-5 space-y-1">
-                <li>Your profile, portfolio, uploaded files, applications, saved jobs, alerts and reviews are removed.</li>
+                <li>
+                  Your profile, portfolio, uploaded files, applications, saved jobs, alerts and reviews are removed.
+                </li>
                 <li>Jobs, acts and requests you posted are closed.</li>
-                <li>Messages you already sent stay with the people you sent them to, shown as from “Deleted account”.</li>
+                <li>
+                  Messages you already sent stay with the people you sent them to, shown as from “Deleted account”.
+                </li>
                 <li>Payment records are kept because tax law requires it.</li>
               </ul>
               <p>Cancel any paid plan and finish or cancel open bookings first.</p>
@@ -109,7 +116,7 @@ export default function AccountData() {
                   type="email"
                   autoComplete="off"
                   value={confirmEmail}
-                  onChange={e => setConfirmEmail(e.target.value)}
+                  onChange={(e) => setConfirmEmail(e.target.value)}
                   placeholder={user?.email}
                   className="mt-2 bg-black/20 border-white/15"
                 />

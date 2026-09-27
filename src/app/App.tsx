@@ -7,7 +7,7 @@ import { PlanLimitPrompt } from './components/PlanLimitPrompt';
 
 // The toast container is loaded after the first render so it stays out of the entry chunk.
 // Toasts raised before it mounts are kept by sonner and shown as soon as it subscribes.
-const Toaster = lazy(() => import('./components/ui/sonner').then(module => ({ default: module.Toaster })));
+const Toaster = lazy(() => import('./components/ui/sonner').then((module) => ({ default: module.Toaster })));
 
 // Animations are plain CSS; styles/index.css shortens them for prefers-reduced-motion.
 export default function App() {

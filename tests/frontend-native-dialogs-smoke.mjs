@@ -18,7 +18,12 @@ for (const entry of await readdir(root, { recursive: true, withFileTypes: true }
 assert.deepEqual(offenders, [], `Native browser dialogs found:\n${offenders.join('\n')}`);
 
 // The pattern itself still catches the calls it is meant to catch.
-for (const sample of ["window.prompt('x')", "if(!window.confirm(`Delete?`))return", "alert('hi')", ";confirm('sure?')"]) {
+for (const sample of [
+  "window.prompt('x')",
+  'if(!window.confirm(`Delete?`))return',
+  "alert('hi')",
+  ";confirm('sure?')",
+]) {
   assert.match(sample, native, sample);
 }
 for (const sample of ['confirm.ask({title})', 'const confirm = useConfirm()']) {

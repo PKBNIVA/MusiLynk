@@ -11,10 +11,20 @@ let root: Root;
 
 function setVisibility(state: DocumentVisibilityState) {
   visibility = state;
-  act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+  act(() => {
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
 }
 
-function Poller({ tick, intervalMs = 1_000, enabled = true }: { tick: () => unknown; intervalMs?: number; enabled?: boolean }) {
+function Poller({
+  tick,
+  intervalMs = 1_000,
+  enabled = true,
+}: {
+  tick: () => unknown;
+  intervalMs?: number;
+  enabled?: boolean;
+}) {
   useVisiblePolling(tick, intervalMs, enabled);
   return null;
 }
@@ -37,7 +47,9 @@ describe('useVisiblePolling', () => {
     const tick = vi.fn();
     act(() => root.render(<Poller tick={tick} />));
     expect(tick).not.toHaveBeenCalled();
-    act(() => { vi.advanceTimersByTime(3_000); });
+    act(() => {
+      vi.advanceTimersByTime(3_000);
+    });
     expect(tick).toHaveBeenCalledTimes(3);
   });
 
@@ -45,12 +57,16 @@ describe('useVisiblePolling', () => {
     const tick = vi.fn();
     act(() => root.render(<Poller tick={tick} />));
     setVisibility('hidden');
-    act(() => { vi.advanceTimersByTime(5_000); });
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
     expect(tick).not.toHaveBeenCalled();
 
     setVisibility('visible');
     expect(tick).toHaveBeenCalledTimes(1);
-    act(() => { vi.advanceTimersByTime(1_000); });
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
     expect(tick).toHaveBeenCalledTimes(2);
   });
 
@@ -58,12 +74,16 @@ describe('useVisiblePolling', () => {
     visibility = 'hidden';
     const tick = vi.fn();
     act(() => root.render(<Poller tick={tick} />));
-    act(() => { vi.advanceTimersByTime(3_000); });
+    act(() => {
+      vi.advanceTimersByTime(3_000);
+    });
     expect(tick).not.toHaveBeenCalled();
     // Becoming visible twice does not stack two timers.
     setVisibility('visible');
     setVisibility('visible');
-    act(() => { vi.advanceTimersByTime(1_000); });
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
     expect(tick).toHaveBeenCalledTimes(3);
   });
 
@@ -71,19 +91,27 @@ describe('useVisiblePolling', () => {
     const tick = vi.fn();
     act(() => root.render(<Poller tick={tick} />));
     visibility = 'hidden'; // no visibilitychange event yet
-    act(() => { vi.advanceTimersByTime(1_000); });
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
     expect(tick).not.toHaveBeenCalled();
   });
 
   it('keeps polling after a tick throws and always calls the latest tick', () => {
-    const first = vi.fn(() => { throw new Error('offline'); });
+    const first = vi.fn(() => {
+      throw new Error('offline');
+    });
     const second = vi.fn();
     act(() => root.render(<Poller tick={first} />));
-    act(() => { vi.advanceTimersByTime(2_000); });
+    act(() => {
+      vi.advanceTimersByTime(2_000);
+    });
     expect(first).toHaveBeenCalledTimes(2);
 
     act(() => root.render(<Poller tick={second} />));
-    act(() => { vi.advanceTimersByTime(1_000); });
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
     expect(second).toHaveBeenCalledTimes(1);
     expect(first).toHaveBeenCalledTimes(2);
   });
@@ -91,16 +119,22 @@ describe('useVisiblePolling', () => {
   it('stops when disabled or unmounted', () => {
     const tick = vi.fn();
     act(() => root.render(<Poller tick={tick} enabled={false} />));
-    act(() => { vi.advanceTimersByTime(3_000); });
+    act(() => {
+      vi.advanceTimersByTime(3_000);
+    });
     expect(tick).not.toHaveBeenCalled();
 
     act(() => root.render(<Poller tick={tick} />));
-    act(() => { vi.advanceTimersByTime(1_000); });
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
     expect(tick).toHaveBeenCalledTimes(1);
 
     act(() => root.render(<Poller tick={tick} enabled={false} />));
     setVisibility('visible');
-    act(() => { vi.advanceTimersByTime(3_000); });
+    act(() => {
+      vi.advanceTimersByTime(3_000);
+    });
     expect(tick).toHaveBeenCalledTimes(1);
   });
 
@@ -114,9 +148,13 @@ describe('useVisiblePolling', () => {
     }
     act(() => root.render(<Switcher />));
     act(() => (Switcher as any).set(5_000));
-    act(() => { vi.advanceTimersByTime(4_000); });
+    act(() => {
+      vi.advanceTimersByTime(4_000);
+    });
     expect(tick).not.toHaveBeenCalled();
-    act(() => { vi.advanceTimersByTime(1_000); });
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
     expect(tick).toHaveBeenCalledTimes(1);
   });
 });
@@ -131,7 +169,9 @@ describe('announceUnreadChanged', () => {
   });
 
   it('is safe where events cannot be dispatched', () => {
-    vi.spyOn(window, 'dispatchEvent').mockImplementation(() => { throw new Error('no window'); });
+    vi.spyOn(window, 'dispatchEvent').mockImplementation(() => {
+      throw new Error('no window');
+    });
     expect(() => announceUnreadChanged()).not.toThrow();
   });
 });

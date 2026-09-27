@@ -121,7 +121,13 @@ export function reportWebVital(vital: Vital, path = typeof location !== 'undefin
 }
 
 /** A failed API call the user saw (5xx, timeout, network). Reported sparingly. */
-export function reportApiFailure(details: { status: number; code?: string; method: string; path: string; requestId?: string }) {
+export function reportApiFailure(details: {
+  status: number;
+  code?: string;
+  method: string;
+  path: string;
+  requestId?: string;
+}) {
   if (!SENTRY_DSN) return;
   const once = ONCE_PER_SESSION_CODES.has(details.code || '');
   if (!once && details.status >= 400 && details.status < 500) return;
@@ -153,8 +159,13 @@ function stopEarlyCapture() {
 
 function loadSentry(): Promise<boolean> {
   return import('./sentryClient')
-    .then(module => {
-      module.initSentry({ dsn: SENTRY_DSN, release: RELEASE, environment: ENVIRONMENT, tracesSampleRate: TRACES_SAMPLE_RATE });
+    .then((module) => {
+      module.initSentry({
+        dsn: SENTRY_DSN,
+        release: RELEASE,
+        environment: ENVIRONMENT,
+        tracesSampleRate: TRACES_SAMPLE_RATE,
+      });
       // Sentry's own global handlers take over from here.
       stopEarlyCapture();
       client = module;
@@ -180,10 +191,13 @@ export function initMonitoring() {
   if (!SENTRY_DSN || loading || typeof window === 'undefined') return;
   window.addEventListener('error', onEarlyError);
   window.addEventListener('unhandledrejection', onEarlyRejection);
-  startWebVitals(vital => reportWebVital(vital));
-  loading = new Promise<boolean>(resolve => {
-    const start = () => { void loadSentry().then(resolve); };
-    const idle = (window as any).requestIdleCallback as ((cb: () => void, options?: { timeout: number }) => number) | undefined;
+  startWebVitals((vital) => reportWebVital(vital));
+  loading = new Promise<boolean>((resolve) => {
+    const start = () => {
+      void loadSentry().then(resolve);
+    };
+    const idle = (window as any).requestIdleCallback as
+      ((cb: () => void, options?: { timeout: number }) => number) | undefined;
     if (idle) idle(start, { timeout: 2_000 });
     else window.setTimeout(start, 1_000);
   });
@@ -199,7 +213,9 @@ export function whenMonitoringReady(): Promise<boolean> {
 /** Admin check: sends a tagged client-side test error. Returns the event id, or null. */
 export async function sendClientTestError(): Promise<string | null> {
   if (!(await whenMonitoringReady()) || !client) return null;
-  return client.captureError(new Error('Verse Sentry client test error (triggered by an admin; safe to resolve)'), {
-    tags: { source: 'admin_sentry_test', verse_test: 'true' },
-  }) || null;
+  return (
+    client.captureError(new Error('Verse Sentry client test error (triggered by an admin; safe to resolve)'), {
+      tags: { source: 'admin_sentry_test', verse_test: 'true' },
+    }) || null
+  );
 }

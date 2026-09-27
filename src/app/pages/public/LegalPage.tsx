@@ -1,20 +1,203 @@
-import {usePageMeta} from '../../components/PageMeta';
+import { usePageMeta } from '../../components/PageMeta';
 import { Link, useLocation } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
 
 const SUPPORT_EMAIL = 'admin@alienbrains.in';
 const EFFECTIVE_DATE = '25 September 2026';
 
-const sections: Record<string, { title:string; intro:string; items:[string,string][] }> = {
-  about: { title:'About Verse', intro:'Verse is a professional operating network for the music industry: careers, hiring, band building, talent discovery, live-act booking and music-production staffing.', items:[['What Verse does','Verse helps music professionals show proof of work, discover opportunities, build teams, book talent and manage professional relationships without forcing every use case into a generic job board.'],['Who it is for','Performers, composers, producers, engineers, touring crews, managers, labels, studios, agencies, venues, festivals, production companies and other legitimate music-industry participants.'],['Operator','Verse is operated by Alien Brains Private Limited.']] },
-  terms: { title:'Terms of Use', intro:'These terms govern access to and use of Verse. By creating an account or using the service, you agree to follow them.', items:[['Accounts and identity','Provide accurate account information, keep credentials secure and do not impersonate another person, organization or act. You are responsible for activity performed through your account.'],['Opportunities and hiring','Listings must describe legitimate work. Misleading jobs, unlawful discrimination, fake auditions, undisclosed application fees and fraudulent offers are prohibited.'],['Bookings and payments','A booking is confirmed only when its status in Verse says so. Quotes, deposits, balances, cancellation terms and refund rules remain part of the booking record.'],['Content and rights','Only upload or link work you have the right to share. You retain responsibility for your portfolio, credits, media and listing content.'],['Platform enforcement','Verse may moderate, restrict, suspend or remove accounts or content that create safety, fraud, payment, abuse or legal risks.'],['Questions',`Questions about these terms can be sent to ${SUPPORT_EMAIL}.`]] },
-  privacy: { title:'Privacy Policy', intro:'Verse processes account and marketplace information needed to provide profiles, hiring, booking, communication, billing, trust and safety functions.', items:[['Data we process','Account details; professional profile and portfolio data; applications; messages; availability; booking and billing records; verification and safety reports; and device, session and operational logs.'],['Why we use it','To provide the service, authenticate users, match and search content, process transactions, prevent abuse, communicate service updates, improve reliability and meet legal obligations.'],['Public information','Fields deliberately published on public profiles, acts and opportunities may be visible to search engines. Private contact details and internal recruiter information are not intended to be public.'],['Your data and your account','Signed-in users can download a copy of their data and delete their account themselves from the account menu under “Your data & account”. Deleting an account removes the profile, portfolio, uploaded files, applications, saved jobs, alerts and reviews, and closes anything the user posted. Messages already sent stay with their recipients, shown as from “Deleted account”.'],['Retention and other requests',`Payment and invoice records are kept for as long as Indian tax and company law requires, even after an account is deleted. Other records are kept only while needed to operate Verse, resolve disputes and prevent abuse. To correct data, or for any request the account page does not cover, email ${SUPPORT_EMAIL}.`],['Service providers','Hosting, email, storage, analytics and payment providers may process limited data for Verse under their own security and contractual controls.']] },
-  safety: { title:'Trust & Safety', intro:'Music work often moves quickly and informally. Verse is designed to make important professional terms more explicit and reportable.', items:[['Avoid application fees','Do not pay private “registration”, audition or security fees to obtain ordinary work. Report suspicious payment requests.'],['Keep commercial terms recorded','For paid bookings or work, keep scope, date, amount, cancellation and payment records tied to the platform workflow where possible.'],['Verification is a signal','Verification can reduce uncertainty but is not a guarantee of conduct, quality or financial performance.'],['Report problems',`Report impersonation, harassment, unsafe requests, fraud, rights infringement, payment diversion, discriminatory content or suspicious opportunities to ${SUPPORT_EMAIL}.`]] },
-  cookies: { title:'Browser Storage & Session Notice', intro:'Verse uses essential browser storage to authenticate accounts and remember product preferences.', items:[['Authenticated sessions','After sign-in, Verse stores an access credential in your browser’s local storage and sends it to the Verse API over HTTPS, so you stay signed in across tabs and browser restarts until the session expires (at most 30 days). Signing out removes it from every open Verse tab.'],['Local preferences','Non-sensitive preferences, such as whether you completed the product tour, may be stored locally in your browser.'],['Optional analytics','Verse will disclose and, where required, request consent before enabling non-essential analytics or advertising storage.']] },
-  refunds: { title:'Payments, Cancellations & Refunds', intro:'SaaS subscriptions and marketplace bookings are separate products with separate commercial terms.', items:[['Subscriptions','Plan changes, trial eligibility, renewal and cancellation follow the terms shown at purchase. Available billing controls and the effective date of a change are shown in the billing workspace.'],['Bookings','Artist and act bookings may use quote-specific deposits, balance dates and cancellation terms. Refund eligibility depends on the accepted booking terms, booking status, timing and applicable law.'],['Disputes',`Verse does not promise escrow or guaranteed refunds unless that protection is explicitly shown during checkout. For a payment or cancellation issue, contact ${SUPPORT_EMAIL} with the relevant booking or transaction reference.`]] },
-  community: { title:'Community & Professional Conduct', intro:'Verse is a professional marketplace. Treat other participants as collaborators and counterparties, not content targets.', items:[['Respect','No harassment, threats, hate, sexual solicitation, spam or repeated unwanted contact.'],['No harassment','Harassment includes insults or slurs, sexual comments or requests, threats, pressure to meet alone or outside agreed work, messaging someone again after they said no or blocked you, and sharing anyone’s private details or images. One serious incident is enough for suspension.'],['No scams or fee requests','Never ask talent to pay to be considered: no “registration”, audition, portfolio, joining or security fees and no “advance” from the person being hired. Do not share UPI IDs or bank details to collect such money, and do not push people to WhatsApp or Telegram before terms are agreed. Verse flags these patterns in messages and moderators act on reports.'],['Professional honesty','Do not fabricate credits, availability, rates, client names, verification evidence or completed work.'],['No manipulation','Do not create fake reviews, fake applications, fake bookings or multiple accounts to manipulate reputation or search.'],['Reporting and enforcement','Use Report on a conversation, profile or listing. Moderators review the report with the relevant messages and the account’s history, then dismiss it, send a warning or suspend the account. Blocking stops messages both ways at any time.']] },
-  accessibility: { title:'Accessibility', intro:'Verse aims to make core hiring, booking and professional-profile workflows usable with keyboards, different screen sizes and assistive technologies.', items:[['Product approach','Core actions use semantic controls, visible focus states, readable contrast, labels for form inputs and alternatives for non-text media.'],['Accessibility support',`If you encounter an accessibility barrier, email ${SUPPORT_EMAIL}. Describe the screen and task, and Verse support will provide an alternate route where possible and record the issue for remediation.`]] },
-  contact: { title:'Contact & Grievance Support', intro:'Contact Verse for account, booking, billing, safety, privacy and accessibility support.', items:[['Operator','Verse is operated by Alien Brains Private Limited.'],['Support and grievances',`Email ${SUPPORT_EMAIL}. Include your account email and any relevant listing, booking or transaction reference, but never send a password, one-time code or full payment-card details.`],['Response and escalation','Verse will acknowledge the request and route it to the appropriate account, safety, privacy or billing owner. Urgent safety reports should be clearly marked “Urgent safety” in the subject line.']] },
+const sections: Record<string, { title: string; intro: string; items: [string, string][] }> = {
+  about: {
+    title: 'About Verse',
+    intro:
+      'Verse is a professional operating network for the music industry: careers, hiring, band building, talent discovery, live-act booking and music-production staffing.',
+    items: [
+      [
+        'What Verse does',
+        'Verse helps music professionals show proof of work, discover opportunities, build teams, book talent and manage professional relationships without forcing every use case into a generic job board.',
+      ],
+      [
+        'Who it is for',
+        'Performers, composers, producers, engineers, touring crews, managers, labels, studios, agencies, venues, festivals, production companies and other legitimate music-industry participants.',
+      ],
+      ['Operator', 'Verse is operated by Alien Brains Private Limited.'],
+    ],
+  },
+  terms: {
+    title: 'Terms of Use',
+    intro:
+      'These terms govern access to and use of Verse. By creating an account or using the service, you agree to follow them.',
+    items: [
+      [
+        'Accounts and identity',
+        'Provide accurate account information, keep credentials secure and do not impersonate another person, organization or act. You are responsible for activity performed through your account.',
+      ],
+      [
+        'Opportunities and hiring',
+        'Listings must describe legitimate work. Misleading jobs, unlawful discrimination, fake auditions, undisclosed application fees and fraudulent offers are prohibited.',
+      ],
+      [
+        'Bookings and payments',
+        'A booking is confirmed only when its status in Verse says so. Quotes, deposits, balances, cancellation terms and refund rules remain part of the booking record.',
+      ],
+      [
+        'Content and rights',
+        'Only upload or link work you have the right to share. You retain responsibility for your portfolio, credits, media and listing content.',
+      ],
+      [
+        'Platform enforcement',
+        'Verse may moderate, restrict, suspend or remove accounts or content that create safety, fraud, payment, abuse or legal risks.',
+      ],
+      ['Questions', `Questions about these terms can be sent to ${SUPPORT_EMAIL}.`],
+    ],
+  },
+  privacy: {
+    title: 'Privacy Policy',
+    intro:
+      'Verse processes account and marketplace information needed to provide profiles, hiring, booking, communication, billing, trust and safety functions.',
+    items: [
+      [
+        'Data we process',
+        'Account details; professional profile and portfolio data; applications; messages; availability; booking and billing records; verification and safety reports; and device, session and operational logs.',
+      ],
+      [
+        'Why we use it',
+        'To provide the service, authenticate users, match and search content, process transactions, prevent abuse, communicate service updates, improve reliability and meet legal obligations.',
+      ],
+      [
+        'Public information',
+        'Fields deliberately published on public profiles, acts and opportunities may be visible to search engines. Private contact details and internal recruiter information are not intended to be public.',
+      ],
+      [
+        'Your data and your account',
+        'Signed-in users can download a copy of their data and delete their account themselves from the account menu under “Your data & account”. Deleting an account removes the profile, portfolio, uploaded files, applications, saved jobs, alerts and reviews, and closes anything the user posted. Messages already sent stay with their recipients, shown as from “Deleted account”.',
+      ],
+      [
+        'Retention and other requests',
+        `Payment and invoice records are kept for as long as Indian tax and company law requires, even after an account is deleted. Other records are kept only while needed to operate Verse, resolve disputes and prevent abuse. To correct data, or for any request the account page does not cover, email ${SUPPORT_EMAIL}.`,
+      ],
+      [
+        'Service providers',
+        'Hosting, email, storage, analytics and payment providers may process limited data for Verse under their own security and contractual controls.',
+      ],
+    ],
+  },
+  safety: {
+    title: 'Trust & Safety',
+    intro:
+      'Music work often moves quickly and informally. Verse is designed to make important professional terms more explicit and reportable.',
+    items: [
+      [
+        'Avoid application fees',
+        'Do not pay private “registration”, audition or security fees to obtain ordinary work. Report suspicious payment requests.',
+      ],
+      [
+        'Keep commercial terms recorded',
+        'For paid bookings or work, keep scope, date, amount, cancellation and payment records tied to the platform workflow where possible.',
+      ],
+      [
+        'Verification is a signal',
+        'Verification can reduce uncertainty but is not a guarantee of conduct, quality or financial performance.',
+      ],
+      [
+        'Report problems',
+        `Report impersonation, harassment, unsafe requests, fraud, rights infringement, payment diversion, discriminatory content or suspicious opportunities to ${SUPPORT_EMAIL}.`,
+      ],
+    ],
+  },
+  cookies: {
+    title: 'Browser Storage & Session Notice',
+    intro: 'Verse uses essential browser storage to authenticate accounts and remember product preferences.',
+    items: [
+      [
+        'Authenticated sessions',
+        'After sign-in, Verse stores an access credential in your browser’s local storage and sends it to the Verse API over HTTPS, so you stay signed in across tabs and browser restarts until the session expires (at most 30 days). Signing out removes it from every open Verse tab.',
+      ],
+      [
+        'Local preferences',
+        'Non-sensitive preferences, such as whether you completed the product tour, may be stored locally in your browser.',
+      ],
+      [
+        'Optional analytics',
+        'Verse will disclose and, where required, request consent before enabling non-essential analytics or advertising storage.',
+      ],
+    ],
+  },
+  refunds: {
+    title: 'Payments, Cancellations & Refunds',
+    intro: 'SaaS subscriptions and marketplace bookings are separate products with separate commercial terms.',
+    items: [
+      [
+        'Subscriptions',
+        'Plan changes, trial eligibility, renewal and cancellation follow the terms shown at purchase. Available billing controls and the effective date of a change are shown in the billing workspace.',
+      ],
+      [
+        'Bookings',
+        'Artist and act bookings may use quote-specific deposits, balance dates and cancellation terms. Refund eligibility depends on the accepted booking terms, booking status, timing and applicable law.',
+      ],
+      [
+        'Disputes',
+        `Verse does not promise escrow or guaranteed refunds unless that protection is explicitly shown during checkout. For a payment or cancellation issue, contact ${SUPPORT_EMAIL} with the relevant booking or transaction reference.`,
+      ],
+    ],
+  },
+  community: {
+    title: 'Community & Professional Conduct',
+    intro:
+      'Verse is a professional marketplace. Treat other participants as collaborators and counterparties, not content targets.',
+    items: [
+      ['Respect', 'No harassment, threats, hate, sexual solicitation, spam or repeated unwanted contact.'],
+      [
+        'No harassment',
+        'Harassment includes insults or slurs, sexual comments or requests, threats, pressure to meet alone or outside agreed work, messaging someone again after they said no or blocked you, and sharing anyone’s private details or images. One serious incident is enough for suspension.',
+      ],
+      [
+        'No scams or fee requests',
+        'Never ask talent to pay to be considered: no “registration”, audition, portfolio, joining or security fees and no “advance” from the person being hired. Do not share UPI IDs or bank details to collect such money, and do not push people to WhatsApp or Telegram before terms are agreed. Verse flags these patterns in messages and moderators act on reports.',
+      ],
+      [
+        'Professional honesty',
+        'Do not fabricate credits, availability, rates, client names, verification evidence or completed work.',
+      ],
+      [
+        'No manipulation',
+        'Do not create fake reviews, fake applications, fake bookings or multiple accounts to manipulate reputation or search.',
+      ],
+      [
+        'Reporting and enforcement',
+        'Use Report on a conversation, profile or listing. Moderators review the report with the relevant messages and the account’s history, then dismiss it, send a warning or suspend the account. Blocking stops messages both ways at any time.',
+      ],
+    ],
+  },
+  accessibility: {
+    title: 'Accessibility',
+    intro:
+      'Verse aims to make core hiring, booking and professional-profile workflows usable with keyboards, different screen sizes and assistive technologies.',
+    items: [
+      [
+        'Product approach',
+        'Core actions use semantic controls, visible focus states, readable contrast, labels for form inputs and alternatives for non-text media.',
+      ],
+      [
+        'Accessibility support',
+        `If you encounter an accessibility barrier, email ${SUPPORT_EMAIL}. Describe the screen and task, and Verse support will provide an alternate route where possible and record the issue for remediation.`,
+      ],
+    ],
+  },
+  contact: {
+    title: 'Contact & Grievance Support',
+    intro: 'Contact Verse for account, booking, billing, safety, privacy and accessibility support.',
+    items: [
+      ['Operator', 'Verse is operated by Alien Brains Private Limited.'],
+      [
+        'Support and grievances',
+        `Email ${SUPPORT_EMAIL}. Include your account email and any relevant listing, booking or transaction reference, but never send a password, one-time code or full payment-card details.`,
+      ],
+      [
+        'Response and escalation',
+        'Verse will acknowledge the request and route it to the appropriate account, safety, privacy or billing owner. Urgent safety reports should be clearly marked “Urgent safety” in the subject line.',
+      ],
+    ],
+  },
 };
 
 export default function LegalPage() {
@@ -22,5 +205,45 @@ export default function LegalPage() {
   const key = path === 'community-guidelines' ? 'community' : path === 'refund-policy' ? 'refunds' : path;
   const content = sections[key] || sections.about;
   usePageMeta(content.title, content.intro);
-  return <div className="min-h-screen bg-slate-950 text-white"><PublicNav/><main className="max-w-4xl mx-auto px-5 py-14"><div className="text-xs uppercase tracking-[.2em] text-violet-300">Verse information</div><h1 className="text-4xl md:text-6xl font-bold mt-2">{content.title}</h1><p className="text-slate-300 leading-8 mt-6 text-lg">{content.intro}</p><div className="mt-9 space-y-4">{content.items.map(([title,body])=><section key={title} className="rounded-xl border border-white/10 bg-white/[.035] p-5"><h2 className="font-semibold text-lg">{title}</h2><p className="text-slate-400 leading-7 mt-2">{body}</p>{body.includes(SUPPORT_EMAIL)&&<a className="inline-block mt-3 text-violet-300 hover:text-violet-200 underline underline-offset-4" href={`mailto:${SUPPORT_EMAIL}`}>Email Verse support</a>}</section>)}</div>{['terms','privacy','cookies','refunds'].includes(key)&&<p className="text-xs text-slate-500 mt-7">Effective {EFFECTIVE_DATE}. Material updates will be published on this page.</p>}<div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400"><Link to="/terms">Terms</Link><Link to="/privacy">Privacy</Link><Link to="/safety">Safety</Link><Link to="/cookies">Browser storage</Link><Link to="/refund-policy">Refunds</Link><Link to="/community-guidelines">Conduct</Link><Link to="/accessibility">Accessibility</Link><Link to="/contact">Contact</Link></div></main></div>;
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+      <PublicNav />
+      <main className="max-w-4xl mx-auto px-5 py-14">
+        <div className="text-xs uppercase tracking-[.2em] text-violet-300">Verse information</div>
+        <h1 className="text-4xl md:text-6xl font-bold mt-2">{content.title}</h1>
+        <p className="text-slate-300 leading-8 mt-6 text-lg">{content.intro}</p>
+        <div className="mt-9 space-y-4">
+          {content.items.map(([title, body]) => (
+            <section key={title} className="rounded-xl border border-white/10 bg-white/[.035] p-5">
+              <h2 className="font-semibold text-lg">{title}</h2>
+              <p className="text-slate-400 leading-7 mt-2">{body}</p>
+              {body.includes(SUPPORT_EMAIL) && (
+                <a
+                  className="inline-block mt-3 text-violet-300 hover:text-violet-200 underline underline-offset-4"
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                >
+                  Email Verse support
+                </a>
+              )}
+            </section>
+          ))}
+        </div>
+        {['terms', 'privacy', 'cookies', 'refunds'].includes(key) && (
+          <p className="text-xs text-slate-500 mt-7">
+            Effective {EFFECTIVE_DATE}. Material updates will be published on this page.
+          </p>
+        )}
+        <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
+          <Link to="/terms">Terms</Link>
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/safety">Safety</Link>
+          <Link to="/cookies">Browser storage</Link>
+          <Link to="/refund-policy">Refunds</Link>
+          <Link to="/community-guidelines">Conduct</Link>
+          <Link to="/accessibility">Accessibility</Link>
+          <Link to="/contact">Contact</Link>
+        </div>
+      </main>
+    </div>
+  );
 }

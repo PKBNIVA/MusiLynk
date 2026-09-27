@@ -18,11 +18,23 @@ class FakeObserver {
     if (FakeObserver.failOn.has(options.type)) throw new TypeError('unsupported option');
     this.type = options.type;
   }
-  disconnect() { this.disconnected = true; }
-  takeRecords() { const records = this.pending; this.pending = []; return records; }
-  emit(entries: Entry[]) { this.callback({ getEntries: () => entries.map(entry => ({ entryType: this.type, ...entry })) }); }
-  queue(entries: Entry[]) { this.pending.push(...entries.map(entry => ({ entryType: this.type, ...entry }))); }
-  static of(type: string) { return FakeObserver.instances.find(o => o.type === type)!; }
+  disconnect() {
+    this.disconnected = true;
+  }
+  takeRecords() {
+    const records = this.pending;
+    this.pending = [];
+    return records;
+  }
+  emit(entries: Entry[]) {
+    this.callback({ getEntries: () => entries.map((entry) => ({ entryType: this.type, ...entry })) });
+  }
+  queue(entries: Entry[]) {
+    this.pending.push(...entries.map((entry) => ({ entryType: this.type, ...entry })));
+  }
+  static of(type: string) {
+    return FakeObserver.instances.find((o) => o.type === type)!;
+  }
 }
 
 let visibility: DocumentVisibilityState = 'visible';
@@ -72,7 +84,7 @@ describe('clsFromShifts', () => {
   });
 
   it('closes a window after five seconds and ignores shifts after input', () => {
-    expect(clsFromShifts([0, 900, 1800, 2700, 3600, 4500, 5400].map(t => shift(t, 0.02)))).toBeCloseTo(0.12);
+    expect(clsFromShifts([0, 900, 1800, 2700, 3600, 4500, 5400].map((t) => shift(t, 0.02)))).toBeCloseTo(0.12);
     expect(clsFromShifts([shift(0, 0.5, true), shift(100, 0.01)])).toBe(0.01);
   });
 });
@@ -91,7 +103,11 @@ describe('startWebVitals', () => {
     FakeObserver.of('largest-contentful-paint').emit([{ startTime: 1200 }, { startTime: 3100 }]);
     FakeObserver.of('largest-contentful-paint').emit([]);
     FakeObserver.of('layout-shift').emit([{ startTime: 10, value: 0.3, hadRecentInput: false }]);
-    FakeObserver.of('event').emit([{ interactionId: 7, duration: 90 }, { interactionId: 7, duration: 260 }, { interactionId: 0, duration: 999 }]);
+    FakeObserver.of('event').emit([
+      { interactionId: 7, duration: 90 },
+      { interactionId: 7, duration: 260 },
+      { interactionId: 0, duration: 999 },
+    ]);
     FakeObserver.of('first-input').emit([{ interactionId: 8, duration: 30 }]);
     window.dispatchEvent(new Event('pointerdown'));
     FakeObserver.of('largest-contentful-paint').emit([{ startTime: 9000 }]); // after input: ignored
@@ -100,12 +116,12 @@ describe('startWebVitals', () => {
     expect(report).not.toHaveBeenCalled();
 
     hide();
-    expect(report.mock.calls.map(call => call[0])).toEqual([
+    expect(report.mock.calls.map((call) => call[0])).toEqual([
       { name: 'LCP', value: 3100, rating: 'needs-improvement' },
       { name: 'INP', value: 260, rating: 'needs-improvement' },
       { name: 'CLS', value: 0.3, rating: 'poor' },
     ]);
-    expect(FakeObserver.instances.every(o => o.disconnected)).toBe(true);
+    expect(FakeObserver.instances.every((o) => o.disconnected)).toBe(true);
 
     window.dispatchEvent(new Event('pagehide'));
     hide();
@@ -118,7 +134,7 @@ describe('startWebVitals', () => {
     FakeObserver.of('layout-shift').queue([{ startTime: 5, value: 0.05, hadRecentInput: false }]);
     FakeObserver.of('event').queue([{ interactionId: 3, duration: 120 }]);
     window.dispatchEvent(new Event('pagehide'));
-    expect(report.mock.calls.map(call => call[0])).toEqual([
+    expect(report.mock.calls.map((call) => call[0])).toEqual([
       { name: 'LCP', value: 1800, rating: 'good' },
       { name: 'INP', value: 120, rating: 'good' },
       { name: 'CLS', value: 0.05, rating: 'good' },
@@ -131,7 +147,7 @@ describe('startWebVitals', () => {
     FakeObserver.of('largest-contentful-paint').emit([{ startTime: 5000 }]);
     FakeObserver.of('largest-contentful-paint').queue([{ startTime: 6000 }]);
     window.dispatchEvent(new Event('pagehide'));
-    expect(background.report.mock.calls.map(call => call[0].name)).toEqual(['CLS']);
+    expect(background.report.mock.calls.map((call) => call[0].name)).toEqual(['CLS']);
 
     visibility = 'visible';
     FakeObserver.instances = [];
@@ -140,17 +156,19 @@ describe('startWebVitals', () => {
     FakeObserver.of('largest-contentful-paint').emit([{ startTime: 700 }]);
     FakeObserver.of('largest-contentful-paint').queue([{ startTime: 800 }]);
     hide();
-    expect(typed.report.mock.calls.map(call => call[0].name)).toEqual(['CLS']);
+    expect(typed.report.mock.calls.map((call) => call[0].name)).toEqual(['CLS']);
   });
 
   it('reports only what the browser supports and survives observer and reporter errors', () => {
     FakeObserver.supportedEntryTypes = ['largest-contentful-paint', 'event'];
     FakeObserver.failOn = new Set(['event']);
-    const report = vi.fn(() => { throw new Error('reporter broke'); });
+    const report = vi.fn(() => {
+      throw new Error('reporter broke');
+    });
     start(report);
     FakeObserver.of('largest-contentful-paint').emit([{ startTime: 900 }]);
     expect(() => hide()).not.toThrow();
-    expect(report.mock.calls.map(call => (call as unknown as [Vital])[0].name)).toEqual(['LCP']);
+    expect(report.mock.calls.map((call) => (call as unknown as [Vital])[0].name)).toEqual(['LCP']);
   });
 
   it('tolerates an observer without takeRecords, and a browser without the list of types', () => {
@@ -169,7 +187,7 @@ describe('startWebVitals', () => {
     const second = start();
     FakeObserver.of('largest-contentful-paint').emit([{ startTime: 400 }]);
     hide();
-    expect(second.report.mock.calls.map(call => call[0].name)).toEqual(['LCP', 'CLS']);
+    expect(second.report.mock.calls.map((call) => call[0].name)).toEqual(['LCP', 'CLS']);
   });
 
   it('stops without reporting, and does nothing where PerformanceObserver is missing', () => {

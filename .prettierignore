@@ -1,0 +1,10 @@
+dist
+dist-*
+node_modules
+backend
+playwright-report
+test-results
+package-lock.json
+.qa-stack
+# Untracked per-developer overrides
+*.local.config.ts

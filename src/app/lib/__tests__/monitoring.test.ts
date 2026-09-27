@@ -5,10 +5,15 @@ const { sentry, sentryModule } = vi.hoisted(() => {
   const sentry = {
     initSentry: vi.fn(),
     captureError: vi.fn(() => 'event-1'),
-    captureText: vi.fn(() => 'event-2'),
+    captureText: vi.fn<typeof import('../sentryClient').captureText>(() => 'event-2'),
     captureVital: vi.fn(),
   };
-  const sentryModule = () => ({ initSentry: sentry.initSentry, captureError: sentry.captureError, captureText: sentry.captureText, captureVital: sentry.captureVital });
+  const sentryModule = () => ({
+    initSentry: sentry.initSentry,
+    captureError: sentry.captureError,
+    captureText: sentry.captureText,
+    captureVital: sentry.captureVital,
+  });
   return { sentry, sentryModule };
 });
 vi.mock('../sentryClient', sentryModule);
@@ -28,7 +33,10 @@ beforeEach(() => {
   sentry.captureError.mockReset().mockReturnValue('event-1');
   sentry.captureText.mockReset().mockReturnValue('event-2');
   sentry.captureVital.mockReset();
-  vi.stubGlobal('requestIdleCallback', (callback: () => void) => { callback(); return 1; });
+  vi.stubGlobal('requestIdleCallback', (callback: () => void) => {
+    callback();
+    return 1;
+  });
 });
 
 const apiError = (status: number, code?: string) => Object.assign(new Error('x'), { name: 'ApiError', status, code });
@@ -97,7 +105,12 @@ describe('without a DSN', () => {
 
 describe('with a DSN', () => {
   it('queues early reports and flushes them once Sentry loads', async () => {
-    const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: ` ${DSN} `, VITE_RELEASE: 'abc123', VITE_SENTRY_ENVIRONMENT: 'staging', VITE_SENTRY_TRACES_SAMPLE_RATE: '5' });
+    const monitoring = await loadMonitoring({
+      VITE_SENTRY_DSN: ` ${DSN} `,
+      VITE_RELEASE: 'abc123',
+      VITE_SENTRY_ENVIRONMENT: 'staging',
+      VITE_SENTRY_TRACES_SAMPLE_RATE: '5',
+    });
     expect(monitoring.monitoringEnabled()).toBe(true);
     const early = new Error('before load');
     monitoring.reportError(early, { tags: { a: 'b' } });
@@ -105,7 +118,12 @@ describe('with a DSN', () => {
 
     expect(await monitoring.whenMonitoringReady()).toBe(true);
     expect(monitoring.monitoringReady()).toBe(true);
-    expect(sentry.initSentry).toHaveBeenCalledWith({ dsn: DSN, release: 'abc123', environment: 'staging', tracesSampleRate: 1 });
+    expect(sentry.initSentry).toHaveBeenCalledWith({
+      dsn: DSN,
+      release: 'abc123',
+      environment: 'staging',
+      tracesSampleRate: 1,
+    });
     expect(sentry.captureError).toHaveBeenCalledWith(early, { tags: { a: 'b' } });
     expect(sentry.captureText).toHaveBeenCalledWith('hello', undefined);
 
@@ -157,7 +175,9 @@ describe('with a DSN', () => {
   });
 
   it('drops queued reports when the Sentry chunk fails to load', async () => {
-    vi.doMock('../sentryClient', () => { throw new Error('chunk failed to load'); });
+    vi.doMock('../sentryClient', () => {
+      throw new Error('chunk failed to load');
+    });
     try {
       const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });
       monitoring.reportMessage('queued');
@@ -174,7 +194,9 @@ describe('with a DSN', () => {
   it('sends a tagged admin test error and returns its id', async () => {
     const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });
     expect(await monitoring.sendClientTestError()).toBe('event-1');
-    expect(sentry.captureError).toHaveBeenCalledWith(expect.any(Error), { tags: { source: 'admin_sentry_test', verse_test: 'true' } });
+    expect(sentry.captureError).toHaveBeenCalledWith(expect.any(Error), {
+      tags: { source: 'admin_sentry_test', verse_test: 'true' },
+    });
     sentry.captureError.mockReturnValue('');
     expect(await monitoring.sendClientTestError()).toBeNull();
   });
@@ -185,7 +207,13 @@ describe('reportApiFailure', () => {
     const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });
     await monitoring.whenMonitoringReady();
 
-    monitoring.reportApiFailure({ status: 503, code: 'UNAVAILABLE', method: 'GET', path: '/jobs/42/applications/0f8fad5b-d9cb-469f-a165-70867728950e?page=2', requestId: 'req-1' });
+    monitoring.reportApiFailure({
+      status: 503,
+      code: 'UNAVAILABLE',
+      method: 'GET',
+      path: '/jobs/42/applications/0f8fad5b-d9cb-469f-a165-70867728950e?page=2',
+      requestId: 'req-1',
+    });
     monitoring.reportApiFailure({ status: 503, method: 'GET', path: '/jobs/43' });
 
     expect(sentry.captureText).toHaveBeenCalledTimes(1);
@@ -211,12 +239,12 @@ describe('reportApiFailure', () => {
     monitoring.reportApiFailure({ status: 200, code: 'INVALID_RESPONSE', method: 'GET', path: '/me' });
     monitoring.reportApiFailure({ status: 200, code: 'INVALID_RESPONSE', method: 'GET', path: '/me' });
     monitoring.reportApiFailure({ status: 0, method: 'GET', path: '/y' });
-    expect(sentry.captureText.mock.calls.map(call => call[0])).toEqual([
+    expect(sentry.captureText.mock.calls.map((call) => call[0])).toEqual([
       'API POST /x failed (NETWORK_ERROR)',
       'API GET /me failed (INVALID_RESPONSE)',
       'API GET /y failed (unknown)',
     ]);
-    expect(sentry.captureText.mock.calls[2][1].tags.apiCode).toBe('none');
+    expect(sentry.captureText.mock.calls[2]?.[1]?.tags?.apiCode).toBe('none');
   });
 
   it('flushes a report queued before load', async () => {
@@ -245,7 +273,9 @@ describe('tracesSampleRate', () => {
   it('is used for Sentry when no rate is configured', async () => {
     const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });
     await monitoring.whenMonitoringReady();
-    expect(sentry.initSentry).toHaveBeenCalledWith(expect.objectContaining({ tracesSampleRate: monitoring.DEFAULT_TRACES_SAMPLE_RATE }));
+    expect(sentry.initSentry).toHaveBeenCalledWith(
+      expect.objectContaining({ tracesSampleRate: monitoring.DEFAULT_TRACES_SAMPLE_RATE }),
+    );
   });
 });
 
@@ -291,13 +321,20 @@ describe('reportWebVital', () => {
 
   it('starts measuring when monitoring starts and reports when the page is hidden', async () => {
     const observers: Array<{ type: string; callback: (list: { getEntries: () => unknown[] }) => void }> = [];
-    vi.stubGlobal('PerformanceObserver', class {
-      static supportedEntryTypes = ['largest-contentful-paint'];
-      type = '';
-      constructor(public callback: (list: { getEntries: () => unknown[] }) => void) { observers.push(this as never); }
-      observe(options: { type: string }) { this.type = options.type; }
-      disconnect() {}
-    });
+    vi.stubGlobal(
+      'PerformanceObserver',
+      class {
+        static supportedEntryTypes = ['largest-contentful-paint'];
+        type = '';
+        constructor(public callback: (list: { getEntries: () => unknown[] }) => void) {
+          observers.push(this as never);
+        }
+        observe(options: { type: string }) {
+          this.type = options.type;
+        }
+        disconnect() {}
+      },
+    );
     const { restore } = fakeLocation('/pricing');
     try {
       const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });

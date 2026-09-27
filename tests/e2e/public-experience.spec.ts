@@ -1,9 +1,9 @@
-import {expect, test} from '@playwright/test';
-import {assertNoHorizontalOverflow, openSettledPage, publicRoutes, watchRuntimeFailures} from './qa-helpers';
+import { expect, test } from '@playwright/test';
+import { assertNoHorizontalOverflow, openSettledPage, publicRoutes, watchRuntimeFailures } from './qa-helpers';
 
 test.describe('public route experience', () => {
   for (const [name, path] of publicRoutes) {
-    test(`${name} renders cleanly and responsively`, async ({page}, testInfo) => {
+    test(`${name} renders cleanly and responsively`, async ({ page }, testInfo) => {
       const runtimeFailures = watchRuntimeFailures(page);
       await openSettledPage(page, path);
 
@@ -18,7 +18,7 @@ test.describe('public route experience', () => {
   }
 });
 
-test('a visitor can follow the primary discovery journey', async ({page}) => {
+test('a visitor can follow the primary discovery journey', async ({ page }) => {
   const runtimeFailures = watchRuntimeFailures(page);
   await openSettledPage(page, '/');
 
@@ -28,7 +28,7 @@ test('a visitor can follow the primary discovery journey', async ({page}) => {
   await expect(page).toHaveURL(/\/start$/);
   await expect(page.getByRole('heading').first()).toBeVisible();
 
-  await page.goBack({waitUntil: 'domcontentloaded'});
+  await page.goBack({ waitUntil: 'domcontentloaded' });
   const publicNavigation = page.locator('header a, footer a');
   await expect(publicNavigation.first()).toBeVisible();
   const count = await publicNavigation.count();
@@ -42,7 +42,7 @@ test('a visitor can follow the primary discovery journey', async ({page}) => {
   expect(runtimeFailures, runtimeFailures.join('\n')).toEqual([]);
 });
 
-test('keyboard navigation reaches interactive controls', async ({page}) => {
+test('keyboard navigation reaches interactive controls', async ({ page }) => {
   await openSettledPage(page, '/');
   for (let index = 0; index < 6; index += 1) await page.keyboard.press('Tab');
   const focused = page.locator(':focus');

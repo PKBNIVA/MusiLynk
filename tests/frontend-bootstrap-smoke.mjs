@@ -9,7 +9,11 @@ assert.match(
   /if\s*\(\s*!hasAccessToken\(\)\s*\)\s*\{[^}]*setLoading\(false\)[^}]*return/s,
   'anonymous auth hydration must finish without requesting /me',
 );
-assert.match(authSource, /apiGet<\{user:User\}>\('\/me'\)/, 'stored sessions must still be validated with /me');
+assert.match(
+  authSource,
+  /apiGet<\{\s*user:\s*User\s*\}>\('\/me'\)/,
+  'stored sessions must still be validated with /me',
+);
 
 assert.match(
   navigationSource,

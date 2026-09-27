@@ -31,8 +31,22 @@ class Job < ApplicationRecord
     has_attribute?(:applications_total) ? self[:applications_total].to_i : applications.count
   end
 
-  def api_json
-    attributes.except("applications_total").merge(
+  # Columns anyone may see on a listing. Everything else (today: moderation_note, which holds
+  # automated review hints and admin rejection reasons) is only for the owner and admins, so a
+  # new internal column stays private unless it is added here.
+  PUBLIC_COLUMNS = %w[
+    id employer_id title company location kind genre salary description requirements skills languages
+    screening_questions experience_level status opportunity_kind function_area workplace currency
+    compensation_period duration compensation_min compensation_max slots featured paid portfolio_required
+    application_deadline start_date published_at created_at updated_at
+  ].freeze
+
+  def visible_in_full_to?(viewer) = viewer.present? && (viewer.admin? || viewer.id == employer_id)
+
+  # `viewer` is the signed-in user (or nil); owners and admins get every column.
+  def api_json(viewer = nil)
+    fields = visible_in_full_to?(viewer) ? attributes.except("applications_total") : attributes.slice(*PUBLIC_COLUMNS)
+    fields.merge(
       "type" => kind,
       "portfolioRequired" => portfolio_required,
       "screeningQuestions" => screening_questions,

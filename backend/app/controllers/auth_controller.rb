@@ -28,6 +28,25 @@ class AuthController < ApplicationController
   SECOND_FACTOR_MESSAGE = "Admin sign-in needs one more step. We emailed a 6-digit code to your address. It expires in 10 minutes.".freeze
   SECOND_FACTOR_EXPIRED_MESSAGE = "This sign-in step has expired. Sign in with your password again.".freeze
   SECOND_FACTOR_UNAVAILABLE_MESSAGE = "Admin sign-in needs an emailed code, but email delivery is not configured on the server. Configure an email provider to sign in.".freeze
+  SECOND_FACTOR_SKIPPED_WARNING = "Admin 2-step sign-in is off because email delivery is not configured. Add an email provider (BREVO_API_KEY), then set ADMIN_SECOND_FACTOR=required.".freeze
+  SECOND_FACTOR_DISABLED_WARNING = "Admin 2-step sign-in is turned off (ADMIN_SECOND_FACTOR=off). Remove that setting once the emergency is over.".freeze
+
+  # ADMIN_SECOND_FACTOR selects how an admin password sign-in is treated:
+  #   "auto" (default, and any unrecognised value): require the emailed code when
+  #     codes can be delivered; otherwise allow the password alone, audit it as
+  #     auth.admin_second_factor_skipped and warn in the admin tester and sign-in
+  #     doctor. Merging or misconfiguring email never locks admins out.
+  #   "required": always require the code; without email delivery the password
+  #     step fails closed (503 SECOND_FACTOR_UNAVAILABLE).
+  #   "off": emergency disable only; every such sign-in is audited.
+  # Outside production the on-screen debugCode counts as delivery.
+  # Returns :enforced, :unavailable (required but undeliverable), :skipped or :off.
+  def self.admin_second_factor_state
+    mode = ENV.fetch("ADMIN_SECOND_FACTOR", "auto").strip.downcase
+    return :off if mode == "off"
+    return :enforced if EmailDelivery.configured? || !Rails.env.production?
+    mode == "required" ? :unavailable : :skipped
+  end
 
   def register
     # Shared campus, office and mobile-carrier IPs sign up many real users; keep bulk abuse bounded.
@@ -59,11 +78,20 @@ class AuthController < ApplicationController
       return render_error("Incorrect email or password.", :unauthorized)
     end
     return render_error("This account is not active.", :forbidden) unless user.active?
-    return start_second_factor(user) if user.admin? && admin_second_factor_enforced?
+    second_factor = user.admin? ? self.class.admin_second_factor_state : nil
+    return start_second_factor(user) if second_factor == :enforced
+    if second_factor == :unavailable
+      Rails.logger.error({ event: "admin_second_factor_unavailable", userId: user.id }.to_json)
+      return render_error(SECOND_FACTOR_UNAVAILABLE_MESSAGE, :service_unavailable, "SECOND_FACTOR_UNAVAILABLE")
+    end
+    if second_factor == :skipped
+      Rails.logger.warn({ event: "admin_second_factor_skipped", userId: user.id, reason: "email_delivery_not_configured" }.to_json)
+      audit!("auth.admin_second_factor_skipped", user, { reason: "email_delivery_not_configured", ip: request.remote_ip })
+    end
 
     user.update!(last_login_at: Time.current)
     token = sign_in(user)
-    audit!("auth.login", user, user.admin? ? { secondFactor: "disabled" } : {})
+    audit!("auth.login", user, second_factor ? { secondFactor: second_factor == :off ? "disabled" : "skipped" } : {})
     render json: { user: public_user(user), accessToken: token }
   end
 
@@ -282,17 +310,9 @@ class AuthController < ApplicationController
     candidate if matched
   end
 
-  # ADMIN_SECOND_FACTOR=off is an emergency escape hatch only (for example, the
-  # email provider is down and no admin can sign in). Anything else enforces it.
-  def admin_second_factor_enforced? = ENV.fetch("ADMIN_SECOND_FACTOR", "on").strip.downcase != "off"
-
   # The password was right; answer with a short-lived challenge instead of a
   # session and email the admin a code that completes it.
   def start_second_factor(user)
-    unless sign_in_codes_available?
-      Rails.logger.error({ event: "admin_second_factor_unavailable", userId: user.id }.to_json)
-      return render_error(SECOND_FACTOR_UNAVAILABLE_MESSAGE, :service_unavailable, "SECOND_FACTOR_UNAVAILABLE")
-    end
     scopes = { email: [user.email, SECOND_FACTOR_CHALLENGES_PER_EMAIL] }
     return if failure_budget_exhausted?("second-factor-challenge", scopes, period: SECOND_FACTOR_CHALLENGE_PERIOD)
     record_failure!("second-factor-challenge", scopes, period: SECOND_FACTOR_CHALLENGE_PERIOD)

@@ -153,9 +153,60 @@ class AdminSecondFactorTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "production without an email provider fails closed for admins only" do
+  test "auto (the default) requires the code when email can be delivered" do
+    production = ActiveSupport::EnvironmentInquirer.new("production")
+    [nil, "auto", "AUTO ", "something-else"].each do |mode|
+      with_env(PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => mode)) do
+        Rails.stub(:env, production) { password_login(@admin.email) }
+      end
+      assert_response :accepted, "mode #{mode.inspect}"
+      assert response.parsed_body["challengeToken"]
+      Rails.cache.clear
+    end
+    assert_equal 0, @admin.sessions.count
+  end
+
+  test "auto without email delivery in production lets the admin in, audits it and warns in the tester and doctor" do
     production = ActiveSupport::EnvironmentInquirer.new("production")
     with_env(NO_PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => nil)) do
+      Rails.stub(:env, production) { password_login(@admin.email, ip: "198.51.100.9") }
+      assert_response :success, "merging must never lock the owner out of admin"
+      token = response.parsed_body.fetch("accessToken")
+      skipped = AuditLog.where(action: "auth.admin_second_factor_skipped", entity_id: @admin.id).sole
+      assert_equal({ "reason" => "email_delivery_not_configured", "ip" => "198.51.100.9" }, skipped.metadata)
+      assert_equal({ "secondFactor" => "skipped" }, AuditLog.where(action: "auth.login").last.metadata)
+
+      Rails.stub(:env, production) { get "/api/admin/tester", headers: bearer(token) }
+      assert_response :success
+      check = response.parsed_body["checks"].find { _1["name"] == "Admin 2-step sign-in" }
+      assert_equal false, check["pass"]
+      assert_match "Admin 2-step sign-in is off because email delivery is not configured", check["detail"]
+
+      Rails.stub(:env, production) { get "/api/admin/users/lookup", params: { email: @admin.email }, headers: bearer(token) }
+      assert_response :success
+      note = response.parsed_body["diagnosis"].find { _1["code"] == "ADMIN_SECOND_FACTOR_SKIPPED" }
+      assert_equal "warn", note["level"]
+      assert_match "Admin 2-step sign-in is off because email delivery is not configured", note["message"]
+
+      Rails.stub(:env, production) { get "/api/admin/users/lookup", params: { email: @member.email }, headers: bearer(token) }
+      assert_nil response.parsed_body["diagnosis"].find { _1["code"].start_with?("ADMIN_SECOND_FACTOR") }, "only admin accounts get the note"
+
+      Rails.stub(:env, production) { password_login(@member.email) }
+      assert_response :success
+      assert_equal 1, AuditLog.where(action: "auth.admin_second_factor_skipped").count, "members are never audited as skipped"
+    end
+  end
+
+  test "the tester reports the second step as on when it is enforced" do
+    token = with_env("ADMIN_SECOND_FACTOR" => "off") { password_login(@admin.email) && response.parsed_body.fetch("accessToken") }
+    with_env(PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => "required")) { get "/api/admin/tester", headers: bearer(token) }
+    check = response.parsed_body["checks"].find { _1["name"] == "Admin 2-step sign-in" }
+    assert_equal true, check["pass"]
+  end
+
+  test "required without email delivery in production fails closed for admins only" do
+    production = ActiveSupport::EnvironmentInquirer.new("production")
+    with_env(NO_PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => "required")) do
       Rails.stub(:env, production) { password_login(@admin.email) }
       assert_response :service_unavailable
       assert_equal "SECOND_FACTOR_UNAVAILABLE", response.parsed_body["code"]
@@ -165,16 +216,19 @@ class AdminSecondFactorTest < ActionDispatch::IntegrationTest
       Rails.stub(:env, production) { password_login(@member.email) }
       assert_response :success
     end
+    with_env(PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => "required")) { password_login(@admin.email) }
+    assert_response :accepted
   end
 
-  test "ADMIN_SECOND_FACTOR=off is an explicit escape hatch and is audited" do
-    with_env("ADMIN_SECOND_FACTOR" => "off") { password_login(@admin.email) }
-    assert_response :success
-    assert response.parsed_body["accessToken"]
-    assert_equal({ "secondFactor" => "disabled" }, AuditLog.where(action: "auth.login").last.metadata)
-
-    with_env("ADMIN_SECOND_FACTOR" => "false") { password_login(@admin.email) }
-    assert_response :accepted, "only the exact value off disables the second step"
+  test "ADMIN_SECOND_FACTOR=off is an explicit escape hatch, audited and flagged in the doctor" do
+    with_env(PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => "off")) do
+      password_login(@admin.email)
+      assert_response :success
+      token = response.parsed_body.fetch("accessToken")
+      assert_equal({ "secondFactor" => "disabled" }, AuditLog.where(action: "auth.login").last.metadata)
+      get "/api/admin/users/lookup", params: { email: @admin.email }, headers: bearer(token)
+      assert response.parsed_body["diagnosis"].any? { _1["code"] == "ADMIN_SECOND_FACTOR_OFF" }
+    end
   end
 
   test "production never returns an on-screen code" do

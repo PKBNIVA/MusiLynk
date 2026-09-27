@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
+import { errorMessage } from '../../lib/errors';
 
 type Batch = {
   name: string;
@@ -32,7 +33,8 @@ type Job = {
   batches?: string[];
   size?: string;
   error?: string;
-  result?: Record<string, any>;
+  // DemoDataSeedJob / DemoDataPurgeJob summaries: counts keyed by what was created or removed.
+  result?: Record<string, number | string | null>;
   createdAt: string;
   updatedAt: string;
 };
@@ -75,8 +77,8 @@ export default function DemoDataPanel() {
       setData(d);
       setError('');
       return d;
-    } catch (e: any) {
-      setError(e.message || 'Unable to load demo data status.');
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'Unable to load demo data status.'));
       return undefined;
     }
   }, []);
@@ -108,8 +110,8 @@ export default function DemoDataPanel() {
       const r = await run();
       setTracked(r.jobId);
       await load();
-    } catch (e: any) {
-      const msg = e.message || 'Request failed.';
+    } catch (e: unknown) {
+      const msg = errorMessage(e, 'Request failed.');
       setError(msg);
       toast.error(msg);
     } finally {

@@ -10,20 +10,26 @@ import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
 import { MapPin, ShieldCheck } from 'lucide-react';
 import { WorkSamplePlayer } from '../../components/WorkSamplePlayer';
+import { errorMessage, errorStatus } from '../../lib/errors';
+import type { PortfolioItem, Professional } from '../../lib/apiTypes';
 
 export default function PublicProfile() {
   const { id } = useParams();
-  const [d, setD] = useState<any>(),
+  const [d, setD] = useState<{ professional: Professional; portfolio: PortfolioItem[] }>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setD(await apiGet<any>(`/public/talent/${encodeURIComponent(id || '')}`));
-    } catch (e: any) {
+      setD(
+        await apiGet<{ professional: Professional; portfolio: PortfolioItem[] }>(
+          `/public/talent/${encodeURIComponent(id || '')}`,
+        ),
+      );
+    } catch (e: unknown) {
       setD(undefined);
-      setError({ message: e.message || 'Unable to load this profile.', status: e.status });
+      setError({ message: errorMessage(e, 'Unable to load this profile.'), status: errorStatus(e) });
     } finally {
       setLoading(false);
     }
@@ -100,7 +106,7 @@ export default function PublicProfile() {
               <h2 className="font-semibold">Work samples</h2>
               {d.portfolio?.length ? (
                 <div className="mt-3 grid md:grid-cols-2 gap-3">
-                  {d.portfolio.map((x: any) => (
+                  {d.portfolio.map((x) => (
                     <WorkSamplePlayer key={x.id} sample={x} />
                   ))}
                 </div>

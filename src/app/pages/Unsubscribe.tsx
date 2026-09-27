@@ -4,6 +4,7 @@ import { MailX } from 'lucide-react';
 import { PublicNav } from '../components/PublicNav';
 import { Button } from '../components/ui/button';
 import { apiPost } from '../lib/api';
+import { errorStatus } from '../lib/errors';
 
 type State = 'working' | 'done' | 'invalid' | 'error';
 
@@ -19,8 +20,8 @@ export default function Unsubscribe() {
     try {
       await apiPost('/notifications/unsubscribe', { token }, { skipAuthRedirect: true });
       setState('done');
-    } catch (e: any) {
-      setState(e?.status === 400 ? 'invalid' : 'error');
+    } catch (e: unknown) {
+      setState(errorStatus(e) === 400 ? 'invalid' : 'error');
     }
   }, [token]);
 

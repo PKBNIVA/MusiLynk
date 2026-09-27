@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
 import { ExternalLink, FileText, Image as ImageIcon, Link2, Music, Video } from 'lucide-react';
 import { Badge } from './ui/badge';
+import type { MediaMetadata } from '../lib/apiTypes';
 
 type Sample = {
   id?: string;
   title: string;
   url: string;
   type?: string;
-  description?: string;
-  thumbnailUrl?: string;
-  waveformUrl?: string;
-  mediaMetadata?: any;
+  description?: string | null;
+  thumbnailUrl?: string | null;
+  waveformUrl?: string | null;
+  mediaMetadata?: MediaMetadata | null;
   tags?: string[];
   genres?: string[];
   roles?: string[];
   instruments?: string[];
-  creditedAs?: string;
-  year?: number;
+  creditedAs?: string | null;
+  year?: number | null;
 };
 
 export type WorkSampleMedia =

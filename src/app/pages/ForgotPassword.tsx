@@ -6,6 +6,7 @@ import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { apiPost } from '../lib/api';
 import { toast } from 'sonner';
+import { errorMessage } from '../lib/errors';
 export default function ForgotPassword() {
   usePageMeta('Reset your password', 'Request a secure link to reset the password on your Verse account.');
   const [email, setEmail] = useState(''),
@@ -16,11 +17,13 @@ export default function ForgotPassword() {
     if (busy) return;
     setBusy(true);
     try {
-      const d: any = await apiPost('/auth/forgot-password', { email });
+      const d = await apiPost<{ ok: boolean; message?: string; debugLink?: string }>('/auth/forgot-password', {
+        email,
+      });
       setDone(true);
       if (d.debugLink) toast.message(`Dev reset link: ${d.debugLink}`);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setBusy(false);
     }

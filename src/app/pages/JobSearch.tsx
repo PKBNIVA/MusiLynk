@@ -12,6 +12,8 @@ import { LoadMoreJobs } from '../components/LoadMoreJobs';
 import { usePagedJobs } from '../lib/usePagedJobs';
 import { useLatestCallback } from '../lib/useLatestCallback';
 import { toast } from 'sonner';
+import { errorMessage } from '../lib/errors';
+import type { Job } from '../lib/apiTypes';
 
 const kinds = ['', 'job', 'gig', 'audition', 'session', 'tour', 'internship', 'collaboration'];
 const functions = [
@@ -31,7 +33,7 @@ const workplaces = ['', 'onsite', 'hybrid', 'remote', 'travel'];
 const label = (s: string) => (s ? s.replace(/(^|\s)\S/g, (m) => m.toUpperCase()) : 'All');
 
 export default function JobSearch() {
-  const list = usePagedJobs<any>();
+  const list = usePagedJobs<Job>();
   const { jobs, setJobs, loading, total } = list;
   const [showFilters, setShowFilters] = useState(false);
   const [f, setF] = useState({
@@ -43,7 +45,7 @@ export default function JobSearch() {
     paid: false,
     verified: false,
   });
-  const set = (k: string, v: any) => setF((x) => ({ ...x, [k]: v }));
+  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
   const params = useMemo(() => {
     const p = new URLSearchParams();
     Object.entries(f).forEach(([k, v]) => {
@@ -64,13 +66,13 @@ export default function JobSearch() {
   useEffect(() => {
     load();
   }, [load, f.kind, f.functionArea, f.workplace, f.paid, f.verified]);
-  async function toggleSave(j: any) {
+  async function toggleSave(j: Job) {
     try {
       j.saved ? await apiDelete(`/saved-jobs/${j.id}`) : await apiPost(`/saved-jobs/${j.id}`);
       setJobs((xs) => xs.map((x) => (x.id === j.id ? { ...x, saved: !x.saved } : x)));
       toast.success(j.saved ? 'Removed from saved' : 'Saved for later');
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
   async function createAlert() {
@@ -85,8 +87,8 @@ export default function JobSearch() {
         frequency: 'saved',
       });
       toast.success('Search saved to your account');
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
   return (

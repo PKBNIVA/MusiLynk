@@ -109,7 +109,7 @@ test('profile cannot be saved over existing data when it failed to load', async 
 });
 
 test('credits keep one entry per line after saving twice', async ({ page }) => {
-  const puts: any[] = [];
+  const puts: Record<string, unknown>[] = [];
   const user = { ...me, credits: ['Song A — guitar — 2024'], skills: ['Guitar'] };
   await signIn(page, (request, path) => {
     if (path.endsWith('/me')) return { body: { user } };

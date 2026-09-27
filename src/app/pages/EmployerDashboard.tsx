@@ -8,17 +8,19 @@ import { Link } from 'react-router';
 import { Briefcase, FileText, CheckCircle, Plus, Users, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../lib/authContext';
 import { OpportunityPipeline } from '../components/OpportunityPipeline';
+import type { EmployerDashboard } from '../lib/apiTypes';
+import type { LucideIcon } from 'lucide-react';
 export default function EmployerDashboard() {
-  const [d, setD] = useState<any>({}),
+  const [d, setD] = useState<Partial<EmployerDashboard>>({}),
     { user } = useAuth();
   const load = () =>
-    apiGet<any>('/dashboard')
+    apiGet<EmployerDashboard>('/dashboard')
       .then(setD)
       .catch(() => {});
   useEffect(() => {
     load();
   }, []);
-  const Stat = ({ n, label, icon: I }: { n: any; label: string; icon: any }) => (
+  const Stat = ({ n, label, icon: I }: { n?: number; label: string; icon: LucideIcon }) => (
     <Card className="bg-white/[.055] border-white/10">
       <CardContent className="p-5 flex gap-4 items-center">
         <div className="p-3 rounded-xl bg-violet-500/10">

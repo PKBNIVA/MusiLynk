@@ -8,6 +8,8 @@ import { Badge } from '../components/ui/badge';
 import { Field, FormDialog, selectClass, textareaClass } from '../components/booking/BookingDialogs';
 import { Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { errorMessage } from '../lib/errors';
+import type { BandProject, BandProjectRole, Taxonomy } from '../lib/apiTypes';
 
 const list = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(String) : typeof value === 'string' && value ? [value] : [];
@@ -23,11 +25,11 @@ type RoleDraft = {
 };
 
 export default function BandBuilder() {
-  const [projects, setProjects] = useState<any[]>([]),
+  const [projects, setProjects] = useState<BandProject[]>([]),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
     [roleOptions, setRoleOptions] = useState<string[]>([]),
-    [f, setF] = useState<any>({
+    [f, setF] = useState({
       name: '',
       concept: '',
       city: '',
@@ -42,18 +44,18 @@ export default function BandBuilder() {
     [publishing, setPublishing] = useState<string | null>(null);
   async function load() {
     try {
-      const d = await apiGet<any>('/band-projects');
+      const d = await apiGet<{ projects?: BandProject[] }>('/band-projects');
       setProjects(d.projects || []);
       setLoadError('');
-    } catch (e: any) {
-      setLoadError(e.message || 'Unable to load your projects.');
+    } catch (e: unknown) {
+      setLoadError(errorMessage(e, 'Unable to load your projects.'));
     } finally {
       setLoading(false);
     }
   }
   useEffect(() => {
     void load();
-    apiGet<any>('/taxonomy')
+    apiGet<Partial<Taxonomy>>('/taxonomy')
       .then((t) => setRoleOptions(Array.from(new Set(Object.values(t?.roleCategories || {}).flatMap((x) => list(x))))))
       .catch(() => {});
   }, []);
@@ -72,8 +74,8 @@ export default function BandBuilder() {
       setF({ ...f, name: '', concept: '', city: '', genres: '', compensationModel: '' });
       toast.success('Band project created');
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setCreating(false);
     }
@@ -96,8 +98,8 @@ export default function BandBuilder() {
       setRole(null);
       toast.success('Role added');
       await load();
-    } catch (e: any) {
-      setRoleError(e.message || 'Unable to add this role.');
+    } catch (e: unknown) {
+      setRoleError(errorMessage(e, 'Unable to add this role.'));
     } finally {
       setSavingRole(false);
     }
@@ -109,8 +111,8 @@ export default function BandBuilder() {
       await apiPost(`/band-projects/${projectId}/roles/${roleId}/publish`, {});
       toast.success('Opening submitted for moderation');
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setPublishing(null);
     }
@@ -196,7 +198,7 @@ export default function BandBuilder() {
               </div>
             ) : (
               projects.map((p) => {
-                const roles: any[] = Array.isArray(p.roles) ? p.roles : [];
+                const roles: BandProjectRole[] = Array.isArray(p.roles) ? p.roles : [];
                 return (
                   <Card key={p.id} className="bg-white/[.055] border-white/10">
                     <CardContent className="p-5">
@@ -231,7 +233,7 @@ export default function BandBuilder() {
                         {roles.length === 0 && (
                           <p className="text-sm text-slate-500">No seats yet. Add the roles this project needs.</p>
                         )}
-                        {roles.map((r: any) => (
+                        {roles.map((r) => (
                           <div
                             key={r.id}
                             className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-black/20 border border-white/10 px-3 py-2"

@@ -39,10 +39,12 @@ import { UNREAD_CHANGED_EVENT, useVisiblePolling } from '../lib/usePolling';
 import { ProductTour, TourLauncher } from './ProductTour';
 import { BrandMark } from './BrandMark';
 import { SkipLink } from './SkipLink';
+import type { UnreadCounts } from '../lib/apiTypes';
+import type { LucideIcon } from 'lucide-react';
 
 const UNREAD_POLL_MS = 30_000;
 
-type NavItem = { path: string; icon: any; label: string };
+type NavItem = { path: string; icon: LucideIcon; label: string };
 type NavGroup = { label: string; items: NavItem[] };
 
 export function Navigation() {
@@ -56,7 +58,7 @@ export function Navigation() {
   // Unread badges: fetched on mount and on route change, polled every 30 s while the tab is visible,
   // and refreshed immediately when a page reports that the viewer read something.
   const refreshUnread = () =>
-    apiGet<any>('/notifications/unread')
+    apiGet<UnreadCounts>('/notifications/unread')
       .then((d) => {
         setUnread(Number(d.unread) || 0);
         setUnreadMessages(Number(d.unreadMessages) || 0);

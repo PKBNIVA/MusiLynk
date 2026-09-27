@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { apiGet } from '../lib/api';
@@ -8,9 +8,10 @@ import { Button } from '../components/ui/button';
 import { WorkSamplePlayer } from '../components/WorkSamplePlayer';
 import { ShieldCheck, MapPin, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../lib/authContext';
+import type { ComparedProfessional } from '../lib/apiTypes';
 export default function CandidateCompare() {
   const [sp] = useSearchParams(),
-    [people, setPeople] = useState<any[]>([]),
+    [people, setPeople] = useState<ComparedProfessional[]>([]),
     [error, setError] = useState(''),
     [loaded, setLoaded] = useState(false),
     { user } = useAuth();
@@ -31,7 +32,9 @@ export default function CandidateCompare() {
       setPeople([]);
       return;
     }
-    apiGet<any>(`/candidates/compare/list?ids=${encodeURIComponent(ids.join(','))}`)
+    apiGet<{ professionals?: ComparedProfessional[] }>(
+      `/candidates/compare/list?ids=${encodeURIComponent(ids.join(','))}`,
+    )
       .then((d) => {
         setPeople(d.professionals || []);
         setLoaded(true);
@@ -122,7 +125,7 @@ export default function CandidateCompare() {
                 <div className="mt-5">
                   <div className="text-xs uppercase text-slate-500 mb-2">Next availability</div>
                   {p.availability?.length ? (
-                    p.availability.slice(0, 3).map((a: any) => (
+                    p.availability.slice(0, 3).map((a) => (
                       <div key={a.startAt} className="text-xs text-slate-300 py-1">
                         {new Date(a.startAt).toLocaleDateString()} · {a.status}
                         {a.city ? ` · ${a.city}` : ''}
@@ -133,7 +136,7 @@ export default function CandidateCompare() {
                   )}
                 </div>
                 <div className="mt-5 space-y-2">
-                  {p.portfolio?.slice(0, 3).map((s: any) => (
+                  {p.portfolio?.slice(0, 3).map((s) => (
                     <WorkSamplePlayer key={s.id} sample={s} compact />
                   ))}
                 </div>
@@ -148,7 +151,7 @@ export default function CandidateCompare() {
     </div>
   );
 }
-function Row({ k, v }: { k: string; v: any }) {
+function Row({ k, v }: { k: string; v: ReactNode }) {
   return (
     <div className="flex justify-between gap-3 border-b border-white/10 py-2 text-sm mt-2">
       <span className="text-slate-500">{k}</span>

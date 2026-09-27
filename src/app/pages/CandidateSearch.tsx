@@ -9,30 +9,39 @@ import { Checkbox } from '../components/ui/checkbox';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
+import type {
+  Created,
+  ConversationCreated,
+  PortfolioItem,
+  Professional,
+  RecentActivity,
+  TalentFolder,
+} from '../lib/apiTypes';
 import { useLatestCallback } from '../lib/useLatestCallback';
 import { Search, MapPin, BookmarkPlus, BookmarkCheck, MessageSquare, ShieldCheck, FolderPlus } from 'lucide-react';
 import { WorkSamplePlayer } from '../components/WorkSamplePlayer';
 import { Label } from '../components/ui/label';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { toastJobError } from '../components/OpportunityPipeline';
+import { errorMessage } from '../lib/errors';
 export default function CandidateSearch() {
   const { user } = useAuth();
   const nav = useNavigate();
   const [compare, setCompare] = useState<string[]>([]),
-    [recent, setRecent] = useState<any[]>([]);
-  const [items, setItems] = useState<any[]>([]),
+    [recent, setRecent] = useState<RecentActivity[]>([]);
+  const [items, setItems] = useState<Professional[]>([]),
     [q, setQ] = useState(''),
     [location, setLocation] = useState(''),
     [role, setRole] = useState(''),
     [instrument, setInstrument] = useState(''),
     [verified, setVerified] = useState(false),
     [remote, setRemote] = useState(false),
-    [selected, setSelected] = useState<any | null>(null),
-    [portfolio, setPortfolio] = useState<any[]>([]),
+    [selected, setSelected] = useState<Professional | null>(null),
+    [portfolio, setPortfolio] = useState<PortfolioItem[]>([]),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
-    [folderFor, setFolderFor] = useState<any | null>(null),
-    [folders, setFolders] = useState<any[] | null>(null),
+    [folderFor, setFolderFor] = useState<Professional | null>(null),
+    [folders, setFolders] = useState<TalentFolder[] | null>(null),
     [folderChoice, setFolderChoice] = useState(''),
     [newFolder, setNewFolder] = useState(''),
     [folderBusy, setFolderBusy] = useState(false);
@@ -45,66 +54,66 @@ export default function CandidateSearch() {
       if (instrument) p.set('instrument', instrument);
       if (verified) p.set('verified', 'true');
       if (remote) p.set('remoteRecording', 'true');
-      const d = await apiGet<any>(`/candidates?${p}`);
+      const d = await apiGet<{ candidates?: Professional[] }>(`/candidates?${p}`);
       setItems(d.candidates || []);
       setLoadError('');
-    } catch (e: any) {
-      setLoadError(e.message || 'Talent could not be loaded.');
+    } catch (e: unknown) {
+      setLoadError(errorMessage(e, 'Talent could not be loaded.'));
     } finally {
       setLoading(false);
     }
   });
   useEffect(() => {
     load();
-    apiGet<any>('/recent-activity')
+    apiGet<{ items?: RecentActivity[] }>('/recent-activity')
       .then((d) =>
-        setRecent((d.items || []).filter((x: any) => x.kind === 'profile_view' || x.kind === 'search').slice(0, 6)),
+        setRecent((d.items || []).filter((x) => x.kind === 'profile_view' || x.kind === 'search').slice(0, 6)),
       )
       .catch(() => {});
   }, [load]);
-  async function shortlist(c: any) {
+  async function shortlist(c: Professional) {
     try {
       c.shortlisted ? await apiDelete(`/shortlists/${c.id}`) : await apiPost(`/shortlists/${c.id}`, {});
       setItems((xs) => xs.map((x) => (x.id === c.id ? { ...x, shortlisted: !x.shortlisted } : x)));
       toast.success(c.shortlisted ? 'Removed from shortlist' : 'Added to talent shortlist');
-    } catch (e: any) {
+    } catch (e: unknown) {
       toastJobError(e, user?.role === 'jobseeker' ? '/jobseeker/billing' : '/employer/billing', nav);
     }
   }
-  async function inspect(c: any) {
+  async function inspect(c: Pick<Professional, 'id'>) {
     try {
-      const d = await apiGet<any>(`/candidates/${c.id}`);
+      const d = await apiGet<{ candidate: Professional; portfolio?: PortfolioItem[] }>(`/candidates/${c.id}`);
       setSelected(d.candidate);
       setPortfolio(d.portfolio || []);
       /* On narrow screens the detail panel sits below the results; bring it into view. */ if (window.innerWidth < 1024)
         requestAnimationFrame(() =>
           document.getElementById('talent-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
         );
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
-  async function message(c: any) {
+  async function message(c: Professional) {
     try {
-      const d = await apiPost<any>('/conversations', { candidateId: c.id });
+      const d = await apiPost<ConversationCreated>('/conversations', { candidateId: c.id });
       nav(`${user?.role === 'jobseeker' ? '/jobseeker' : '/employer'}/messages?conversation=${d.conversation.id}`);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
-  async function addFolder(c: any) {
+  async function addFolder(c: Professional) {
     setFolderFor(c);
     setFolders(null);
     setNewFolder('');
     setFolderChoice('');
     try {
-      const d: any = await apiGet('/talent-folders');
+      const d = await apiGet<{ folders?: TalentFolder[] }>('/talent-folders');
       const list = d.folders || [];
       setFolders(list);
       setFolderChoice(list[0]?.id || 'new');
       if (!list.length) setNewFolder('Shortlist');
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
       setFolderFor(null);
     }
   }
@@ -118,17 +127,17 @@ export default function CandidateSearch() {
     }
     setFolderBusy(true);
     try {
-      let target = folders?.find((x: any) => x.id === folderChoice);
+      let target = folders?.find((x) => x.id === folderChoice);
       if (creating) {
-        const n: any = await apiPost('/talent-folders', { name });
+        const n = await apiPost<Created>('/talent-folders', { name });
         target = { id: n.id, name };
       }
       if (!target) return;
       await apiPost(`/talent-folders/${target.id}/candidates/${folderFor.id}`, {});
       toast.success(`Added ${folderFor.name} to ${target.name}`);
       setFolderFor(null);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setFolderBusy(false);
     }
@@ -204,7 +213,7 @@ export default function CandidateSearch() {
             {recent.length ? (
               <>
                 Recent:{' '}
-                {recent.slice(0, 4).map((r: any) => (
+                {recent.slice(0, 4).map((r) => (
                   <button
                     key={r.id}
                     className="ml-2 text-slate-300 hover:text-white"
@@ -278,7 +287,7 @@ export default function CandidateSearch() {
                         <Checkbox
                           aria-label={`Compare ${c.name}`}
                           checked={compare.includes(c.id)}
-                          onCheckedChange={(v: any) =>
+                          onCheckedChange={(v) =>
                             setCompare((xs) =>
                               v ? [...xs.filter((x) => x !== c.id), c.id].slice(-4) : xs.filter((x) => x !== c.id),
                             )
@@ -353,7 +362,7 @@ export default function CandidateSearch() {
                   </div>
                   <p className="text-violet-300 mt-1">{selected.headline}</p>
                   <p className="text-sm text-slate-300 mt-4 leading-6">{selected.bio}</p>
-                  {selected.credits?.length > 0 && (
+                  {!!selected.credits?.length && (
                     <div className="mt-5">
                       <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">Credits</div>
                       {selected.credits.slice(0, 8).map((x: string) => (
@@ -417,7 +426,7 @@ export default function CandidateSearch() {
                     onChange={(e) => setFolderChoice(e.target.value)}
                     className={fieldClass + ' bg-slate-900'}
                   >
-                    {folders.map((x: any) => (
+                    {folders.map((x) => (
                       <option key={x.id} value={x.id}>
                         {x.name || 'Untitled folder'}
                         {typeof x.count === 'number' ? ` (${x.count})` : ''}

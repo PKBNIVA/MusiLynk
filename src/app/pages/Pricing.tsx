@@ -6,6 +6,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { PublicNav } from '../components/PublicNav';
 import { usePageMeta } from '../components/PageMeta';
 import { apiGet } from '../lib/api';
+import type { LucideIcon } from 'lucide-react';
 
 export type ApiPlan = {
   code: string;
@@ -207,7 +208,7 @@ export default function Pricing() {
     </div>
   );
 }
-function Value({ icon: I, title, body }: { icon: any; title: string; body: string }) {
+function Value({ icon: I, title, body }: { icon: LucideIcon; title: string; body: string }) {
   return (
     <Card className="bg-white/[.035] border-white/10">
       <CardContent className="p-5">

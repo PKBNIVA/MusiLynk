@@ -12,6 +12,8 @@ import { OpportunityPipeline, jobStatusLabel, toastJobError } from '../component
 import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
 import { ShieldCheck } from 'lucide-react';
+import { errorMessage, errorStatus } from '../lib/errors';
+import type { CreatedJob, Job } from '../lib/apiTypes';
 const kinds = ['job', 'gig', 'audition', 'session', 'tour', 'internship', 'collaboration'];
 const functions = [
   'Performance',
@@ -57,10 +59,12 @@ const blank = {
   duration: '',
   screeningQuestions: '',
 };
-const day = (v: any) => (v ? String(v).slice(0, 10) : '');
-const text = (v: any) => (v === null || v === undefined ? '' : String(v));
+// Inputs hand back strings, so `slots` holds whatever was typed until it is submitted.
+type JobForm = Omit<typeof blank, 'slots'> & { slots: number | string };
+const day = (v: unknown) => (v ? String(v).slice(0, 10) : '');
+const text = (v: unknown) => (v === null || v === undefined ? '' : String(v));
 // API job (snake_case columns + a few camelCase aliases) -> form state.
-const toForm = (j: any) => ({
+const toForm = (j: Job): JobForm => ({
   ...blank,
   title: text(j.title),
   location: text(j.location),
@@ -103,14 +107,14 @@ export default function PostJob() {
     [sp, setSp] = useSearchParams();
   const seeker = user?.role === 'jobseeker';
   const editId = sp.get('edit') || '';
-  const [f, setF] = useState<any>(blank);
+  const [f, setF] = useState<JobForm>(blank);
   const [busy, setBusy] = useState(false);
-  const [job, setJob] = useState<any | null>(null),
+  const [job, setJob] = useState<Job | null>(null),
     [loadingJob, setLoadingJob] = useState(!!editId),
     [loadError, setLoadError] = useState(''),
     [formError, setFormError] = useState(''),
     [pipelineKey, setPipelineKey] = useState(0);
-  const set = (k: string, v: any) => setF((x: any) => ({ ...x, [k]: v }));
+  const set = <K extends keyof JobForm>(k: K, v: JobForm[K]) => setF((x) => ({ ...x, [k]: v }));
   const userId = user?.id;
   useEffect(() => {
     setFormError('');
@@ -122,14 +126,14 @@ export default function PostJob() {
     }
     setLoadingJob(true);
     setLoadError('');
-    apiGet<any>(`/jobs/${encodeURIComponent(editId)}`)
+    apiGet<{ job?: Job }>(`/jobs/${encodeURIComponent(editId)}`)
       .then((d) => {
         if (!d.job || (userId && d.job.employer_id && d.job.employer_id !== userId))
           throw new Error('Opportunity not found');
         setJob(d.job);
         setF(toForm(d.job));
       })
-      .catch((e: any) => setLoadError(e.message || 'This opportunity could not be loaded.'))
+      .catch((e: unknown) => setLoadError(errorMessage(e, 'This opportunity could not be loaded.')))
       .finally(() => setLoadingJob(false));
   }, [editId, userId]);
   const status = job?.status as string | undefined;
@@ -188,7 +192,7 @@ export default function PostJob() {
     try {
       if (job) {
         const target = draft ? 'draft' : primary.status;
-        const d = await apiPatch<any>(`/employer/jobs/${job.id}`, {
+        const d = await apiPatch<{ ok: boolean; job?: Job }>(`/employer/jobs/${job.id}`, {
           ...payload(),
           ...((target && target !== job.status) || target === 'pending' ? { status: target } : {}),
         });
@@ -198,7 +202,7 @@ export default function PostJob() {
         );
         done();
       } else {
-        const d = await apiPost<any>('/jobs', { ...payload(), status: draft ? 'draft' : 'pending' });
+        const d = await apiPost<CreatedJob>('/jobs', { ...payload(), status: draft ? 'draft' : 'pending' });
         if (d.moderationFlags?.length && !draft)
           toast.info(
             `Submitted with ${d.moderationFlags.length} moderation note${d.moderationFlags.length === 1 ? '' : 's'}`,
@@ -206,20 +210,20 @@ export default function PostJob() {
         else toast.success(draft ? 'Draft saved. Finish it any time from your opportunities.' : 'Submitted for review');
         done();
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       const billing = seeker ? '/jobseeker/billing' : '/employer/billing';
-      if (e?.status === 402 && !draft) {
+      if (errorStatus(e) === 402 && !draft) {
         /* Keep the work: save it as a draft so publishing can resume after an upgrade or closing another post. */ try {
           if (job) await apiPatch(`/employer/jobs/${job.id}`, { ...payload(), status: 'draft' });
           else await apiPost('/jobs', { ...payload(), status: 'draft' });
-          toast.error(`${e.message} Your opportunity was saved as a draft.`, {
+          toast.error(`${errorMessage(e)} Your opportunity was saved as a draft.`, {
             action: { label: 'View plans', onClick: () => nav(billing) },
           });
           done();
           return;
         } catch {}
       }
-      setFormError(e.message || '');
+      setFormError(errorMessage(e, ''));
       toastJobError(e, billing, nav);
     } finally {
       setBusy(false);
@@ -572,7 +576,7 @@ export default function PostJob() {
               {busy ? 'Saving…' : primary.label}
             </Button>
             {canDraft && (
-              <Button disabled={busy} type="button" variant="outline" onClick={(e: any) => submit(e, 'draft')}>
+              <Button disabled={busy} type="button" variant="outline" onClick={(e) => submit(e, 'draft')}>
                 {job && job.status !== 'draft' ? 'Move to drafts' : 'Save draft'}
               </Button>
             )}

@@ -4,13 +4,16 @@ import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
+import { errorMessage } from '../lib/errors';
+import type { Booking, BookingPayment, BookingPaymentOrder } from '../lib/apiTypes';
 
 // Requester-side deposit state and payment for one booking. The amount, currency and order
 // always come from the server; the browser only relays the Razorpay handler payload back.
-const money = (currency: string, value: any) => `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
+const money = (currency: string | null | undefined, value: unknown) =>
+  `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
 
-export function BookingDepositPanel({ booking, onChanged }: { booking: any; onChanged: () => unknown }) {
-  const [payments, setPayments] = useState<any[] | null>(null);
+export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; onChanged: () => unknown }) {
+  const [payments, setPayments] = useState<BookingPayment[] | null>(null);
   const [paying, setPaying] = useState(false);
   const [declined, setDeclined] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -18,7 +21,7 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: any; onCh
 
   const refresh = useCallback(
     () =>
-      apiGet<any>(`/bookings/${booking.id}/payments`)
+      apiGet<{ payments?: BookingPayment[] }>(`/bookings/${booking.id}/payments`)
         .then((d) => setPayments(d.payments || []))
         .catch(() => setPayments([])),
     [booking.id],
@@ -41,7 +44,7 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: any; onCh
     setPaying(true);
     setDeclined(null);
     try {
-      const d: any = await apiPost(`/bookings/${booking.id}/payment-order`, {});
+      const d = await apiPost<BookingPaymentOrder>(`/bookings/${booking.id}/payment-order`, {});
       if (d.checkout?.mode === 'mock') {
         await apiPost(`/booking-payments/${d.payment.id}/confirm`, {});
         toast.success('Mock deposit recorded');
@@ -65,8 +68,8 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: any; onCh
           toast.info('Checkout closed. Nothing was charged.');
         }
       }
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       inFlight.current = false;
       setPaying(false);
@@ -94,7 +97,7 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: any; onCh
       <Button size="sm" disabled={paying} aria-busy={paying} onClick={pay}>
         {paying
           ? 'Processing payment…'
-          : `${declined ? 'Retry deposit' : deposit?.status === 'created' ? 'Resume deposit payment' : 'Pay deposit'}${expected ? ` · ${money(quote.currency, expected)}` : ''}`}
+          : `${declined ? 'Retry deposit' : deposit?.status === 'created' ? 'Resume deposit payment' : 'Pay deposit'}${expected ? ` · ${money(quote?.currency, expected)}` : ''}`}
       </Button>
       {declined && (
         <span role="alert" className="text-xs text-rose-300" data-testid="deposit-declined">

@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Field, FormDialog } from './booking/BookingDialogs';
+import { errorMessage } from '../lib/errors';
 
 // Accessible replacements for the window.prompt calls on the profile page.
 
@@ -61,8 +62,8 @@ export function VerificationRequestDialog({
     try {
       await onSubmit(url.trim());
       onOpenChange(false);
-    } catch (e: any) {
-      setError(e?.message || 'Unable to send your request. Try again.');
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'Unable to send your request. Try again.'));
     } finally {
       setBusy(false);
     }

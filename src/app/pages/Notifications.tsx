@@ -9,17 +9,11 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { announceUnreadChanged } from '../lib/usePolling';
 import { Switch } from '../components/ui/switch';
+import { errorMessage } from '../lib/errors';
+import type { Notification, NotificationPreferences } from '../lib/apiTypes';
 
 type Role = 'jobseeker' | 'employer';
-type Item = {
-  id: string;
-  type?: string;
-  title?: string;
-  body?: string;
-  link?: string | null;
-  readAt?: string | null;
-  createdAt: string;
-};
+type Item = Notification;
 
 // Role-neutral links stored by the API (see backend Notifier) mapped to routes that exist for each workspace.
 const SHARED: Record<string, string> = {
@@ -80,10 +74,10 @@ export default function Notifications() {
     setLoading(true);
     setError('');
     try {
-      const d = await apiGet<any>('/notifications');
+      const d = await apiGet<{ notifications?: Notification[]; unread?: number }>('/notifications');
       setItems(d.notifications || []);
-    } catch (e: any) {
-      setError(e.message || 'Unable to load notifications.');
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'Unable to load notifications.'));
     } finally {
       setLoading(false);
     }
@@ -96,7 +90,7 @@ export default function Notifications() {
   const [emailOn, setEmailOn] = useState<boolean | null>(null);
   const [savingPref, setSavingPref] = useState(false);
   useEffect(() => {
-    apiGet<any>('/notifications/preferences')
+    apiGet<NotificationPreferences>('/notifications/preferences')
       .then((d) => setEmailOn(d.emailNotifications !== false))
       .catch(() => setEmailOn(null));
   }, []);
@@ -106,12 +100,12 @@ export default function Notifications() {
     setEmailOn(next);
     setSavingPref(true);
     try {
-      const d = await apiPatch<any>('/notifications/preferences', { emailNotifications: next });
+      const d = await apiPatch<NotificationPreferences>('/notifications/preferences', { emailNotifications: next });
       setEmailOn(d.emailNotifications !== false);
       toast.success(next ? 'Notification emails turned on' : 'Notification emails turned off');
-    } catch (e: any) {
+    } catch (e: unknown) {
       setEmailOn(previous);
-      toast.error(e.message || 'Unable to save your email preference');
+      toast.error(errorMessage(e, 'Unable to save your email preference'));
     } finally {
       setSavingPref(false);
     }
@@ -124,9 +118,9 @@ export default function Notifications() {
     try {
       await apiPatch(`/notifications/${n.id}`, {});
       announceUnreadChanged();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setItems((xs) => xs.map((x) => (x.id === n.id ? { ...x, readAt: null } : x)));
-      toast.error(e.message || 'Unable to mark notification as read');
+      toast.error(errorMessage(e, 'Unable to mark notification as read'));
     }
   }
 
@@ -139,9 +133,9 @@ export default function Notifications() {
     try {
       await apiPost('/notifications/read-all', {});
       announceUnreadChanged();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setItems(previous);
-      toast.error(e.message || 'Unable to mark notifications as read');
+      toast.error(errorMessage(e, 'Unable to mark notifications as read'));
     } finally {
       setMarkingAll(false);
     }

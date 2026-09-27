@@ -6,8 +6,8 @@ export const REPORT_JOB_ID = 'job-7';
 export const CONVERSATION_ID = 'c1';
 
 export type DialogFixtureState = {
-  reports: any[];
-  verificationRequests: any[];
+  reports: Record<string, unknown>[];
+  verificationRequests: Record<string, unknown>[];
   nativeDialogs: string[];
   pageErrors: string[];
 };

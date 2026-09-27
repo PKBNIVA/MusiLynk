@@ -8,13 +8,15 @@ import { apiGet } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { Link } from 'react-router';
 import { Briefcase, Calendar, Search, Bookmark, ArrowRight, ShieldCheck } from 'lucide-react';
+import type { Job, JobSeekerDashboard } from '../lib/apiTypes';
+import type { LucideIcon } from 'lucide-react';
 export default function JobSeekerDashboard() {
   const { user } = useAuth();
-  const [d, setD] = useState<any>({ recommendedJobs: [] }),
+  const [d, setD] = useState<Partial<JobSeekerDashboard> & { recommendedJobs: Job[] }>({ recommendedJobs: [] }),
     [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const load = () => {
     setState('loading');
-    apiGet<any>('/dashboard')
+    apiGet<JobSeekerDashboard>('/dashboard')
       .then((x) => {
         setD({ ...x, recommendedJobs: x?.recommendedJobs || [] });
         setState('ready');
@@ -22,7 +24,7 @@ export default function JobSeekerDashboard() {
       .catch(() => setState('error'));
   };
   useEffect(load, []);
-  const Stat = ({ n, label, icon: I }: { n: any; label: string; icon: any }) => (
+  const Stat = ({ n, label, icon: I }: { n?: number; label: string; icon: LucideIcon }) => (
     <Card className="bg-white/[.055] border-white/10">
       <CardContent className="p-5 flex items-center gap-4">
         <div className="rounded-xl bg-violet-500/10 p-3">
@@ -121,7 +123,7 @@ export default function JobSeekerDashboard() {
           </Card>
         )}
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {d.recommendedJobs?.map((j: any) => (
+          {d.recommendedJobs?.map((j) => (
             <Link key={j.id} to={`/jobseeker/jobs/${j.id}`}>
               <Card className="h-full bg-white/[.055] border-white/10 hover:bg-white/[.075]">
                 <CardContent className="p-5">

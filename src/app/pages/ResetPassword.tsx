@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { apiPost } from '../lib/api';
 import { toast } from 'sonner';
+import { errorMessage } from '../lib/errors';
 export default function ResetPassword() {
   usePageMeta('Choose a new password', 'Set a new password for your Verse account using the link from your email.');
   const [sp] = useSearchParams(),
@@ -20,8 +21,8 @@ export default function ResetPassword() {
     try {
       await apiPost('/auth/reset-password', { token: sp.get('token'), password });
       setDone(true);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setBusy(false);
     }

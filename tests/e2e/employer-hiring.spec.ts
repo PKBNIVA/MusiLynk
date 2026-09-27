@@ -50,7 +50,7 @@ const candidates = [
 ];
 
 async function signIn(page: Page, role: Role, handler: Handler = () => undefined) {
-  const calls: Array<{ method: string; path: string; body: any }> = [];
+  const calls: Array<{ method: string; path: string; body: unknown }> = [];
   const dialogs: string[] = [];
   const errors: string[] = [];
   page.on('dialog', (dialog) => {
@@ -66,7 +66,7 @@ async function signIn(page: Page, role: Role, handler: Handler = () => undefined
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname.replace(/^\/api/, '');
-    let body: any = null;
+    let body: unknown = null;
     try {
       body = request.postDataJSON();
     } catch {
@@ -144,10 +144,11 @@ test('hitting the plan limit keeps the opportunity as a draft and links to plans
   await page.getByRole('button', { name: 'Submit for review' }).click();
   await expect(page.getByText(/saved as a draft/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'View plans' })).toBeVisible();
-  expect(calls.filter((c) => c.method === 'POST' && c.path === '/jobs').map((c) => c.body.status)).toEqual([
-    'pending',
-    'draft',
-  ]);
+  expect(
+    calls
+      .filter((c) => c.method === 'POST' && c.path === '/jobs')
+      .map((c) => (c.body as Record<string, unknown>).status),
+  ).toEqual(['pending', 'draft']);
 });
 
 test('interview scheduling and recruiter notes use in-page dialogs, not browser prompts', async ({ page }) => {
@@ -175,9 +176,9 @@ test('interview scheduling and recruiter notes use in-page dialogs, not browser 
   await notes.getByRole('button', { name: 'Save notes' }).click();
   await expect(notes).toBeHidden();
 
-  const patches = calls.filter((c) => c.method === 'PATCH').map((c) => c.body);
+  const patches = calls.filter((c) => c.method === 'PATCH').map((c) => c.body as Record<string, unknown>);
   expect(patches[0]).toMatchObject({ status: 'Interview Scheduled' });
-  expect(new Date(patches[0].interviewDate).toISOString()).toBe(new Date('2030-01-15T14:30').toISOString());
+  expect(new Date(String(patches[0].interviewDate)).toISOString()).toBe(new Date('2030-01-15T14:30').toISOString());
   expect(patches[1]).toEqual({ recruiterNote: 'Great feel', recruiterRating: 4 });
   expect(dialogs).toEqual([]);
   expect(errors).toEqual([]);

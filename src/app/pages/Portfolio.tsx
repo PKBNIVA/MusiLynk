@@ -47,13 +47,15 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { describeWorkSample, WorkSamplePlayer } from '../components/WorkSamplePlayer';
+import { errorCode, errorMessage, errorStatus } from '../lib/errors';
+import type { MediaMetadata, PortfolioItem } from '../lib/apiTypes';
 
 const split = (s: string) =>
   s
     .split(',')
     .map((x) => x.trim())
     .filter(Boolean);
-const join = (a: any[]) => (a || []).join(', ');
+const join = (a?: string[]) => (a || []).join(', ');
 const blank = {
   type: 'audio',
   title: '',
@@ -70,6 +72,11 @@ const blank = {
   mediaMetadata: {},
   thumbnailUrl: '',
   waveformUrl: '',
+};
+// Tag lists are edited as comma-separated text; the year holds whatever the input last produced.
+type PortfolioForm = Omit<typeof blank, 'year' | 'mediaMetadata'> & {
+  year: number | string;
+  mediaMetadata: MediaMetadata;
 };
 const AUDIO_KINDS = ['audio', 'composition', 'production', 'mix', 'master'];
 const VIDEO_KINDS = ['video', 'showreel', 'live'];
@@ -90,19 +97,19 @@ function kindForUpload(current: string, contentType: string) {
 }
 
 export default function Portfolio() {
-  const [items, setItems] = useState<any[]>([]);
-  const [f, setF] = useState<any>(blank);
+  const [items, setItems] = useState<PortfolioItem[]>([]);
+  const [f, setF] = useState<PortfolioForm>(blank);
   const [editId, setEditId] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
   const [upload, setUpload] = useState<UploadState>({ status: 'idle' });
-  const [pendingDelete, setPendingDelete] = useState<any | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PortfolioItem | null>(null);
   const [saving, setSaving] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const load = () =>
-    apiGet<any>('/portfolio')
+    apiGet<{ items?: PortfolioItem[] }>('/portfolio')
       .then((d) => setItems(d.items || []))
-      .catch((e: any) => toast.error(e.message));
+      .catch((e: unknown) => toast.error(errorMessage(e)));
   useEffect(() => {
     load();
     return () => abortRef.current?.abort();
@@ -130,8 +137,8 @@ export default function Portfolio() {
   async function startUpload(file: File) {
     try {
       validateUploadFile(file);
-    } catch (error: any) {
-      setUpload({ status: 'error', file, message: error.message, retryable: false });
+    } catch (error: unknown) {
+      setUpload({ status: 'error', file, message: errorMessage(error), retryable: false });
       return;
     }
     abortRef.current?.abort();
@@ -144,7 +151,7 @@ export default function Portfolio() {
         onProgress: (pct) => setUpload({ status: 'uploading', file, pct }),
       });
       const contentType = out.contentType || uploadContentType(file) || '';
-      setF((x: any) => ({
+      setF((x) => ({
         ...x,
         url: out.url,
         type: kindForUpload(x.type, contentType),
@@ -160,15 +167,15 @@ export default function Portfolio() {
       }));
       setUpload({ status: 'done', file, id: out.id });
       toast.success('File uploaded');
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (controller.signal.aborted) {
         setUpload({ status: 'idle' });
         return;
       }
       const retryable =
-        !['UNSUPPORTED_TYPE', 'FILE_TOO_LARGE', 'FILE_EMPTY', 'UPLOAD_REJECTED'].includes(error?.code) &&
-        error?.status !== 422;
-      setUpload({ status: 'error', file, message: error?.message || 'Upload failed.', retryable });
+        !['UNSUPPORTED_TYPE', 'FILE_TOO_LARGE', 'FILE_EMPTY', 'UPLOAD_REJECTED'].includes(errorCode(error) ?? '') &&
+        errorStatus(error) !== 422;
+      setUpload({ status: 'error', file, message: errorMessage(error, 'Upload failed.'), retryable });
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
     }
@@ -176,7 +183,7 @@ export default function Portfolio() {
 
   async function removeUploadedFile() {
     const id = unsavedUploadId;
-    setF((x: any) => ({ ...x, url: '', mediaMetadata: {}, thumbnailUrl: '', waveformUrl: '' }));
+    setF((x) => ({ ...x, url: '', mediaMetadata: {}, thumbnailUrl: '', waveformUrl: '' }));
     setUpload({ status: 'idle' });
     if (id) await discardUpload(id).catch(() => undefined);
   }
@@ -199,14 +206,14 @@ export default function Portfolio() {
       toast.success(editId ? 'Work sample updated' : 'Work sample added');
       resetForm();
       load();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error(errorMessage(error));
     } finally {
       setSaving(false);
     }
   }
 
-  function edit(i: any) {
+  function edit(i: PortfolioItem) {
     setEditId(i.id);
     setUpload({ status: 'idle' });
     setF({
@@ -238,8 +245,8 @@ export default function Portfolio() {
       if (editId === item.id) resetForm();
       toast.success('Work sample deleted');
       load();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error(errorMessage(error));
     }
   }
 

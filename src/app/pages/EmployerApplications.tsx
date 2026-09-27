@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../lib/authContext';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
+import { errorMessage } from '../lib/errors';
+import type { ConversationCreated, EmployerApplication, Job } from '../lib/apiTypes';
 // datetime-local value for "now", in the viewer's time zone.
 const localNow = () => {
   const d = new Date();
@@ -23,8 +25,8 @@ export default function EmployerApplications() {
   const base = user?.role === 'jobseeker' ? '/jobseeker' : '/employer',
     postPath = user?.role === 'jobseeker' ? '/jobseeker/hiring/post' : '/employer/post-job';
   const jobId = params.get('jobId') || '';
-  const [apps, setApps] = useState<any[]>([]),
-    [jobs, setJobs] = useState<any[]>([]),
+  const [apps, setApps] = useState<EmployerApplication[]>([]),
+    [jobs, setJobs] = useState<Job[]>([]),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState('');
   /* Applications with a status/note update in flight; their actions are disabled until it settles. */ const [
@@ -42,12 +44,14 @@ export default function EmployerApplications() {
     [notes, setNotes] = useState<{ id: string; name: string; note: string; rating: string } | null>(null);
   const load = useCallback(
     () =>
-      apiGet<any>(`/employer/applications?${new URLSearchParams(jobId ? { jobId } : {})}`)
+      apiGet<{ applications?: EmployerApplication[] }>(
+        `/employer/applications?${new URLSearchParams(jobId ? { jobId } : {})}`,
+      )
         .then((d) => {
           setApps(d.applications || []);
           setLoadError('');
         })
-        .catch((e: any) => setLoadError(e.message || 'Applications could not be loaded.'))
+        .catch((e: unknown) => setLoadError(errorMessage(e, 'Applications could not be loaded.')))
         .finally(() => setLoading(false)),
     [jobId],
   );
@@ -56,19 +60,19 @@ export default function EmployerApplications() {
     load();
   }, [load]);
   useEffect(() => {
-    apiGet<any>('/employer/jobs')
+    apiGet<{ jobs?: Job[] }>('/employer/jobs')
       .then((d) => setJobs(d.jobs || []))
       .catch(() => {});
   }, []);
   async function message(candidateId: string, jobId: string) {
     try {
-      const d = await apiPost<any>('/conversations', { candidateId, jobId });
+      const d = await apiPost<ConversationCreated>('/conversations', { candidateId, jobId });
       nav(`${base}/messages?conversation=${d.conversation.id}`);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
-  async function update(id: string, body: any, success: string) {
+  async function update(id: string, body: Record<string, unknown>, success: string) {
     if (updating[id]) return false;
     markUpdating(id, true);
     try {
@@ -76,14 +80,14 @@ export default function EmployerApplications() {
       toast.success(success);
       await load();
       return true;
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
       return false;
     } finally {
       markUpdating(id, false);
     }
   }
-  function status(a: any, s: string) {
+  function status(a: EmployerApplication, s: string) {
     if (s === 'Interview Scheduled') {
       setInterview({ id: a.id, name: a.candidateName, date: '' });
       return;
@@ -220,7 +224,7 @@ export default function EmployerApplications() {
                       {a.screeningAnswers?.length > 0 && (
                         <div className="mt-4 text-sm space-y-2">
                           <div className="text-slate-500">Screening responses</div>
-                          {a.screeningAnswers.map((x: any, i: number) => (
+                          {a.screeningAnswers.map((x, i: number) => (
                             <div key={i} className="p-2 rounded bg-white/5 break-words">
                               {typeof x === 'string' ? x : JSON.stringify(x)}
                             </div>

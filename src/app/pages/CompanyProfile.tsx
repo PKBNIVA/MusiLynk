@@ -11,9 +11,11 @@ import { useAuth } from '../lib/authContext';
 import { toast } from 'sonner';
 import { ShieldCheck } from 'lucide-react';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
+import { errorMessage } from '../lib/errors';
+import type { AccountUser } from '../lib/apiTypes';
 export default function CompanyProfile() {
   const { setUser } = useAuth();
-  const [f, setF] = useState<any>({}),
+  const [f, setF] = useState<Partial<AccountUser>>({}),
     [saving, setSaving] = useState(false),
     [loadError, setLoadError] = useState(''),
     [verifyOpen, setVerifyOpen] = useState(false),
@@ -21,27 +23,27 @@ export default function CompanyProfile() {
     [verifyBusy, setVerifyBusy] = useState(false),
     [requested, setRequested] = useState(false);
   const loadMe = () =>
-    apiGet<any>('/me')
+    apiGet<{ user?: AccountUser }>('/me')
       .then(({ user }) => {
         setF(user || {});
         setLoadError('');
       })
-      .catch((e: any) => setLoadError(e.message || 'Your organization profile could not be loaded.'));
+      .catch((e: unknown) => setLoadError(errorMessage(e, 'Your organization profile could not be loaded.')));
   useEffect(() => {
     loadMe();
   }, []);
-  const set = (k: string, v: string) => setF({ ...f, [k]: v });
+  const set = (k: keyof AccountUser, v: string) => setF({ ...f, [k]: v });
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (saving) return;
     setSaving(true);
     try {
-      const d = await apiPut<any>('/profile', f);
+      const d = await apiPut<{ user: AccountUser }>('/profile', f);
       setUser(d.user);
       setF({ ...f, ...d.user });
       toast.success('Organization profile saved');
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -69,8 +71,8 @@ export default function CompanyProfile() {
       toast.success('Verification request submitted');
       setRequested(true);
       setVerifyOpen(false);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setVerifyBusy(false);
     }
@@ -123,13 +125,15 @@ export default function CompanyProfile() {
               <CardTitle>Organization details</CardTitle>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
-              {[
-                ['companyName', 'Company / label / studio name'],
-                ['companyWebsite', 'Official website'],
-                ['companySize', 'Team size'],
-                ['phone', 'Contact phone'],
-                ['location', 'Primary location'],
-              ].map(([k, l]) => (
+              {(
+                [
+                  ['companyName', 'Company / label / studio name'],
+                  ['companyWebsite', 'Official website'],
+                  ['companySize', 'Team size'],
+                  ['phone', 'Contact phone'],
+                  ['location', 'Primary location'],
+                ] as const
+              ).map(([k, l]) => (
                 <div key={k}>
                   <Label htmlFor={`org-${k}`}>{l}</Label>
                   <Input

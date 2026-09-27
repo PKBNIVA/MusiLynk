@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { Link } from 'react-router';
 import { Field, FormDialog, textareaClass } from './booking/BookingDialogs';
+import { errorMessage } from '../lib/errors';
 
 // Accessible replacement for the window.prompt report flows (a conversation partner, a job
 // listing). The reason is picked from a fixed list so moderators get consistent categories;
@@ -64,8 +65,8 @@ export function ReportDialog({
     try {
       await onSubmit({ reason, details: details.trim().slice(0, REPORT_DETAILS_MAX) });
       onOpenChange(false);
-    } catch (e: any) {
-      setError(e?.message || 'Unable to send your report. Try again.');
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'Unable to send your report. Try again.'));
     } finally {
       setBusy(false);
     }

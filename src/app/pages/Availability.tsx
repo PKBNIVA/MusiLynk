@@ -6,11 +6,13 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
+import { errorMessage } from '../lib/errors';
+import type { AvailabilityWindow } from '../lib/apiTypes';
 
 type AvailabilityForm = { startAt?: string; endAt?: string; city?: string; status: string };
 
 export default function Availability() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<AvailabilityWindow[]>([]);
   const [form, setForm] = useState<AvailabilityForm>({ status: 'available' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -24,10 +26,10 @@ export default function Availability() {
     setLoading(true);
     setError('');
     try {
-      const data = await apiGet<any>('/availability');
+      const data = await apiGet<{ windows?: AvailabilityWindow[] }>('/availability');
       setItems(data.windows || []);
-    } catch (e: any) {
-      setError(e.message || 'Unable to load availability.');
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'Unable to load availability.'));
     } finally {
       setLoading(false);
     }
@@ -53,8 +55,8 @@ export default function Availability() {
       setForm({ status: 'available' });
       await load();
       toast.success('Availability added.');
-    } catch (e: any) {
-      toast.error(e.message || 'Unable to add availability.');
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Unable to add availability.'));
     } finally {
       setSaving(false);
     }
@@ -64,8 +66,8 @@ export default function Availability() {
       await apiDelete(`/availability/${id}`);
       setItems((current) => current.filter((item) => item.id !== id));
       toast.success('Availability removed.');
-    } catch (e: any) {
-      toast.error(e.message || 'Unable to remove availability.');
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Unable to remove availability.'));
     }
   }
 

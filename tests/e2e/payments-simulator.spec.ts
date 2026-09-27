@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import type { AdminSubscription, BillingEventSummary, BookingPayment } from '../../src/app/lib/apiTypes';
 
 // Complete payment journeys in a real browser against Rails running the local Razorpay
 // simulator (RAZORPAY_SIMULATOR=true with rzp_test_ keys; never production). The simulated
@@ -141,7 +142,7 @@ test.describe('payments against the Razorpay simulator', () => {
     });
     const adminToken = (await admin.json()).accessToken;
     const subs = await call(request, adminToken, 'get', '/admin/subscriptions');
-    expect(subs.body.subscriptions.filter((s: any) => s.email === user.email)).toHaveLength(1);
+    expect(subs.body.subscriptions.filter((s: AdminSubscription) => s.email === user.email)).toHaveLength(1);
 
     await page.getByTestId('billing-status').getByRole('button', { name: 'Complete setup' }).click();
     await checkout.getByRole('button', { name: 'Pay (simulate success)' }).click();
@@ -158,7 +159,7 @@ test.describe('payments against the Razorpay simulator', () => {
     await expect(statusLabel(page)).toHaveText('Cancelled');
 
     const events = await call(request, adminToken, 'get', `/admin/billing-events?userId=${user.id}`);
-    expect(events.body.events.map((e: any) => e.eventType)).toEqual(
+    expect(events.body.events.map((e: BillingEventSummary) => e.eventType)).toEqual(
       expect.arrayContaining(['subscription.authenticated']),
     );
     const failed = await call(request, adminToken, 'get', '/admin/billing-events?eventType=payment.failed');
@@ -275,14 +276,14 @@ test.describe('payments against the Razorpay simulator', () => {
     await expect(page.getByText('Deposit paid. Your booking is confirmed.')).toBeVisible();
 
     const payments = await call(request, user.token, 'get', `/bookings/${bookingId}/payments`);
-    expect(payments.body.payments.map((p: any) => p.status).sort()).toEqual(['failed', 'paid']);
-    const paid = payments.body.payments.find((p: any) => p.status === 'paid');
+    expect(payments.body.payments.map((p: BookingPayment) => p.status).sort()).toEqual(['failed', 'paid']);
+    const paid = payments.body.payments.find((p: BookingPayment) => p.status === 'paid');
     expect(paid.amount).toBe(10500);
     expect(paid.currency).toBe('INR');
 
     const refund = await call(request, user.token, 'post', `/dev/razorpay/payments/${paid.provider_payment_id}/refund`);
     expect(refund.status).toBe(200);
-    expect(refund.body.deliveries.map((d: any) => d.status)).toEqual([200, 200]);
+    expect(refund.body.deliveries.map((d: { status: number }) => d.status)).toEqual([200, 200]);
     await page.reload();
     await expect(page.getByTestId('deposit-status')).toHaveText('Deposit refunded · INR 10,500');
     await page.getByRole('button', { name: /Payment history/ }).click();

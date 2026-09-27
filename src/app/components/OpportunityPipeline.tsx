@@ -6,6 +6,8 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ApiError, apiGet, apiPatch } from '../lib/api';
 import { FormDialog } from './HiringDialog';
+import { errorMessage } from '../lib/errors';
+import type { Job } from '../lib/apiTypes';
 
 export const jobStatusLabel: Record<string, string> = {
   draft: 'Draft',
@@ -23,10 +25,10 @@ const statusClass: Record<string, string> = {
 };
 
 // Shows a plan-limit error with a way to the plans page instead of a dead end.
-export function toastJobError(error: any, billingPath: string, nav: (to: string) => void) {
+export function toastJobError(error: unknown, billingPath: string, nav: (to: string) => void) {
   if (error instanceof ApiError && error.status === 402) {
     toast.error(error.message, { action: { label: 'View plans', onClick: () => nav(billingPath) } });
-  } else toast.error(error?.message || 'Something went wrong. Try again.');
+  } else toast.error(errorMessage(error, 'Something went wrong. Try again.'));
 }
 
 // The poster's own opportunities with the actions their status allows (GET/PATCH /employer/jobs).
@@ -46,25 +48,25 @@ export function OpportunityPipeline({
   const editBase = seeker ? '/jobseeker/hiring/post' : '/employer/post-job';
   const applicantsBase = seeker ? '/jobseeker/hiring/applicants' : '/employer/applications';
   const billingPath = seeker ? '/jobseeker/billing' : '/employer/billing';
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
-  const [closing, setClosing] = useState<any | null>(null);
+  const [closing, setClosing] = useState<Job | null>(null);
 
   const load = () =>
-    apiGet<any>('/employer/jobs')
+    apiGet<{ jobs?: Job[] }>('/employer/jobs')
       .then((d) => {
         setJobs(d.jobs || []);
         setError('');
       })
-      .catch((e: any) => setError(e.message || 'Your opportunities could not be loaded.'))
+      .catch((e: unknown) => setError(errorMessage(e, 'Your opportunities could not be loaded.')))
       .finally(() => setLoading(false));
   useEffect(() => {
     load();
   }, [reloadKey]);
 
-  async function move(job: any, status: string, success: string) {
+  async function move(job: Job, status: string, success: string) {
     if (busy) return false;
     setBusy(job.id);
     try {
@@ -73,9 +75,9 @@ export function OpportunityPipeline({
       await load();
       onChanged?.();
       return true;
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 422 && status === 'pending') {
-        toast.error(`${e.message} Edit the opportunity to finish it.`, {
+        toast.error(`${errorMessage(e)} Edit the opportunity to finish it.`, {
           action: { label: 'Edit', onClick: () => nav(`${editBase}?edit=${job.id}`) },
         });
       } else toastJobError(e, billingPath, nav);

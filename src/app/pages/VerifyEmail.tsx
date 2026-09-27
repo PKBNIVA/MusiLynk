@@ -4,6 +4,7 @@ import { PublicNav } from '../components/PublicNav';
 import { usePageMeta } from '../components/PageMeta';
 import { apiPost } from '../lib/api';
 import { Button } from '../components/ui/button';
+import { errorMessage } from '../lib/errors';
 
 type State = { kind: 'pending' | 'ok' | 'error'; message: string };
 
@@ -24,8 +25,8 @@ export default function VerifyEmail() {
     setState({ kind: 'pending', message: 'Verifying your email…' });
     apiPost('/auth/verify-email', { token }, { skipAuthRedirect: true })
       .then(() => setState({ kind: 'ok', message: 'Email verified successfully.' }))
-      .catch((e: any) =>
-        setState({ kind: 'error', message: e?.message || 'Verification link is invalid or expired.' }),
+      .catch((e: unknown) =>
+        setState({ kind: 'error', message: errorMessage(e, 'Verification link is invalid or expired.') }),
       );
   }, [token]);
   return (

@@ -12,9 +12,19 @@ import { toast } from 'sonner';
 import { ShieldCheck, MailCheck } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
 import { DebugLinkDialog, VerificationRequestDialog } from '../components/VerificationDialogs';
+import { errorMessage } from '../lib/errors';
+import type { AccountUser } from '../lib/apiTypes';
 // List fields arrive as arrays and are edited as text: comma-separated, credits one per line.
-const joinList = (v: any, sep: string) => (Array.isArray(v) ? v.join(sep) : String(v ?? ''));
-const toForm = (user: any) => ({
+type ListField =
+  'skills' | 'genres' | 'instruments' | 'languages' | 'credits' | 'openTo' | 'roles' | 'gear' | 'software';
+type NumberField = 'yearsExperience' | 'hourlyRate' | 'sessionRate' | 'showRate' | 'tourDayRate' | 'dayRate';
+// The form holds list fields as text and number fields as whatever the input last produced.
+type ProfileForm = Partial<
+  Omit<AccountUser, ListField | NumberField> & Record<ListField, string> & Record<NumberField, number | string | null>
+>;
+type ProfileSource = Omit<ProfileForm, ListField> & Partial<Record<ListField, string[] | string>>;
+const joinList = (v: unknown, sep: string) => (Array.isArray(v) ? v.join(sep) : String(v ?? ''));
+const toForm = (user: ProfileSource): ProfileForm => ({
   ...user,
   skills: joinList(user.skills, ', '),
   genres: joinList(user.genres, ', '),
@@ -28,7 +38,7 @@ const toForm = (user: any) => ({
 });
 export default function ProfileSetup() {
   const { setUser } = useAuth();
-  const [f, setF] = useState<any>({}),
+  const [f, setF] = useState<ProfileForm>({}),
     [saving, setSaving] = useState(false),
     [loaded, setLoaded] = useState(false),
     [loadError, setLoadError] = useState(''),
@@ -36,16 +46,16 @@ export default function ProfileSetup() {
     [debugLink, setDebugLink] = useState<string | null>(null);
   const load = () => {
     setLoadError('');
-    apiGet<any>('/me')
+    apiGet<{ user: AccountUser }>('/me')
       .then(({ user }) => {
         setF(toForm(user));
         setLoaded(true);
       })
-      .catch((e: any) => setLoadError(e?.message || 'Your profile could not be loaded.'));
+      .catch((e: unknown) => setLoadError(errorMessage(e, 'Your profile could not be loaded.')));
   };
   useEffect(load, []);
-  const set = (k: string, v: any) => setF((x: any) => ({ ...x, [k]: v }));
-  const list = (v: string) =>
+  const set = <K extends keyof ProfileForm>(k: K, v: ProfileForm[K]) => setF((x) => ({ ...x, [k]: v }));
+  const list = (v?: string) =>
     String(v || '')
       .split(',')
       .map((x) => x.trim())
@@ -70,12 +80,12 @@ export default function ProfileSetup() {
           .map((x: string) => x.trim())
           .filter(Boolean),
       };
-      const d = await apiPut<any>('/profile', payload);
+      const d = await apiPut<{ user: AccountUser }>('/profile', payload);
       setUser(d.user);
       setF(toForm({ ...f, ...d.user }));
       toast.success('Career profile saved');
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -90,14 +100,17 @@ export default function ProfileSetup() {
   }
   async function verifyEmail() {
     try {
-      const d: any = await apiPost('/auth/request-email-verification', {});
+      const d = await apiPost<{ ok?: boolean; alreadyVerified?: boolean; debugLink?: string }>(
+        '/auth/request-email-verification',
+        {},
+      );
       if (d.alreadyVerified) toast.success('Email already verified');
       else {
         toast.success('Verification email requested');
         if (d.debugLink) setDebugLink(d.debugLink);
       }
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
   return (

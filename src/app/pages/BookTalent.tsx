@@ -11,6 +11,8 @@ import { Badge } from '../components/ui/badge';
 import { Field, FormDialog, selectClass, textareaClass } from '../components/booking/BookingDialogs';
 import { Calendar, MapPin, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { errorMessage, errorStatus } from '../lib/errors';
+import type { Act } from '../lib/apiTypes';
 
 const EVENT_TYPES = [
   'wedding',
@@ -57,7 +59,7 @@ export default function BookTalent() {
   const base = `/${useLocation().pathname.split('/')[1] || 'employer'}`;
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const [acts, setActs] = useState<any[]>([]),
+  const [acts, setActs] = useState<Act[]>([]),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
     [q, setQ] = useState(''),
@@ -70,11 +72,13 @@ export default function BookTalent() {
   const load = useLatestCallback(async () => {
     setLoading(true);
     try {
-      const d = await apiGet<any>(`/acts?q=${encodeURIComponent(q.trim())}&city=${encodeURIComponent(city.trim())}`);
+      const d = await apiGet<{ acts?: Act[] }>(
+        `/acts?q=${encodeURIComponent(q.trim())}&city=${encodeURIComponent(city.trim())}`,
+      );
       setActs(d.acts || []);
       setLoadError('');
-    } catch (e: any) {
-      setLoadError(e.message || 'Unable to load acts.');
+    } catch (e: unknown) {
+      setLoadError(errorMessage(e, 'Unable to load acts.'));
     } finally {
       setLoading(false);
     }
@@ -84,7 +88,7 @@ export default function BookTalent() {
   }, [load]);
 
   const openEnquiry = useCallback(
-    (a: any) => {
+    (a: Act) => {
       setFormError('');
       setBooking({
         id: a.id,
@@ -108,16 +112,18 @@ export default function BookTalent() {
   useEffect(() => {
     if (!actParam || preselected.current === actParam) return;
     preselected.current = actParam;
-    apiGet<any>(`/acts/${encodeURIComponent(actParam)}`)
+    apiGet<{ act?: Act }>(`/acts/${encodeURIComponent(actParam)}`)
       .then((d) => {
         const act = d.act;
         if (!act || act.status !== 'active') throw new Error('This act is not currently taking bookings.');
         if (userId && act.owner_id === userId) throw new Error('This is your own act, so it cannot be booked.');
         openEnquiry(act);
       })
-      .catch((e: any) =>
+      .catch((e: unknown) =>
         toast.error(
-          e?.status === 404 ? 'That act is no longer available for booking.' : e.message || 'Unable to open that act.',
+          errorStatus(e) === 404
+            ? 'That act is no longer available for booking.'
+            : errorMessage(e, 'Unable to open that act.'),
         ),
       );
   }, [actParam, userId, openEnquiry]);
@@ -151,8 +157,8 @@ export default function BookTalent() {
         action: { label: 'View bookings', onClick: () => navigate(`${base}/bookings`) },
       });
       closeEnquiry();
-    } catch (e: any) {
-      setFormError(e.message || 'Unable to send the enquiry.');
+    } catch (e: unknown) {
+      setFormError(errorMessage(e, 'Unable to send the enquiry.'));
     } finally {
       setSending(false);
     }
@@ -211,9 +217,9 @@ export default function BookTalent() {
                   setQ('');
                   setCity('');
                   setLoading(true);
-                  apiGet<any>('/acts?q=&city=')
+                  apiGet<{ acts?: Act[] }>('/acts?q=&city=')
                     .then((d) => setActs(d.acts || []))
-                    .catch((e: any) => setLoadError(e.message || 'Unable to load acts.'))
+                    .catch((e: unknown) => setLoadError(errorMessage(e, 'Unable to load acts.')))
                     .finally(() => setLoading(false));
                 }}
               >

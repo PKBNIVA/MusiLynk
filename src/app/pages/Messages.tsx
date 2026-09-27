@@ -9,42 +9,18 @@ import { ReportDialog } from '../components/ReportDialog';
 import { useConfirm } from '../components/booking/BookingDialogs';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
+import { errorCode, errorMessage as messageOf, errorStatus } from '../lib/errors';
 import { announceUnreadChanged, useVisiblePolling } from '../lib/usePolling';
-
-type Conversation = {
-  id: string;
-  counterpartId?: string;
-  counterpartName?: string;
-  candidateName?: string;
-  employerName?: string;
-  viewerSide?: 'candidate' | 'employer';
-  counterpartActive?: boolean;
-  blockedByMe?: boolean;
-  blockedMe?: boolean;
-  jobTitle?: string | null;
-  lastMessage?: string | null;
-  lastMessageAt?: string | null;
-  lastMessageFromMe?: boolean;
-  unreadCount?: number;
-};
-// safetyFlags: scam-pattern signals, only ever sent to the recipient (see backend ScamSignals).
-type Message = {
-  id: string;
-  senderId: string;
-  body: string;
-  createdAt: string;
-  readAt?: string | null;
-  safetyFlags?: string[];
-};
+import type { Conversation, Message, MessagePage } from '../lib/apiTypes';
 
 const MESSAGE_MAX_LENGTH = 5000;
 const THREAD_POLL_MS = 10_000;
 const INBOX_POLL_MS = 30_000;
 
-const errorMessage = (e: any, fallback: string) => {
-  if (e?.status === 429)
+const errorMessage = (e: unknown, fallback: string) => {
+  if (errorStatus(e) === 429)
     return 'You’re sending messages too quickly. Wait a few minutes, then try again — your draft is saved.';
-  return e?.message || fallback;
+  return messageOf(e, fallback);
 };
 const byTime = (a: Message, b: Message) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
 const formatTime = (value?: string | null) => {
@@ -143,7 +119,7 @@ export default function Messages() {
 
   const loadConvs = useCallback(async () => {
     try {
-      const d = await apiGet<any>('/conversations');
+      const d = await apiGet<{ conversations?: Conversation[] }>('/conversations');
       const rows: Conversation[] = d.conversations || [];
       // The open thread was marked read when it loaded; an inbox response computed earlier may still count it.
       setConvs(
@@ -152,7 +128,7 @@ export default function Messages() {
       setConvsError('');
       // Desktop shows list and thread side by side, so open the latest thread; phones keep the list.
       if (!activeRef.current && rows[0] && isDesktop()) select(rows[0].id, true);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setConvsError(errorMessage(e, 'Unable to load conversations.'));
     } finally {
       setConvsLoading(false);
@@ -166,7 +142,7 @@ export default function Messages() {
         setThreadError('');
       }
       try {
-        const d = await apiGet<any>(`/conversations/${id}/messages`);
+        const d = await apiGet<MessagePage>(`/conversations/${id}/messages`);
         if (activeRef.current !== id) return;
         const server: Message[] = [...(d.messages || [])].sort(byTime);
         const oldest = server[0]?.createdAt || '';
@@ -187,9 +163,9 @@ export default function Messages() {
         server.forEach((m) => seenIds.current.add(m.id));
         setConvs((prev) => prev.map((c) => (c.id === id && c.unreadCount ? { ...c, unreadCount: 0 } : c)));
         if (!silent || receivedUnread) announceUnreadChanged();
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (activeRef.current !== id || silent) return;
-        if (e?.status === 404) setThreadState('missing');
+        if (errorStatus(e) === 404) setThreadState('missing');
         else {
           setThreadState('error');
           setThreadError(errorMessage(e, 'Unable to load messages.'));
@@ -232,14 +208,14 @@ export default function Messages() {
     if (!id || !first || loadingOlder) return;
     setLoadingOlder(true);
     try {
-      const d = await apiGet<any>(`/conversations/${id}/messages?before=${encodeURIComponent(first.id)}`);
+      const d = await apiGet<MessagePage>(`/conversations/${id}/messages?before=${encodeURIComponent(first.id)}`);
       if (activeRef.current !== id) return;
       const older: Message[] = [...(d.messages || [])].sort(byTime);
       olderLoaded.current = true;
       prependFrom.current = scroller.current?.scrollHeight ?? null;
       setMsgs((prev) => [...older.filter((m) => !prev.some((p) => p.id === m.id)), ...prev]);
       setTruncated(Boolean(d.truncated));
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(errorMessage(e, 'Unable to load earlier messages.'));
     } finally {
       setLoadingOlder(false);
@@ -269,7 +245,7 @@ export default function Messages() {
         confirmLabel: 'Block',
         destructive: true,
         action: () =>
-          applyBlock(c).catch((e: any) => {
+          applyBlock(c).catch((e: unknown) => {
             throw new Error(errorMessage(e, 'Unable to update this block.'));
           }),
       });
@@ -278,7 +254,7 @@ export default function Messages() {
     setSafetyBusy(true);
     try {
       await applyBlock(c);
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(errorMessage(e, 'Unable to update this block.'));
     } finally {
       setSafetyBusy(false);
@@ -294,7 +270,7 @@ export default function Messages() {
         reason: report.reason.slice(0, 200),
         details: report.details ? `${report.details}\n\n${context}` : context,
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       throw new Error(errorMessage(e, 'Unable to send your report.'));
     }
     toast.success('Report sent to moderation. You can also block this person.');
@@ -316,7 +292,7 @@ export default function Messages() {
     setSending(true);
     setSendError('');
     try {
-      const d = await apiPost<any>(`/conversations/${id}/messages`, { body });
+      const d = await apiPost<{ message: Message }>(`/conversations/${id}/messages`, { body });
       if (activeRef.current === id) {
         stickToBottom.current = true;
         setMsgs((xs) => (xs.some((m) => m.id === d.message.id) ? xs : [...xs, d.message].sort(byTime)));
@@ -332,12 +308,12 @@ export default function Messages() {
           : prev;
       });
       void loadConvs();
-    } catch (err: any) {
+    } catch (err: unknown) {
       const message = errorMessage(err, 'Unable to send your message.');
       setSendError(message);
       // Blocks and deactivated accounts change what the thread allows; refresh so the composer reflects it.
-      if (err?.code === 'MESSAGING_BLOCKED' || err?.code === 'RECIPIENT_INACTIVE') void loadConvs();
-      if (err?.status !== 429) toast.error(message);
+      if (errorCode(err) === 'MESSAGING_BLOCKED' || errorCode(err) === 'RECIPIENT_INACTIVE') void loadConvs();
+      if (errorStatus(err) !== 429) toast.error(message);
     } finally {
       setSending(false);
     }

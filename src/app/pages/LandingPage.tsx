@@ -23,6 +23,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { BrandMark } from '../components/BrandMark';
 import { SkipLink } from '../components/SkipLink';
+import type { LucideIcon } from 'lucide-react';
 
 const formats = [
   ['Jobs', BriefcaseBusiness],
@@ -366,7 +367,17 @@ function HeroStage() {
     </div>
   );
 }
-function Metric({ icon: Icon, value, label, color }: { icon: any; value: string; label: string; color: string }) {
+function Metric({
+  icon: Icon,
+  value,
+  label,
+  color,
+}: {
+  icon: LucideIcon;
+  value: string;
+  label: string;
+  color: string;
+}) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
       <span className={`grid h-9 w-9 place-items-center rounded-xl ${color}`}>
@@ -451,7 +462,7 @@ function HiringCard() {
     </Card>
   );
 }
-function Value({ icon: Icon, color, title, text }: { icon: any; color: string; title: string; text: string }) {
+function Value({ icon: Icon, color, title, text }: { icon: LucideIcon; color: string; title: string; text: string }) {
   return (
     <div className="verse-card-lift verse-surface rounded-2xl p-6">
       <span className={`grid h-11 w-11 place-items-center rounded-xl bg-white/[.06] ${color}`}>

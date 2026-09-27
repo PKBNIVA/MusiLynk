@@ -17,17 +17,17 @@ assert.match(
 
 assert.match(
   navigationSource,
-  /apiGet<any>\('\/notifications\/unread'\)/,
+  /apiGet<UnreadCounts>\('\/notifications\/unread'\)/,
   'workspace navigation must request the lightweight unread-count endpoint',
 );
 assert.doesNotMatch(
   navigationSource,
-  /apiGet<any>\('\/notifications'\)/,
+  /apiGet(<[^>]*>)?\('\/notifications'\)/,
   'workspace navigation must not download the full notification list',
 );
 assert.match(
   navigationSource,
-  /apiGet<any>\('\/notifications\/unread'\)[\s\S]*?\},\s*\[\]\s*\)/,
+  /apiGet<UnreadCounts>\('\/notifications\/unread'\)[\s\S]*?\},\s*\[\]\s*\)/,
   'navigation unread loading must not be explicitly coupled to pathname changes',
 );
 

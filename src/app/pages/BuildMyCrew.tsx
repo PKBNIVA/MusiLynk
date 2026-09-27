@@ -10,10 +10,23 @@ import { toast } from 'sonner';
 import { WandSparkles, Users, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../lib/authContext';
+import { errorMessage } from '../lib/errors';
+import type { CrewPlan } from '../lib/apiTypes';
 const needOptions = ['music', 'sound', 'lighting', 'video', 'production'];
 export default function BuildMyCrew() {
-  const [plans, setPlans] = useState<any[]>([]),
-    [f, setF] = useState<any>({
+  const [plans, setPlans] = useState<CrewPlan[]>([]),
+    [f, setF] = useState<{
+      title: string;
+      eventType: string;
+      city: string;
+      eventDate: string;
+      audienceSize: number | string;
+      budget: string;
+      currency: string;
+      genres: string;
+      needs: string[];
+      notes: string;
+    }>({
       title: '',
       eventType: 'Corporate event',
       city: '',
@@ -33,12 +46,12 @@ export default function BuildMyCrew() {
     [busy, setBusy] = useState(''),
     [converted, setConverted] = useState<Record<string, boolean>>({});
   const load = () =>
-    apiGet<any>('/crew-plans')
+    apiGet<{ plans?: CrewPlan[] }>('/crew-plans')
       .then((d) => {
         setPlans(d.plans || []);
         setLoadError('');
       })
-      .catch((e: any) => setLoadError(e.message || 'Crew plans could not be loaded.'))
+      .catch((e: unknown) => setLoadError(errorMessage(e, 'Crew plans could not be loaded.')))
       .finally(() => setLoading(false));
   useEffect(() => {
     load();
@@ -65,8 +78,8 @@ export default function BuildMyCrew() {
       toast.success('Crew plan created');
       setF({ ...f, title: '' });
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setBusy('');
     }
@@ -80,8 +93,8 @@ export default function BuildMyCrew() {
       toast.success('Moved to Band Builder. Publish each opening from there.', {
         action: { label: 'Open Band Builder', onClick: () => nav(bandBuilder) },
       });
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setBusy('');
     }
@@ -241,7 +254,7 @@ export default function BuildMyCrew() {
                     )}
                   </div>
                   <div className="grid md:grid-cols-2 gap-2 mt-4">
-                    {p.roles?.map((r: any) => (
+                    {p.roles?.map((r) => (
                       <div key={r.id} className="rounded-lg bg-black/20 border border-white/10 p-3">
                         <div className="flex justify-between gap-2">
                           <b className="text-sm">

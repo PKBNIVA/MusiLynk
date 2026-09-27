@@ -21,14 +21,16 @@ import {
   MessageSquare,
   Send,
 } from 'lucide-react';
+import { errorMessage } from '../lib/errors';
+import type { ConversationCreated, Job } from '../lib/apiTypes';
 
-const title = (x: string) => String(x || '').replace(/(^|\s)\S/g, (m) => m.toUpperCase());
+const title = (x?: string | null) => String(x || '').replace(/(^|\s)\S/g, (m) => m.toUpperCase());
 
 export default function JobDetails() {
   const { id } = useParams(),
     nav = useNavigate(),
     { user } = useAuth();
-  const [job, setJob] = useState<any>(),
+  const [job, setJob] = useState<Job>(),
     [cover, setCover] = useState(''),
     [answers, setAnswers] = useState<Record<number, string>>({}),
     [busy, setBusy] = useState(false),
@@ -36,12 +38,12 @@ export default function JobDetails() {
     [reporting, setReporting] = useState(false);
   const load = useCallback(() => {
     setLoadError('');
-    return apiGet<any>(`/jobs/${id}`)
+    return apiGet<{ job?: Job }>(`/jobs/${id}`)
       .then((d) => {
         if (!d?.job) throw new Error('Opportunity not found');
         setJob(d.job);
       })
-      .catch((e: any) => setLoadError(e?.message || 'This opportunity could not be loaded.'));
+      .catch((e: unknown) => setLoadError(errorMessage(e, 'This opportunity could not be loaded.')));
   }, [id]);
   useEffect(() => {
     setJob(undefined);
@@ -50,13 +52,14 @@ export default function JobDetails() {
   const backTo = user?.role === 'employer' ? '/employer' : '/jobseeker/jobs';
   async function messageEmployer() {
     try {
-      const d = await apiPost<any>('/conversations', { jobId: id });
+      const d = await apiPost<ConversationCreated>('/conversations', { jobId: id });
       nav(`/jobseeker/messages?conversation=${d.conversation.id}`);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
   async function apply() {
+    if (!job) return;
     setBusy(true);
     try {
       await apiPost(`/jobs/${id}/apply`, {
@@ -65,18 +68,19 @@ export default function JobDetails() {
       });
       setJob({ ...job, applied: true });
       toast.success('Application submitted');
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setBusy(false);
     }
   }
   async function save() {
+    if (!job) return;
     try {
       job.saved ? await apiDelete(`/saved-jobs/${id}`) : await apiPost(`/saved-jobs/${id}`);
       setJob({ ...job, saved: !job.saved });
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     }
   }
   async function report({ reason, details }: { reason: string; details: string }) {

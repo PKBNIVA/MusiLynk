@@ -9,17 +9,30 @@ import { Badge } from '../components/ui/badge';
 import { Field, FormDialog, selectClass, useConfirm } from '../components/booking/BookingDialogs';
 import { Music, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { errorMessage } from '../lib/errors';
+import type { Act, ActMember, Taxonomy } from '../lib/apiTypes';
 
 const FALLBACK_ACT_TYPES = ['solo', 'duo', 'trio', 'band', 'ensemble', 'dj'];
+// Inputs hand back strings, so the lineup size holds whatever was typed until it is submitted.
+type ActForm = {
+  name: string;
+  actType: string;
+  city: string;
+  genres: string;
+  minFee: string;
+  maxFee: string;
+  lineupSize: number | string;
+  ownerRole: string;
+};
 const list = (value: unknown): string[] => (Array.isArray(value) ? value.map(String) : []);
 
 export default function ActsManager() {
   const base = `/${useLocation().pathname.split('/')[1] || 'jobseeker'}`;
-  const [acts, setActs] = useState<any[]>([]),
+  const [acts, setActs] = useState<Act[]>([]),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
     [actTypes, setActTypes] = useState<string[]>(FALLBACK_ACT_TYPES),
-    [f, setF] = useState<any>({
+    [f, setF] = useState<ActForm>({
       name: '',
       actType: 'band',
       city: '',
@@ -43,18 +56,18 @@ export default function ActsManager() {
   const { ask, element: confirmDialog } = useConfirm();
   async function load() {
     try {
-      const d = await apiGet<any>('/acts/me');
+      const d = await apiGet<{ acts?: Act[] }>('/acts/me');
       setActs(d.acts || []);
       setLoadError('');
-    } catch (e: any) {
-      setLoadError(e.message || 'Unable to load your acts.');
+    } catch (e: unknown) {
+      setLoadError(errorMessage(e, 'Unable to load your acts.'));
     } finally {
       setLoading(false);
     }
   }
   useEffect(() => {
     void load();
-    apiGet<any>('/taxonomy')
+    apiGet<Partial<Taxonomy>>('/taxonomy')
       .then((t) => {
         const types = list(t?.actTypes);
         if (types.length) setActTypes(types);
@@ -90,10 +103,10 @@ export default function ActsManager() {
         lineupSize: Math.max(1, Math.floor(Number(f.lineupSize)) || 1),
       });
       toast.success('Bookable act created');
-      setF((current: any) => ({ ...current, name: '', city: '', genres: '', minFee: '', maxFee: '' }));
+      setF((current) => ({ ...current, name: '', city: '', genres: '', minFee: '', maxFee: '' }));
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setCreating(false);
     }
@@ -112,13 +125,13 @@ export default function ActsManager() {
       toast.success('Lineup member added');
       setMember(null);
       await load();
-    } catch (e: any) {
-      setMemberError(e.message || 'Unable to add this member.');
+    } catch (e: unknown) {
+      setMemberError(errorMessage(e, 'Unable to add this member.'));
     } finally {
       setSavingMember(false);
     }
   }
-  const removeMember = (actId: string, m: any) =>
+  const removeMember = (actId: string, m: ActMember) =>
     ask({
       title: `Remove ${m.displayName}?`,
       description: "They will no longer appear in this act's public lineup.",
@@ -130,7 +143,7 @@ export default function ActsManager() {
         await load();
       },
     });
-  async function changeStatus(act: any) {
+  async function changeStatus(act: Act) {
     if (togglingId) return;
     setTogglingId(act.id);
     try {
@@ -138,8 +151,8 @@ export default function ActsManager() {
       else await apiPatch(`/acts/${act.id}`, { status: 'active' });
       toast.success(act.status === 'active' ? 'Act hidden from booking' : 'Act published for booking');
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setTogglingId(null);
     }
@@ -298,7 +311,7 @@ export default function ActsManager() {
                         </Button>
                       </div>
                       <div className="mt-3 space-y-2">
-                        {(a.members || []).map((m: any) => (
+                        {(a.members || []).map((m) => (
                           <div
                             key={m.id}
                             className="flex items-center justify-between gap-2 rounded-lg bg-black/15 p-3"

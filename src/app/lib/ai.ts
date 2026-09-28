@@ -44,62 +44,59 @@ export interface AiSuggestion {
   balance?: number;
 }
 
-/** GET /api/ai/usage. */
+/**
+ * GET /api/ai/usage — how much of the account's own free AI help is left, for the small hint
+ * next to the AI buttons. `period` is "lifetime" for talent tasks (profile_headline,
+ * profile_bio) or "month" for hirer tasks (job_description, job_screening_questions); there is
+ * no "credits" balance shown to the person.
+ */
 export interface AiUsage {
-  balance: number;
-  monthlyAllowance: number | null;
-  usedThisPeriod: number;
-  resetsAt: string;
-  plan: string;
-  recent: { task: string; credits: number; date: string }[];
+  remaining: number;
+  limit: number;
+  period: 'lifetime' | 'month';
 }
 
-/** GET /api/ai/pricing — the public AI credits catalogue. */
+/** GET /api/ai/pricing — the public AI pricing catalogue. `aiPlus`/`topups` are present only
+ * while AI billing is enabled server-side (it stays off at launch — nothing is purchasable). */
 export interface AiPricingCatalogue {
   freeCreditsPerMonth: number;
-  aiPlus: { planCode: string; priceInr: number; creditsPerMonth: number };
   planAllowances: Record<string, number | null>;
-  topups: Record<string, { priceInr: number; credits: number }>;
-  topupExpiresAfterMonths: number;
   taskCosts: Record<string, number>;
-}
-
-/** What a 402 from /api/ai/suggest carries, offered by AiPaywallDialog. */
-export interface AiUpgradeOptions {
-  aiPlus: { planCode: string; priceInr: number; creditsPerMonth: number };
-  topups: Record<string, { priceInr: number; credits: number }>;
+  aiPlus?: { planCode: string; priceInr: number; creditsPerMonth: number };
+  topups?: Record<string, { priceInr: number; credits: number }>;
+  topupExpiresAfterMonths?: number;
 }
 
 /**
- * Thrown by `suggestAi` in place of a plain `ApiError` when the server refused the call for a
- * credits/spend reason (never for a validation or access error, which stay plain `ApiError`s).
- * `AI_CREDITS_EXHAUSTED` is the person's own balance; `AI_FREE_PAUSED` / `AI_HARD_PAUSED` are the
- * spend guard. The generic API client drops the extra fields a 402 body carries (`balance`,
- * `resetsAt`), so `balance`/`resetsAt` are refetched from GET /api/ai/usage and `upgradeOptions`
- * from GET /api/ai/pricing, so AiPaywallDialog always has real numbers and an offer to show. Both
- * refetches are best-effort — a failure there still surfaces the paywall, just without them.
+ * Thrown by `suggestAi` in place of a plain `ApiError` when the server refused the call because
+ * the account's own free AI help is used up (`AI_USAGE_LIMIT_REACHED`) or the platform-wide
+ * monthly AI budget is resting (`AI_FREE_PAUSED`) — never for a validation or access error, which
+ * stay plain `ApiError`s. The generic API client drops the extra fields a 402 body carries, so
+ * `remaining`/`limit`/`period` are refetched from GET /api/ai/usage, best-effort, so
+ * AiPaywallDialog can say how much (if anything) is left. A failed refetch still surfaces the
+ * paywall, just without those numbers.
  */
 export class AiPaywallError extends Error {
-  code: 'AI_CREDITS_EXHAUSTED' | 'AI_FREE_PAUSED' | 'AI_HARD_PAUSED';
-  balance?: number;
-  resetsAt?: string;
-  upgradeOptions?: AiUpgradeOptions;
+  code: 'AI_USAGE_LIMIT_REACHED' | 'AI_FREE_PAUSED';
+  remaining?: number;
+  limit?: number;
+  period?: AiUsage['period'];
 
   constructor(
     message: string,
     code: AiPaywallError['code'],
-    extra?: { balance?: number; resetsAt?: string; upgradeOptions?: AiUpgradeOptions },
+    extra?: { remaining?: number; limit?: number; period?: AiUsage['period'] },
   ) {
     super(message);
     this.name = 'AiPaywallError';
     this.code = code;
-    this.balance = extra?.balance;
-    this.resetsAt = extra?.resetsAt;
-    this.upgradeOptions = extra?.upgradeOptions;
+    this.remaining = extra?.remaining;
+    this.limit = extra?.limit;
+    this.period = extra?.period;
   }
 }
 
-const PAYWALL_CODES = new Set(['AI_CREDITS_EXHAUSTED', 'AI_FREE_PAUSED', 'AI_HARD_PAUSED']);
+const PAYWALL_CODES = new Set(['AI_USAGE_LIMIT_REACHED', 'AI_FREE_PAUSED']);
 
 export function isAiPaywallError(error: unknown): error is AiPaywallError {
   return error instanceof AiPaywallError;
@@ -174,26 +171,20 @@ export function suggestAi(
     { signal: options?.signal },
   ).catch(async (error: unknown) => {
     if (error instanceof ApiError && error.status === 402 && error.code && PAYWALL_CODES.has(error.code)) {
-      // The generic API client drops extra 402-body fields (balance/resetsAt), so they're
-      // refetched from GET /api/ai/usage — the same numbers, from the account's own ledger —
-      // alongside the public pricing catalogue for the upgrade offer.
-      const [usage, upgradeOptions] = await Promise.all([
-        loadAiUsage().catch(() => undefined),
-        loadAiPricing()
-          .then((pricing) => ({ aiPlus: pricing.aiPlus, topups: pricing.topups }))
-          .catch(() => undefined),
-      ]);
+      // The generic API client drops extra 402-body fields, so remaining/limit/period are
+      // refetched from GET /api/ai/usage — the same numbers the hint next to the button shows.
+      const usage = await loadAiUsage().catch(() => undefined);
       throw new AiPaywallError(error.message, error.code as AiPaywallError['code'], {
-        balance: usage?.balance,
-        resetsAt: usage?.resetsAt,
-        upgradeOptions,
+        remaining: usage?.remaining,
+        limit: usage?.limit,
+        period: usage?.period,
       });
     }
     throw error;
   });
 }
 
-/** GET /api/ai/usage — the signed-in account's credits balance, allowance and recent activity. */
+/** GET /api/ai/usage — how much of the signed-in account's own free AI help is left. */
 export function loadAiUsage(signal?: AbortSignal): Promise<AiUsage> {
   return apiGet<AiUsage>('/ai/usage', { signal });
 }
@@ -214,7 +205,8 @@ export function resetAiPricing() {
   pricingCache = null;
 }
 
-/** The signed-in account's AI credits, refetched on demand (used by AiCreditsBadge). */
+/** How much of the signed-in account's own free AI help is left, refetched on demand (used by
+ * the AiCreditsBadge hint). */
 export function useAiUsage(): { usage: AiUsage | null; reload: () => void } {
   const [usage, setUsage] = useState<AiUsage | null>(null);
   const [generation, setGeneration] = useState(0);
@@ -223,7 +215,7 @@ export function useAiUsage(): { usage: AiUsage | null; reload: () => void } {
     loadAiUsage()
       .then((value) => {
         // Guards against an unmocked/misbehaving endpoint answering with an incomplete body.
-        if (live && value && typeof value.balance === 'number' && Array.isArray(value.recent)) setUsage(value);
+        if (live && value && typeof value.remaining === 'number' && typeof value.limit === 'number') setUsage(value);
       })
       .catch(() => undefined);
     return () => {

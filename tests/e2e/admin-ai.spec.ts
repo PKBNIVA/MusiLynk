@@ -1,9 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page, type Route } from '@playwright/test';
-import { chooseOption } from './qa-helpers';
 
-// Mocked-API test of the admin AI tab: this month's spend, budget guardrails and the
-// grant-credits form. The real endpoints (Admin::AiController) are covered by
+// Mocked-API test of the admin "AI spend" tab: this month's spend by task and tier, and the
+// budget guardrails. The grant-credits form is gone at launch (AI billing stays off, so there is
+// nothing to grant against). The real endpoints (Admin::AiController) are covered by
 // backend/test/integration/admin_ai_test.rb.
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
 
@@ -17,15 +17,15 @@ const admin = {
 };
 
 const costs = {
-  totalSpendInr: 4200,
-  freeTierSpendInr: 1800,
-  freeTierBudgetInr: 5000,
-  hardBudgetInr: 20000,
-  byTask: { job_description: 2200, profile_bio: 900, candidate_summary: 1100 },
-  byTier: { free: 1800, pro: 1900, studio: 500 },
+  totalSpendInr: 420,
+  freeTierSpendInr: 420,
+  freeTierBudgetInr: 1500,
+  hardBudgetInr: 1500,
+  byTask: { job_description: 220, profile_bio: 100, profile_headline: 100 },
+  byTier: { free: 420 },
   topAccounts: [
-    { accountType: 'user', accountId: 'user-1', spendInr: 900 },
-    { accountType: 'organization', accountId: 'org-1', spendInr: 700 },
+    { accountType: 'user', accountId: 'user-1', spendInr: 90 },
+    { accountType: 'user', accountId: 'user-2', spendInr: 70 },
   ],
 };
 
@@ -65,69 +65,34 @@ async function openAdminAiTab(page: Page, extra: (route: Route, pathname: string
     return json(route, fixture ?? {});
   });
   await page.goto('/admin');
-  await page.getByRole('tab', { name: 'AI' }).click();
+  await page.getByRole('tab', { name: 'AI spend' }).click();
   return calls;
 }
 
-test('the AI tab shows spend by task and tier, budget bars and top accounts', async ({ page }) => {
+test('the AI spend tab shows spend by task and tier, budget bars and top accounts, with no grant form', async ({
+  page,
+}) => {
   await openAdminAiTab(page);
   await expect(page.getByRole('heading', { name: 'Spend this month', level: 2 })).toBeVisible();
-  await expect(page.getByText('₹4,200', { exact: true })).toBeVisible();
-  await expect(page.getByText('₹1,800', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('₹420', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('job_description')).toBeVisible();
-  await expect(page.getByText('candidate_summary')).toBeVisible();
+  await expect(page.getByText('profile_bio')).toBeVisible();
   await expect(page.getByText('free', { exact: true })).toBeVisible();
   await expect(page.getByText('user:user-1')).toBeVisible();
-  await expect(page.getByText('organization:org-1')).toBeVisible();
-  // Budget bars: free-tier 1800/5000 = 36%, hard 4200/20000 = 21%.
-  await expect(page.getByText('36%')).toBeVisible();
-  await expect(page.getByText('21%')).toBeVisible();
-});
+  await expect(page.getByText('user:user-2')).toBeVisible();
+  // Budget bars: free-tier and hard are both 420/1500 = 28%.
+  await expect(page.getByText('28%').first()).toBeVisible();
 
-test('granting credits asks for confirmation, then posts the grant and refreshes spend', async ({ page }) => {
-  let granted: Record<string, unknown> | null = null;
-  const calls = await openAdminAiTab(page, (route, pathname) => {
-    if (pathname === '/api/admin/ai/grants' && route.request().method() === 'POST') {
-      granted = route.request().postDataJSON();
-      void route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ok: true, balance: 150 }),
-      });
-      return true;
-    }
-    return false;
-  });
+  await expect(page.getByRole('button', { name: 'Grant credits' })).toHaveCount(0);
+  await expect(page.getByText('Grant AI credits')).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Grant credits' }).click();
-  await chooseOption(page.getByLabel('Account type'), 'Organization');
-  await page.getByLabel('Credits', { exact: true }).fill('150');
-  await page.getByLabel('Account id').fill('org-42');
-  await page.getByLabel('Reason').fill('Goodwill credit for a support case.');
-  await page.getByRole('button', { name: 'Grant' }).click();
-
-  const confirm = page.getByRole('dialog', { name: 'Confirm grant' });
-  await expect(confirm).toBeVisible();
-  await expect(confirm).toContainText('150 AI credits to organization:org-42');
-  // Not sent yet — the confirmation step must be explicitly accepted.
-  expect(calls.some((c) => c.path === '/admin/ai/grants')).toBe(false);
-
-  const axeResult = await new AxeBuilder({ page })
-    .include('[role="dialog"]')
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .analyze();
+  const axeResult = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(axeResult.violations, axeResult.violations.map((v) => `${v.impact}: ${v.id} — ${v.help}`).join('\n')).toEqual(
     [],
   );
+});
 
-  await confirm.getByRole('button', { name: 'Confirm grant' }).click();
-  await expect(confirm).toBeHidden();
-  expect(granted).toEqual({
-    accountType: 'organization',
-    accountId: 'org-42',
-    credits: 150,
-    note: 'Goodwill credit for a support case.',
-  });
-  // The costs endpoint is refetched after a successful grant.
-  expect(calls.filter((c) => c.path === '/admin/ai/costs').length).toBeGreaterThanOrEqual(2);
+test('the AI spend tab never posts a grant, even on reload', async ({ page }) => {
+  const calls = await openAdminAiTab(page);
+  expect(calls.some((c) => c.path === '/admin/ai/grants')).toBe(false);
 });

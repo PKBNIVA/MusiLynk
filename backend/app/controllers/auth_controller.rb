@@ -74,13 +74,24 @@ class AuthController < ApplicationController
     role = params[:role].to_s
     return render_error("Choose either a jobseeker or employer account.", :unprocessable_content, "INVALID_ROLE") unless %w[jobseeker employer].include?(role)
 
-    user = User.create!(name: params[:name], email: params[:email], password: params[:password], role:, status: :active)
-    user.create_profile!
+    return unless consent_acceptable?
+    # The two-minute sign-up sends its answers with the account; the old payload has none.
+    starter = Onboarding::Starter.from_params(params)
+    unless starter.valid?(role)
+      return render_error(starter.errors.values.flatten.to_sentence, :unprocessable_content, "VALIDATION_FAILED", fields: starter.errors)
+    end
+
+    user, created = User.transaction do
+      account = User.create!(name: params[:name], email: params[:email], password: params[:password], role:, status: :active,
+        consented_at: consent_given? ? Time.current : nil)
+      account.create_profile!
+      [account, starter.apply!(account)]
+    end
     token = sign_in(user)
     verification_token = issue_token("verify_email", 24.hours, user)
     _verification_link, verification_delivery = deliver_token(verification_token, "/verify-email", user)
-    audit!("auth.register", user)
-    render json: { user: public_user(user), accessToken: token, verificationRequired: true, verificationDelivery: verification_delivery }, status: :created
+    audit!("auth.register", user, starter.any? ? { starter: created } : {})
+    render json: { user: public_user(user), accessToken: token, verificationRequired: true, verificationDelivery: verification_delivery, starter: created }, status: :created
   rescue ActiveRecord::RecordNotUnique
     render_error("An account already exists for this email.", :conflict)
   end
@@ -176,7 +187,8 @@ class AuthController < ApplicationController
 
     user = User.find_by(email:)
     pending = user ? {} : sign_up.to_h
-    record, code = SignInCode.issue!(email:, pending_name: pending[:name], pending_role: pending[:role])
+    record, code = SignInCode.issue!(email:, pending_name: pending[:name], pending_role: pending[:role],
+      pending_consented_at: pending[:role] && consent_given? ? Time.current : nil)
     if (user || record.sign_up?) && !admin_code_only_sign_in_blocked?(user)
       queue_sign_in_code(user:, email:, code:)
     else
@@ -314,6 +326,17 @@ class AuthController < ApplicationController
 
   def normalized_email = params[:email].to_s.strip.downcase
 
+  # Sign-up consent (Terms and Privacy Policy). Older clients send no `consent` at all and keep
+  # working; a client that asks and gets "no" is refused, so an account never starts without it.
+  def consent_given? = ActiveModel::Type::Boolean.new.cast(params[:consent]) == true
+
+  def consent_acceptable?
+    return true if !params.key?(:consent) || consent_given?
+    render_error("Agree to the Terms and Privacy Policy to create your account.", :unprocessable_content, "CONSENT_REQUIRED",
+      fields: { consent: ["Agree to the Terms and Privacy Policy to continue."] })
+    false
+  end
+
   def password_login_enabled? = ENV.fetch("PASSWORD_LOGIN_ENABLED", "true").strip.downcase != "false"
 
   # Outside production a missing provider falls back to the on-screen debug code.
@@ -333,6 +356,7 @@ class AuthController < ApplicationController
       render_error("Enter a name between 2 and 120 characters.", :unprocessable_content, "INVALID_NAME")
       return nil
     end
+    return nil unless consent_acceptable?
     { name:, role: }
   end
 
@@ -363,7 +387,7 @@ class AuthController < ApplicationController
   def create_user_from_code(code)
     user = User.transaction do
       created = User.create!(name: code.pending_name, email: code.email, role: code.pending_role, status: :active,
-        email_verified: true, password: SecureRandom.base58(32))
+        email_verified: true, password: SecureRandom.base58(32), consented_at: code.pending_consented_at)
       created.create_profile!
       created
     end

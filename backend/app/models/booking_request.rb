@@ -26,6 +26,7 @@ class BookingRequest < ApplicationRecord
   belongs_to :requester, class_name: "User"
   has_many :booking_quotes, dependent: :destroy
   has_many :booking_payments, dependent: :destroy
+  has_many :refund_records, dependent: :destroy
 
   validates :status, inclusion: { in: STATUSES }
   validates :event_type, :city, presence: true

@@ -13,6 +13,7 @@ import { Field, FormDialog, textareaClass, useConfirm } from '../components/book
 import { Clock3, Zap, Siren } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { UrgentRequest, UrgentRequestResponse } from '../lib/apiTypes';
+import { trackUrgentRequestSubmitted, trackUrgentResponseSubmitted } from '../lib/analytics';
 
 type Draft = {
   title: string;
@@ -102,6 +103,7 @@ export default function UrgentRequests() {
         budgetMax: draft.budgetMax.trim() ? Number(draft.budgetMax) : null,
         requirements: draft.requirements.trim() || null,
       });
+      trackUrgentRequestSubmitted();
       toast.success('Urgent request published');
       setDraft(null);
       await load();
@@ -122,6 +124,7 @@ export default function UrgentRequests() {
         message: reply.message.trim(),
         rate: reply.rate.trim() ? Number(reply.rate) : null,
       });
+      trackUrgentResponseSubmitted();
       toast.success('Availability sent');
       setReply(null);
       await load();

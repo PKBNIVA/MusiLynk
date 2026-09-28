@@ -17,6 +17,7 @@ import {
   History,
   Database,
   Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -61,6 +62,8 @@ const OperationsTab = lazy(() => import('./admin/OperationsTab'));
 const DemoDataTab = lazy(() => import('./admin/DemoDataTab'));
 const AuditTab = lazy(() => import('./admin/AuditTab'));
 const AdminAiTab = lazy(() => import('./admin/AdminAiTab'));
+const UrgentTab = lazy(() => import('./admin/UrgentTab'));
+const FunnelTab = lazy(() => import('./admin/FunnelTab'));
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth(),
@@ -302,7 +305,15 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="ai" className="flex-none gap-1.5">
               <Sparkles aria-hidden="true" size={14} />
-              AI
+              AI spend
+            </TabsTrigger>
+            <TabsTrigger value="urgent" className="flex-none gap-1.5">
+              <AlertTriangle aria-hidden="true" size={14} />
+              Urgent matching
+            </TabsTrigger>
+            <TabsTrigger value="funnel" className="flex-none gap-1.5">
+              <TrendingUp aria-hidden="true" size={14} />
+              Funnel
             </TabsTrigger>
           </TabsList>
 
@@ -421,6 +432,17 @@ export default function AdminDashboard() {
           <TabsContent value="ai" className="mt-5">
             <Suspense fallback={null}>
               <AdminAiTab />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="urgent" className="mt-5">
+            <Suspense fallback={null}>
+              <UrgentTab />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="funnel" className="mt-5">
+            <Suspense fallback={null}>
+              <FunnelTab />
             </Suspense>
           </TabsContent>
 

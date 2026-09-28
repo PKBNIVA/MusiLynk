@@ -49,7 +49,8 @@ export default function PublicTalent() {
     e.preventDefault();
     if (!update({ q, location })) void load();
   };
-  const roleLabel = values.role ? talentRoleLabel(values.role, taxonomy) : '';
+  // The API labels free-text roles ("drummer" → "Drummer"); the taxonomy covers the fixed directory keys.
+  const roleLabel = values.role ? list.first?.role?.label || talentRoleLabel(values.role, taxonomy) : '';
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
@@ -174,10 +175,10 @@ export default function PublicTalent() {
             onClear={query ? clear : undefined}
           >
             <Button variant="outline" asChild>
-              <Link to="/auth/jobseeker">List your profile</Link>
+              <Link to="/join/musician">List your profile</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link to="/auth/employer">Start hiring</Link>
+              <Link to="/join/hiring">Start hiring</Link>
             </Button>
           </NoResults>
         )}

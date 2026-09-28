@@ -19,6 +19,7 @@ const P = ({ roles, children }: { roles: Role[]; children: React.ReactNode }) =>
 function publicRoutes(): RouteObject[] {
   const LandingPage = L(() => import('./pages/LandingPage'));
   const AuthPage = L(() => import('./pages/AuthPage'));
+  const Join = L(() => import('./pages/Join'));
   const JobSeekerDashboard = L(() => import('./pages/JobSeekerDashboard'));
   const EmployerDashboard = L(() => import('./pages/EmployerDashboard'));
   const JobSearch = L(() => import('./pages/JobSearch'));
@@ -52,6 +53,7 @@ function publicRoutes(): RouteObject[] {
   const PublicAct = L(() => import('./pages/public/PublicAct'));
   const LegalPage = L(() => import('./pages/public/LegalPage'));
   const UrgentRequests = L(() => import('./pages/UrgentRequests'));
+  const UrgentHire = L(() => import('./pages/UrgentHire'));
   const Availability = L(() => import('./pages/Availability'));
   const VerifyEmail = L(() => import('./pages/VerifyEmail'));
   const Unsubscribe = L(() => import('./pages/Unsubscribe'));
@@ -61,6 +63,7 @@ function publicRoutes(): RouteObject[] {
   const ActsManager = L(() => import('./pages/ActsManager'));
   const BookTalent = L(() => import('./pages/BookTalent'));
   const Bookings = L(() => import('./pages/Bookings'));
+  const InvoicePrint = L(() => import('./pages/InvoicePrint'));
   const BandBuilder = L(() => import('./pages/BandBuilder'));
   const Billing = L(() => import('./pages/Billing'));
   const AccountData = L(() => import('./pages/AccountData'));
@@ -319,6 +322,24 @@ function publicRoutes(): RouteObject[] {
       ),
     },
     {
+      // Public entry for "need someone by tomorrow": no sign-in required to fill the form,
+      // only to publish it (see UrgentHire.tsx).
+      path: '/urgent',
+      element: (
+        <S>
+          <UrgentHire />
+        </S>
+      ),
+    },
+    {
+      path: '/join/:audience',
+      element: (
+        <S>
+          <Join />
+        </S>
+      ),
+    },
+    {
       path: '/jobseeker',
       children: [
         {
@@ -438,6 +459,14 @@ function publicRoutes(): RouteObject[] {
           element: (
             <P roles={['jobseeker']}>
               <Bookings />
+            </P>
+          ),
+        },
+        {
+          path: 'invoices/:id/print',
+          element: (
+            <P roles={['jobseeker']}>
+              <InvoicePrint />
             </P>
           ),
         },
@@ -644,6 +673,14 @@ function publicRoutes(): RouteObject[] {
           element: (
             <P roles={['employer']}>
               <Bookings />
+            </P>
+          ),
+        },
+        {
+          path: 'invoices/:id/print',
+          element: (
+            <P roles={['employer']}>
+              <InvoicePrint />
             </P>
           ),
         },

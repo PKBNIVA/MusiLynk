@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, useLocation, useSearchParams, Link } from 'react-router';
+import { useParams, useNavigate, useLocation, useSearchParams, Link, Navigate } from 'react-router';
 import { ArrowLeft, Briefcase, Eye, EyeOff, Mail, ShieldCheck, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -7,10 +7,10 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User } from '../lib/authContext';
 import { consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
+import { submitUrgentDraft } from '../lib/urgentDraft';
 import { toast } from 'sonner';
 import { BrandMark } from '../components/BrandMark';
-import { PasswordChecklist } from '../components/PasswordChecklist';
-import { errorCode, errorMessage, errorStatus } from '../lib/errors';
+import { errorCode, errorMessage } from '../lib/errors';
 import { useSubmitOnce } from '../lib/formErrors';
 import { CODE_LENGTH, CodeStep, FormError, focusField, useResendCooldown } from '../components/auth/CodeStep';
 
@@ -23,18 +23,15 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { login, register, verifyCode, completeSecondFactor, logout } = useAuth();
-  // C4/FORM-11: "Join Verse" and /start link straight to `?mode=register` so a new
-  // visitor lands on the sign-up form instead of the sign-in form.
-  const [mode, setMode] = useState<'login' | 'register'>(
-    searchParams.get('mode') === 'register' ? 'register' : 'login',
-  );
+  const { login, verifyCode, completeSecondFactor, logout } = useAuth();
+  // Sign-up lives on the two-minute /join flow; old `?mode=register` links go there (see below).
+  const registering = searchParams.get('mode') === 'register';
+  const joinPath = role === 'employer' ? '/join/hiring' : '/join/musician';
   /* Email codes are the primary path; passwords remain a fallback until email delivery is proven in production. */
   const [method, setMethod] = useState<'code' | 'password'>('code');
   const [codeStep, setCodeStep] = useState<'email' | 'code'>('email');
   /* Set when an admin's password was accepted and the emailed second-step code is still needed. */
   const [challenge, setChallenge] = useState<SecondFactorChallenge | null>(null);
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
@@ -94,6 +91,20 @@ export default function AuthPage() {
       setError(ADMIN_SITE_MESSAGE);
       return;
     }
+    // /urgent saved a draft before sending a signed-out hirer to create an account or sign in;
+    // post it now and land them on the confirmation/status card instead of the usual destination.
+    try {
+      const confirmed = await submitUrgentDraft();
+      if (confirmed) {
+        toast.success(welcome);
+        navigate('/urgent', { replace: true, state: { confirmed } });
+        return;
+      }
+    } catch (e: unknown) {
+      toast.error(
+        errorMessage(e, 'Signed in, but the urgent request could not be posted. Please try again from /urgent.'),
+      );
+    }
     toast.success(welcome);
     go(u.role, u.profileComplete);
   };
@@ -123,12 +134,6 @@ export default function AuthPage() {
     startCooldown();
     toast.success('Check your email for a 6-digit code');
   };
-  const switchMode = () => {
-    setMode(mode === 'login' ? 'register' : 'login');
-    setCodeStep('email');
-    setCode('');
-    setError('');
-  };
 
   /* Ref-based guard: rapid clicks on Sign in / Create account send one request (FORM-22). */
   const passwordSubmit = useSubmitOnce();
@@ -140,19 +145,19 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      const result = mode === 'login' ? await login(email, password) : await register({ name, email, password, role });
+      const result = await login(email, password);
       if (isSecondFactorChallenge(result)) {
         startChallenge(result);
         return;
       }
-      await finish(result, mode === 'login' ? 'Welcome back' : 'Account created. Next: set up your profile.');
+      await finish(result, 'Welcome back');
     } catch (e: unknown) {
       /* The API refuses admin passwords from this site once the admin site is live. */
       if (errorCode(e) === 'ADMIN_USE_ADMIN_SITE') setError(errorMessage(e, ADMIN_SITE_MESSAGE));
       else {
         /* Inline, announced, next to the fields; focus goes to the field to fix (FORM-08). */
         setError(errorMessage(e, 'Unable to continue'));
-        focusField(mode === 'login' || errorStatus(e) !== 409 ? 'auth-password' : 'auth-email');
+        focusField('auth-password');
       }
     } finally {
       setLoading(false);
@@ -181,7 +186,7 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      const response = await requestSignInCode(mode === 'register' ? { email, name, role } : { email });
+      const response = await requestSignInCode({ email });
       setDebugCode(response.debugCode);
       setCode('');
       setCodeStep('code');
@@ -211,7 +216,7 @@ export default function AuthPage() {
       const u = challenge
         ? await completeSecondFactor(challenge.challengeToken, value)
         : await verifyCode(email, value);
-      await finish(u, mode === 'register' ? 'Account created. Next: set up your profile.' : 'Welcome back');
+      await finish(u, 'Welcome back');
     } catch (e: unknown) {
       /* An expired or unusable challenge cannot be retried; start again from the password. */
       if (challenge && errorCode(e) === 'SECOND_FACTOR_EXPIRED') {
@@ -234,23 +239,6 @@ export default function AuthPage() {
   };
 
   const inputClass = 'mt-2 border-white/15';
-  const nameField = mode === 'register' && (
-    <div>
-      <Label htmlFor="auth-name" className="text-slate-200">
-        {role === 'employer' ? 'Your or company name' : 'Full name'}
-      </Label>
-      <Input
-        id="auth-name"
-        autoComplete="name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-        minLength={2}
-        maxLength={120}
-        className={inputClass}
-      />
-    </div>
-  );
   const emailField = (
     <div>
       <Label htmlFor="auth-email" className="text-slate-200">
@@ -273,7 +261,6 @@ export default function AuthPage() {
   const codeForms =
     codeStep === 'email' ? (
       <form onSubmit={sendCode} className="space-y-4" aria-busy={loading}>
-        {nameField}
         {emailField}
         {errorBox}
         <Button disabled={loading} className="w-full border-0 bg-gradient-to-r from-fuchsia-600 to-violet-600">
@@ -305,7 +292,7 @@ export default function AuthPage() {
         loading={loading}
         error={error}
         debugCode={debugCode}
-        submitLabel={mode === 'register' ? 'Verify and create account' : 'Verify and sign in'}
+        submitLabel="Verify and sign in"
         backLabel={challenge ? 'Back to sign in' : 'Use a different email'}
         onBack={() => {
           if (challenge) {
@@ -323,7 +310,6 @@ export default function AuthPage() {
 
   const passwordForm = (
     <form onSubmit={submit} className="space-y-4">
-      {nameField}
       {emailField}
       <div>
         <Label htmlFor="auth-password" className="text-slate-200">
@@ -333,18 +319,13 @@ export default function AuthPage() {
           <Input
             id="auth-password"
             aria-label="Password"
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+            autoComplete="current-password"
             type={show ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={mode === 'register' ? 10 : undefined}
             aria-invalid={error ? true : undefined}
-            aria-describedby={
-              [mode === 'register' ? 'password-help' : '', error ? 'auth-password-error' : '']
-                .filter(Boolean)
-                .join(' ') || undefined
-            }
+            aria-describedby={error ? 'auth-password-error' : undefined}
             className="border-white/15 pr-12"
           />
           <button
@@ -356,11 +337,6 @@ export default function AuthPage() {
             {show ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
-        {mode === 'register' && (
-          <div id="password-help">
-            <PasswordChecklist password={password} email={email} name={name} />
-          </div>
-        )}
       </div>
       {error && (
         <div id="auth-password-error">
@@ -368,11 +344,12 @@ export default function AuthPage() {
         </div>
       )}
       <Button disabled={loading} className="w-full border-0 bg-gradient-to-r from-fuchsia-600 to-violet-600">
-        {loading ? 'Tuning your workspace…' : mode === 'login' ? 'Sign in' : 'Create account'}
+        {loading ? 'Tuning your workspace…' : 'Sign in'}
       </Button>
     </form>
   );
 
+  if (registering) return <Navigate to={joinPath} state={location.state} replace />;
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 px-5 py-8 text-white">
       <div className="verse-grid absolute inset-0" />
@@ -409,11 +386,7 @@ export default function AuthPage() {
                   {role === 'employer' ? <Briefcase /> : <Users />}
                 </div>
                 <CardTitle level={2} className="mt-2 text-2xl font-black text-white">
-                  {(method === 'code' || challenge) && codeStep === 'code'
-                    ? 'Check your email'
-                    : mode === 'login'
-                      ? 'Welcome back'
-                      : 'Create your Verse account'}
+                  {(method === 'code' || challenge) && codeStep === 'code' ? 'Check your email' : 'Welcome back'}
                 </CardTitle>
                 <CardDescription className="text-slate-300">
                   {role === 'employer'
@@ -425,14 +398,14 @@ export default function AuthPage() {
                 {codeStep === 'email' && (
                   <div className="mb-5 grid grid-cols-2 rounded-xl border border-white/10 bg-black/15 p-1">
                     <Link
-                      to={mode === 'register' ? '/auth/jobseeker?mode=register' : '/auth/jobseeker'}
+                      to="/auth/jobseeker"
                       className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role === 'jobseeker' ? 'bg-white/10 text-white' : 'text-slate-400'}`}
                     >
                       <Users size={15} />
                       Professional
                     </Link>
                     <Link
-                      to={mode === 'register' ? '/auth/employer?mode=register' : '/auth/employer'}
+                      to="/auth/employer"
                       className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role === 'employer' ? 'bg-white/10 text-white' : 'text-slate-400'}`}
                     >
                       <Briefcase size={15} />
@@ -452,7 +425,7 @@ export default function AuthPage() {
                         {method === 'code' ? 'Use password instead' : 'Email me a code instead'}
                       </button>
                     )}
-                    {method === 'password' && mode === 'login' && emailAvailable && (
+                    {method === 'password' && emailAvailable && (
                       <Link to="/forgot-password" className="text-xs text-slate-400 hover:text-white">
                         Forgot password?
                       </Link>
@@ -460,27 +433,13 @@ export default function AuthPage() {
                   </div>
                 )}
                 {codeStep === 'email' && (
-                  <button
-                    onClick={switchMode}
-                    className="mt-3 min-h-11 w-full text-sm font-semibold text-violet-200 hover:text-white"
+                  <Link
+                    to={joinPath}
+                    state={location.state}
+                    className="mt-3 flex min-h-11 w-full items-center justify-center text-sm font-semibold text-violet-200 hover:text-white"
                   >
-                    {mode === 'login'
-                      ? `New to Verse? Create ${role === 'employer' ? 'an employer' : 'a professional'} account`
-                      : 'Already have an account? Sign in'}
-                  </button>
-                )}
-                {mode === 'register' && (
-                  <p className="mt-4 text-center text-xs leading-5 text-slate-400">
-                    By joining, you agree to our{' '}
-                    <Link className="text-slate-200 underline" to="/terms">
-                      Terms
-                    </Link>{' '}
-                    and{' '}
-                    <Link className="text-slate-200 underline" to="/privacy">
-                      Privacy Policy
-                    </Link>
-                    .
-                  </p>
+                    New to Verse? Join in two minutes
+                  </Link>
                 )}
               </CardContent>
             </Card>

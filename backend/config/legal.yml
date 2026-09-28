@@ -1,0 +1,25 @@
+# Compliance placeholders for a lawyer/CA to fill in before launch. Nothing here is invented:
+# GSTIN stays blank until the owner has one, and Invoice#gstin_present? gates GST fields on a
+# generated invoice on it being filled in. Read by LegalController (public, read-only) and by
+# InvoiceGenerator. See backend/docs/compliance-checklist.md for what each field needs.
+default: &default
+  business:
+    legal_name: "[LEGAL ENTITY NAME]"
+    gstin: "" # leave blank until GST-registered; never fabricate one
+    address: "[REGISTERED ADDRESS]"
+    state: "[STATE, for place-of-supply on GST invoices]"
+
+  # DPDP Act, 2023 grievance officer. Shown on the Privacy Policy page.
+  grievance_officer:
+    name: "[NAME]"
+    email: "[EMAIL]"
+    address: "[ADDRESS]"
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

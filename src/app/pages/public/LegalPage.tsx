@@ -1,6 +1,35 @@
+import { useEffect, useState } from 'react';
 import { usePageMeta } from '../../components/PageMeta';
 import { Link, useLocation } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
+import { apiGet } from '../../lib/api';
+
+// GET /api/legal/policy (LegalController#policy) — the DPDP grievance officer placeholders
+// (config/legal.yml) and the booking fee/cancellation rules in plain words (config/bookings.yml,
+// via BookingFeePolicy), read live so these sections never drift from the code that enforces
+// them. A fetch failure just means the DPDP/booking sections below are skipped; the rest of the
+// page (this file's static `sections`) is unaffected.
+type LegalPolicy = {
+  legal: {
+    legalName: string;
+    gstin: string;
+    gstinPresent: boolean;
+    businessAddress: string;
+    businessState: string;
+    grievanceOfficer: { name: string; email: string; address: string };
+  };
+  booking: { feeEnabled: boolean; plainEnglish: string[]; policyVersion: number };
+};
+
+function useLegalPolicy() {
+  const [policy, setPolicy] = useState<LegalPolicy | null>(null);
+  useEffect(() => {
+    apiGet<LegalPolicy>('/legal/policy')
+      .then(setPolicy)
+      .catch(() => setPolicy(null));
+  }, []);
+  return policy;
+}
 
 const SUPPORT_EMAIL = 'admin@alienbrains.in';
 const EFFECTIVE_DATE = '25 September 2026';
@@ -200,10 +229,44 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
   },
 };
 
+/** DPDP grievance officer + booking policy sections, appended to Privacy/Terms only once the
+ * live policy has loaded. Both are clearly marked as drafts: this is config rendered as prose,
+ * not legal advice, and a lawyer/CA still needs to sign off on the wording (see
+ * backend/docs/compliance-checklist.md). */
+function dynamicItems(key: string, policy: LegalPolicy | null): [string, string][] {
+  // The page must never crash on a missing or partial policy (API down, or an old/odd response):
+  // it just shows the static text without the generated sections.
+  if (!policy?.legal?.grievanceOfficer || !Array.isArray(policy.booking?.plainEnglish)) return [];
+  if (key === 'privacy') {
+    const officer = policy.legal.grievanceOfficer;
+    return [
+      [
+        'Data Protection (DPDP Act, 2023) — Draft, pending legal review',
+        'What we collect: account and contact details, professional profile and portfolio data, booking and payment records, and device/session logs. Purpose: to provide the service, process bookings and payments, prevent abuse and meet legal obligations. Consent: creating an account and using booking/payment features is your consent to this processing for those purposes; where a feature asks for separate consent (e.g. optional analytics), it is requested there. Withdrawal: you can withdraw consent for optional processing at any time from account settings, and delete your account entirely (see "Your data and your account" above) — Verse then deletes what the law allows it to delete and keeps only what tax and company law requires.',
+      ],
+      [
+        'Grievance Officer (DPDP Act, 2023) — Draft, pending legal review',
+        `Name: ${officer.name} · Email: ${officer.email} · Address: ${officer.address}. Contact the Grievance Officer for a data protection complaint under the DPDP Act; other support requests go to ${SUPPORT_EMAIL}.`,
+      ],
+    ];
+  }
+  if (key === 'terms' && policy.booking.plainEnglish.length) {
+    return [
+      [
+        'Booking fee, cancellation & no-shows — Draft, pending legal review',
+        `${policy.booking.plainEnglish.join(' ')} (Policy version ${policy.booking.policyVersion}.) These rules are generated from Verse's live configuration, so they always match what the booking flow actually charges and refunds.`,
+      ],
+    ];
+  }
+  return [];
+}
+
 export default function LegalPage() {
   const path = useLocation().pathname.split('/').filter(Boolean)[0] || 'about';
   const key = path === 'community-guidelines' ? 'community' : path === 'refund-policy' ? 'refunds' : path;
   const content = sections[key] || sections.about;
+  const policy = useLegalPolicy();
+  const items = [...content.items, ...dynamicItems(key, policy)];
   usePageMeta(content.title, content.intro);
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -213,7 +276,7 @@ export default function LegalPage() {
         <h1 className="text-4xl md:text-6xl font-bold mt-2">{content.title}</h1>
         <p className="text-slate-300 leading-8 mt-6 text-lg">{content.intro}</p>
         <div className="mt-9 space-y-4">
-          {content.items.map(([title, body]) => (
+          {items.map(([title, body]) => (
             <section key={title} className="rounded-xl border border-white/10 bg-white/[.035] p-5">
               <h2 className="font-semibold text-lg">{title}</h2>
               <p className="text-slate-400 leading-7 mt-2">{body}</p>

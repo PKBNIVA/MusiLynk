@@ -38,6 +38,8 @@ import { AppSelect } from '../components/ui/app-select';
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { AutocompleteInput } from '../components/ai/AutocompleteInput';
 import { AiCreditsBadge } from '../components/ai/AiCreditsBadge';
+import { JobPostTemplates, type JobPostTemplate } from '../components/templates/JobPostTemplates';
+import { trackJobPosted } from '../lib/analytics';
 
 /** ActorResolver::Actor#as_json — the identities a person can post an opportunity as. */
 type Identity = { type: 'user' | 'organization' | 'act'; id: string; name: string; key: string };
@@ -350,6 +352,7 @@ export default function PostJob() {
         done();
       } else {
         const d = await apiPost<CreatedJob>('/jobs', { ...payload(), status: draft ? 'draft' : 'pending' });
+        if (!draft) trackJobPosted();
         if (d.moderationFlags?.length && !draft)
           toast.info(
             `Submitted with ${d.moderationFlags.length} moderation note${d.moderationFlags.length === 1 ? '' : 's'}`,
@@ -425,6 +428,20 @@ export default function PostJob() {
     pay: payText,
     keyPoints: list(f.skills),
   });
+  // "Start from a template" — no network, no AI: prefills title, description skeleton and
+  // screening questions for one of six common opportunity shapes. Only offered on a fresh draft.
+  function applyTemplate(template: JobPostTemplate) {
+    setF((x) => ({
+      ...x,
+      opportunityKind: template.opportunityKind,
+      title: template.title,
+      description: template.description,
+      screeningQuestions: template.screeningQuestions.join('\n'),
+    }));
+    form.clear('title');
+    form.clear('description');
+    form.clear('screeningQuestions');
+  }
   const steps = [
     {
       id: STEP_IDS[0],
@@ -433,6 +450,7 @@ export default function PostJob() {
       description: 'What the opportunity is and where it happens.',
       content: (
         <div className="grid md:grid-cols-2 gap-5">
+          {!job && <JobPostTemplates onApply={applyTemplate} className="md:col-span-2" />}
           <RequiredNote className="md:col-span-2 -mt-2" />
           <Field
             id="job-title"

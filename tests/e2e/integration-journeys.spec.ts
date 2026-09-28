@@ -14,21 +14,30 @@ test.describe('real frontend and Rails journeys', () => {
       const name = role === 'jobseeker' ? 'Integration Artist' : 'Integration Studio';
       const profilePath = `/${role}/profile`;
 
+      // The two-minute sign-up, skipping the questions ("complete my profile later").
       await page.goto(`/auth/${role}`);
-      await page.getByRole('button', { name: /create .* account/i }).click();
-      await page.getByLabel(role === 'employer' ? 'Your or company name' : 'Full name').fill(name);
+      await page.getByRole('link', { name: 'New to Verse? Join in two minutes' }).click();
+      await page.getByRole('button', { name: 'Complete my profile later' }).click();
+      await page.getByLabel('Your name').fill(name);
       await page.getByLabel('Email').fill(email);
-      await page.getByRole('button', { name: 'Use password instead' }).click();
+      await page.getByRole('button', { name: 'Use a password instead' }).click();
       await page.getByLabel('Password', { exact: true }).fill(password);
-      await page.getByRole('button', { name: 'Create account', exact: true }).click();
-      await expect(page).toHaveURL(new RegExp(`${profilePath}$`));
+      await page.getByLabel(/I agree to the Terms/).check();
+      await page.getByRole('button', { name: 'Create my account' }).click();
+      await expect(page).toHaveURL(new RegExp(`/${role}\\?welcome=1$`));
+      await page.goto(profilePath);
+      // The form loads the saved profile first; typing before that finishes would be overwritten.
+      await page.waitForLoadState('networkidle');
 
       const token = await page.evaluate(() => localStorage.getItem('verse_access_token'));
       expect(token).toBeTruthy();
       const apiBase = process.env.QA_API_BASE_URL!;
       const me = await request.get(`${apiBase}/me`, { headers: { Authorization: `Bearer ${token}` } });
       expect(me.status()).toBe(200);
-      expect((await me.json()).user).toMatchObject({ email, role });
+      const meUser = (await me.json()).user;
+      expect(meUser).toMatchObject({ email, role });
+      // The sign-up's Terms and Privacy box is recorded on the account.
+      expect(meUser.consented_at).toBeTruthy();
       const forbidden = await request.get(`${apiBase}/admin/stats`, { headers: { Authorization: `Bearer ${token}` } });
       expect(forbidden.status()).toBe(403);
 
@@ -75,6 +84,8 @@ test.describe('real frontend and Rails journeys', () => {
       await page.getByRole('button', { name: 'Sign in' }).click();
       await expect.poll(() => new URL(page.url()).pathname).toBe(`/${role}`);
       await page.goto(profilePath);
+      // The form loads the saved profile first; typing before that finishes would be overwritten.
+      await page.waitForLoadState('networkidle');
       if (role === 'jobseeker') {
         await expect(page.getByPlaceholder(/Playback singer/)).toHaveValue('Integration vocalist');
       } else {

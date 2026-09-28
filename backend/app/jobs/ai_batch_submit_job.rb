@@ -9,9 +9,16 @@ class AiBatchSubmitJob < ApplicationJob
 
   MAX_PER_BATCH = 100
 
+  # Launch-disabled (see config/ai_pricing.yml `launch:`): the good_job.rb cron entry is left out
+  # entirely so this never fires on a schedule, but a no-op guard here too means a direct
+  # `AiBatchSubmitJob.perform_now` (a console, a stray enqueue) submits nothing new either. Rows
+  # already submitted before the task was disabled are still polled and ingested, since that
+  # costs nothing further and just finishes work already paid for.
+  def self.disabled? = !AiPricing.task_enabled?("classify_portfolio_item")
+
   def perform(now = Time.current, client: nil)
     @client = client || BatchClient.new
-    { submitted: submit_queued(now), ingested: ingest_submitted(now) }
+    { submitted: self.class.disabled? ? 0 : submit_queued(now), ingested: ingest_submitted(now) }
   end
 
   private

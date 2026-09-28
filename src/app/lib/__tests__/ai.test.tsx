@@ -15,7 +15,6 @@ import {
   useAiStatus,
   useAiTaskEnabled,
   useAiUsage,
-  type AiPricingCatalogue,
   type AiStatus,
   type AiUsage,
 } from '../ai';
@@ -136,49 +135,30 @@ describe('suggestAi', () => {
     );
   });
 
-  it('turns a 402 AI_CREDITS_EXHAUSTED into a typed AiPaywallError, enriched from usage and pricing', async () => {
-    resetAiPricing();
-    const pricing: AiPricingCatalogue = {
-      freeCreditsPerMonth: 20,
-      aiPlus: { planCode: 'ai_plus', priceInr: 199, creditsPerMonth: 400 },
-      planAllowances: { pro: 500, studio: 2000, enterprise: null },
-      topups: { small: { priceInr: 99, credits: 150 }, large: { priceInr: 399, credits: 700 } },
-      topupExpiresAfterMonths: 12,
-      taskCosts: { post_caption: 1 },
-    };
-    const usage: AiUsage = {
-      balance: 0,
-      monthlyAllowance: 20,
-      usedThisPeriod: 20,
-      resetsAt: '2026-10-01',
-      plan: 'free',
-      recent: [],
-    };
-    vi.mocked(apiPost).mockRejectedValue(new ApiError("You're out of AI credits.", 402, 'AI_CREDITS_EXHAUSTED'));
-    vi.mocked(apiGet).mockImplementation((path: string) => Promise.resolve(path === '/ai/usage' ? usage : pricing));
+  it('turns a 402 AI_USAGE_LIMIT_REACHED into a typed AiPaywallError, enriched from GET /ai/usage', async () => {
+    const usage: AiUsage = { remaining: 0, limit: 5, period: 'lifetime' };
+    vi.mocked(apiPost).mockRejectedValue(new ApiError('AI help is used up for now.', 402, 'AI_USAGE_LIMIT_REACHED'));
+    vi.mocked(apiGet).mockResolvedValue(usage);
 
     const error = await suggestAi('post_caption', { kind: 'release' }).catch((e: unknown) => e);
     expect(isAiPaywallError(error)).toBe(true);
     if (isAiPaywallError(error)) {
-      expect(error.code).toBe('AI_CREDITS_EXHAUSTED');
-      expect(error.balance).toBe(0);
-      expect(error.resetsAt).toBe('2026-10-01');
-      expect(error.upgradeOptions?.aiPlus.priceInr).toBe(199);
-      expect(error.upgradeOptions?.topups.small.credits).toBe(150);
+      expect(error.code).toBe('AI_USAGE_LIMIT_REACHED');
+      expect(error.remaining).toBe(0);
+      expect(error.limit).toBe(5);
+      expect(error.period).toBe('lifetime');
     }
   });
 
-  it('still surfaces the paywall when the usage/pricing refetch itself fails', async () => {
-    resetAiPricing();
-    vi.mocked(apiPost).mockRejectedValue(new ApiError('Free AI usage paused.', 402, 'AI_FREE_PAUSED'));
+  it('still surfaces the paywall when the usage refetch itself fails', async () => {
+    vi.mocked(apiPost).mockRejectedValue(new ApiError('AI help is resting this month.', 402, 'AI_FREE_PAUSED'));
     vi.mocked(apiGet).mockRejectedValue(new Error('offline'));
 
     const error = await suggestAi('post_caption', { kind: 'release' }).catch((e: unknown) => e);
     expect(isAiPaywallError(error)).toBe(true);
     if (isAiPaywallError(error)) {
       expect(error.code).toBe('AI_FREE_PAUSED');
-      expect(error.balance).toBeUndefined();
-      expect(error.upgradeOptions).toBeUndefined();
+      expect(error.remaining).toBeUndefined();
     }
   });
 
@@ -192,14 +172,7 @@ describe('suggestAi', () => {
 
 describe('loadAiUsage / loadAiPricing', () => {
   it('fetches usage from /ai/usage', async () => {
-    const usage = {
-      balance: 12,
-      monthlyAllowance: 20,
-      usedThisPeriod: 8,
-      resetsAt: '2026-10-01',
-      plan: 'free',
-      recent: [],
-    };
+    const usage: AiUsage = { remaining: 4, limit: 10, period: 'month' };
     vi.mocked(apiGet).mockResolvedValue(usage);
     await expect(loadAiUsage()).resolves.toEqual(usage);
     expect(apiGet).toHaveBeenCalledWith('/ai/usage', { signal: undefined });
@@ -223,15 +196,8 @@ describe('useAiUsage', () => {
   }
 
   it('loads usage on mount and refetches on reload()', async () => {
-    const first: AiUsage = {
-      balance: 5,
-      monthlyAllowance: 20,
-      usedThisPeriod: 15,
-      resetsAt: '2026-10-01',
-      plan: 'free',
-      recent: [],
-    };
-    const second: AiUsage = { ...first, balance: 4, usedThisPeriod: 16 };
+    const first: AiUsage = { remaining: 5, limit: 5, period: 'lifetime' };
+    const second: AiUsage = { ...first, remaining: 4 };
     vi.mocked(apiGet).mockResolvedValueOnce(first).mockResolvedValueOnce(second);
     let reload = () => {};
     await act(async () => {
@@ -249,7 +215,7 @@ describe('useAiUsage', () => {
   });
 
   it('ignores an incomplete or failed usage response', async () => {
-    vi.mocked(apiGet).mockResolvedValueOnce({ balance: 'nope' }).mockRejectedValueOnce(new Error('offline'));
+    vi.mocked(apiGet).mockResolvedValueOnce({ remaining: 'nope' }).mockRejectedValueOnce(new Error('offline'));
     let reload = () => {};
     await act(async () => {
       root.render(<UsageHarness onReload={(r) => (reload = r)} />);

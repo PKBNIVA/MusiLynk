@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -288,6 +288,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.datetime "updated_at", null: false
     t.datetime "provider_state_at"
     t.string "last_provider_event_id"
+    t.integer "fee_amount", default: 0, null: false
+    t.integer "gst_amount", default: 0, null: false
+    t.decimal "fee_percent", precision: 6, scale: 2, default: "0.0", null: false
+    t.integer "policy_version", default: 0, null: false
     t.index ["booking_quote_id"], name: "index_booking_payments_on_booking_quote_id"
     t.index ["booking_request_id", "kind"], name: "index_booking_payments_on_active_kind", unique: true, where: "((status)::text = ANY ((ARRAY['created'::character varying, 'paid'::character varying])::text[]))"
     t.index ["booking_request_id"], name: "index_booking_payments_on_booking_request_id"
@@ -296,6 +300,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.index ["provider_payment_id"], name: "index_booking_payments_on_provider_payment_id", unique: true, where: "(provider_payment_id IS NOT NULL)"
     t.check_constraint "amount > 0", name: "booking_payments_amount_positive"
     t.check_constraint "currency::text ~ '^[A-Z]{3}$'::text", name: "booking_payments_currency_format"
+    t.check_constraint "fee_amount >= 0 AND gst_amount >= 0", name: "booking_payments_fee_breakdown_nonnegative"
     t.check_constraint "kind::text = ANY (ARRAY['deposit'::character varying, 'balance'::character varying, 'refund'::character varying]::text[])", name: "booking_payments_kind_valid"
     t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying, 'razorpay'::character varying]::text[])", name: "booking_payments_provider_valid"
     t.check_constraint "status::text = ANY (ARRAY['created'::character varying, 'paid'::character varying, 'failed'::character varying, 'refunded'::character varying]::text[])", name: "booking_payments_status_valid"
@@ -317,9 +322,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.text "cancellation_terms"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "fee_amount", default: 0, null: false
+    t.integer "gst_amount", default: 0, null: false
+    t.decimal "fee_percent", precision: 6, scale: 2, default: "0.0", null: false
+    t.integer "policy_version", default: 0, null: false
     t.index ["booking_request_id"], name: "index_booking_quotes_on_booking_request_id"
     t.index ["created_by_id"], name: "index_booking_quotes_on_created_by_id"
     t.check_constraint "deposit_percent >= 1 AND deposit_percent <= 100", name: "booking_quotes_deposit_percent_valid"
+    t.check_constraint "fee_amount >= 0 AND gst_amount >= 0", name: "booking_quotes_fee_breakdown_nonnegative"
     t.check_constraint "performance_fee >= 0 AND travel_fee >= 0 AND production_fee >= 0 AND other_fee >= 0", name: "booking_quotes_fees_nonnegative"
   end
 
@@ -555,6 +565,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.index ["queue_name"], name: "index_good_jobs_on_queue_name"
     t.index ["scheduled_at", "queue_name"], name: "index_good_jobs_on_scheduled_at_and_queue_name"
     t.index ["scheduled_at"], name: "index_good_jobs_on_scheduled_at", where: "(finished_at IS NULL)"
+  end
+
+  create_table "invoices", id: :string, force: :cascade do |t|
+    t.string "booking_payment_id", null: false
+    t.string "invoice_number", null: false
+    t.string "financial_year", null: false
+    t.integer "sequence_number", null: false
+    t.integer "deposit_amount", null: false
+    t.integer "fee_amount", null: false
+    t.integer "gst_amount", null: false
+    t.integer "total_amount", null: false
+    t.string "currency", null: false
+    t.integer "policy_version", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_payment_id"], name: "index_invoices_on_booking_payment_id", unique: true
+    t.index ["financial_year", "sequence_number"], name: "index_invoices_on_financial_year_and_sequence_number", unique: true
+    t.index ["invoice_number"], name: "index_invoices_on_invoice_number", unique: true
   end
 
   create_table "job_alert_deliveries", id: :string, force: :cascade do |t|
@@ -804,6 +832,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.index ["status"], name: "index_posts_on_status"
   end
 
+  create_table "product_events", id: :string, force: :cascade do |t|
+    t.string "user_id"
+    t.string "anon_id", null: false
+    t.string "name", null: false
+    t.jsonb "props", default: {}, null: false
+    t.string "page"
+    t.string "referrer"
+    t.string "city"
+    t.datetime "created_at", null: false
+    t.index ["anon_id"], name: "index_product_events_on_anon_id"
+    t.index ["name", "created_at"], name: "index_product_events_on_name_and_created_at"
+    t.index ["user_id"], name: "index_product_events_on_user_id"
+  end
+
   create_table "profiles", primary_key: "user_id", id: :string, force: :cascade do |t|
     t.string "headline"
     t.string "phone"
@@ -843,6 +885,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "email_notifications", default: true, null: false
+    t.string "phone_e164"
+    t.datetime "whatsapp_consented_at"
     t.index "((roles)::text) gin_trgm_ops", name: "index_profiles_on_roles_text_trgm", using: :gin
     t.index "((skills)::text) gin_trgm_ops", name: "index_profiles_on_skills_text_trgm", using: :gin
     t.index ["bio"], name: "index_profiles_on_bio", opclass: :gin_trgm_ops, using: :gin
@@ -858,6 +902,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["user_id"], name: "index_recent_activities_on_user_id"
+  end
+
+  create_table "refund_records", id: :string, force: :cascade do |t|
+    t.string "booking_request_id", null: false
+    t.string "booking_payment_id"
+    t.string "requested_by_id", null: false
+    t.string "decided_by_id"
+    t.integer "amount", null: false
+    t.string "currency", null: false
+    t.integer "refund_percent", null: false
+    t.string "reason", null: false
+    t.string "status", default: "pending_manual", null: false
+    t.integer "policy_version", default: 0, null: false
+    t.text "note"
+    t.datetime "decided_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_payment_id"], name: "index_refund_records_on_booking_payment_id"
+    t.index ["booking_request_id"], name: "index_refund_records_on_booking_request_id"
+    t.index ["status"], name: "index_refund_records_on_status"
+    t.check_constraint "amount >= 0", name: "refund_records_amount_nonnegative"
+    t.check_constraint "refund_percent >= 0 AND refund_percent <= 100", name: "refund_records_percent_valid"
+    t.check_constraint "status::text = ANY (ARRAY['pending_manual'::character varying, 'done'::character varying, 'not_applicable'::character varying]::text[])", name: "refund_records_status_valid"
   end
 
   create_table "reports", id: :string, force: :cascade do |t|
@@ -971,6 +1038,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.datetime "used_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "pending_consented_at"
     t.index ["email", "created_at"], name: "index_sign_in_codes_on_email_and_created_at"
     t.index ["expires_at"], name: "index_sign_in_codes_on_expires_at"
   end
@@ -1054,6 +1122,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.index ["user_id", "status"], name: "index_uploads_on_user_id_and_status"
   end
 
+  create_table "urgent_request_notifications", id: :string, force: :cascade do |t|
+    t.string "urgent_request_id", null: false
+    t.string "user_id", null: false
+    t.string "channel", null: false
+    t.string "notified_by_admin_id"
+    t.datetime "created_at", null: false
+    t.index ["urgent_request_id", "user_id", "channel"], name: "idx_urgent_notif_unique", unique: true
+    t.index ["user_id"], name: "index_urgent_request_notifications_on_user_id"
+  end
+
   create_table "urgent_request_responses", id: false, force: :cascade do |t|
     t.string "urgent_request_id", null: false
     t.string "user_id", null: false
@@ -1084,7 +1162,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.boolean "travel_covered", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "notified_count", default: 0, null: false
+    t.datetime "first_notified_at"
+    t.datetime "last_notified_at"
+    t.string "filled_by_id"
+    t.text "founder_notes"
     t.index ["requester_id"], name: "index_urgent_requests_on_requester_id"
+    t.index ["start_at"], name: "index_urgent_requests_on_start_at"
+    t.index ["status"], name: "index_urgent_requests_on_status"
   end
 
   create_table "user_blocks", id: :string, force: :cascade do |t|
@@ -1108,6 +1193,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "synthetic_batch"
+    t.datetime "consented_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["name"], name: "index_users_on_name", opclass: :gin_trgm_ops, using: :gin
     t.index ["synthetic_batch"], name: "index_users_on_synthetic_batch", where: "(synthetic_batch IS NOT NULL)"
@@ -1159,6 +1245,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
   add_foreign_key "crew_plans", "users", column: "owner_id"
   add_foreign_key "email_tokens", "users"
   add_foreign_key "follows", "users", column: "follower_user_id"
+  add_foreign_key "invoices", "booking_payments"
   add_foreign_key "job_alert_deliveries", "job_alerts"
   add_foreign_key "job_alert_deliveries", "jobs"
   add_foreign_key "job_alert_deliveries", "notifications", on_delete: :nullify
@@ -1179,8 +1266,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
   add_foreign_key "posts", "portfolio_items", column: "shared_portfolio_item_id", on_delete: :nullify
   add_foreign_key "posts", "posts", column: "reshared_post_id", on_delete: :nullify
   add_foreign_key "posts", "users", column: "created_by_user_id"
+  add_foreign_key "product_events", "users", on_delete: :nullify
   add_foreign_key "profiles", "users"
   add_foreign_key "recent_activities", "users"
+  add_foreign_key "refund_records", "booking_payments", on_delete: :nullify
+  add_foreign_key "refund_records", "booking_requests"
+  add_foreign_key "refund_records", "users", column: "decided_by_id", on_delete: :nullify
+  add_foreign_key "refund_records", "users", column: "requested_by_id"
   add_foreign_key "reports", "users", column: "reporter_id"
   add_foreign_key "reports", "users", column: "resolved_by_id"
   add_foreign_key "resumes", "uploads", on_delete: :nullify
@@ -1197,8 +1289,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
   add_foreign_key "talent_shortlists", "users", column: "candidate_id"
   add_foreign_key "talent_shortlists", "users", column: "employer_id"
   add_foreign_key "uploads", "users", on_delete: :nullify
+  add_foreign_key "urgent_request_notifications", "urgent_requests"
+  add_foreign_key "urgent_request_notifications", "users"
+  add_foreign_key "urgent_request_notifications", "users", column: "notified_by_admin_id"
   add_foreign_key "urgent_request_responses", "urgent_requests"
   add_foreign_key "urgent_request_responses", "users"
+  add_foreign_key "urgent_requests", "users", column: "filled_by_id"
   add_foreign_key "urgent_requests", "users", column: "requester_id"
   add_foreign_key "user_blocks", "users", column: "blocked_id", on_delete: :cascade
   add_foreign_key "user_blocks", "users", column: "blocker_id", on_delete: :cascade

@@ -150,7 +150,7 @@ export default function PublicJobs() {
             onClear={query ? clear : undefined}
           >
             <Button variant="outline" asChild>
-              <Link to="/auth/jobseeker">Create professional account</Link>
+              <Link to="/join/musician">Create professional account</Link>
             </Button>
             <Button variant="outline" asChild>
               <Link to="/auth/employer">Post an opportunity</Link>

@@ -14,11 +14,11 @@ class SignInCode < ApplicationRecord
   scope :usable, -> { where(used_at: nil).where("expires_at > ?", Time.current).where("attempts < ?", MAX_ATTEMPTS) }
 
   # Invalidates older unused codes for the address and returns [record, raw_code].
-  def self.issue!(email:, pending_name: nil, pending_role: nil)
+  def self.issue!(email:, pending_name: nil, pending_role: nil, pending_consented_at: nil)
     raw = format("%06d", SecureRandom.random_number(1_000_000))
     record = transaction do
       where(email:, used_at: nil).update_all(used_at: Time.current, updated_at: Time.current)
-      code = new(id: "sign_#{SecureRandom.uuid}", email:, pending_name:, pending_role:, expires_at: LIFETIME.from_now)
+      code = new(id: "sign_#{SecureRandom.uuid}", email:, pending_name:, pending_role:, pending_consented_at:, expires_at: LIFETIME.from_now)
       code.code_digest = code.digest_for(raw)
       code.save!
       code

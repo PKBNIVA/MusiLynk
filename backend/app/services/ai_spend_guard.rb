@@ -29,23 +29,25 @@ class AiSpendGuard
     AiCreditLedger.where(reason: "usage", created_at: from..to).where("metadata->>'tier' = 'free'").sum(:cost_inr)
   end
 
-  # Raises AiSpendGuard::Paused (AI_FREE_PAUSED or AI_HARD_PAUSED) when the guard blocks this
-  # call; admin: true bypasses both budgets (only the hard budget's own "stop everything except
+  # Launch mode: hard_monthly_budget_inr and free_tier_monthly_budget_inr are set to the same
+  # ₹1,500 cap (there is no purchasable paid AI tier to protect separately right now), so both
+  # budgets raise the same code and copy — the person never sees a distinction between "free"
+  # and "hard" that no longer exists for them.
+  PAUSE_MESSAGE = "AI help is resting this month. Everything else works as usual.".freeze
+
+  # Raises AiSpendGuard::Paused (code: AI_FREE_PAUSED) when the guard blocks this call;
+  # admin: true bypasses both budgets (only the hard budget's own "stop everything except
   # admin" language exempts admin, per the brief).
   def self.check!(tier:, admin: false, now: Time.current)
+    return if admin
+
     budgets = AiPricing.budgets
-    hard = budgets.fetch(:hard_monthly_budget_inr)
-    unless admin
-      if total_spend_inr(now:) >= hard
-        raise Paused.new("AI assist has reached this month's usage limit and is temporarily paused. Please try again next month.", code: "AI_HARD_PAUSED")
-      end
+    if tier == "free" && free_tier_spend_inr(now:) >= budgets.fetch(:free_tier_monthly_budget_inr)
+      raise Paused.new(PAUSE_MESSAGE, code: "AI_FREE_PAUSED")
     end
 
-    return unless tier == "free" && !admin
+    return unless total_spend_inr(now:) >= budgets.fetch(:hard_monthly_budget_inr)
 
-    free_cap = budgets.fetch(:free_tier_monthly_budget_inr)
-    return unless free_tier_spend_inr(now:) >= free_cap
-
-    raise Paused.new("Free AI credits have reached this month's usage limit. Upgrade to Verse AI Plus or buy a top-up to keep going.", code: "AI_FREE_PAUSED")
+    raise Paused.new(PAUSE_MESSAGE, code: "AI_FREE_PAUSED")
   end
 end

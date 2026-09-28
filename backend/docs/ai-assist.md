@@ -5,6 +5,70 @@ portfolio copy, cover letters, post captions, message replies, resume summaries,
 text", and taxonomy autocomplete. Every result is a suggestion the person accepts, edits or
 discards — nothing is ever sent on their behalf.
 
+## Launch mode (current)
+
+The owner's call for launch (2026-09-28): AI is too costly right now, both to run and to price
+for the person paying, so it stays free-only, small, and capped hard.
+
+- **Enabled tasks**: only `profile_headline`, `profile_bio` (talent onboarding) and
+  `job_description`, `job_screening_questions` (hirers) — see `config/ai_pricing.yml`'s `launch:`
+  block. `GET /api/ai/status` lists only these; `POST /api/ai/suggest` for any other task in the
+  registry (the recruiter tasks, `cover_letter`, `message_reply`, `post_caption`, `improve_text`,
+  `resume_summary`, `portfolio_blurb`, `tailor_resume`, `draft_portfolio`,
+  `classify_portfolio_item`) answers `403 AI_TASK_DISABLED`. A genuinely unknown task string is
+  still `422 UNKNOWN_TASK` — that distinction is what tells "not built" apart from "built, not
+  turned on right now".
+- **Usage caps, not credits**: talent gets 5 uses **total, ever** across the two talent tasks;
+  hirers get 10 uses **per calendar month** across the two hirer tasks. `AiUsageCap`
+  (`app/services/ai_usage_cap.rb`) enforces this by counting the account's own `reason: "usage"`
+  rows in the existing `ai_credit_ledgers` table (the same rows `AiCredits.charge!` already
+  writes) — there is no separate counter, and the person is never shown a "credits" number.
+  `GET /api/ai/usage` returns `{ remaining, limit, period }` (`period` is `"lifetime"` or
+  `"month"`); going over answers `402 AI_USAGE_LIMIT_REACHED` with the same three fields. The
+  legacy monthly credit allowance (`AiCreditAccount`/`AiCredits`, 20/month free) still runs
+  underneath and is what a re-enabled task would fall back to, but at 5/10 the launch cap is
+  always the tighter limit, so it's what a person actually hits.
+- **Budgets**: `hard_monthly_budget_inr` and `free_tier_monthly_budget_inr` are both ₹1,500 (see
+  `AiSpendGuard`) — there's no separate paid-AI budget to protect right now, so both raise the
+  same `402 AI_FREE_PAUSED` with the copy "AI help is resting this month. Everything else works
+  as usual."
+- **Billing stays off**: `AI_BILLING_ENABLED` is unset (defaults to off), so `Ai::BillingController`
+  answers `503 AI_BILLING_DISABLED` for top-ups and Verse AI Plus, and `GET /api/ai/pricing`
+  leaves `aiPlus`/`topups`/`topupExpiresAfterMonths` out of its response entirely
+  (`AiPricing.public_catalogue`). The code, routes and tests for billing are untouched — only the
+  flag is off.
+- **Batch classification is off**: `classify_portfolio_item` isn't in the launch task list, so
+  `config/initializers/good_job.rb` leaves the `ai_batch_submit` cron entry out entirely — GoodJob
+  never enqueues `AiBatchSubmitJob` on a schedule. The job also no-ops its own submit step if ever
+  run directly while disabled (`AiBatchSubmitJob.disabled?`), though it still polls and ingests
+  any batch that was already submitted before the task was turned off.
+- **Templates instead of AI**: talent gets `src/app/components/ai/BioBuilder.tsx` (headline + bio
+  from role/city/years/genres/credits, three tone variants, no network) and hirers get
+  `src/app/components/templates/JobPostTemplates.tsx` (six ready-made opportunity templates,
+  mounted in `PostJob.tsx`'s first step as "Start from a template"). Neither calls the server.
+- **No "credits" in the UI**: the frontend never says "credits". `AiCreditsBadge` (kept under that
+  name so pages that already mount it keep compiling) renders "AI help: N of M left" from
+  `GET /api/ai/usage`; `AiPaywallDialog` is a plain "used up" / "resting" notice with no purchase
+  buttons.
+
+### Re-enabling something later
+
+Every one of the above is a config change, not a code change:
+
+- **A disabled task**: add it to `launch.talent_tasks` or `launch.hirer_tasks` in
+  `config/ai_pricing.yml` (or give it its own cap tier if it shouldn't share the talent/hirer
+  limit — `AiUsageCap` would need a third group for that).
+- **Bigger caps**: change `talent_lifetime_limit` / `hirer_monthly_limit` in the same `launch:`
+  block.
+- **A bigger monthly budget, or splitting free/paid again**: change
+  `free_tier_monthly_budget_inr` / `hard_monthly_budget_inr` — `AiSpendGuard` already checks them
+  independently, it's only the launch config that set them equal.
+- **AI billing (top-ups, Verse AI Plus)**: set `AI_BILLING_ENABLED=true`. `GET /api/ai/pricing`
+  picks the fields back up automatically.
+- **Batch classification**: add `classify_portfolio_item` to a launch task list (or its own
+  config key, since it isn't really a talent/hirer task) and the cron entry comes back on the
+  next deploy.
+
 ## How it's wired
 
 - `AiAssist` (`app/services/ai_assist.rb`) calls the Anthropic Messages API
@@ -47,13 +111,19 @@ never reachable through `/api/ai/suggest` and never listed in `tasks`.
 
 ## Endpoints
 
-- **`GET /api/ai/status`** — public. `{ enabled: boolean, tasks: string[] }`. The frontend hides
-  every AI button when `enabled` is false.
+- **`GET /api/ai/status`** — public. `{ enabled: boolean, tasks: string[] }`. `tasks` is only the
+  launch allow-list (`AiPricing.enabled_tasks`) right now. The frontend hides every AI button
+  when `enabled` is false, or when its task isn't in `tasks`.
 - **`POST /api/ai/suggest`** — auth required (any role). Body `{ task, context }`. Success:
   `{ suggestion, task, model }`. Errors: `503 AI_DISABLED`, `422 UNKNOWN_TASK` /
-  `422 INVALID_CONTEXT`, `403 AI_ACCESS_DENIED` (job/conversation the caller can't reach),
-  `429 RATE_LIMITED`, `429 AI_BUDGET_EXHAUSTED`, `502 AI_TIMEOUT` / `AI_UPSTREAM_ERROR` /
-  `AI_MALFORMED_RESPONSE`.
+  `422 INVALID_CONTEXT`, `403 AI_TASK_DISABLED` (a real task, not on the launch allow-list),
+  `403 AI_ACCESS_DENIED` (job/conversation the caller can't reach), `429 RATE_LIMITED`,
+  `429 AI_BUDGET_EXHAUSTED`, `402 AI_USAGE_LIMIT_REACHED` (the account's own launch cap — body
+  carries `{ remaining, limit, period }`), `402 AI_FREE_PAUSED` (the platform-wide monthly
+  budget), `502 AI_TIMEOUT` / `AI_UPSTREAM_ERROR` / `AI_MALFORMED_RESPONSE`.
+- **`GET /api/ai/usage`** — auth required. `{ remaining, limit, period }` for the caller's own
+  launch task group (talent: `period: "lifetime"`; hirer: `period: "month"`). This is the only
+  number shown to the person — never a credits balance.
 - **`GET /api/ai/autocomplete?field=&q=`** — public; works with no AI configured. `field` is one
   of `skills`, `genres`, `instruments`, `roles`, `cities`. Returns
   `{ field, query, suggestions: [{ value, source }] }`, `source` is `"taxonomy"` or `"ai"`. AI

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { KeyRound, Mail, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { KeyRound, Mail, MessageCircle, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
 import { Button } from '../components/ui/button';
@@ -44,6 +44,7 @@ export default function AccountSettings() {
 
         {user && <NameCard user={user} onSaved={setUser} />}
         {user && <EmailCard user={user} onSaved={setUser} />}
+        {user?.role === 'jobseeker' && <WhatsAppCard user={user} />}
         {user && <PasswordCard user={user} />}
       </main>
     </div>
@@ -235,6 +236,78 @@ function EmailCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }
             </div>
           </form>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// "Need someone by tomorrow" urgent alerts, on top of the in-app + email alert everyone
+// already gets. Off unless a number is entered AND the box is ticked; see WhatsappAlerts.
+function WhatsAppCard({ user }: { user: User }) {
+  const [phone, setPhone] = useState(user.phoneE164 || '');
+  const [consent, setConsent] = useState(Boolean(user.whatsappConsentedAt));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const dirty = phone !== (user.phoneE164 || '') || consent !== Boolean(user.whatsappConsentedAt);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy || !dirty) return;
+    setBusy(true);
+    setError('');
+    try {
+      await apiPost('/profile/whatsapp-consent', { phoneE164: phone.trim(), consent });
+      toast.success(consent ? 'WhatsApp urgent alerts turned on' : 'WhatsApp urgent alerts turned off');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'Could not save this.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="bg-white/[.055] border-white/10">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageCircle size={18} className="text-violet-300" />
+          Get urgent alerts on WhatsApp
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-slate-400 mb-4">
+          When a "need someone by tomorrow" request matches your roles and city, you'll always get an in-app and email
+          alert. Add your number and turn this on to also get it on WhatsApp, so you can respond even faster.
+        </p>
+        <form onSubmit={save} className="space-y-3" aria-busy={busy}>
+          <div>
+            <Label htmlFor="settings-whatsapp-phone">WhatsApp number (with country code)</Label>
+            <Input
+              id="settings-whatsapp-phone"
+              type="tel"
+              placeholder="+919812345678"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="mt-2 bg-black/20 border-white/15"
+            />
+          </div>
+          <label className="flex items-start gap-2.5 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              className="mt-0.5 size-4 rounded border-white/30 bg-black/20"
+            />
+            Send me urgent-hire alerts on WhatsApp at this number.
+          </label>
+          {error && (
+            <p role="alert" className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-3 text-rose-200">
+              {error}
+            </p>
+          )}
+          <Button type="submit" disabled={busy || !dirty} aria-busy={busy}>
+            {busy ? 'Saving…' : 'Save'}
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );

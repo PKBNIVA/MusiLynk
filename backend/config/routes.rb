@@ -24,6 +24,10 @@ Rails.application.routes.draw do
     post "account/email/confirm", to: "account#confirm_email_change"
     post "account/password", to: "account#change_password"
     put "profile", to: "profiles#update"
+    post "profile/whatsapp-consent", to: "profiles#whatsapp_consent"
+    post "onboarding/starter", to: "onboarding#starter"
+    post "link-previews", to: "link_previews#create"
+    get "public/stats", to: "public_stats#show"
 
     resources :jobs, only: %i[index show create] do
       member { post :apply }
@@ -73,12 +77,18 @@ Rails.application.routes.draw do
       get "ai/usage", to: "ai#usage"
       post "ai/grants", to: "ai#create_grant"
       get :bookings, to: "operations#bookings"
+      resources :refunds, only: %i[index update]
+      get :funnel, to: "funnel#show"
       post "search/reindex", to: "search#reindex"
       get "demo-data", to: "demo_data#index"
       post "demo-data", to: "demo_data#create"
       delete "demo-data", to: "demo_data#destroy_all"
       get "demo-data/jobs/:id", to: "demo_data#job_status"
       delete "demo-data/:batch", to: "demo_data#destroy"
+      get "urgent-requests", to: "urgent_requests#index"
+      get "urgent-requests/:id/candidates", to: "urgent_requests#candidates"
+      post "urgent-requests/:id/notify", to: "urgent_requests#notify"
+      patch "urgent-requests/:id", to: "urgent_requests#update"
     end
 
     resources :portfolio, only: %i[index create update destroy], controller: "portfolio"
@@ -121,6 +131,9 @@ Rails.application.routes.draw do
     resources :reviews, only: %i[index create]
     resources :resources, only: :index
     get "taxonomy", to: "catalog#taxonomy"
+    get "legal/policy", to: "legal#policy"
+    post "events", to: "events#create"
+    resources :invoices, only: :show
     get "ai/status", to: "ai#status"
     post "ai/suggest", to: "ai#suggest"
     get "ai/autocomplete", to: "ai#autocomplete"
@@ -177,7 +190,7 @@ Rails.application.routes.draw do
         delete "members/:userId", to: "organizations#remove_member"
       end
     end
-    resources :urgent_requests, path: "urgent-requests", only: %i[index create update] do
+    resources :urgent_requests, path: "urgent-requests", only: %i[index show create update] do
       member do
         post :respond
         get :responses

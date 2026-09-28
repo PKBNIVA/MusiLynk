@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { HelpCallout } from '../components/help/HelpCallout';
+import { WelcomeNextStep } from '../components/landing/WelcomeNextStep';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -8,7 +9,7 @@ import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 import { apiGet } from '../lib/api';
 import { useAuth } from '../lib/authContext';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import {
   Briefcase,
   Calendar,
@@ -20,6 +21,7 @@ import {
   Gauge,
   MapPin,
   Sparkles,
+  Siren,
 } from 'lucide-react';
 import { EmptyState } from '../components/help/EmptyState';
 import { optionLabel } from '../components/ui/option-labels';
@@ -27,6 +29,7 @@ import type { Job, JobSeekerDashboard } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
 export default function JobSeekerDashboard() {
   const { user } = useAuth();
+  const welcome = new URLSearchParams(useLocation().search).get('welcome') === '1';
   const [d, setD] = useState<Partial<JobSeekerDashboard> & { recommendedJobs: Job[] }>({ recommendedJobs: [] }),
     [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const load = () => {
@@ -59,7 +62,10 @@ export default function JobSeekerDashboard() {
         <div className="flex flex-col md:flex-row justify-between gap-5 mb-7">
           <div>
             <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Career workspace</div>
-            <h1 className="text-4xl md:text-5xl font-bold">Welcome back, {user?.name?.split(' ')[0]}</h1>
+            <h1 className="text-4xl md:text-5xl font-bold">
+              {/* Right after the two-minute sign-up (?welcome=1) it is a first visit, not a return. */}
+              {welcome ? 'Welcome' : 'Welcome back'}, {user?.name?.split(' ')[0]}
+            </h1>
             <p className="text-slate-400 mt-2">
               Focus on credible opportunities and proof of work, not application volume.
             </p>
@@ -71,6 +77,7 @@ export default function JobSeekerDashboard() {
             </Link>
           </Button>
         </div>
+        <WelcomeNextStep role="jobseeker" />
         <HelpCallout {...HELP.jobseekerDashboard} />
         {state === 'error' && (
           <div
@@ -88,6 +95,35 @@ export default function JobSeekerDashboard() {
           <Stat n={d.interviews} label="Interviews" icon={Calendar} />
           <Stat n={d.saved} label="Saved opportunities" icon={Bookmark} />
         </div>
+        {Boolean(d.urgentNearby?.count) && (
+          <Card className="bg-gradient-to-br from-orange-500/15 to-rose-500/[.06] border-orange-400/20 mb-8">
+            <CardContent className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-orange-500/15 p-2.5 shrink-0">
+                  <Siren aria-hidden="true" size={20} className="text-orange-300" />
+                </div>
+                <div>
+                  <h2 className="font-semibold flex items-center gap-2">
+                    Urgent near you
+                    <Badge className="bg-orange-500/20 text-orange-200">{d.urgentNearby?.count}</Badge>
+                  </h2>
+                  <p className="text-sm text-slate-400 mt-1">
+                    {d.urgentNearby?.items
+                      .slice(0, 2)
+                      .map((r) => `${r.roleName} in ${r.city}`)
+                      .join(' · ')}
+                    {(d.urgentNearby?.count || 0) > 2 ? ' and more' : ''}
+                  </p>
+                </div>
+              </div>
+              <Button asChild variant="outline" className="shrink-0">
+                <Link to="/jobseeker/urgent">
+                  Respond now <ArrowRight size={14} className="ml-2" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         <Card className="bg-gradient-to-br from-violet-500/10 to-sky-500/[.06] border-white/10 mb-10">
           <CardContent className="p-5 md:p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

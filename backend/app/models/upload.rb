@@ -23,12 +23,19 @@ class Upload < ApplicationRecord
     base.presence || "upload-#{SecureRandom.hex(6)}"
   end
 
-  # Uploads no portfolio item points at (by url, thumbnail or waveform).
+  # Uploads nothing uses: no portfolio item points at them (by url, thumbnail or waveform), no
+  # resume attaches them and no application sent them as a resume PDF (see
+  # Application.materials_snapshot), so an employer's copy keeps working after the resume changes.
   def self.unreferenced
     where(<<~SQL.squish)
-      uploads.public_url IS NULL OR NOT EXISTS (
+      (uploads.public_url IS NULL OR NOT EXISTS (
         SELECT 1 FROM portfolio_items p
         WHERE p.url = uploads.public_url OR p.thumbnail_url = uploads.public_url OR p.waveform_url = uploads.public_url
+      ))
+      AND NOT EXISTS (SELECT 1 FROM resumes r WHERE r.upload_id = uploads.id)
+      AND NOT EXISTS (
+        SELECT 1 FROM applications a
+        WHERE a.materials_snapshot IS NOT NULL AND (a.materials_snapshot #>> '{resume,uploadId}') = uploads.id
       )
     SQL
   end
@@ -36,7 +43,9 @@ class Upload < ApplicationRecord
   def complete? = status == "complete"
 
   def referenced?
-    public_url.present? && PortfolioItem.where(url: public_url).or(PortfolioItem.where(thumbnail_url: public_url)).or(PortfolioItem.where(waveform_url: public_url)).exists?
+    (public_url.present? && PortfolioItem.where(url: public_url).or(PortfolioItem.where(thumbnail_url: public_url)).or(PortfolioItem.where(waveform_url: public_url)).exists?) ||
+      Resume.exists?(upload_id: id) ||
+      Application.where.not(materials_snapshot: nil).where("(materials_snapshot #>> '{resume,uploadId}') = ?", id).exists?
   end
 
   # Deletes the stored object, then the row. Safe to repeat.

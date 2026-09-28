@@ -1,9 +1,17 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ApiError } from '../../lib/api';
-import { suggestAi, useAiTaskEnabled, type AiContext, type AiTask } from '../../lib/ai';
+import {
+  isAiPaywallError,
+  suggestAi,
+  useAiTaskEnabled,
+  type AiContext,
+  type AiPaywallError,
+  type AiTask,
+} from '../../lib/ai';
 import { Button } from '../ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { AiPaywallDialog } from './AiPaywallDialog';
 
 export interface AiSuggestButtonProps {
   /** Which AiAssist task to call (job_description, cover_letter, improve_text, ...). */
@@ -20,7 +28,11 @@ export interface AiSuggestButtonProps {
 }
 
 type State =
-  { kind: 'idle' } | { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; text: string };
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+  | { kind: 'paywall'; error: AiPaywallError }
+  | { kind: 'ready'; text: string };
 
 /**
  * A small "Suggest" / "Improve" button for any writing field. Opens a popover with the AI's
@@ -51,21 +63,38 @@ export function AiSuggestButton({ task, getContext, onAccept, value, label, clas
   const hasValue = Boolean(value && value.trim());
   const buttonLabel = label || (hasValue ? 'Improve' : 'Suggest');
 
-  function requestSuggestion() {
+  function requestSuggestion(regenerate = false) {
     setState({ kind: 'loading' });
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    suggestAi(task, getContext(), controller.signal)
+    suggestAi(task, getContext(), { signal: controller.signal, regenerate })
       .then((result) => setState({ kind: 'ready', text: result.suggestion }))
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return;
+        if (isAiPaywallError(error)) {
+          setState({ kind: 'paywall', error });
+          return;
+        }
         const message =
           error instanceof ApiError
             ? friendlyMessage(error)
             : 'Something went wrong getting a suggestion. Please try again.';
         setState({ kind: 'error', message });
       });
+  }
+
+  if (state.kind === 'paywall') {
+    return (
+      <AiPaywallDialog
+        error={state.error}
+        billingEnabled={false}
+        onClose={() => {
+          setState({ kind: 'idle' });
+          setOpen(false);
+        }}
+      />
+    );
   }
 
   return (
@@ -102,7 +131,7 @@ export function AiSuggestButton({ task, getContext, onAccept, value, label, clas
               {state.message}
             </p>
             <div className="mt-3 flex justify-end gap-2">
-              <Button type="button" size="sm" variant="outline" onClick={requestSuggestion}>
+              <Button type="button" size="sm" variant="outline" onClick={() => requestSuggestion(true)}>
                 Try again
               </Button>
             </div>
@@ -123,7 +152,7 @@ export function AiSuggestButton({ task, getContext, onAccept, value, label, clas
               <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
                 Discard
               </Button>
-              <Button type="button" size="sm" variant="outline" onClick={requestSuggestion}>
+              <Button type="button" size="sm" variant="outline" onClick={() => requestSuggestion(true)}>
                 Try again
               </Button>
               {hasValue && (

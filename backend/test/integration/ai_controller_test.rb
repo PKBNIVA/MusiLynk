@@ -7,10 +7,14 @@ class AiControllerTest < ActionDispatch::IntegrationTest
   setup do
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
-    @jobseeker = User.create!(name: "AI Jobseeker", email: "ai-jobseeker@example.com", password: PASSWORD, role: "jobseeker", status: "active")
-    @employer = User.create!(name: "AI Employer", email: "ai-employer@example.com", password: PASSWORD, role: "employer", status: "active")
+    @jobseeker = User.create!(name: "AI Jobseeker", email: "ai-jobseeker@example.com", password: PASSWORD, role: "jobseeker", status: "active", email_verified: true)
+    @employer = User.create!(name: "AI Employer", email: "ai-employer@example.com", password: PASSWORD, role: "employer", status: "active", email_verified: true)
     @token = session_for(@jobseeker)
     @employer_token = session_for(@employer)
+    # These tests exercise rate limiting/budgets, not the credits ledger (covered separately in
+    # ai_credits_test.rb) — grant plenty of credits so a loop of calls never hits AI_CREDITS_EXHAUSTED.
+    grant_ai_credits(@jobseeker, 1000)
+    grant_ai_credits(@employer, 1000)
   end
 
   teardown { Rails.cache = @original_cache }
@@ -94,6 +98,50 @@ class AiControllerTest < ActionDispatch::IntegrationTest
       end
       assert_response :too_many_requests
       assert_equal "AI_BUDGET_EXHAUSTED", response.parsed_body["code"]
+    end
+  end
+
+  test "a recruiter task is refused for a job the caller is not the employer/admin/org member of" do
+    with_env("ANTHROPIC_API_KEY" => "sk-test") do
+      job = Job.create!(employer: @employer, title: "Session Bassist", company: "Studio", location: "Mumbai", kind: "Contract",
+        genre: "Studio", description: "A" * 90, status: "published")
+      post "/api/ai/suggest", params: { task: "candidate_summary", context: { jobId: job.id, jobTitle: job.title } }, headers: bearer(@token), as: :json
+      assert_response :forbidden
+      assert_equal "AI_ACCESS_DENIED", response.parsed_body["code"]
+    end
+  end
+
+  test "a recruiter task succeeds for the job's employer, and rank_applicants drops any id the model invented" do
+    with_env("ANTHROPIC_API_KEY" => "sk-test") do
+      job = Job.create!(employer: @employer, title: "Session Bassist", company: "Studio", location: "Mumbai", kind: "Contract",
+        genre: "Studio", description: "A" * 90, status: "published")
+      fabricated = [{ "applicationId" => "app_real", "score" => 80, "reason" => "Great fit" },
+        { "applicationId" => "app_invented", "score" => 99, "reason" => "Invented" }].to_json
+      stub_anthropic_success(fabricated) do
+        post "/api/ai/suggest", params: { task: "rank_applicants", context: { jobId: job.id, jobTitle: job.title, applicants: [{ id: "app_real" }] } }, headers: bearer(@employer_token), as: :json
+      end
+      assert_response :success
+      ranked = JSON.parse(response.parsed_body.fetch("suggestion"))
+      assert_equal ["app_real"], ranked.map { _1["applicationId"] }
+    end
+  end
+
+  test "suggest answers 402 AI_CREDITS_EXHAUSTED with balance/resetsAt/upgradeOptions once credits run out" do
+    with_env("ANTHROPIC_API_KEY" => "sk-test") do
+      resolution = AiCreditAccount.for(@jobseeker)
+      AiCredits.with_account_lock(resolution.account_type, resolution.account_id) do
+        AiCreditLedger.where(account_type: resolution.account_type, account_id: resolution.account_id).delete_all
+      end
+      AiCredits.ensure_monthly_allowance!(resolution, hirer: false)
+      AiCredits.charge!(resolution, cost: AiCredits.balance(resolution.account_type, resolution.account_id), task: "post_caption")
+
+      post "/api/ai/suggest", params: { task: "post_caption", context: { kind: "release" } }, headers: bearer(@token), as: :json
+      assert_response :payment_required
+      body = response.parsed_body
+      assert_equal "AI_CREDITS_EXHAUSTED", body["code"]
+      assert_equal 0, body["balance"]
+      assert body.key?("resetsAt")
+      assert body.dig("upgradeOptions", "aiPlus").present?
     end
   end
 
@@ -222,6 +270,11 @@ class AiControllerTest < ActionDispatch::IntegrationTest
   end
 
   def bearer(token) = { "Authorization" => "Bearer #{token}" }
+
+  def grant_ai_credits(user, credits)
+    resolution = AiCreditAccount.for(user)
+    AiCreditLedger.create!(account_type: resolution.account_type, account_id: resolution.account_id, delta: credits, reason: "admin_grant")
+  end
 
   def with_env(values)
     previous = values.keys.to_h { [_1, ENV[_1]] }

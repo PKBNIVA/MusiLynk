@@ -1,10 +1,11 @@
-import { Check, X } from 'lucide-react';
+import { Check, X, Briefcase } from 'lucide-react';
 import { apiPatch } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import type { Job } from '../../lib/apiTypes';
 import { Panel, Pager, Empty, type AdminActions, type PageMeta } from './shared';
+import { AdminPageHeader, HowToCallout } from './ui';
 
 export default function QueueTab({
   jobs,
@@ -26,7 +27,18 @@ export default function QueueTab({
   const { busy, patch, act, setConfirm } = actions;
   return (
     <Panel error={error} onRetry={retry} loading={loading}>
-      {jobs.length === 0 && <Empty text="No opportunities waiting for review." />}
+      <AdminPageHeader
+        icon={Briefcase}
+        title="Opportunity queue"
+        description="New job and gig posts, held for review before they go live to job seekers."
+      />
+      <HowToCallout storageKey="queue">
+        <b>Approve</b> publishes the opportunity immediately. <b>Reject</b> asks for a reason, which is sent to the
+        employer so they know what to change before reposting.
+      </HowToCallout>
+      {jobs.length === 0 && (
+        <Empty icon={Briefcase} text="No opportunities waiting for review." hint="New posts will show up here." />
+      )}
       {jobs.map((j) => (
         <Card key={j.id} className="bg-white/[.05] border-white/10">
           <CardContent className="p-5">

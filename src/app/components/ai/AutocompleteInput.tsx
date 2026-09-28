@@ -72,7 +72,8 @@ export function AutocompleteInput({
       autocompleteAi(field, text, controller.signal)
         .then((result) => {
           if (seq !== requestSeq.current) return;
-          setOptions(result.suggestions);
+          // Defensive: an unmocked/misbehaving endpoint could answer with no `suggestions` array.
+          setOptions(Array.isArray(result.suggestions) ? result.suggestions : []);
           setActiveIndex(-1);
           setError(null);
         })

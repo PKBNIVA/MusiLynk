@@ -1,3 +1,4 @@
+import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { apiDelete, apiGet } from '../lib/api';
@@ -5,7 +6,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Link } from 'react-router';
-import { BookmarkX } from 'lucide-react';
+import { BookmarkX, Bookmark, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
 import type { Job } from '../lib/apiTypes';
@@ -51,14 +52,20 @@ export default function SavedJobs() {
         ) : loading ? (
           <p className="text-slate-400">Loading saved opportunities…</p>
         ) : jobs.length === 0 ? (
-          <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-12 text-center">
-              <p className="text-slate-400">You have not saved any opportunities yet.</p>
-              <Button asChild className="mt-4">
-                <Link to="/jobseeker/jobs">Browse opportunities</Link>
+          <EmptyState
+            icon={Bookmark}
+            title="You have not saved any opportunities yet."
+            action={
+              <Button asChild>
+                <Link to="/jobseeker/jobs">
+                  <Search aria-hidden="true" size={16} className="mr-2" />
+                  Browse opportunities
+                </Link>
               </Button>
-            </CardContent>
-          </Card>
+            }
+          >
+            Tap the bookmark on any listing to keep it here for later.
+          </EmptyState>
         ) : (
           <div className="space-y-4">
             {jobs.map((j) => (

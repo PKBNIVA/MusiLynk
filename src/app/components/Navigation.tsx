@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  Radio,
   Music,
   Search,
   Settings,
@@ -22,6 +23,14 @@ import {
   Users,
   WalletCards,
   Zap,
+  Compass,
+  Mic2,
+  UserSearch,
+  BriefcaseBusiness,
+  Library,
+  Layers,
+  ScrollText,
+  Inbox,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '../lib/authContext';
@@ -42,11 +51,14 @@ import { BrandMark } from './BrandMark';
 import { SkipLink } from './SkipLink';
 import type { UnreadCounts } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
+import { ActingAsChip, IdentitySwitcher } from './showcase/IdentitySwitcher';
+import { FEATURE_RESUMES, FEATURE_STAGE } from '../lib/features';
+import { usePendingSuggestions } from './showcase/usePendingSuggestions';
 
 const UNREAD_POLL_MS = 10_000;
 
 type NavItem = { path: string; icon: LucideIcon; label: string };
-type NavGroup = { label: string; items: NavItem[] };
+type NavGroup = { label: string; icon: LucideIcon; items: NavItem[] };
 
 export function Navigation() {
   const { user, logout } = useAuth();
@@ -86,23 +98,30 @@ export function Navigation() {
         {unreadMessages > 9 ? '9+' : unreadMessages}
       </span>
     ) : null;
+  const pendingReview = usePendingSuggestions(Boolean(user));
   const messagesLabel = unreadMessages > 0 ? `Messages, ${unreadMessages} unread` : 'Messages';
 
   const groups: NavGroup[] = isJobSeeker
     ? [
         {
           label: 'Career',
+          icon: Compass,
           items: [
             { path: `${baseUrl}/jobs`, icon: Search, label: 'Explore work' },
             { path: `${baseUrl}/saved`, icon: Star, label: 'Saved' },
             { path: `${baseUrl}/applications`, icon: Briefcase, label: 'Applications' },
-            { path: `${baseUrl}/portfolio`, icon: FileText, label: 'Portfolio' },
+            { path: `${baseUrl}/library`, icon: Library, label: 'My work' },
+            { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Portfolios' },
+            ...(FEATURE_RESUMES
+              ? [{ path: `${baseUrl}/resumes`, icon: ScrollText, label: 'Career record & resumes' }]
+              : []),
             { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
             { path: `${baseUrl}/resources`, icon: BookOpen, label: 'Resources' },
           ],
         },
         {
           label: 'Perform & book',
+          icon: Mic2,
           items: [
             { path: `${baseUrl}/acts`, icon: Music, label: 'My acts' },
             { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
@@ -113,6 +132,7 @@ export function Navigation() {
         },
         {
           label: 'Hire',
+          icon: UserSearch,
           items: [
             { path: `${baseUrl}/hiring/post`, icon: Briefcase, label: 'Post opportunity' },
             { path: `${baseUrl}/hiring/talent`, icon: Users, label: 'Find talent' },
@@ -124,6 +144,7 @@ export function Navigation() {
     : [
         {
           label: 'Hiring',
+          icon: BriefcaseBusiness,
           items: [
             { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Create opportunity' },
             { path: `${baseUrl}/candidates`, icon: Users, label: 'Find talent' },
@@ -133,6 +154,7 @@ export function Navigation() {
         },
         {
           label: 'Book & perform',
+          icon: Mic2,
           items: [
             { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
             { path: `${baseUrl}/bookings`, icon: CalendarDays, label: 'Bookings' },
@@ -140,6 +162,7 @@ export function Navigation() {
             { path: `${baseUrl}/band-builder`, icon: UserRoundPlus, label: 'Band builder' },
             { path: `${baseUrl}/urgent`, icon: Zap, label: 'Urgent replacement' },
             { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
+            { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Page portfolios' },
           ],
         },
       ];
@@ -192,6 +215,19 @@ export function Navigation() {
                 Overview
               </Link>
             </Button>
+            {FEATURE_STAGE && (
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className={location.pathname.startsWith('/stage') ? 'bg-white/10 text-white' : 'text-slate-300'}
+              >
+                <Link to="/stage">
+                  <Radio size={16} className="mr-2" aria-hidden="true" />
+                  Stage
+                </Link>
+              </Button>
+            )}
             {groups.map((group) => (
               <DropdownMenu key={group.label}>
                 <DropdownMenuTrigger asChild>
@@ -200,6 +236,7 @@ export function Navigation() {
                     size="sm"
                     className={group.items.some((x) => active(x.path)) ? 'bg-white/10 text-white' : 'text-slate-300'}
                   >
+                    <group.icon size={16} className="mr-2" aria-hidden="true" />
                     {group.label}
                     <ChevronDown size={14} className="ml-1.5" />
                   </Button>
@@ -235,6 +272,7 @@ export function Navigation() {
             </Button>
           </div>
           <div className="ml-auto flex items-center gap-1">
+            <IdentitySwitcher />
             <Button variant="ghost" size="icon" asChild className="relative text-slate-300 hover:text-white">
               <Link
                 to={`${baseUrl}/notifications`}
@@ -256,8 +294,10 @@ export function Navigation() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-11 gap-2 rounded-full px-1.5 pr-2 hover:bg-white/10"
-                  aria-label="Open account menu"
+                  className="relative h-11 gap-2 rounded-full px-1.5 pr-2 hover:bg-white/10"
+                  aria-label={
+                    pendingReview > 0 ? `Open account menu, ${pendingReview} changes to review` : 'Open account menu'
+                  }
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-gradient-to-br from-fuchsia-500 to-violet-600 text-xs font-bold text-white">
@@ -268,6 +308,15 @@ export function Navigation() {
                     {user?.name?.split(' ')[0]}
                   </span>
                   <ChevronDown size={14} className="hidden text-slate-400 sm:block" />
+                  {pendingReview > 0 && (
+                    <span
+                      aria-hidden="true"
+                      data-testid="review-badge"
+                      className="absolute -right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-teal-600 px-1 text-[9px] font-bold text-white"
+                    >
+                      {pendingReview > 9 ? '9+' : pendingReview}
+                    </span>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
@@ -280,6 +329,18 @@ export function Navigation() {
                   <Link to={`${baseUrl}/profile`}>
                     <User className="mr-2 h-4 w-4" />
                     Profile & verification
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to={`${baseUrl}/review`} data-testid="review-menu-item">
+                    <Inbox className="mr-2 h-4 w-4" />
+                    Review changes
+                    {pendingReview > 0 && (
+                      <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-[10px] font-bold text-white">
+                        {pendingReview}
+                        <span className="sr-only"> to review</span>
+                      </span>
+                    )}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -355,6 +416,14 @@ export function Navigation() {
                     <DropdownMenuSeparator />
                   </div>
                 ))}
+                {FEATURE_STAGE && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/stage">
+                      <Radio className="mr-2 h-4 w-4" />
+                      Stage
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link to={`${baseUrl}/messages`}>
                     <MessageSquare className="mr-2 h-4 w-4" />
@@ -366,6 +435,7 @@ export function Navigation() {
           </div>
         </div>
       </nav>
+      <ActingAsChip />
       <nav
         className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-2xl border border-white/15 bg-[#101221]/94 p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden"
         aria-label="Quick navigation"

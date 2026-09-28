@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useTaxonomy } from '../lib/useTaxonomy';
+import { AppSelect } from './ui/app-select';
 
 const ACT_TYPES = ['solo', 'duo', 'trio', 'band', 'ensemble', 'dj', 'wedding-band', 'corporate-band', 'folk-group'];
 
@@ -57,20 +58,17 @@ export function ActSearchForm({ values, onSearch, onType, busy, idPrefix }: Prop
       <label htmlFor={`${idPrefix}-type`} className="sr-only">
         Act type
       </label>
-      <select
+      <AppSelect
         id={`${idPrefix}-type`}
         value={values.type}
-        onChange={(e) => onType(e.target.value)}
-        className="h-10 rounded-md bg-slate-900 border border-white/15 px-3 text-sm"
-      >
-        <option value="">Any act type</option>
-        {types.map((x) => (
-          <option key={x} value={x}>
-            {x.replace(/-/g, ' ')}
-          </option>
-        ))}
-        {values.type && !types.includes(values.type) && <option value={values.type}>{values.type}</option>}
-      </select>
+        onValueChange={onType}
+        className="md:w-48"
+        options={[
+          { value: '', label: 'Any act type' },
+          ...types,
+          ...(values.type && !types.includes(values.type) ? [values.type] : []),
+        ]}
+      />
       <Button type="submit" disabled={busy}>
         <Search size={16} className="mr-2" />
         Search

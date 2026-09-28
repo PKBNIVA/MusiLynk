@@ -20,12 +20,21 @@ import {
   BriefcaseBusiness,
   MessageSquare,
   Send,
+  FileText,
+  ListChecks,
 } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, Job } from '../lib/apiTypes';
 import { formatDate, formatDeadline, formatPay } from '../lib/format';
+import { MoreDetails } from '../components/help/MoreDetails';
 import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
+import { PostedBy } from '../components/showcase/PostedBy';
+import { ApplyMaterials, type Materials } from '../components/showcase/ApplyMaterials';
+import { AiSuggestButton } from '../components/ai/AiSuggestButton';
+import type { Portfolio, Resume } from '../lib/showcase';
+import { ShareToStageButton } from '../components/stage/ShareToStageButton';
+import { FEATURE_STAGE } from '../lib/features';
 
 const COVER_MAX = 5_000;
 const answerId = (i: number) => `screening-${i}`;
@@ -40,7 +49,9 @@ export default function JobDetails() {
     [cover, setCover] = useState(''),
     [answers, setAnswers] = useState<Record<number, string>>({}),
     [loadError, setLoadError] = useState(''),
-    [reporting, setReporting] = useState(false);
+    [reporting, setReporting] = useState(false),
+    [materials, setMaterials] = useState<Materials>({}),
+    [chosen, setChosen] = useState<{ portfolio?: Portfolio; resume?: Resume }>({});
   const load = useCallback(() => {
     setLoadError('');
     return apiGet<{ job?: Job }>(`/jobs/${id}`)
@@ -91,6 +102,8 @@ export default function JobDetails() {
         await apiPost(`/jobs/${id}/apply`, {
           coverLetter: cover,
           screeningAnswers: questions.map((_q, i) => answers[i].trim()),
+          ...(materials.portfolioId ? { portfolioId: materials.portfolioId } : {}),
+          ...(materials.resumeId ? { resumeId: materials.resumeId } : {}),
         });
         setJob({ ...job, applied: true });
         toast.success('Application submitted');
@@ -151,20 +164,26 @@ export default function JobDetails() {
           <div className="space-y-5">
             <Card className="bg-white/[.055] border-white/10">
               <CardContent className="p-6 md:p-8">
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary">{title(job.opportunity_kind || 'job')}</Badge>
-                  {job.employerVerified && (
-                    <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-400/20">
-                      <ShieldCheck size={13} className="mr-1" />
-                      Verified employer
-                    </Badge>
-                  )}
-                  {job.fitScore && (
-                    <Badge className="bg-sky-500/15 text-sky-200 border-sky-400/20">{job.fitScore}% profile fit</Badge>
-                  )}
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">{title(job.opportunity_kind || 'job')}</Badge>
+                    {job.employerVerified && (
+                      <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-400/20">
+                        <ShieldCheck size={13} className="mr-1" />
+                        Verified employer
+                      </Badge>
+                    )}
+                    {job.fitScore && (
+                      <Badge className="bg-sky-500/15 text-sky-200 border-sky-400/20">
+                        {job.fitScore}% profile fit
+                      </Badge>
+                    )}
+                  </div>
+                  {FEATURE_STAGE && <ShareToStageButton kind="job_share" id={job.id} label={job.title} />}
                 </div>
                 <h1 className="text-3xl md:text-5xl font-bold mt-4 leading-tight">{job.title}</h1>
                 <p className="text-xl text-violet-300 mt-2">{job.company}</p>
+                <PostedBy postedAs={job.postedAs} className="mt-2" />
                 <div className="grid sm:grid-cols-2 gap-3 mt-6 text-sm text-slate-300">
                   <div className="flex gap-2">
                     <MapPin size={18} className="text-slate-500" />
@@ -187,11 +206,17 @@ export default function JobDetails() {
             </Card>
             <Card className="bg-white/[.055] border-white/10">
               <CardContent className="p-6 md:p-8">
-                <h2 className="text-xl font-semibold">About the opportunity</h2>
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <FileText aria-hidden="true" size={20} className="text-violet-300" />
+                  About the opportunity
+                </h2>
                 <p className="text-slate-300 mt-4 whitespace-pre-wrap leading-7">{job.description}</p>
                 {job.requirements && (
                   <>
-                    <h2 className="text-xl font-semibold mt-8">Requirements</h2>
+                    <h2 className="text-xl font-semibold mt-8 flex items-center gap-2">
+                      <ListChecks aria-hidden="true" size={20} className="text-violet-300" />
+                      Requirements
+                    </h2>
                     <p className="text-slate-300 mt-4 whitespace-pre-wrap leading-7">{job.requirements}</p>
                   </>
                 )}
@@ -267,9 +292,18 @@ export default function JobDetails() {
                       </div>
                     ) : (
                       <>
+                        <ApplyMaterials
+                          base="/jobseeker"
+                          value={materials}
+                          onChange={setMaterials}
+                          onDetails={setChosen}
+                        />
                         {job.screeningQuestions?.length > 0 && (
                           <fieldset className="space-y-3 mb-4">
                             <legend className="text-sm font-medium mb-1">Screening questions</legend>
+                            <p className="text-xs text-slate-400">
+                              The employer asks everyone these. Short, honest answers are best.
+                            </p>
                             {job.screeningQuestions.map((q: string, i: number) => (
                               <Field
                                 key={q}
@@ -292,25 +326,47 @@ export default function JobDetails() {
                             ))}
                           </fieldset>
                         )}
-                        <Field
-                          id="cover-note"
-                          label="Short note to the employer"
-                          optional
-                          error={applyForm.errors.coverLetter}
-                          count={cover.length}
-                          maxLength={cover.length > COVER_MAX * 0.8 ? COVER_MAX : undefined}
+                        <MoreDetails
+                          label="Add a note to the employer (optional)"
+                          forceOpen={!!applyForm.errors.coverLetter}
                         >
-                          <Textarea
+                          <Field
+                            id="cover-note"
+                            label="Short note to the employer"
+                            optional
+                            help="Two or three lines on why you fit, plus the one sample they should hear first. Your profile is sent automatically."
+                            error={applyForm.errors.coverLetter}
+                            count={cover.length}
+                            maxLength={cover.length > COVER_MAX * 0.8 ? COVER_MAX : undefined}
+                          >
+                            <Textarea
+                              value={cover}
+                              maxLength={COVER_MAX}
+                              onChange={(e) => {
+                                setCover(e.target.value);
+                                applyForm.clear('coverLetter');
+                              }}
+                              placeholder="Why this opportunity fits your work and what relevant proof should they review…"
+                              className="min-h-32 bg-black/20 border-white/15"
+                            />
+                          </Field>
+                          <AiSuggestButton
+                            task="cover_letter"
                             value={cover}
-                            maxLength={COVER_MAX}
-                            onChange={(e) => {
-                              setCover(e.target.value);
+                            getContext={() => ({
+                              jobId: job.id,
+                              jobTitle: job.title,
+                              company: job.company,
+                              jobDescription: (job.description || '').slice(0, 1500),
+                              headline: chosen.portfolio?.headline || chosen.resume?.headline || undefined,
+                              resumeSummary: (chosen.resume?.summary || '').slice(0, 1000) || undefined,
+                            })}
+                            onAccept={(text) => {
+                              setCover(text);
                               applyForm.clear('coverLetter');
                             }}
-                            placeholder="Why this opportunity fits your work and what relevant proof should they review…"
-                            className="min-h-32 bg-black/20 border-white/15"
                           />
-                        </Field>
+                        </MoreDetails>
                         <FormError message={applyForm.formError} className="mt-3" />
                         <Button className="w-full mt-3" disabled={busy} aria-busy={busy} onClick={apply}>
                           <Send size={16} className="mr-2" />

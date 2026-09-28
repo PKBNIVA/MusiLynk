@@ -1,5 +1,6 @@
 import { cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { cn } from '../ui/utils';
+import { FieldHelp } from '../help/FieldHelp';
 
 /** The attributes Field puts on its control so the label, hint and error are announced with it. */
 export interface FieldControlProps {
@@ -20,6 +21,13 @@ export interface FieldProps {
   /** Shows "(optional)" after the label, for forms where most fields are required. */
   optional?: boolean;
   hint?: ReactNode;
+  /** A short explanation behind an info button next to the label (kept out of the label's name). */
+  help?: ReactNode;
+  /**
+   * Extra controls shown next to the label — e.g. an "Improve with AI" button — rendered as a
+   * sibling of the `<label>` element (never inside it), so they never join its accessible name.
+   */
+  labelExtra?: ReactNode;
   /** The field's error message; shown under the control with role=alert and sets aria-invalid. */
   error?: string;
   /** Current length, shown as "count / maxLength" when maxLength is set. */
@@ -53,11 +61,13 @@ export function Field({
   required,
   optional,
   hint,
+  help,
   error,
   count,
   maxLength,
   className,
   labelClassName,
+  labelExtra,
   children,
 }: FieldProps) {
   const hintId = hint ? fieldHintId(id) : undefined;
@@ -81,22 +91,33 @@ export function Field({
   } else {
     rendered = children;
   }
+  const labelEl = (
+    <label htmlFor={id} className={cn('block text-sm font-medium text-slate-300', labelClassName)}>
+      {label}
+      {required && (
+        <>
+          <span aria-hidden="true" className="ml-0.5 text-rose-300">
+            *
+          </span>
+          <span className="sr-only"> (required)</span>
+        </>
+      )}
+      {optional && !required && <span className="ml-1 font-normal text-slate-500">(optional)</span>}
+    </label>
+  );
   const over = maxLength !== undefined && count !== undefined && count > maxLength;
 
   return (
     <div className={cn('space-y-1.5', className)} data-slot="field">
-      <label htmlFor={id} className={cn('block text-sm font-medium text-slate-300', labelClassName)}>
-        {label}
-        {required && (
-          <>
-            <span aria-hidden="true" className="ml-0.5 text-rose-300">
-              *
-            </span>
-            <span className="sr-only"> (required)</span>
-          </>
-        )}
-        {optional && !required && <span className="ml-1 font-normal text-slate-500">(optional)</span>}
-      </label>
+      {help || labelExtra ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {labelEl}
+          {help && <FieldHelp topic={typeof label === 'string' ? label : 'this field'}>{help}</FieldHelp>}
+          {labelExtra}
+        </div>
+      ) : (
+        labelEl
+      )}
       {rendered}
       {(hint || maxLength !== undefined) && (
         <div className="flex items-start justify-between gap-3 text-xs text-slate-500">

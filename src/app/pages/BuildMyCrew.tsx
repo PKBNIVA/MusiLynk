@@ -8,11 +8,13 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import { Field } from '../components/form/Field';
-import { WandSparkles, Users, ArrowRight } from 'lucide-react';
+import { WandSparkles, Users, ArrowRight, ListChecks, PartyPopper } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../lib/authContext';
 import { errorMessage } from '../lib/errors';
 import type { CrewPlan } from '../lib/apiTypes';
+import { FormSection, MoreDetails } from '../components/help/MoreDetails';
+import { AppSelect } from '../components/ui/app-select';
 const needOptions = ['music', 'sound', 'lighting', 'video', 'production'];
 export default function BuildMyCrew() {
   const [plans, setPlans] = useState<CrewPlan[]>([]),
@@ -118,94 +120,111 @@ export default function BuildMyCrew() {
         </div>
         <div className="grid lg:grid-cols-[.8fr_1.2fr] gap-6 mt-8">
           <Card className="bg-white/[.055] border-white/10">
-            <CardContent className="p-6 space-y-4">
-              <Field id="crew-title" label="Project / event name" required>
-                <Input
-                  placeholder="e.g. Annual sales conference gala"
-                  required
-                  maxLength={160}
-                  value={f.title}
-                  onChange={(e) => setF({ ...f, title: e.target.value })}
-                />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <select
-                  aria-label="Event type"
-                  className="h-10 min-w-0 rounded-md bg-slate-900 border border-white/10 px-3"
-                  value={f.eventType}
-                  onChange={(e) => setF({ ...f, eventType: e.target.value })}
-                >
-                  {[
-                    'Corporate event',
-                    'Wedding',
-                    'Concert',
-                    'Festival',
-                    'Conference',
-                    'Awards show',
-                    'Tour',
-                    'Private event',
-                  ].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-                <Field id="crew-city" label="City" required>
+            <CardContent className="p-6 space-y-6">
+              <FormSection icon={PartyPopper} title="The event">
+                <Field id="crew-title" label="Project / event name" required>
                   <Input
-                    placeholder="e.g. Goa"
+                    placeholder="e.g. Annual sales conference gala"
                     required
-                    value={f.city}
-                    onChange={(e) => setF({ ...f, city: e.target.value })}
+                    maxLength={160}
+                    value={f.title}
+                    onChange={(e) => setF({ ...f, title: e.target.value })}
                   />
                 </Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  aria-label="Event date"
-                  type="date"
-                  value={f.eventDate}
-                  onChange={(e) => setF({ ...f, eventDate: e.target.value })}
-                />
-                <Field id="crew-audience" label="Audience size">
-                  <Input
-                    placeholder="e.g. 300"
-                    type="number"
-                    min="0"
-                    value={f.audienceSize}
-                    onChange={(e) => setF({ ...f, audienceSize: e.target.value })}
-                  />
-                </Field>
-              </div>
-              <Input
-                aria-label="Genres"
-                placeholder="Genres, comma-separated"
-                value={f.genres}
-                onChange={(e) => setF({ ...f, genres: e.target.value })}
-              />
-              <Input
-                aria-label="Overall budget"
-                type="number"
-                min="0"
-                placeholder="Overall budget (optional)"
-                value={f.budget}
-                onChange={(e) => setF({ ...f, budget: e.target.value })}
-              />
-              <div>
-                <div className="text-sm text-slate-400 mb-2">What do you need help with?</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field id="crew-event-type" label="Event type">
+                    <AppSelect
+                      className="min-w-0"
+                      value={f.eventType}
+                      onValueChange={(v) => setF({ ...f, eventType: v })}
+                      options={[
+                        'Corporate event',
+                        'Wedding',
+                        'Concert',
+                        'Festival',
+                        'Conference',
+                        'Awards show',
+                        'Tour',
+                        'Private event',
+                      ]}
+                    />
+                  </Field>
+                  <Field id="crew-city" label="City" required>
+                    <Input
+                      placeholder="e.g. Goa"
+                      required
+                      value={f.city}
+                      onChange={(e) => setF({ ...f, city: e.target.value })}
+                    />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field id="crew-date" label="Event date">
+                    <Input
+                      type="date"
+                      value={f.eventDate}
+                      onChange={(e) => setF({ ...f, eventDate: e.target.value })}
+                    />
+                  </Field>
+                  <Field
+                    id="crew-audience"
+                    label="Audience size"
+                    help="Roughly how many guests. It decides how big the sound and stage crew needs to be."
+                  >
+                    <Input
+                      placeholder="e.g. 300"
+                      type="number"
+                      min="0"
+                      value={f.audienceSize}
+                      onChange={(e) => setF({ ...f, audienceSize: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              </FormSection>
+              <FormSection
+                icon={ListChecks}
+                title="What you need"
+                description="Tick everything you want covered. Not sure? Leave it and we suggest a starting crew."
+              >
                 <div className="grid grid-cols-2 gap-2">
                   {needOptions.map((x) => (
-                    <label key={x} className="flex gap-2 items-center text-sm capitalize">
+                    <label key={x} className="flex min-h-9 gap-2 items-center text-sm capitalize">
                       <Checkbox checked={f.needs.includes(x)} onCheckedChange={() => toggle(x)} />
                       {x}
                     </label>
                   ))}
                 </div>
-              </div>
-              <textarea
-                aria-label="Notes"
-                className="w-full min-h-24 rounded-md bg-slate-900 border border-white/10 p-3"
-                placeholder="Anything unusual about the show?"
-                value={f.notes}
-                onChange={(e) => setF({ ...f, notes: e.target.value })}
-              />
+              </FormSection>
+              <MoreDetails defaultOpen={!!(f.genres || f.budget || f.notes)}>
+                <Field id="crew-genres" label="Genres" hint="Separate with commas.">
+                  <Input
+                    placeholder="e.g. Bollywood, jazz, EDM"
+                    value={f.genres}
+                    onChange={(e) => setF({ ...f, genres: e.target.value })}
+                  />
+                </Field>
+                <Field
+                  id="crew-budget"
+                  label="Overall budget"
+                  help="Your total for all music and crew, in rupees. It helps us suggest a realistic lineup; nobody else sees it."
+                >
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 250000"
+                    value={f.budget}
+                    onChange={(e) => setF({ ...f, budget: e.target.value })}
+                  />
+                </Field>
+                <Field id="crew-notes" label="Notes">
+                  <textarea
+                    className="w-full min-h-24 rounded-md bg-slate-900 border border-white/10 p-3"
+                    placeholder="Anything unusual about the show?"
+                    value={f.notes}
+                    onChange={(e) => setF({ ...f, notes: e.target.value })}
+                  />
+                </Field>
+              </MoreDetails>
               <Button
                 className="w-full"
                 onClick={create}

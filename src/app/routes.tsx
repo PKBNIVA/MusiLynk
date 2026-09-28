@@ -1,4 +1,5 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
+import { FEATURE_RESUMES, FEATURE_STAGE } from './lib/features';
 import React from 'react';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PageLoading } from './components/ExperienceStates';
@@ -64,7 +65,51 @@ function publicRoutes(): RouteObject[] {
   const Billing = L(() => import('./pages/Billing'));
   const AccountData = L(() => import('./pages/AccountData'));
   const AccountSettings = L(() => import('./pages/AccountSettings'));
+  // ---- Showcase (one library, many views; one account, many hats) — begin ----
+  const Showcase = React.lazy(() => import('./pages/showcase/ShowcasePage'));
+  const showcasePaths = {
+    library: 'library',
+    portfolios: 'portfolios',
+    newPortfolio: 'portfolios/new',
+    portfolio: 'portfolios/:id',
+    career: 'career',
+    resumes: 'resumes',
+    resume: 'resumes/:id',
+    resumePrint: 'resumes/:id/print',
+    review: 'review',
+  } as const;
+  // The work library (portfolio items) is a job-seeker feature; everything else serves both roles.
+  const showcase = (role: Role): RouteObject[] =>
+    Object.entries(showcasePaths)
+      .filter(([page]) => role === 'jobseeker' || page !== 'library')
+      .filter(([page]) => FEATURE_RESUMES || !['career', 'resumes', 'resume', 'resumePrint'].includes(page))
+      .map(([page, path]) => ({
+        path,
+        element: (
+          <P roles={[role]}>
+            <Showcase page={page as keyof typeof showcasePaths} />
+          </P>
+        ),
+      }));
+  const showcasePublic: RouteObject[] = [
+    ['/p/:slug', 'publicPortfolio'],
+    ['/pages/:type/:id', 'pageJobs'],
+  ].map(([path, page]) => ({
+    path,
+    element: (
+      <S>
+        <Showcase page={page as 'pageJobs'} />
+      </S>
+    ),
+  }));
+  // ---- Showcase — end ----
+  // The Stage: the community feed. Owned by the fe-stage change; see src/app/pages/stage/.
+  const StageFeed = L(() => import('./pages/stage/StageFeed'));
+  const StageTag = L(() => import('./pages/stage/StageTag'));
+  const StageAuthor = L(() => import('./pages/stage/StageAuthor'));
+  const StagePost = L(() => import('./pages/stage/StagePost'));
   return [
+    ...showcasePublic,
     {
       path: '/',
       element: (
@@ -492,6 +537,7 @@ function publicRoutes(): RouteObject[] {
             </P>
           ),
         },
+        ...showcase('jobseeker'), // Showcase
       ],
     },
     {
@@ -657,8 +703,51 @@ function publicRoutes(): RouteObject[] {
             </P>
           ),
         },
+        ...showcase('employer'), // Showcase
       ],
     },
+    // === The Stage (community feed) — begin ===
+    // Top-level, not role-prefixed: both jobseeker and employer accounts use the same identity
+    // (person or a Page they run) on the Stage. Author and tag pages are public-data reads but
+    // still sit behind sign-in here, matching the rest of the authenticated app; the composer
+    // and reactions always require it.
+    ...(FEATURE_STAGE
+      ? [
+          {
+            path: '/stage',
+            element: (
+              <P roles={['jobseeker', 'employer']}>
+                <StageFeed />
+              </P>
+            ),
+          },
+          {
+            path: '/stage/tags/:tag',
+            element: (
+              <P roles={['jobseeker', 'employer']}>
+                <StageTag />
+              </P>
+            ),
+          },
+          {
+            path: '/stage/authors/:type/:id',
+            element: (
+              <P roles={['jobseeker', 'employer']}>
+                <StageAuthor />
+              </P>
+            ),
+          },
+          {
+            path: '/stage/posts/:id',
+            element: (
+              <P roles={['jobseeker', 'employer']}>
+                <StagePost />
+              </P>
+            ),
+          },
+        ]
+      : []),
+    // === The Stage (community feed) — end ===
     // Admin pages live on the separate admin site; the old sign-in link here is gone too.
     {
       path: '/auth/admin',

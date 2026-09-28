@@ -152,6 +152,7 @@ test.describe('forms using the shared pattern', () => {
     await expect(page.getByLabel('Phone')).toHaveAttribute('autocomplete', 'tel');
     await expect(page.getByLabel('Bio')).toHaveAttribute('maxlength', '2000');
 
+    await page.getByRole('button', { name: /Rates & links/ }).click();
     await page.getByLabel('Website').fill('not a url');
     await page.getByLabel('Phone').fill('abc-😀');
     await page.getByLabel('Hourly rate').fill('-5');
@@ -162,6 +163,7 @@ test.describe('forms using the shared pattern', () => {
     await expect(page.locator('#profile-website-error')).toHaveText('Enter a full web address starting with https://');
     expect(calls.filter((c) => c.method === 'PUT')).toEqual([]);
 
+    await page.getByRole('button', { name: /About you/ }).click();
     await page.getByLabel('Bio').fill('https://www.youtube.com/watch?v=' + 'x'.repeat(400));
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
@@ -221,6 +223,7 @@ test.describe('forms using the shared pattern', () => {
     await page.getByRole('button', { name: /Create bookable act/ }).click();
     await expect(page.getByLabel(/Act \/ stage name/)).toBeFocused();
     await page.getByLabel(/Act \/ stage name/).fill('The Monsoon Collective');
+    await page.getByRole('button', { name: 'Fees & lineup (optional)' }).click();
     await page.getByLabel('Min fee (₹)').fill('50000');
     await page.getByLabel('Max fee (₹)').fill('10000');
     await page.getByRole('button', { name: /Create bookable act/ }).click();

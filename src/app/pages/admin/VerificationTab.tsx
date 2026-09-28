@@ -1,7 +1,9 @@
+import { UserCheck } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import type { AdminVerification } from '../../lib/apiTypes';
 import { Panel, Pager, Empty, type AdminActions, type PageMeta } from './shared';
+import { AdminPageHeader, HowToCallout } from './ui';
 
 export default function VerificationTab({
   verifications,
@@ -23,7 +25,18 @@ export default function VerificationTab({
   const { busy, patch } = actions;
   return (
     <Panel error={error} onRetry={retry} loading={loading}>
-      {verifications.length === 0 && <Empty text="No verification requests waiting." />}
+      <AdminPageHeader
+        icon={UserCheck}
+        title="Verification"
+        description="Identity and company verification requests from employers and acts, waiting on a decision."
+      />
+      <HowToCallout storageKey="verification">
+        Open the evidence link before deciding. Approving adds a verified badge visible to everyone on the public site;
+        rejecting leaves the account unverified with no notice sent.
+      </HowToCallout>
+      {verifications.length === 0 && (
+        <Empty icon={UserCheck} text="No verification requests waiting." hint="New requests will appear here." />
+      )}
       {verifications.map((v) => (
         <Card key={v.id} className="bg-white/[.05] border-white/10">
           <CardContent className="p-5 flex flex-col md:flex-row justify-between gap-4">

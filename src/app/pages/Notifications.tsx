@@ -46,6 +46,8 @@ export function notificationDestination(link: string | null | undefined, role: R
   const suffix = cut < 0 ? '' : link.slice(cut);
   if (SHARED[path]) return `${base}/${SHARED[path]}${suffix}`;
   if (PUBLIC_PAGES.has(path)) return link;
+  // The Stage is a single top-level app for both roles (see routes.tsx), not role-prefixed.
+  if (/^\/stage(\/|$)/.test(path)) return link;
   if (path === '/hiring/applicants')
     return role === 'employer' ? '/employer/applications' : '/jobseeker/hiring/applicants';
   if (/^\/jobs\/[^/]+$/.test(path)) return `${base}${path}${suffix}`;

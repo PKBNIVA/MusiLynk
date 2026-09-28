@@ -1,3 +1,5 @@
+import { CalendarCheck, Search } from 'lucide-react';
+import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
@@ -6,13 +8,14 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { FormDialog, selectClass, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
+import { FormDialog, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
 import { Field, RequiredNote } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { toast } from 'sonner';
 import { BookingDepositPanel } from '../components/BookingDepositPanel';
 import { errorMessage } from '../lib/errors';
 import type { Booking, BookingPayment, ConversationCreated } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 
 const money = (currency: string | null | undefined, value: unknown) =>
   `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
@@ -325,20 +328,26 @@ export default function Bookings() {
             </Button>
           </div>
         ) : rows.length === 0 ? (
-          <div className="mt-7 rounded-xl border border-dashed border-white/15 p-10 text-center">
-            <p className="text-slate-300 font-medium">No bookings yet</p>
-            <p className="text-sm text-slate-500 mt-1">
-              Enquiries you send, and enquiries for acts you own, appear here.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3 mt-5">
-              <Button asChild>
-                <Link to={`${base}/book-talent`}>Book talent</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to={`${base}/acts`}>Manage your acts</Link>
-              </Button>
-            </div>
-          </div>
+          <EmptyState
+            icon={CalendarCheck}
+            className="mt-7"
+            title="No bookings yet"
+            action={
+              <div className="flex flex-wrap justify-center gap-3">
+                <Button asChild>
+                  <Link to={`${base}/book-talent`}>
+                    <Search aria-hidden="true" size={16} className="mr-2" />
+                    Book talent
+                  </Link>
+                </Button>
+                <Button asChild variant="ghost">
+                  <Link to={`${base}/acts`}>Manage your acts</Link>
+                </Button>
+              </div>
+            }
+          >
+            Enquiries you send, and enquiries for acts you own, appear here.
+          </EmptyState>
         ) : (
           <div className="space-y-4 mt-7">
             {rows.map((b) => {
@@ -517,20 +526,24 @@ export default function Bookings() {
                   />
                 </Field>
                 <Field id={QUOTE_IDS.currency} label="Currency" required error={quoteErrors.errors.currency}>
-                  <select
-                    className={selectClass}
+                  <AppSelect
+                    className="h-11 rounded-xl"
                     value={quote.currency}
-                    onChange={(e) => setQ('currency', e.target.value)}
-                  >
-                    {(QUOTE_CURRENCIES.includes(quote.currency)
-                      ? QUOTE_CURRENCIES
-                      : [quote.currency, ...QUOTE_CURRENCIES]
-                    ).map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
+                    onValueChange={(v) => setQ('currency', v)}
+                    options={
+                      QUOTE_CURRENCIES.includes(quote.currency)
+                        ? QUOTE_CURRENCIES
+                        : [quote.currency, ...QUOTE_CURRENCIES]
+                    }
+                  />
                 </Field>
-                <Field id={QUOTE_IDS.travelFee} label="Travel fee" optional error={quoteErrors.errors.travelFee}>
+                <Field
+                  id={QUOTE_IDS.travelFee}
+                  label="Travel fee"
+                  optional
+                  error={quoteErrors.errors.travelFee}
+                  help="Flights, trains or fuel for the whole lineup and gear. Listing it separately keeps the quote clear."
+                >
                   <Input
                     inputMode="numeric"
                     type="number"
@@ -577,7 +590,13 @@ export default function Bookings() {
                     onChange={(e) => setQ('depositPercent', e.target.value)}
                   />
                 </Field>
-                <Field id={QUOTE_IDS.validUntil} label="Valid until" optional error={quoteErrors.errors.validUntil}>
+                <Field
+                  id={QUOTE_IDS.validUntil}
+                  label="Valid until"
+                  optional
+                  error={quoteErrors.errors.validUntil}
+                  help="After this date the client can no longer accept the quote, so your calendar is not held forever."
+                >
                   <Input
                     type="date"
                     min={new Date().toISOString().slice(0, 10)}

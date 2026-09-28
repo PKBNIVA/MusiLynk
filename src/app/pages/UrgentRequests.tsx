@@ -1,3 +1,4 @@
+import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent } from '../components/ui/card';
@@ -9,7 +10,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
 import { useLatestCallback } from '../lib/useLatestCallback';
 import { Field, FormDialog, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
-import { Clock3, Zap } from 'lucide-react';
+import { Clock3, Zap, Siren } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { UrgentRequest, UrgentRequestResponse } from '../lib/apiTypes';
 
@@ -214,11 +215,13 @@ export default function UrgentRequests() {
             </Button>
           </div>
         ) : items.length === 0 ? (
-          <div className="mt-7 rounded-xl border border-dashed border-white/15 p-10 text-center text-slate-500">
-            {city || role
-              ? 'No open requests match these filters.'
-              : 'No open urgent requests right now. Post one when you need cover fast.'}
-          </div>
+          <EmptyState
+            icon={Siren}
+            className="mt-7"
+            title={city || role ? 'No open requests match these filters.' : 'No open urgent requests right now.'}
+          >
+            {city || role ? 'Try a nearby city or a broader role.' : 'Post one when you need cover fast.'}
+          </EmptyState>
         ) : (
           <div className="grid gap-4 mt-7">
             {items.map((r) => (

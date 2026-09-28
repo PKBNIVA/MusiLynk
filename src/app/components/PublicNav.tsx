@@ -8,9 +8,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { BrandMark } from './BrandMark';
 import { SkipLink } from './SkipLink';
+
+const IdentitySwitcher = lazy(() =>
+  import('./showcase/IdentitySwitcher').then((m) => ({ default: m.IdentitySwitcher })),
+);
 
 const links = [
   ['Music jobs', '/music-jobs', Briefcase],
@@ -74,6 +78,9 @@ export function PublicNav() {
               </Button>
             ))}
           </div>
+          <Suspense fallback={null}>
+            <IdentitySwitcher className="ml-auto xl:ml-0" />
+          </Suspense>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="ml-auto xl:hidden" aria-label="Open navigation">

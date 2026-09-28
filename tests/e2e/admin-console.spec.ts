@@ -258,7 +258,8 @@ test.describe('admin console', () => {
 
     await page.getByRole('button', { name: 'Grant plan' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Plan').selectOption('studio');
+    await dialog.getByRole('combobox', { name: 'Plan' }).click();
+    await page.getByRole('option', { name: 'Studio' }).click();
     await dialog.getByLabel('Days').fill('0');
     await expect(dialog.getByRole('button', { name: 'Grant plan' })).toBeDisabled();
     await dialog.getByLabel('Days').fill('45');

@@ -1,17 +1,88 @@
+import { ChevronDown, Inbox, ListOrdered, Mail, MessageCircleQuestion, Plus, Sparkles, ThumbsDown } from 'lucide-react';
+import { EmptyState } from '../components/help/EmptyState';
 import { useCallback, useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
-import { apiGet, apiPatch, apiPost } from '../lib/api';
+import { apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import { toast } from 'sonner';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../lib/authContext';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, EmployerApplication, Job } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
+import {
+  isAiPaywallError,
+  purchaseAiTopup,
+  subscribeAiPlus,
+  suggestAi,
+  useAiTaskEnabled,
+  type AiPaywallError,
+} from '../lib/ai';
+import { AiCreditsBadge } from '../components/ai/AiCreditsBadge';
+import { AiPaywallDialog } from '../components/ai/AiPaywallDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
+
+// The application's snapshot of the portfolio/resume chosen at apply time (materialsSnapshot —
+// see backend/docs/api-pages-portfolios-resumes.md §8). Not in apiTypes yet, so kept local here.
+type MaterialsSnapshot = {
+  capturedAt?: string;
+  portfolio?: {
+    title?: string;
+    headline?: string | null;
+    itemCount?: number;
+    items?: { itemId: string; item?: { title?: string; type?: string } }[];
+  } | null;
+  resume?: {
+    title?: string;
+    headline?: string | null;
+    summary?: string | null;
+    entryCount?: number;
+    sections?: string[];
+    pdf?: { url: string; filename?: string } | null;
+  } | null;
+};
+type ApplicationWithMaterials = EmployerApplication & { materials?: MaterialsSnapshot | null };
+
+type CandidateSummary = { bullets: string[]; fit: string };
+type SummaryState = { loading: boolean; open: boolean; error?: string; data?: CandidateSummary };
+type RankResult = { score: number; reason: string };
+type DraftKind = 'outreach_message' | 'interview_questions' | 'rejection_note';
+type DraftState = { kind: DraftKind; app: EmployerApplication; text: string; loading: boolean; error?: string };
+
+const DRAFT_TITLES: Record<DraftKind, string> = {
+  outreach_message: 'Draft invite',
+  interview_questions: 'Interview questions',
+  rejection_note: 'Draft kind rejection',
+};
+
+/** Parses candidate_summary's fixed output shape: "- bullet" lines, then a final "Fit: ..." line. */
+function parseCandidateSummary(text: string): CandidateSummary {
+  const rows = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const bullets = rows.filter((l) => l.startsWith('- ')).map((l) => l.slice(2).trim());
+  const fitLine = rows.find((l) => /^fit:/i.test(l));
+  return { bullets, fit: fitLine ? fitLine.replace(/^fit:\s*/i, '') : '' };
+}
+
+function billingDisabledMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError && error.code === 'AI_BILLING_DISABLED')
+    return 'AI credit purchases are not enabled yet.';
+  return error instanceof Error ? error.message : fallback;
+}
 // datetime-local value for "now", in the viewer's time zone.
 const localNow = () => {
   const d = new Date();
@@ -51,6 +122,146 @@ export default function EmployerApplications() {
     });
   const [interview, setInterview] = useState<{ id: string; name: string; date: string } | null>(null),
     [notes, setNotes] = useState<{ id: string; name: string; note: string; rating: string } | null>(null);
+  // Recruiter AI: candidate_summary is cached per applicant in view state; rank_applicants keys
+  // its results by applicationId so re-filtering the job list never mixes up two jobs' scores.
+  const [summaries, setSummaries] = useState<Record<string, SummaryState>>({});
+  const [rank, setRank] = useState<{
+    loading: boolean;
+    error?: string;
+    results: Record<string, RankResult>;
+    sortActive: boolean;
+  }>({ loading: false, results: {}, sortActive: false });
+  const [draft, setDraft] = useState<DraftState | null>(null);
+  const [sendingDraft, setSendingDraft] = useState(false);
+  const [paywall, setPaywall] = useState<AiPaywallError | null>(null);
+  const summarizeEnabled = useAiTaskEnabled('candidate_summary');
+  const rankEnabled = useAiTaskEnabled('rank_applicants');
+  const outreachEnabled = useAiTaskEnabled('outreach_message');
+  const interviewQEnabled = useAiTaskEnabled('interview_questions');
+  const rejectionEnabled = useAiTaskEnabled('rejection_note');
+  const recruiterAiAvailable = outreachEnabled || interviewQEnabled || rejectionEnabled;
+
+  function buyTopup(pack: string) {
+    purchaseAiTopup(pack)
+      .then(() => toast.success('Credits added to your account.'))
+      .catch((e: unknown) => toast.error(billingDisabledMessage(e, 'The top-up could not be completed.')));
+  }
+  function subscribePlus() {
+    subscribeAiPlus()
+      .then(() => toast.success('Verse AI Plus is active.'))
+      .catch((e: unknown) => toast.error(billingDisabledMessage(e, 'The subscription could not be started.')));
+  }
+
+  async function summarize(a: EmployerApplication) {
+    setSummaries((s) => ({ ...s, [a.id]: { ...s[a.id], loading: true, error: undefined, open: true } }));
+    try {
+      const screeningAnswers = (a.screeningAnswers || [])
+        .map((x, i) => screeningPair(x, i).answer)
+        .filter(Boolean) as string[];
+      const result = await suggestAi('candidate_summary', {
+        jobId: a.jobId,
+        candidateHeadline: a.headline || '',
+        candidateSkills: a.skills || [],
+        candidateSummary: a.coverLetter || '',
+        jobTitle: a.jobTitle,
+        screeningAnswers,
+      });
+      setSummaries((s) => ({
+        ...s,
+        [a.id]: { loading: false, open: true, data: parseCandidateSummary(result.suggestion) },
+      }));
+    } catch (e: unknown) {
+      if (isAiPaywallError(e)) {
+        setPaywall(e);
+        setSummaries((s) => ({ ...s, [a.id]: { ...s[a.id], loading: false } }));
+        return;
+      }
+      setSummaries((s) => ({
+        ...s,
+        [a.id]: { loading: false, open: true, error: errorMessage(e, 'Could not summarize this candidate.') },
+      }));
+    }
+  }
+  function toggleSummary(a: EmployerApplication) {
+    const existing = summaries[a.id];
+    if (!existing || (!existing.data && !existing.loading)) void summarize(a);
+    else setSummaries((s) => ({ ...s, [a.id]: { ...s[a.id], open: !s[a.id]?.open } }));
+  }
+
+  async function rankApplicants() {
+    const filteredJob = jobs.find((j) => j.id === jobId);
+    const candidates = apps.filter((a) => a.jobId === jobId);
+    if (!filteredJob || !candidates.length || rank.loading) return;
+    setRank((r) => ({ ...r, loading: true, error: undefined }));
+    try {
+      const result = await suggestAi('rank_applicants', {
+        jobId: filteredJob.id,
+        jobTitle: filteredJob.title,
+        jobRequirements: filteredJob.requirements || '',
+        applicants: candidates.map((a) =>
+          JSON.stringify({
+            id: a.id,
+            headline: a.headline || '',
+            skills: a.skills || [],
+            summary: (a.coverLetter || '').slice(0, 300),
+          }),
+        ),
+      });
+      const parsed = JSON.parse(result.suggestion) as { applicationId: string; score: number; reason: string }[];
+      const results: Record<string, RankResult> = {};
+      parsed.forEach((p) => {
+        results[p.applicationId] = { score: p.score, reason: p.reason };
+      });
+      setRank({ loading: false, results, sortActive: true, error: undefined });
+    } catch (e: unknown) {
+      if (isAiPaywallError(e)) {
+        setPaywall(e);
+        setRank((r) => ({ ...r, loading: false }));
+        return;
+      }
+      setRank((r) => ({ ...r, loading: false, error: errorMessage(e, 'Could not rank applicants.') }));
+    }
+  }
+
+  function openDraft(kind: DraftKind, a: EmployerApplication) {
+    setDraft({ kind, app: a, text: '', loading: true });
+    const context =
+      kind === 'outreach_message'
+        ? { jobId: a.jobId, jobTitle: a.jobTitle, candidateHeadline: a.headline || '', notes: '' }
+        : kind === 'interview_questions'
+          ? { jobId: a.jobId, jobTitle: a.jobTitle, candidateHeadline: a.headline || '', focusAreas: a.skills || [] }
+          : { jobId: a.jobId, jobTitle: a.jobTitle, candidateHeadline: a.headline || '' };
+    suggestAi(kind, context)
+      .then((r) => setDraft((d) => (d && d.app.id === a.id ? { ...d, text: r.suggestion, loading: false } : d)))
+      .catch((e: unknown) => {
+        if (isAiPaywallError(e)) {
+          setPaywall(e);
+          setDraft(null);
+          return;
+        }
+        setDraft((d) =>
+          d && d.app.id === a.id ? { ...d, loading: false, error: errorMessage(e, 'Could not draft this.') } : d,
+        );
+      });
+  }
+  async function sendDraft() {
+    if (!draft || !draft.text.trim() || sendingDraft) return;
+    setSendingDraft(true);
+    try {
+      const c = await apiPost<ConversationCreated>('/conversations', {
+        candidateId: draft.app.candidateId,
+        jobId: draft.app.jobId,
+      });
+      await apiPost(`/conversations/${c.conversation.id}/messages`, { body: draft.text });
+      toast.success(`Sent to ${draft.app.candidateName}`);
+      setDraft(null);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Could not send this message.'));
+    } finally {
+      setSendingDraft(false);
+    }
+  }
+
   const load = useCallback(
     () =>
       apiGet<{ applications?: EmployerApplication[] }>(
@@ -136,25 +347,58 @@ export default function EmployerApplications() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <h1 className="text-4xl font-bold">Applications</h1>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="text-4xl font-bold">Applications</h1>
+          <AiCreditsBadge />
+        </div>
+        <HelpCallout {...HELP.employerApplications} />
         <p className="text-slate-400 mt-2 mb-5">Review candidates only for opportunities you posted.</p>
         {jobs.length > 0 && (
-          <div className="mb-6 max-w-md">
-            <Label htmlFor="application-job-filter">Opportunity</Label>
-            <select
-              id="application-job-filter"
-              value={jobId}
-              onChange={(e) => setJobFilter(e.target.value)}
-              className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-            >
-              <option value="">All opportunities</option>
-              {jobs.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.title} ({j.status})
-                </option>
-              ))}
-            </select>
+          <div className="mb-6 flex flex-wrap items-end gap-3">
+            <div className="max-w-md flex-1 min-w-56">
+              <Label htmlFor="application-job-filter">Opportunity</Label>
+              <AppSelect
+                id="application-job-filter"
+                value={jobId}
+                onValueChange={(v) => {
+                  setJobFilter(v);
+                  setRank({ loading: false, results: {}, sortActive: false });
+                }}
+                className="mt-2"
+                options={[
+                  { value: '', label: 'All opportunities' },
+                  ...jobs.map((j) => ({ value: j.id, label: `${j.title} (${j.status})` })),
+                ]}
+              />
+            </div>
+            {jobId && rankEnabled && apps.some((a) => a.jobId === jobId) && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={rank.loading}
+                aria-busy={rank.loading}
+                onClick={() => void rankApplicants()}
+              >
+                <ListOrdered aria-hidden="true" size={15} className="mr-2" />
+                {rank.loading ? 'Ranking…' : 'Rank applicants'}
+              </Button>
+            )}
+            {Object.keys(rank.results).length > 0 && (
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={rank.sortActive}
+                  onChange={(e) => setRank((r) => ({ ...r, sortActive: e.target.checked }))}
+                />
+                Sort by AI estimate
+              </label>
+            )}
           </div>
+        )}
+        {rank.error && (
+          <p role="alert" className="mb-4 text-sm text-rose-300">
+            {rank.error}
+          </p>
         )}
         {loading ? (
           <Card className="bg-white/5 border-white/10">
@@ -179,120 +423,255 @@ export default function EmployerApplications() {
             </CardContent>
           </Card>
         ) : apps.length === 0 ? (
-          <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-10 text-center text-slate-400">
-              <p>
-                {jobId
-                  ? `No applications for ${filteredJob?.title || 'this opportunity'} yet.`
-                  : 'No applications yet.'}
-              </p>
-              {jobId ? (
-                <Button className="mt-4" variant="outline" onClick={() => setJobFilter('')}>
+          <EmptyState
+            icon={Inbox}
+            title={
+              jobId ? `No applications for ${filteredJob?.title || 'this opportunity'} yet.` : 'No applications yet.'
+            }
+            action={
+              jobId ? (
+                <Button variant="outline" onClick={() => setJobFilter('')}>
                   Show all opportunities
                 </Button>
               ) : (
-                <Button className="mt-4" variant="outline" asChild>
-                  <Link to={postPath}>Create an opportunity</Link>
+                <Button asChild>
+                  <Link to={postPath}>
+                    <Plus aria-hidden="true" size={16} className="mr-2" />
+                    Create an opportunity
+                  </Link>
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+              )
+            }
+          >
+            {jobId
+              ? 'New applicants usually arrive within a few days of a listing going live.'
+              : 'Post an opportunity and applicants will appear here with their samples and answers.'}
+          </EmptyState>
         ) : (
           <div className="space-y-4">
-            {apps.map((a) => (
-              <Card key={a.id} className="bg-white/[.06] border-white/10">
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row gap-5 justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-xl font-semibold">{a.candidateName}</h2>
-                        <Badge>{a.status}</Badge>
-                      </div>
-                      <div className="text-violet-300 text-sm mt-1">Applied for {a.jobTitle}</div>
-                      {a.status === 'Interview Scheduled' && a.interviewDate && (
-                        <div className="text-sm text-emerald-300 mt-1">
-                          Interview: {new Date(a.interviewDate).toLocaleString()}
+            {(rank.sortActive
+              ? [...apps].sort((a, b) => (rank.results[b.id]?.score ?? -1) - (rank.results[a.id]?.score ?? -1))
+              : apps
+            ).map((a) => {
+              const materials = (a as ApplicationWithMaterials).materials;
+              const summary = summaries[a.id];
+              const aiRank = rank.results[a.id];
+              return (
+                <Card key={a.id} className="bg-white/[.06] border-white/10">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col lg:flex-row gap-5 justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-xl font-semibold">{a.candidateName}</h2>
+                          <Badge>{a.status}</Badge>
+                          {aiRank && (
+                            <Badge
+                              className="bg-violet-500/15 text-violet-200"
+                              title="AI estimate, not a hiring decision"
+                            >
+                              AI estimate: {aiRank.score}/100
+                            </Badge>
+                          )}
                         </div>
-                      )}
-                      <div className="text-sm text-slate-400 mt-2 break-words">
-                        {a.candidateEmail} · {a.candidateLocation || 'Location not provided'} ·{' '}
-                        {a.experience || 'Experience not provided'}
-                      </div>
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        {a.skills?.map((s: string) => (
-                          <Badge variant="secondary" key={s}>
-                            {s}
-                          </Badge>
-                        ))}
-                      </div>
-                      {a.coverLetter && (
-                        <p className="text-sm text-slate-300 mt-4 border-l-2 border-violet-500 pl-3 whitespace-pre-line break-words">
-                          {a.coverLetter}
-                        </p>
-                      )}
-                      {a.screeningAnswers?.length > 0 && (
-                        <div className="mt-4 text-sm space-y-2">
-                          <div className="text-slate-500">Screening responses</div>
-                          <dl className="space-y-2">
-                            {a.screeningAnswers.map((x, i: number) => {
-                              const { question, answer } = screeningPair(x, i);
-                              return (
-                                <div key={i} className="p-2 rounded bg-white/5 [overflow-wrap:anywhere]">
-                                  <dt className="text-slate-400 text-xs">{question}</dt>
-                                  <dd className={answer ? 'mt-1 whitespace-pre-line' : 'mt-1 italic text-slate-500'}>
-                                    {answer || 'No answer'}
-                                  </dd>
+                        {aiRank && <p className="text-xs text-violet-300 mt-1">{aiRank.reason}</p>}
+                        <div className="text-violet-300 text-sm mt-1">Applied for {a.jobTitle}</div>
+                        {a.status === 'Interview Scheduled' && a.interviewDate && (
+                          <div className="text-sm text-emerald-300 mt-1">
+                            Interview: {new Date(a.interviewDate).toLocaleString()}
+                          </div>
+                        )}
+                        <div className="text-sm text-slate-400 mt-2 break-words">
+                          {a.candidateEmail} · {a.candidateLocation || 'Location not provided'} ·{' '}
+                          {a.experience || 'Experience not provided'}
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {a.skills?.map((s: string) => (
+                            <Badge variant="secondary" key={s}>
+                              {s}
+                            </Badge>
+                          ))}
+                        </div>
+                        {a.coverLetter && (
+                          <p className="text-sm text-slate-300 mt-4 border-l-2 border-violet-500 pl-3 whitespace-pre-line break-words">
+                            {a.coverLetter}
+                          </p>
+                        )}
+                        {a.screeningAnswers?.length > 0 && (
+                          <div className="mt-4 text-sm space-y-2">
+                            <div className="text-slate-500">Screening responses</div>
+                            <dl className="space-y-2">
+                              {a.screeningAnswers.map((x, i: number) => {
+                                const { question, answer } = screeningPair(x, i);
+                                return (
+                                  <div key={i} className="p-2 rounded bg-white/5 [overflow-wrap:anywhere]">
+                                    <dt className="text-slate-400 text-xs">{question}</dt>
+                                    <dd className={answer ? 'mt-1 whitespace-pre-line' : 'mt-1 italic text-slate-500'}>
+                                      {answer || 'No answer'}
+                                    </dd>
+                                  </div>
+                                );
+                              })}
+                            </dl>
+                          </div>
+                        )}
+                        {(a.recruiterNote || a.recruiterRating) && (
+                          <div className="text-xs text-amber-200 mt-3">
+                            Internal: {a.recruiterRating ? `${a.recruiterRating}/5 · ` : ''}
+                            {a.recruiterNote}
+                          </div>
+                        )}
+                        {materials && (materials.portfolio || materials.resume) && (
+                          <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
+                            {materials.portfolio && (
+                              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                                <div className="text-slate-500 text-xs">Portfolio sent with this application</div>
+                                <div className="font-medium mt-0.5">{materials.portfolio.title}</div>
+                                {materials.portfolio.headline && (
+                                  <div className="text-slate-400 text-xs mt-0.5">{materials.portfolio.headline}</div>
+                                )}
+                                <div className="text-slate-400 text-xs mt-1">
+                                  {materials.portfolio.itemCount ?? materials.portfolio.items?.length ?? 0} work sample
+                                  {(materials.portfolio.itemCount ?? materials.portfolio.items?.length ?? 0) === 1
+                                    ? ''
+                                    : 's'}
                                 </div>
-                              );
-                            })}
-                          </dl>
-                        </div>
-                      )}
-                      {(a.recruiterNote || a.recruiterRating) && (
-                        <div className="text-xs text-amber-200 mt-3">
-                          Internal: {a.recruiterRating ? `${a.recruiterRating}/5 · ` : ''}
-                          {a.recruiterNote}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap lg:flex-col gap-2 lg:w-52">
-                      <Button className="tap-target-44" size="sm" onClick={() => message(a.candidateId, a.jobId)}>
-                        Message
-                      </Button>
-                      <Button
-                        className="tap-target-44"
-                        size="sm"
-                        variant="outline"
-                        disabled={!!updating[a.id]}
-                        onClick={() =>
-                          setNotes({
-                            id: a.id,
-                            name: a.candidateName,
-                            note: a.recruiterNote || '',
-                            rating: a.recruiterRating ? String(a.recruiterRating) : '',
-                          })
-                        }
-                      >
-                        Rate / note
-                      </Button>
-                      {(a.allowedNextStatuses || []).map((s: string) => (
+                              </div>
+                            )}
+                            {materials.resume && (
+                              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                                <div className="text-slate-500 text-xs">Resume sent with this application</div>
+                                <div className="font-medium mt-0.5">{materials.resume.title}</div>
+                                {materials.resume.summary && (
+                                  <div className="text-slate-400 text-xs mt-0.5 line-clamp-2">
+                                    {materials.resume.summary}
+                                  </div>
+                                )}
+                                <div className="text-slate-400 text-xs mt-1">
+                                  {(materials.resume.sections || []).join(', ') ||
+                                    `${materials.resume.entryCount ?? 0} entries`}
+                                  {materials.resume.pdf && (
+                                    <>
+                                      {' · '}
+                                      <a
+                                        className="underline underline-offset-2"
+                                        href={materials.resume.pdf.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                      >
+                                        {materials.resume.pdf.filename || 'PDF'}
+                                      </a>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {summarizeEnabled && summary?.open && (
+                          <div
+                            className="mt-4 rounded-lg border border-violet-400/20 bg-violet-500/[.06] p-3 text-sm"
+                            aria-live="polite"
+                          >
+                            {summary.loading ? (
+                              <p role="status" className="text-slate-400">
+                                Summarizing…
+                              </p>
+                            ) : summary.error ? (
+                              <p role="alert" className="text-rose-300">
+                                {summary.error}
+                              </p>
+                            ) : summary.data ? (
+                              <>
+                                <ul className="list-disc pl-4 space-y-1 text-slate-200">
+                                  {summary.data.bullets.map((b, i) => (
+                                    <li key={i}>{b}</li>
+                                  ))}
+                                </ul>
+                                {summary.data.fit && <p className="mt-2 text-violet-200">Fit: {summary.data.fit}</p>}
+                                <p className="mt-2 text-xs text-slate-500">
+                                  AI-written summary — review before relying on it.
+                                </p>
+                              </>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap lg:flex-col gap-2 lg:w-52">
+                        <Button className="tap-target-44" size="sm" onClick={() => message(a.candidateId, a.jobId)}>
+                          Message
+                        </Button>
                         <Button
-                          key={s}
                           className="tap-target-44"
                           size="sm"
-                          variant={s === 'Rejected' ? 'outline' : 'secondary'}
+                          variant="outline"
                           disabled={!!updating[a.id]}
-                          aria-busy={!!updating[a.id]}
-                          onClick={() => status(a, s)}
+                          onClick={() =>
+                            setNotes({
+                              id: a.id,
+                              name: a.candidateName,
+                              note: a.recruiterNote || '',
+                              rating: a.recruiterRating ? String(a.recruiterRating) : '',
+                            })
+                          }
                         >
-                          {s}
+                          Rate / note
                         </Button>
-                      ))}
+                        {(summarizeEnabled || recruiterAiAvailable) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button className="tap-target-44" size="sm" variant="outline">
+                                <Sparkles aria-hidden="true" size={14} className="mr-2" />
+                                AI help
+                                <ChevronDown aria-hidden="true" size={14} className="ml-1" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {summarizeEnabled && (
+                                <DropdownMenuItem onSelect={() => toggleSummary(a)}>
+                                  <Sparkles aria-hidden="true" size={14} />
+                                  Summarize
+                                </DropdownMenuItem>
+                              )}
+                              {outreachEnabled && (
+                                <DropdownMenuItem onSelect={() => openDraft('outreach_message', a)}>
+                                  <Mail aria-hidden="true" size={14} />
+                                  Draft invite
+                                </DropdownMenuItem>
+                              )}
+                              {interviewQEnabled && (
+                                <DropdownMenuItem onSelect={() => openDraft('interview_questions', a)}>
+                                  <MessageCircleQuestion aria-hidden="true" size={14} />
+                                  Interview questions
+                                </DropdownMenuItem>
+                              )}
+                              {rejectionEnabled && (
+                                <DropdownMenuItem onSelect={() => openDraft('rejection_note', a)}>
+                                  <ThumbsDown aria-hidden="true" size={14} />
+                                  Draft kind rejection
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                        {(a.allowedNextStatuses || []).map((s: string) => (
+                          <Button
+                            key={s}
+                            className="tap-target-44"
+                            size="sm"
+                            variant={s === 'Rejected' ? 'outline' : 'secondary'}
+                            disabled={!!updating[a.id]}
+                            aria-busy={!!updating[a.id]}
+                            onClick={() => status(a, s)}
+                          >
+                            {s}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
         <FormDialog
@@ -347,21 +726,61 @@ export default function EmployerApplications() {
           </div>
           <div>
             <Label htmlFor="recruiter-rating">Internal rating</Label>
-            <select
+            <AppSelect
               id="recruiter-rating"
-              value={notes?.rating || ''}
-              onChange={(e) => setNotes((x) => x && { ...x, rating: e.target.value })}
-              className={fieldClass + ' bg-slate-900'}
-            >
-              <option value="">No rating</option>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <option key={n} value={n}>
-                  {n} / 5
-                </option>
-              ))}
-            </select>
+              value={String(notes?.rating || '')}
+              onValueChange={(v) => setNotes((x) => x && { ...x, rating: v })}
+              className="mt-2"
+              options={[
+                { value: '', label: 'No rating' },
+                ...[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n} / 5` })),
+              ]}
+            />
           </div>
         </FormDialog>
+        <FormDialog
+          open={!!draft}
+          onOpenChange={(o) => {
+            if (!o) setDraft(null);
+          }}
+          title={draft ? `${DRAFT_TITLES[draft.kind]} · ${draft.app.candidateName}` : ''}
+          description="AI-written draft — edit it before sending. Nothing is sent until you choose Send."
+          submitLabel={sendingDraft ? 'Sending…' : 'Send message'}
+          busy={sendingDraft}
+          submitDisabled={draft?.loading || !draft?.text.trim()}
+          onSubmit={sendDraft}
+        >
+          <div aria-live="polite">
+            {draft?.loading ? (
+              <p role="status" className="text-sm text-slate-400">
+                Writing a draft…
+              </p>
+            ) : draft?.error ? (
+              <p role="alert" className="text-sm text-rose-300">
+                {draft.error}
+              </p>
+            ) : (
+              <>
+                <Label htmlFor="ai-draft-text">Message</Label>
+                <Textarea
+                  id="ai-draft-text"
+                  maxLength={5000}
+                  value={draft?.text || ''}
+                  onChange={(e) => setDraft((d) => d && { ...d, text: e.target.value })}
+                  className="mt-2 bg-black/20 border-white/15 min-h-40"
+                />
+              </>
+            )}
+          </div>
+        </FormDialog>
+        {paywall && (
+          <AiPaywallDialog
+            error={paywall}
+            onSubscribePlus={subscribePlus}
+            onBuyTopup={buyTopup}
+            onClose={() => setPaywall(null)}
+          />
+        )}
       </main>
     </div>
   );

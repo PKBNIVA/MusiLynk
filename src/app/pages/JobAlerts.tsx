@@ -10,6 +10,7 @@ import { Link } from 'react-router';
 import { useConfirm } from '../components/booking/BookingDialogs';
 import { errorMessage } from '../lib/errors';
 import type { JobAlert } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 
 export default function JobAlerts() {
   const [alerts, setAlerts] = useState<JobAlert[]>([]),
@@ -95,19 +96,20 @@ export default function JobAlerts() {
                       .filter(Boolean)
                       .join(' · ') || 'All matching opportunities'}
                   </p>
-                  <label className="block text-xs text-slate-500 mt-3">
-                    Delivery{' '}
-                    <select
+                  <div className="mt-3 flex items-center text-xs text-slate-500">
+                    <span aria-hidden="true">Delivery</span>
+                    <AppSelect
                       aria-label={`Delivery frequency for ${a.name || 'Saved search'}`}
-                      className="ml-2 rounded-md bg-slate-900 border border-white/10 px-2 py-1 text-slate-200"
+                      className="ml-2 inline-flex h-8 w-auto min-w-32 px-2 text-slate-200"
                       value={a.frequency || 'weekly'}
-                      onChange={(e) => update(a, { frequency: e.target.value })}
-                    >
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="saved">Saved only</option>
-                    </select>
-                  </label>
+                      onValueChange={(v) => update(a, { frequency: v })}
+                      options={[
+                        { value: 'daily', description: 'One email each morning' },
+                        { value: 'weekly', description: 'A Monday round-up' },
+                        { value: 'saved', description: 'No emails, just keep the search' },
+                      ]}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => update(a, { active: !a.active })}>

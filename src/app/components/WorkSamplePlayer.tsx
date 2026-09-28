@@ -274,3 +274,8 @@ export function WorkSamplePlayer({ sample, compact = false }: { sample: Sample; 
     </div>
   );
 }
+
+/** Just the playable media (or thumbnail) of a sample, for cards that render their own title and tags. */
+export function WorkSampleMediaView({ sample }: { sample: Sample }) {
+  return <MediaView sample={sample} media={describeWorkSample(sample.url, sample.mediaMetadata?.contentType)} />;
+}

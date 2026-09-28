@@ -1,5 +1,7 @@
 module Admin
   class ReportsController < BaseController
+    include AdminPagination
+
     # Decisions against the reported *person* (or the owner of what they reported).
     USER_DECISIONS = %w[warn suspend dismiss].freeze
     # Decisions against the reported *content* itself: each removes the content from public view
@@ -10,32 +12,23 @@ module Admin
     CONTENT_ENTITY_TYPE = { "unpublish_job" => "job", "hide_review" => "review", "hide_act" => "act" }.freeze
     STATUSES = %w[open resolved dismissed].freeze
     ENTITY_TYPES = %w[user job act review].freeze
-    DEFAULT_PER_PAGE = 50
-    MAX_PER_PAGE = 100
     EXCERPT_SIZE = 20
     HISTORY_WINDOW = 90.days
     NOTE_LIMIT = 1_000
     # Written by the conversation report flow at the end of `details` (after any text from the reporter).
     CONVERSATION_REFERENCE = /Reported from conversation (conv_[0-9a-f-]{36})\.?\s*\z/
 
-    # Filters: status, entityType, reason. Pagination: page (1-based), perPage (<= 100).
+    # Filters: status, entityType, reason. Pagination via the shared AdminPagination concern
+    # (page/perPage/total; see backend/app/controllers/concerns/admin_pagination.rb).
     def index
       reports = Report.includes(:reporter).order(created_at: :desc)
       reports = reports.where(status: params[:status]) if STATUSES.include?(params[:status].to_s)
       reports = reports.where("lower(entity_type) = ?", params[:entityType].to_s.downcase) if ENTITY_TYPES.include?(params[:entityType].to_s.downcase)
       reports = reports.where(reason: params[:reason]) if params[:reason].present?
 
-      total = reports.count
-      # Clamped well above any real page count so a huge value cannot overflow the SQL OFFSET.
-      page = params[:page].to_i.clamp(1, 10_000_000)
-      per_page = params[:perPage].to_i.clamp(1, MAX_PER_PAGE)
-      per_page = DEFAULT_PER_PAGE if params[:perPage].blank?
-      rows = reports.offset((page - 1) * per_page).limit(per_page).to_a
+      rows, meta = admin_paginate(reports, default_per: 100)
       titles = entity_titles(rows)
-      render json: {
-        reports: rows.map { |r| r.attributes.merge(reporterName: r.reporter&.name, entityTitle: titles[[r.entity_type.to_s.downcase, r.entity_id]]) },
-        total: total, page: page, perPage: per_page
-      }
+      render json: { reports: rows.map { |r| r.attributes.merge(reporterName: r.reporter&.name, entityTitle: titles[[r.entity_type.to_s.downcase, r.entity_id]]) } }.merge(meta)
     end
 
     def update

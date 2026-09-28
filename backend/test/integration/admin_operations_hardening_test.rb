@@ -46,6 +46,72 @@ class AdminOperationsHardeningTest < ActionDispatch::IntegrationTest
     assert_equal 2, AuditLog.where(action: "admin.verification.status", entity_id: request_record.id).count
   end
 
+  test "user search finds an old account by name, email or id and paginates the rest" do
+    old_user = create_user("Old Professional Nine", "old-professional-nine@example.com", "jobseeker")
+    old_user.update!(created_at: 2.years.ago)
+    25.times { |i| create_user("Filler #{i}", "filler-#{i}-hardening@example.com", "jobseeker") }
+
+    get "/api/admin/users", params: { q: "old-professional-nine" }, headers: auth(@token)
+    assert_response :success
+    body = response.parsed_body
+    assert_equal 1, body.fetch("total")
+    assert_equal old_user.id, body.fetch("users").sole.fetch("id")
+
+    get "/api/admin/users", params: { q: old_user.id }, headers: auth(@token)
+    assert_equal old_user.id, response.parsed_body.fetch("users").sole.fetch("id")
+
+    get "/api/admin/users", params: { page: 1, perPage: 10 }, headers: auth(@token)
+    body = response.parsed_body
+    assert_equal 10, body.fetch("users").length
+    assert_equal 1, body.fetch("page")
+    assert_equal 10, body.fetch("perPage")
+    assert_operator body.fetch("total"), :>=, 27
+
+    get "/api/admin/users", params: { role: "jobseeker" }, headers: auth(@token)
+    assert response.parsed_body.fetch("users").all? { _1.fetch("role") == "jobseeker" }
+  end
+
+  test "perPage above 100 is clamped and an out-of-range page returns no rows without erroring" do
+    get "/api/admin/users", params: { perPage: 500 }, headers: auth(@token)
+    assert_response :success
+    assert_equal 100, response.parsed_body.fetch("perPage")
+
+    get "/api/admin/jobs", params: { perPage: 999, page: 5000 }, headers: auth(@token)
+    assert_response :success
+    body = response.parsed_body
+    assert_equal 100, body.fetch("perPage")
+    assert_equal [], body.fetch("jobs")
+  end
+
+  test "the other admin lists answer page, perPage and total without truncating silently" do
+    [
+      ["/api/admin/jobs", "jobs"],
+      ["/api/admin/verifications", "requests"],
+      ["/api/admin/reviews", "reviews"],
+      ["/api/admin/audit", "logs"],
+      ["/api/admin/subscriptions", "subscriptions"],
+      ["/api/admin/billing-attempts", "attempts"],
+      ["/api/admin/bookings", "bookings"],
+      ["/api/admin/reports", "reports"],
+    ].each do |path, key|
+      get path, headers: auth(@token)
+      assert_response :success
+      body = response.parsed_body
+      assert body.key?(key), "#{path} should still answer #{key}"
+      assert body.key?("page"), "#{path} should answer page"
+      assert body.key?("perPage"), "#{path} should answer perPage"
+      assert body.key?("total"), "#{path} should answer total"
+    end
+
+    get "/api/admin/billing-events", headers: auth(@token)
+    assert_response :success
+    body = response.parsed_body
+    assert body.key?("events")
+    assert body.key?("total")
+    assert body.key?("perPage")
+    assert body.key?("nextBefore")
+  end
+
   test "approving an opportunity keeps the automated moderation hints; rejecting records the reason" do
     job = Job.create!(employer: @studio, title: "Session Bassist", company: "Ops Studio", location: "Mumbai", kind: "Contract",
                       genre: "Studio", description: "A paid studio session with agreed terms, charts and a reference track.",

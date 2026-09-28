@@ -234,7 +234,7 @@ class AuthorizationIntegrityTest < ActionDispatch::IntegrationTest
     assert_equal 3, Job.find(job.id).applications_count, "falls back to COUNT without the scope"
   end
 
-  test "admin moderation lists are capped to the newest 500" do
+  test "admin moderation lists are paged (page/perPage/total), never silently truncated" do
     admin = create_user("List Admin", "admin")
     reporter = create_user("Bulk Reporter", "jobseeker")
     now = Time.current
@@ -249,24 +249,24 @@ class AuthorizationIntegrityTest < ActionDispatch::IntegrationTest
       { id: SecureRandom.uuid, author_id: reporter.id, employer_id: employer.id, rating: 4, body: "bulk", status: "pending", created_at: now - index.minutes, updated_at: now }
     end)
 
-    { "/api/admin/verifications" => "requests", "/api/admin/reviews" => "reviews" }.each do |path, key|
+    { "/api/admin/reports" => "reports", "/api/admin/verifications" => "requests", "/api/admin/reviews" => "reviews" }.each do |path, key|
       get path, headers: auth(admin)
       assert_response :success
-      rows = response.parsed_body.fetch(key)
-      assert_equal 500, rows.size, path
+      body = response.parsed_body
+      rows = body.fetch(key)
+      assert_equal 100, rows.size, path
+      assert_equal 1, body.fetch("page"), path
+      assert_equal 100, body.fetch("perPage"), path
+      assert_equal 502, body.fetch("total"), path
       assert_equal rows.pluck("created_at").sort.reverse, rows.pluck("created_at"), path
+
+      # A later page reaches rows page 1 could never show under the old cap-at-500 behaviour.
+      get path, params: { page: 6 }, headers: auth(admin)
+      assert_response :success
+      later_body = response.parsed_body
+      assert_equal 2, later_body.fetch(key).size, path
+      assert_equal 502, later_body.fetch("total"), path
     end
-
-    # Reports (Admin::ReportsController#index) are filtered/paged rather than capped at a fixed
-    # 500: the default page is 50 rows, and `total` reports the true count.
-    get "/api/admin/reports", headers: auth(admin)
-    assert_response :success
-    body = response.parsed_body
-    assert_equal [50, 502], [body.fetch("reports").size, body.fetch("total")]
-    assert_equal body.fetch("reports").pluck("created_at").sort.reverse, body.fetch("reports").pluck("created_at")
-
-    get "/api/admin/reports", params: { perPage: "500" }, headers: auth(admin)
-    assert_equal Admin::ReportsController::MAX_PER_PAGE, response.parsed_body.fetch("reports").size
   end
 
   test "public profiles do not leak synthetic batch and listings hide synthetic accounts from real users" do

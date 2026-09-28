@@ -35,6 +35,9 @@ const adminFixtures = () => ({
           createdAt: '2026-09-01T00:00:00Z',
         },
       ],
+      page: 1,
+      perPage: 50,
+      total: 2,
     },
   },
   '/api/admin/jobs': {
@@ -49,10 +52,13 @@ const adminFixtures = () => ({
           description: 'Studio session.',
         },
       ],
+      page: 1,
+      perPage: 100,
+      total: 1,
     },
   },
-  '/api/admin/reviews': { body: { reviews: [] } },
-  '/api/admin/verifications': { body: { requests: [] } },
+  '/api/admin/reviews': { body: { reviews: [], page: 1, perPage: 100, total: 0 } },
+  '/api/admin/verifications': { body: { requests: [], page: 1, perPage: 100, total: 0 } },
   '/api/admin/reports': {
     body: {
       reports: [
@@ -65,11 +71,14 @@ const adminFixtures = () => ({
           created_at: '2026-09-01T00:00:00Z',
         },
       ],
+      page: 1,
+      perPage: 100,
+      total: 1,
     },
   },
-  '/api/admin/audit': { body: { logs: [] } },
-  '/api/admin/subscriptions': { body: { subscriptions: [] } },
-  '/api/admin/bookings': { body: { bookings: [] } },
+  '/api/admin/audit': { body: { logs: [], page: 1, perPage: 100, total: 0 } },
+  '/api/admin/subscriptions': { body: { subscriptions: [], page: 1, perPage: 100, total: 0 } },
+  '/api/admin/bookings': { body: { bookings: [], page: 1, perPage: 100, total: 0 } },
   '/api/admin/billing-attempts': {
     body: {
       attempts: [
@@ -92,6 +101,9 @@ const adminFixtures = () => ({
           created_at: '2026-09-01T00:00:00Z',
         },
       ],
+      page: 1,
+      perPage: 100,
+      total: 2,
     },
   },
   '/api/admin/billing-events': {
@@ -109,6 +121,8 @@ const adminFixtures = () => ({
         },
       ],
       nextBefore: null,
+      total: 1,
+      perPage: 200,
     },
   },
 });
@@ -124,7 +138,7 @@ test.describe('admin console', () => {
     );
     await page.goto('/admin');
     await expect(page.getByRole('heading', { name: 'Marketplace health' })).toBeVisible();
-    await expect(page.getByText('1 of 11 panels could not load')).toBeVisible();
+    await expect(page.getByText('1 of 10 panels could not load')).toBeVisible();
     await expect(page.getByText('Session Bassist')).toBeVisible();
     await page.getByRole('tab', { name: /Reports/ }).click();
     await expect(page.getByText('This panel could not load: Reports store offline')).toBeVisible();
@@ -157,6 +171,58 @@ test.describe('admin console', () => {
     const patch = calls.find((call) => call.method === 'PATCH' && call.path === '/api/admin/jobs/job-1');
     expect(patch?.body).toEqual({ status: 'rejected', note: 'Please add the fee range.' });
     expect(nativeDialog).toBe(false);
+  });
+
+  test('users tab searches the server and pages through the rest instead of filtering only what loaded', async ({
+    page,
+  }) => {
+    const older = {
+      id: 'u-old',
+      name: 'Professional Old Nine',
+      email: 'professional-old-nine@example.invalid',
+      role: 'jobseeker',
+      status: 'active',
+      createdAt: '2024-01-01T00:00:00Z',
+    };
+    const calls = await mockApi(
+      page,
+      {
+        ...adminFixtures(),
+        'GET /api/admin/users': (request) => {
+          const url = new URL(request.url());
+          const q = url.searchParams.get('q') || '';
+          if (q.includes('professional-old-nine')) {
+            return { body: { users: [older], page: 1, perPage: 50, total: 1 } };
+          }
+          return {
+            body: {
+              users: [
+                {
+                  id: 'u-1',
+                  name: 'Asha Rao',
+                  email: 'asha@example.invalid',
+                  role: 'jobseeker',
+                  status: 'active',
+                  createdAt: '2026-09-01T00:00:00Z',
+                },
+              ],
+              page: 1,
+              perPage: 50,
+              total: 1005,
+            },
+          };
+        },
+      },
+      admin,
+    );
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: 'Users' }).click();
+    await expect(page.getByText(/Showing 1.50 of 1,005/)).toBeVisible();
+    await page.getByLabel('Search users').fill('professional-old-nine');
+    await expect(page.getByText('professional-old-nine@example.invalid')).toBeVisible();
+    await expect(page.getByText('Showing 1–1 of 1', { exact: false })).toBeVisible();
+    const searchCall = calls.filter((c) => c.path === '/api/admin/users').at(-1);
+    expect(searchCall?.method).toBe('GET');
   });
 
   test('suspending asks for confirmation and grant-plan validates days', async ({ page }) => {
@@ -307,6 +373,17 @@ test.describe('admin console', () => {
     await page.getByLabel('Account email').fill('nobody@example.invalid');
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('signin-doctor-result')).toContainText('No account uses this email.');
+  });
+
+  test('sign-in doctor: diagnosing with an empty email shows an inline error instead of doing nothing', async ({
+    page,
+  }) => {
+    const calls = await mockApi(page, adminFixtures(), admin);
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: 'Sign-in doctor' }).click();
+    await page.getByRole('button', { name: 'Diagnose' }).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'Enter an email to diagnose.' })).toBeVisible();
+    expect(calls.some((call) => call.path === '/api/admin/users/lookup')).toBe(false);
   });
 
   test('admin console fits a phone screen', async ({ page }, testInfo) => {

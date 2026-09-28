@@ -1,6 +1,11 @@
 module Admin
   class JobsController < BaseController
-    def index = render(json: { jobs: Job.with_applications_count.includes(employer: :profile).order(created_at: :desc).limit(500).map { _1.api_json(current_user) } })
+    include AdminPagination
+
+    def index
+      rows, meta = admin_paginate(Job.with_applications_count.includes(employer: :profile).order(created_at: :desc), default_per: 100)
+      render json: { jobs: rows.map { _1.api_json(current_user) } }.merge(meta)
+    end
 
     def update
       return render_error("Invalid opportunity status.", :bad_request) unless %w[pending published rejected closed].include?(params[:status])

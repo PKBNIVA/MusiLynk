@@ -62,3 +62,25 @@ talent_roles:
     # Laptop-first production is where most music-tech work happens today.
     terms: [music tech, music technologist, audio developer, audio programmer, plugin developer, sound designer,
       dolby atmos, immersive audio, playback engineer, livestream engineer, electronic producer, music producer, mixing engineer]
+
+# Flat value lists behind GET /api/ai/autocomplete (AutocompleteTaxonomy), prefix- and
+# fuzzy-matched with no AI required. The "roles" field reuses talent_roles above instead of
+# repeating it; instruments reuses CatalogController::INSTRUMENTS.
+autocomplete_skills:
+  [Vocals, Songwriting, Music Production, Mixing, Mastering, Sound Design, Beatmaking, Live Sound,
+    Session Recording, Arranging, Orchestration, Music Direction, Tour Management, Stage Management,
+    Artist Management, Booking, A&R, Music Supervision, Sync Licensing, Publishing Administration,
+    Playlist Pitching, Music Journalism, Choreography, Lighting Design, Video Editing, Photography,
+    Rigging, Backline Tech, RF Coordination, Vocal Coaching, Music Teaching, Foley, Dialogue Editing,
+    Immersive Audio, Playback Programming, Merchandising, Event Production]
+
+autocomplete_genres:
+  [Bollywood, Indie, Classical Hindustani, Classical Carnatic, Bhangra, Sufi, Ghazal, Devotional,
+    Folk, Fusion, Rock, Pop, Hip-Hop, R&B, EDM, Techno, House, Jazz, Blues, Metal, Punk, Reggae,
+    Country, Qawwali, Bhajan, Filmi, Lo-fi, Ambient, Carnatic Fusion, Indie Pop, Indie Rock, Rap,
+    Devotional Fusion, Wedding Music, Regional Pop]
+
+autocomplete_cities:
+  [Mumbai, Delhi, Bengaluru, Chennai, Kolkata, Hyderabad, Pune, Ahmedabad, Jaipur, Chandigarh,
+    Goa, Kochi, Lucknow, Indore, Surat, Nagpur, Bhopal, Coimbatore, Visakhapatnam, Guwahati,
+    Dehradun, Amritsar, Shillong, Shimla, Udaipur]

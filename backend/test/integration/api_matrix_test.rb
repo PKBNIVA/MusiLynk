@@ -140,6 +140,10 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/reviews", :jobseeker, { ok: [201, 403, 409], params: ->(w, _a) { { employerId: w.user(:emp).id, rating: 5, body: "Great" } }, bad: { employerId: ApiMatrixWorld::MISSING_ID }, bad_status: [404, 422] }],
     [:get, "/api/resources", :public, { keys: %w[resources] }],
     [:get, "/api/taxonomy", :public, { keys: %w[opportunityKinds roleCategories instruments] }],
+    [:get, "/api/ai/status", :public, { keys: %w[enabled tasks] }],
+    [:get, "/api/ai/autocomplete", :public, { params: { field: "cities", q: "mum" }, bad: { field: "not-a-field", q: "mum" }, bad_status: [422], keys: %w[field query suggestions] }],
+    # No ANTHROPIC_API_KEY in this environment, so AI assist answers 503 AI_DISABLED for every allowed role.
+    [:post, "/api/ai/suggest", :any, { ok: [503], params: { task: "post_caption", context: { kind: "release" } }, bad: { task: "not_a_real_task", context: {} }, bad_status: [503] }],
     [:get, "/api/dashboard", :any, {}],
     [:get, "/api/search?q=mix", :public, { keys: %w[results interpretedAs status] }],
     [:get, "/api/search/status", :public, { keys: %w[provider healthy] }],

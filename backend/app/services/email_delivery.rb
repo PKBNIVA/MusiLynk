@@ -19,8 +19,26 @@ class EmailDelivery
       heading: "Your sign-in code",
       copy: "Enter this code on Verse to continue. It expires in 10 minutes and can be used once. Verse will never ask you for this code by phone or chat.",
       action: nil
+    },
+    # data: { code: }. Sent to the address an admin wants to switch their account to.
+    "admin_email_change" => {
+      subject: "Confirm your new Verse admin email",
+      heading: "Confirm your new admin email",
+      copy: "Enter this code on the Verse admin site to move your admin account to this address. It expires in 10 minutes and can be used once.",
+      action: nil,
+      footer: "If you didn't request this, ignore this email: nothing changes without the code. If you are a Verse admin and did not start this, change your admin password now."
+    },
+    # data: { detail: new address }. Sent to the previous address once the change is done.
+    "admin_email_changed" => {
+      subject: "Your Verse admin email was changed",
+      heading: "Admin email changed",
+      copy: "The email address for your Verse admin account was just changed to:",
+      action: nil,
+      notice: true,
+      footer: "If you made this change, nothing else is needed. If you did not, sign in at the admin site right away and change your password, or contact the site owner."
     }
   }.freeze
+  DEFAULT_FOOTER = "If you did not request this, you can safely ignore this email.".freeze
 
   # Returns a result hash. Network and configuration errors are reported as an
   # unsuccessful delivery unless raise_errors is true (used by EmailDeliveryJob
@@ -28,6 +46,7 @@ class EmailDelivery
   def self.call(to:, template:, data:, raise_errors: false)
     return { delivered: false, reason: "Recipient unavailable" } if to.blank?
     return { delivered: false, reason: "Recipient suppressed" } if EmailSuppression.blocks_all?(to)
+    return { delivered: false, reason: "Reserved address" } if skip_reserved?(to)
     return deliver_with_brevo(to:, template:, data:) if brevo_configured?
     return deliver_with_resend(to:, template:, data:) if ENV["RESEND_API_KEY"].present?
 
@@ -56,6 +75,20 @@ class EmailDelivery
   end
 
   def self.configured? = provider.present?
+
+  # Top-level domains reserved by RFC 2606/6761 plus common internal ones: mail sent there
+  # can never arrive (the seeded admin@verse.local, synthetic qa+…@example.invalid accounts).
+  RESERVED_TLDS = %w[local localhost invalid test example internal].freeze
+
+  def self.reserved_address?(email)
+    domain = email.to_s.strip.downcase.split("@", 2)[1].to_s.delete_suffix(".")
+    domain.present? && RESERVED_TLDS.include?(domain.split(".").last)
+  end
+
+  # Real providers (Brevo, Resend) are never asked to send to a reserved address: each attempt
+  # would hard-bounce and hurt the sending domain's reputation. The webhook provider is local
+  # QA plumbing and still receives them.
+  def self.skip_reserved?(email) = %w[brevo resend].include?(provider) && reserved_address?(email)
 
   def self.brevo_configured?
     ENV["BREVO_API_KEY"].present? && ENV["BREVO_SENDER_EMAIL"].present?
@@ -118,24 +151,28 @@ class EmailDelivery
     nil
   end
 
-  # Link templates require data[:link]; code templates require data[:code].
+  # Link templates require data[:link]; code templates data[:code]; notices data[:detail].
   def self.email_body_value(content:, data:)
-    content[:action] ? data.fetch(:link) : data.fetch(:code).to_s
+    return data.fetch(:link) if content[:action]
+    content[:notice] ? data.fetch(:detail).to_s : data.fetch(:code).to_s
   end
 
   def self.email_text(content:, data:)
-    "#{content[:heading]}\n\n#{content[:copy]}\n\n#{email_body_value(content:, data:)}"
+    "#{content[:heading]}\n\n#{content[:copy]}\n\n#{email_body_value(content:, data:)}\n\n#{content[:footer] || DEFAULT_FOOTER}"
   end
 
   def self.email_html(content:, data:)
     value = ERB::Util.html_escape(email_body_value(content:, data:))
     body = if content[:action]
       %(<a href="#{value}" style="display:inline-block;margin-top:18px;padding:13px 20px;border-radius:12px;background:#7c3aed;color:white;text-decoration:none;font-weight:700">#{content[:action]}</a>)
+    elsif content[:notice]
+      %(<p style="margin:18px 0 0;font-size:18px;font-weight:700;color:#f8fafc">#{value}</p>)
     else
       %(<p style="margin:22px 0 0;font-family:'Courier New',monospace;font-size:34px;font-weight:800;letter-spacing:8px;color:#f8fafc">#{value}</p>)
     end
+    footer = ERB::Util.html_escape(content[:footer] || DEFAULT_FOOTER)
     <<~HTML.squish
-      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px"><div style="font-size:22px;font-weight:800;color:#a78bfa">VERSE</div><h1 style="font-size:28px;margin:28px 0 12px">#{content[:heading]}</h1><p style="color:#cbd5e1;line-height:1.6">#{content[:copy]}</p>#{body}<p style="margin-top:28px;color:#94a3b8;font-size:13px">If you did not request this, you can safely ignore this email.</p></div></body></html>
+      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px"><div style="font-size:22px;font-weight:800;color:#a78bfa">VERSE</div><h1 style="font-size:28px;margin:28px 0 12px">#{content[:heading]}</h1><p style="color:#cbd5e1;line-height:1.6">#{content[:copy]}</p>#{body}<p style="margin-top:28px;color:#94a3b8;font-size:13px">#{footer}</p></div></body></html>
     HTML
   end
 

@@ -1,4 +1,6 @@
 class AuthController < ApplicationController
+  include ConsumesSignInCodes
+
   LOGIN_FAILURE_PERIOD = 15.minutes
   # Strict budget per (email, IP) pair; a looser global per-email budget still
   # stops distributed guessing without letting one attacker lock a user out.
@@ -31,7 +33,10 @@ class AuthController < ApplicationController
   SECOND_FACTOR_UNAVAILABLE_MESSAGE = "Admin sign-in needs an emailed code, but email delivery is not configured on the server. Configure an email provider to sign in.".freeze
   SECOND_FACTOR_SKIPPED_WARNING = "Admin 2-step sign-in is off because email delivery is not configured. Add an email provider (BREVO_API_KEY), then set ADMIN_SECOND_FACTOR=required.".freeze
   SECOND_FACTOR_SUPPRESSED_WARNING = "Admin 2-step sign-in is off for this admin because email to their address is suppressed (bounced or reported as spam). Fix the address, then lift the suppression.".freeze
+  SECOND_FACTOR_ADDRESS_WARNING = "Admin 2-step sign-in is off for this admin because their email address can't receive mail (a reserved domain such as .local or .invalid). Change the admin's email to a real mailbox.".freeze
   SECOND_FACTOR_DISABLED_WARNING = "Admin 2-step sign-in is turned off (ADMIN_SECOND_FACTOR=off). Remove that setting once the emergency is over.".freeze
+  # With ADMIN_ORIGIN set, admins sign in only on the admin site (see AdminOrigin).
+  ADMIN_USE_ADMIN_SITE_MESSAGE = "Admins sign in at the admin site.".freeze
 
   # ADMIN_SECOND_FACTOR selects how an admin password sign-in is treated:
   #   "auto" (default, and any unrecognised value): require the emailed code when
@@ -42,7 +47,8 @@ class AuthController < ApplicationController
   #     step fails closed (503 SECOND_FACTOR_UNAVAILABLE).
   #   "off": emergency disable only; every such sign-in is audited.
   # Outside production the on-screen debugCode counts as delivery. With an email
-  # address, a suppressed (bounced or complained) address counts as undeliverable.
+  # address, a suppressed (bounced or complained) address or one on a reserved domain
+  # (admin@verse.local) counts as undeliverable, so auto mode never sends the code nowhere.
   # Returns :enforced, :unavailable (required but undeliverable), :skipped or :off.
   def self.admin_second_factor_state(email = nil)
     mode = ENV.fetch("ADMIN_SECOND_FACTOR", "auto").strip.downcase
@@ -53,7 +59,13 @@ class AuthController < ApplicationController
 
   def self.admin_code_deliverable?(email)
     return !Rails.env.production? unless EmailDelivery.configured?
-    email.blank? || !EmailSuppression.blocks_all?(email)
+    email.blank? || (!EmailDelivery.reserved_address?(email) && !EmailSuppression.blocks_all?(email))
+  end
+
+  # Which warning explains a :skipped state for this admin address.
+  def self.admin_second_factor_warning(email)
+    return SECOND_FACTOR_SKIPPED_WARNING unless EmailDelivery.configured?
+    EmailDelivery.reserved_address?(email) ? SECOND_FACTOR_ADDRESS_WARNING : SECOND_FACTOR_SUPPRESSED_WARNING
   end
 
   def register
@@ -86,6 +98,7 @@ class AuthController < ApplicationController
       return render_error("Incorrect email or password.", :unauthorized)
     end
     return render_error("This account is not active.", :forbidden) unless user.active?
+    return unless admin_origin_allowed?(user)
     second_factor = user.admin? ? self.class.admin_second_factor_state(user.email) : nil
     return start_second_factor(user) if second_factor == :enforced
     if second_factor == :unavailable
@@ -93,7 +106,10 @@ class AuthController < ApplicationController
       return render_error(SECOND_FACTOR_UNAVAILABLE_MESSAGE, :service_unavailable, "SECOND_FACTOR_UNAVAILABLE")
     end
     if second_factor == :skipped
-      reason = EmailDelivery.configured? ? "email_suppressed" : "email_delivery_not_configured"
+      reason = if !EmailDelivery.configured? then "email_delivery_not_configured"
+      elsif EmailDelivery.reserved_address?(user.email) then "email_address_undeliverable"
+      else "email_suppressed"
+      end
       Rails.logger.warn({ event: "admin_second_factor_skipped", userId: user.id, reason: }.to_json)
       audit!("auth.admin_second_factor_skipped", user, { reason:, ip: request.remote_ip })
     end
@@ -118,6 +134,7 @@ class AuthController < ApplicationController
       return render_error(SECOND_FACTOR_EXPIRED_MESSAGE, :unauthorized, "SECOND_FACTOR_EXPIRED")
     end
 
+    return unless admin_origin_allowed?(user)
     scopes = ip_scope.merge(user: [user.id, SECOND_FACTOR_FAILURES_PER_USER])
     return if failure_budget_exhausted?("second-factor-failure", scopes, period: SECOND_FACTOR_FAILURE_PERIOD)
     unless consume_code(code, params[:code])
@@ -160,7 +177,7 @@ class AuthController < ApplicationController
     user = User.find_by(email:)
     pending = user ? {} : sign_up.to_h
     record, code = SignInCode.issue!(email:, pending_name: pending[:name], pending_role: pending[:role])
-    if user || record.sign_up?
+    if (user || record.sign_up?) && !admin_code_only_sign_in_blocked?(user)
       queue_sign_in_code(user:, email:, code:)
     else
       record.update_columns(used_at: record.created_at)
@@ -191,6 +208,7 @@ class AuthController < ApplicationController
       user, created = create_user_from_code(code)
     end
     return render_error(OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID") unless user
+    return render_error(OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID") if admin_code_only_sign_in_blocked?(user)
     return render_error("This account is not active.", :forbidden) unless user.active?
 
     user.update!(email_verified: true, last_login_at: Time.current)
@@ -297,31 +315,6 @@ class AuthController < ApplicationController
     { name:, role: }
   end
 
-  # Spends one attempt on the newest usable code for the address and returns it
-  # (marked used) when the code matches. The row lock serialises concurrent
-  # guesses so the attempt cap cannot be raced.
-  def consume_sign_in_code(email, raw)
-    candidate = SignInCode.latest_usable_for(email)
-    # Keep the no-code path doing the same HMAC work as the has-code path.
-    unless candidate
-      SignInCode.new(id: "sign_placeholder", code_digest: "").matches?(raw)
-      return nil
-    end
-    consume_code(candidate, raw)
-  end
-
-  def consume_code(candidate, raw)
-    matched = false
-    candidate.with_lock do
-      next if candidate.used_at? || candidate.expires_at <= Time.current || candidate.attempts >= SignInCode::MAX_ATTEMPTS
-      candidate.attempts += 1
-      matched = candidate.matches?(raw)
-      candidate.used_at = Time.current if matched || candidate.attempts >= SignInCode::MAX_ATTEMPTS
-      candidate.save!
-    end
-    candidate if matched
-  end
-
   # The password was right; answer with a short-lived challenge instead of a
   # session and email the admin a code that completes it.
   def start_second_factor(user)
@@ -368,6 +361,22 @@ class AuthController < ApplicationController
     Rails.logger.error({ event: "email_enqueue_failed", template: "sign_in_code", error: error.class.name }.to_json)
     ErrorReporter.capture(error, tags: { source: "email_enqueue_failed", template: "sign_in_code" })
   end
+
+  # With ADMIN_ORIGIN set, an admin's password sign-in (and its second step) is only
+  # accepted from the admin site. Checked after the password or challenge has been
+  # verified, so a non-admin, or a wrong password, gets exactly the same answers as before.
+  def admin_origin_allowed?(user)
+    return true unless user.admin? && !AdminOrigin.allows?(request)
+    audit!("auth.admin_wrong_origin", user, { ip: request.remote_ip, origin: request.origin.to_s.first(200) })
+    Rails.logger.warn({ event: "admin_wrong_origin", userId: user.id }.to_json)
+    render_error(ADMIN_USE_ADMIN_SITE_MESSAGE, :forbidden, "ADMIN_USE_ADMIN_SITE")
+    false
+  end
+
+  # With ADMIN_ORIGIN set, an admin account never gets or accepts an email-only sign-in code:
+  # admins always use password + code on the admin site. The request answers the same body
+  # as for any address and the verify step the generic invalid-code error.
+  def admin_code_only_sign_in_blocked?(user) = user.present? && user.admin? && AdminOrigin.locked?
 
   def login_failure_scopes(email)
     {

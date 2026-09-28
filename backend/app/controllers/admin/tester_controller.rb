@@ -23,10 +23,16 @@ module Admin
       release = ENV.fetch("RAILWAY_GIT_COMMIT_SHA", ENV.fetch("RENDER_GIT_COMMIT", ""))
       check.call("Release traceability", !Rails.env.production? || release.present?, release.present? ? release.first(12) : "Commit SHA unavailable", "high")
       check.call("Email delivery", !Rails.env.production? || EmailDelivery.brevo_configured? || (ENV["RESEND_API_KEY"].present? && ENV["EMAIL_FROM"].present?) || ENV["EMAIL_DELIVERY_WEBHOOK"].present?, EmailDelivery.brevo_configured? ? "Brevo configured" : ENV["RESEND_API_KEY"].present? ? "Resend configured" : ENV["EMAIL_DELIVERY_WEBHOOK"].present? ? "Webhook configured" : "Not configured", "medium")
-      second_factor = AuthController.admin_second_factor_state
-      second_factor_detail = { enforced: "Emailed code required after an admin password", unavailable: "Required, but email delivery is not configured: admin password sign-in is refused",
-        skipped: AuthController::SECOND_FACTOR_SKIPPED_WARNING, off: AuthController::SECOND_FACTOR_DISABLED_WARNING }.fetch(second_factor)
+      # The weakest state across active admins: one admin with an undeliverable address is enough to flag it.
+      admin_emails = User.where(role: "admin", status: "active").pluck(:email).presence || [nil]
+      states = admin_emails.index_with { AuthController.admin_second_factor_state(_1) }
+      second_factor = %i[unavailable off skipped enforced].find { states.value?(_1) }
+      weakest_email = states.key(second_factor)
+      second_factor_detail = { enforced: "Emailed code required after an admin password", unavailable: "Required, but the code cannot be emailed: admin password sign-in is refused",
+        skipped: AuthController.admin_second_factor_warning(weakest_email), off: AuthController::SECOND_FACTOR_DISABLED_WARNING }.fetch(second_factor)
       check.call("Admin 2-step sign-in", second_factor == :enforced, second_factor_detail, "high")
+      check.call("Admin site origin", !Rails.env.production? || AdminOrigin.locked?,
+        AdminOrigin.locked? ? "Admin API and admin sign-in answer the admin site only" : "ADMIN_ORIGIN not set: the admin API answers every allowed origin", "medium")
       suppressions = EmailSuppression.summary
       webhook_ready = !Rails.env.production? || !EmailDelivery.brevo_configured? || ENV["BREVO_WEBHOOK_SECRET"].present?
       reasons = suppressions[:byReason].map { |reason, count| "#{count} #{reason.tr('_', ' ')}" }.join(", ")

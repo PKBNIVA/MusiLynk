@@ -29,6 +29,7 @@ import { formatDate, formatDeadline, formatPay } from '../lib/format';
 import { MoreDetails } from '../components/help/MoreDetails';
 import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
+import { ShareToStageButton } from '../components/stage/ShareToStageButton';
 
 const COVER_MAX = 5_000;
 const answerId = (i: number) => `screening-${i}`;
@@ -154,17 +155,22 @@ export default function JobDetails() {
           <div className="space-y-5">
             <Card className="bg-white/[.055] border-white/10">
               <CardContent className="p-6 md:p-8">
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary">{title(job.opportunity_kind || 'job')}</Badge>
-                  {job.employerVerified && (
-                    <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-400/20">
-                      <ShieldCheck size={13} className="mr-1" />
-                      Verified employer
-                    </Badge>
-                  )}
-                  {job.fitScore && (
-                    <Badge className="bg-sky-500/15 text-sky-200 border-sky-400/20">{job.fitScore}% profile fit</Badge>
-                  )}
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">{title(job.opportunity_kind || 'job')}</Badge>
+                    {job.employerVerified && (
+                      <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-400/20">
+                        <ShieldCheck size={13} className="mr-1" />
+                        Verified employer
+                      </Badge>
+                    )}
+                    {job.fitScore && (
+                      <Badge className="bg-sky-500/15 text-sky-200 border-sky-400/20">
+                        {job.fitScore}% profile fit
+                      </Badge>
+                    )}
+                  </div>
+                  <ShareToStageButton kind="job_share" id={job.id} label={job.title} />
                 </div>
                 <h1 className="text-3xl md:text-5xl font-bold mt-4 leading-tight">{job.title}</h1>
                 <p className="text-xl text-violet-300 mt-2">{job.company}</p>

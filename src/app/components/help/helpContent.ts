@@ -19,6 +19,7 @@ import {
   Send,
   ShieldCheck,
   Share2,
+  Sparkles,
   Star,
   UserRound,
   Users,
@@ -143,6 +144,27 @@ export const HELP: Record<string, { id: string; title: string; steps: HelpStep[]
         text: 'Never pay fees to move off-platform. Staying here keeps you protected.',
       },
       { icon: Bell, title: 'Report anything odd', text: 'Use Report in a conversation and our team will take a look.' },
+    ],
+  },
+  stage: {
+    id: 'stage',
+    title: 'What is the Stage',
+    steps: [
+      {
+        icon: Sparkles,
+        title: 'Share your work',
+        text: 'Post updates, performances, releases and gigs, as yourself or as a Page you run.',
+      },
+      {
+        icon: Handshake,
+        title: 'Applause, comment, reshare',
+        text: 'React to what you see, and follow people or Pages to see more of their posts.',
+      },
+      {
+        icon: Search,
+        title: 'Genres, cities and jobs',
+        text: 'Hashtags for genres and cities help people find you; job and gig shares have a live apply button.',
+      },
     ],
   },
   availability: {

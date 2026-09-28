@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { Input } from '../components/ui/input';
@@ -24,53 +24,58 @@ import { Label } from '../components/ui/label';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { toastJobError } from '../components/OpportunityPipeline';
 import { errorMessage } from '../lib/errors';
+import { usePagedList, type PageMeta } from '../lib/usePagedList';
+import { useUrlFilters } from '../lib/useUrlFilters';
+import { LoadMore } from '../components/LoadMore';
+import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../components/SearchFeedback';
+
+type CandidatePage = PageMeta & { candidates?: Professional[] };
+const pickCandidates = (page: CandidatePage) => page.candidates;
+// URL keys are the API's filter names, so the URL is the search.
+const FILTERS = ['q', 'location', 'role', 'instrument', 'verified', 'remoteRecording'] as const;
+const NOUN = ['professional', 'professionals'] as const;
+
 export default function CandidateSearch() {
   const { user } = useAuth();
   const nav = useNavigate();
   const [compare, setCompare] = useState<string[]>([]),
     [recent, setRecent] = useState<RecentActivity[]>([]);
-  const [items, setItems] = useState<Professional[]>([]),
-    [q, setQ] = useState(''),
-    [location, setLocation] = useState(''),
-    [role, setRole] = useState(''),
-    [instrument, setInstrument] = useState(''),
-    [verified, setVerified] = useState(false),
-    [remote, setRemote] = useState(false),
+  // Filters live in the URL (reload, share, Back undoes a change: SRCH-08); results are paged.
+  const { values: f, query, update, clear } = useUrlFilters(FILTERS);
+  const list = usePagedList<Professional, CandidatePage>({ path: '/candidates', pick: pickCandidates, noun: 'talent' });
+  const { items, setItems, loading, error: loadError } = list;
+  const [q, setQ] = useState(f.q),
+    [location, setLocation] = useState(f.location),
+    [role, setRole] = useState(f.role),
+    [instrument, setInstrument] = useState(f.instrument),
     [selected, setSelected] = useState<Professional | null>(null),
     [portfolio, setPortfolio] = useState<PortfolioItem[]>([]),
-    [loading, setLoading] = useState(true),
-    [loadError, setLoadError] = useState(''),
     [folderFor, setFolderFor] = useState<Professional | null>(null),
     [folders, setFolders] = useState<TalentFolder[] | null>(null),
     [folderChoice, setFolderChoice] = useState(''),
     [newFolder, setNewFolder] = useState(''),
     [folderBusy, setFolderBusy] = useState(false);
-  const load = useLatestCallback(async () => {
-    try {
-      const p = new URLSearchParams();
-      if (q) p.set('q', q);
-      if (location) p.set('location', location);
-      if (role) p.set('role', role);
-      if (instrument) p.set('instrument', instrument);
-      if (verified) p.set('verified', 'true');
-      if (remote) p.set('remoteRecording', 'true');
-      const d = await apiGet<{ candidates?: Professional[] }>(`/candidates?${p}`);
-      setItems(d.candidates || []);
-      setLoadError('');
-    } catch (e: unknown) {
-      setLoadError(errorMessage(e, 'Talent could not be loaded.'));
-    } finally {
-      setLoading(false);
-    }
-  });
   useEffect(() => {
-    load();
+    setQ(f.q);
+    setLocation(f.location);
+    setRole(f.role);
+    setInstrument(f.instrument);
+  }, [f.q, f.location, f.role, f.instrument]);
+  const load = useLatestCallback(() => list.search(query));
+  useEffect(() => {
+    void load();
+  }, [query, load]);
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!update({ q, location, role, instrument })) void load();
+  };
+  useEffect(() => {
     apiGet<{ items?: RecentActivity[] }>('/recent-activity')
       .then((d) =>
         setRecent((d.items || []).filter((x) => x.kind === 'profile_view' || x.kind === 'search').slice(0, 6)),
       )
       .catch(() => {});
-  }, [load]);
+  }, []);
   async function shortlist(c: Professional) {
     try {
       c.shortlisted ? await apiDelete(`/shortlists/${c.id}`) : await apiPost(`/shortlists/${c.id}`, {});
@@ -156,13 +161,7 @@ export default function CandidateSearch() {
         </div>
         <Card className="bg-white/[.055] border-white/10 mb-7">
           <CardContent className="p-4">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                load();
-              }}
-              className="grid md:grid-cols-2 lg:grid-cols-5 gap-3"
-            >
+            <form onSubmit={submit} className="grid md:grid-cols-2 lg:grid-cols-5 gap-3" role="search">
               <Input
                 aria-label="Skill, credit, gear or software"
                 value={q}
@@ -198,11 +197,17 @@ export default function CandidateSearch() {
             </form>
             <div className="flex flex-wrap gap-5 mt-3">
               <label className="flex items-center gap-2 text-sm text-slate-300">
-                <Checkbox checked={verified} onCheckedChange={(v) => setVerified(!!v)} />
+                <Checkbox
+                  checked={f.verified === 'true'}
+                  onCheckedChange={(v) => update({ verified: v ? 'true' : '' })}
+                />
                 Verified only
               </label>
               <label className="flex items-center gap-2 text-sm text-slate-300">
-                <Checkbox checked={remote} onCheckedChange={(v) => setRemote(!!v)} />
+                <Checkbox
+                  checked={f.remoteRecording === 'true'}
+                  onCheckedChange={(v) => update({ remoteRecording: v ? 'true' : '' })}
+                />
                 Remote recording ready
               </label>
             </div>
@@ -219,8 +224,7 @@ export default function CandidateSearch() {
                     className="ml-2 text-slate-300 hover:text-white"
                     onClick={() => {
                       if (r.kind === 'search') {
-                        setQ(r.query || '');
-                        setTimeout(load, 0);
+                        update({ q: r.query || '' });
                       } else if (r.entityId) {
                         inspect({ id: r.entityId });
                       }
@@ -256,14 +260,7 @@ export default function CandidateSearch() {
               <Card className="bg-white/[.035] border-white/10 md:col-span-2">
                 <CardContent className="p-8 text-center" role="alert">
                   <p className="text-rose-300">{loadError}</p>
-                  <Button
-                    className="mt-4"
-                    variant="outline"
-                    onClick={() => {
-                      setLoading(true);
-                      load();
-                    }}
-                  >
+                  <Button className="mt-4" variant="outline" onClick={() => void load()}>
                     Try again
                   </Button>
                 </CardContent>
@@ -271,16 +268,28 @@ export default function CandidateSearch() {
             ) : (
               !items.length && (
                 <Card className="bg-white/[.035] border-white/10 md:col-span-2">
-                  <CardContent className="p-8 text-center text-slate-400">
-                    No professionals match these filters. Try fewer or broader terms.
+                  <CardContent className="p-2">
+                    <NoResults
+                      noun="professionals"
+                      query={f.q}
+                      meta={list.meta}
+                      onSearch={(term) => update({ q: term })}
+                      suggestions={POPULAR_SEARCHES}
+                      onClear={query ? clear : undefined}
+                    />
                   </CardContent>
                 </Card>
               )
             )}
+            {!loading && !loadError && items.length > 0 && (
+              <div className="md:col-span-2 -mt-2">
+                <SearchNotice meta={list.meta} query={f.q} />
+              </div>
+            )}
             {!loading &&
               !loadError &&
-              items.map((c) => (
-                <Card key={c.id} className="bg-white/[.055] border-white/10">
+              items.map((c, index) => (
+                <Card key={c.id} className="bg-white/[.055] border-white/10" data-list-item={index} tabIndex={-1}>
                   <CardContent className="p-5">
                     <div className="flex justify-between gap-3">
                       <div className="flex gap-3 items-start">
@@ -351,6 +360,19 @@ export default function CandidateSearch() {
                   </CardContent>
                 </Card>
               ))}
+            {!loading && !loadError && (
+              <div className="md:col-span-2">
+                <LoadMore
+                  shown={items.length}
+                  total={list.total}
+                  hasMore={list.hasMore}
+                  loading={list.loadingMore}
+                  error={list.moreError}
+                  onLoadMore={list.loadMore}
+                  noun={NOUN}
+                />
+              </div>
+            )}
           </div>
           <aside id="talent-detail" className="scroll-mt-24" aria-live="polite">
             {selected ? (

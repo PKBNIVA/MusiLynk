@@ -1,0 +1,90 @@
+# Search vocabulary shared by every search surface (global search, jobs, talent, candidates, acts).
+# Loaded once per process by Search::Synonyms. All entries are lower case; matching is case-insensitive.
+#
+# groups:   two-way synonyms. Searching any member also searches every other member.
+# broader:  one-way expansions. Searching the key also searches the listed terms, but not the reverse
+#           ("percussionist" finds tabla players; "tabla player" does not find every percussionist).
+# cities:   city names and their aliases. A query word that is a city constrains location fields.
+# stopwords: filler words dropped from multi-word queries ("vocalist for a wedding").
+
+groups:
+  # Performers
+  - [singer, vocalist, playback singer, lead vocalist, vocals, gayak, gayika, गायक, गायिका]
+  - [guitarist, guitar player, guitar]
+  - [bassist, bass player, bass guitarist, bass guitar]
+  - [drummer, drum player, drums, drum kit]
+  - [keyboardist, keyboard player, keys player, keys, pianist, piano player, piano]
+  - [violinist, violin player, violin, fiddle, fiddler]
+  - [percussionist, percussion player, percussion]
+  - [tabla player, tabla, tabla vadak, tabla artist, tablist]
+  - [flautist, flutist, flute player, bansuri player, flute]
+  - [saxophonist, sax player, saxophone]
+  - [cellist, cello player, cello]
+  - [sitarist, sitar player, sitar]
+  - [harmonium player, harmonium]
+  - [rapper, mc, hip hop artist]
+  - [dj, disc jockey, deejay]
+  # Writing and production
+  - [music director, musical director, sangeet nirdeshak]
+  - [music producer, record producer, beatmaker, beat maker, producer, beat producer]
+  - [composer, film composer, score composer, background score composer]
+  - [songwriter, lyricist, lyric writer]
+  - [arranger, music arranger]
+  # Studio and live sound
+  - [mixing engineer, mix engineer, mixer]
+  - [mastering engineer, mastering]
+  - [recording engineer, studio engineer, tracking engineer]
+  - [sound engineer, foh engineer, front of house engineer, live sound engineer, audio engineer, sound guy, live sound]
+  - [monitor engineer, monitors engineer]
+  - [tech director, technical director]
+  - [roadie, backline technician, stage technician, stagehand]
+  - [lighting designer, lighting engineer, light designer]
+  # Business and touring
+  - [tour manager, road manager, touring manager]
+  - [artist manager, talent manager, band manager]
+  - [booking agent, booker]
+  - [a&r, a and r, artist and repertoire, talent scout]
+  # Genres and styles
+  - [hip hop, hip-hop, hiphop, rap]
+  - [edm, electronic dance music, electronic]
+  - [bollywood, filmi, hindi film]
+  - [indie pop, indie]
+  - [classical, hindustani, carnatic]
+  - [sufi, qawwali, qawwal]
+  - [rock, rock and roll, rock & roll]
+  # Events
+  - [wedding, shaadi, sangeet, destination wedding, wedding band]
+  - [corporate, corporate event, corporate gala, brand launch]
+
+broader:
+  percussionist: [tabla player, drummer, cajon player, dholak player]
+  harmonium: [keyboardist]
+  music director: [composer]
+  qawwali: [sufi]
+  sound engineer: [mixing engineer, monitor engineer]
+  musician: [vocalist, guitarist, bassist, drummer, keyboardist, violinist, tabla player, percussionist]
+  instrumentalist: [guitarist, bassist, drummer, keyboardist, violinist, tabla player, percussionist]
+  band: [ensemble, collective, band]
+
+cities:
+  - [mumbai, bombay]
+  - [delhi, new delhi, ncr]
+  - [bengaluru, bangalore]
+  - [kolkata, calcutta]
+  - [chennai, madras]
+  - [hyderabad, secunderabad]
+  - [pune, poona]
+  - [kochi, cochin]
+  - [goa, panaji, panjim]
+  - [jaipur]
+  - [ahmedabad]
+  - [gurugram, gurgaon]
+  - [thiruvananthapuram, trivandrum]
+  - [mysuru, mysore]
+  - [vadodara, baroda]
+  - [lucknow]
+  - [chandigarh]
+  - [indore]
+  - [shillong]
+
+stopwords: [a, an, the, for, in, at, of, with, and, or, to, near, looking, need, needed, wanted, available, based, from, "on", my, our]

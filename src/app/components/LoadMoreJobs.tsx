@@ -1,4 +1,4 @@
-import { Button } from './ui/button';
+import { LoadMore } from './LoadMore';
 
 type Props = {
   shown: number;
@@ -9,40 +9,9 @@ type Props = {
   onLoadMore: () => Promise<number | null>;
 };
 
-/**
- * "Showing X of Y" plus a "Load more" button under a paged opportunity list.
- *
- * The count is a polite live region, so screen readers hear how many were added. After a page
- * loads, focus moves to the first new item (marked `data-job-item={index}` by the list), so
- * keyboard users continue where the new results start instead of back at the button.
- */
-export function LoadMoreJobs({ shown, total, hasMore, loading, error, onLoadMore }: Props) {
-  if (!shown) return null;
-  const noun = total === 1 ? 'opportunity' : 'opportunities';
+const NOUN = ['opportunity', 'opportunities'] as const;
 
-  async function loadMore() {
-    const first = await onLoadMore();
-    if (first === null) return;
-    requestAnimationFrame(() => {
-      document.querySelector<HTMLElement>(`[data-job-item="${first}"]`)?.focus();
-    });
-  }
-
-  return (
-    <div className="flex flex-col items-center gap-3 mt-8">
-      <p className="text-sm text-slate-400" role="status" aria-live="polite">
-        Showing {shown} of {Math.max(total, shown)} {noun}
-      </p>
-      {error && (
-        <p className="text-sm text-rose-300" role="alert">
-          {error}
-        </p>
-      )}
-      {hasMore && (
-        <Button variant="outline" onClick={loadMore} disabled={loading} aria-busy={loading}>
-          {loading ? 'Loading…' : error ? 'Try again' : 'Load more opportunities'}
-        </Button>
-      )}
-    </div>
-  );
+/** LoadMore for opportunity lists, whose items carry `data-job-item={index}`. */
+export function LoadMoreJobs(props: Props) {
+  return <LoadMore {...props} noun={NOUN} itemAttribute="data-job-item" />;
 }

@@ -35,8 +35,11 @@ class CreatePosts < ActiveRecord::Migration[8.1]
     add_index :posts, :hashtags, using: :gin
     add_index :posts, :genres, using: :gin
     add_foreign_key :posts, :users, column: :created_by_user_id
-    add_foreign_key :posts, :portfolio_items, column: :shared_portfolio_item_id
-    add_foreign_key :posts, :jobs, column: :shared_job_id
-    add_foreign_key :posts, :posts, column: :reshared_post_id
+    # Nullified rather than restricted: deleting the shared portfolio item, job or original
+    # post must never block on a post that merely links to it. The feed/serializers render an
+    # "unavailable" shared preview once the reference goes null (see Post#shared_entity_preview).
+    add_foreign_key :posts, :portfolio_items, column: :shared_portfolio_item_id, on_delete: :nullify
+    add_foreign_key :posts, :jobs, column: :shared_job_id, on_delete: :nullify
+    add_foreign_key :posts, :posts, column: :reshared_post_id, on_delete: :nullify
   end
 end

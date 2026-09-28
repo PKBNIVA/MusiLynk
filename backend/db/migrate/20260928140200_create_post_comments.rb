@@ -16,8 +16,8 @@ class CreatePostComments < ActiveRecord::Migration[8.1]
     add_index :post_comments, %i[post_id created_at]
     add_index :post_comments, :parent_id
     add_index :post_comments, :created_by_user_id
-    add_foreign_key :post_comments, :posts
+    add_foreign_key :post_comments, :posts, on_delete: :cascade
     add_foreign_key :post_comments, :users, column: :created_by_user_id
-    add_foreign_key :post_comments, :post_comments, column: :parent_id
+    add_foreign_key :post_comments, :post_comments, column: :parent_id, on_delete: :cascade
   end
 end

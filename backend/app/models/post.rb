@@ -31,11 +31,15 @@ class Post < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :body, length: { maximum: BODY_LIMIT }, allow_nil: true
   validates :link_url, safe_http_url: true, allow_blank: true
-  validate :body_or_share_present
+  # These only make sense at creation time: the shared portfolio item, job or original post
+  # can legitimately disappear later (deleted, closed, taken down) — the FK on those columns
+  # is ON DELETE SET NULL for exactly that reason, and the post then renders an "unavailable"
+  # shared preview (see #shared_entity_preview) instead of failing later, unrelated edits.
+  validate :body_or_share_present, on: :create
   validate :media_is_well_formed
-  validate :shared_portfolio_item_is_owned_by_author, if: -> { kind == "portfolio_share" }
-  validate :shared_job_is_open, if: -> { kind == "job_share" }
-  validate :reshared_post_is_visible, if: -> { reshared_post_id.present? }
+  validate :shared_portfolio_item_is_owned_by_author, on: :create, if: -> { kind == "portfolio_share" }
+  validate :shared_job_is_open, on: :create, if: -> { kind == "job_share" }
+  validate :reshared_post_is_visible, on: :create, if: -> { reshared_post_id.present? }
 
   before_validation :extract_hashtags
 
@@ -102,21 +106,28 @@ class Post < ApplicationRecord
     }
   end
 
+  # A post that shared something keeps its `shared_*_id`/`reshared_post_id` for its own
+  # lifetime, even after the thing it pointed at is gone (the FK sets the column to null on
+  # delete — see the migrations): the preview then degrades to "unavailable" instead of the
+  # request failing, so the post itself (and any body the person added) still renders. A
+  # reshare whose original post is gone simply has no `reshared_post_id` left to show; the
+  # post still renders, just without a shared preview.
   def shared_entity_preview
     return reshared_post_preview if reshared_post_id.present?
 
     case kind
-    when "portfolio_share" then shared_portfolio_item && { type: "portfolio_item", item: shared_portfolio_item.api_json }
-    when "job_share" then shared_job && { type: "job", job: shared_job.api_json, applyOpen: shared_job.listed? }
+    when "portfolio_share" then shared_portfolio_item ? { type: "portfolio_item", item: shared_portfolio_item.api_json } : unavailable("portfolio_item")
+    when "job_share" then shared_job ? { type: "job", job: shared_job.api_json, applyOpen: shared_job.listed? } : unavailable("job")
     end
   end
 
   private
 
   def reshared_post_preview
-    return nil unless reshared_post
-    { type: "post", post: reshared_post.api_json }
+    reshared_post ? { type: "post", post: reshared_post.api_json } : unavailable("post")
   end
+
+  def unavailable(type) = { type:, unavailable: true }
 
   def author_avatar
     nil

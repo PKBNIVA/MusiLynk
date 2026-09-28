@@ -11,6 +11,6 @@ class CreatePostReactions < ActiveRecord::Migration[8.1]
 
     add_index :post_reactions, %i[post_id actor_type actor_id], unique: true, name: "index_post_reactions_on_post_and_actor"
     add_index :post_reactions, %i[actor_type actor_id]
-    add_foreign_key :post_reactions, :posts
+    add_foreign_key :post_reactions, :posts, on_delete: :cascade
   end
 end

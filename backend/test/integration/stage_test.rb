@@ -87,6 +87,45 @@ class StageTest < ActionDispatch::IntegrationTest
     assert_equal "post", response.parsed_body["post"]["sharedEntity"]["type"]
   end
 
+  test "deleting a shared portfolio item still renders the post, with an unavailable preview" do
+    item = PortfolioItem.create!(user: @alice, kind: "audio", title: "Take", url: "https://example.com/gone.mp3", visibility: "public")
+    post "/api/stage/posts", params: { kind: "portfolio_share", sharedPortfolioItemId: item.id }, headers: auth(@alice), as: :json
+    id = response.parsed_body["id"]
+
+    item.destroy!
+
+    get "/api/stage/posts/#{id}"
+    assert_response :success
+    assert_equal({ "type" => "portfolio_item", "unavailable" => true }, response.parsed_body["post"]["sharedEntity"])
+  end
+
+  test "closing a job that was shared still renders it, with applyOpen false" do
+    job = create_job(@org_owner, "published")
+    post "/api/stage/posts", params: { kind: "job_share", sharedJobId: job.id }, headers: auth(@alice), as: :json
+    id = response.parsed_body["id"]
+
+    job.update!(status: "closed")
+
+    get "/api/stage/posts/#{id}"
+    assert_response :success
+    shared = response.parsed_body["post"]["sharedEntity"]
+    assert_equal "job", shared["type"]
+    refute shared["applyOpen"]
+  end
+
+  test "deleting the original post of a reshare still renders the reshare, without a shared preview" do
+    original = Post.create!(author_type: "user", author_id: @bob.id, created_by_user_id: @bob.id, body: "Original", visibility: "public")
+    post "/api/stage/posts", params: { body: "Check this out", resharedPostId: original.id }, headers: auth(@alice), as: :json
+    id = response.parsed_body["id"]
+
+    original.destroy!
+
+    get "/api/stage/posts/#{id}"
+    assert_response :success
+    assert_equal "Check this out", response.parsed_body["post"]["body"]
+    assert_nil response.parsed_body["post"]["sharedEntity"]
+  end
+
   test "shows, updates and soft-deletes your own post" do
     post "/api/stage/posts", params: { body: "Mine" }, headers: auth(@alice), as: :json
     id = response.parsed_body["id"]
@@ -331,6 +370,57 @@ class StageTest < ActionDispatch::IntegrationTest
   test "notifies a person of a new follower" do
     post "/api/stage/follows", params: { followableType: "user", followableId: @alice.id }, headers: auth(@bob), as: :json
     assert_equal 1, @alice.notifications.where(kind: "stage_follower").count
+  end
+
+  # ---- Account erasure -------------------------------------------------------------
+
+  test "account erasure removes this person's Stage content and recounts other people's posts" do
+    item = PortfolioItem.create!(user: @alice, kind: "audio", title: "Take", url: "https://example.com/erase.mp3", visibility: "public")
+    post "/api/stage/posts", params: { kind: "portfolio_share", sharedPortfolioItemId: item.id }, headers: auth(@alice), as: :json
+    alice_post_id = response.parsed_body["id"]
+
+    post "/api/stage/posts", params: { body: "Bob's post" }, headers: auth(@bob), as: :json
+    bob_post_id = response.parsed_body["id"]
+    post "/api/stage/posts/#{bob_post_id}/applause", headers: auth(@alice), as: :json
+    post "/api/stage/posts/#{bob_post_id}/comments", params: { body: "Nice!" }, headers: auth(@alice), as: :json
+    post "/api/stage/posts", params: { body: "Reshared", resharedPostId: bob_post_id }, headers: auth(@alice), as: :json
+    reshare_id = response.parsed_body["id"]
+    post "/api/stage/follows", params: { followableType: "user", followableId: @bob.id }, headers: auth(@alice), as: :json
+    post "/api/stage/follows", params: { followableType: "user", followableId: @alice.id }, headers: auth(@bob), as: :json
+
+    bob_post = Post.find(bob_post_id)
+    assert_equal 1, bob_post.applause_count
+    assert_equal 1, bob_post.comment_count
+    assert_equal 1, bob_post.reload.reshare_count
+
+    AccountErasure.new(@alice).call!
+
+    assert_not Post.exists?(id: alice_post_id)
+    assert_not Post.exists?(id: reshare_id)
+    assert_empty Follow.where(follower_user_id: @alice.id)
+    assert_empty Follow.where(followable_type: "user", followable_id: @alice.id)
+    assert_empty PostReaction.where(actor_type: "user", actor_id: @alice.id)
+    assert_empty PostComment.where(created_by_user_id: @alice.id)
+
+    bob_post.reload
+    assert_equal 0, bob_post.applause_count
+    assert_equal 0, bob_post.comment_count
+    assert_equal 0, bob_post.reshare_count
+
+    get "/api/stage/posts/#{bob_post_id}"
+    assert_response :success
+  end
+
+  test "account erasure keeps posts made as a Page, anonymising only the person" do
+    post "/api/stage/posts", params: { body: "From the studio" }, headers: auth(@org_owner).merge("X-Verse-Act-As" => "organization:#{@org.id}"), as: :json
+    org_post_id = response.parsed_body["id"]
+
+    AccountErasure.new(@org_owner).call!
+
+    org_post = Post.find(org_post_id)
+    assert_equal "organization", org_post.author_type
+    assert_equal @org_owner.id, org_post.created_by_user_id
+    assert_equal "Deleted account", org_post.created_by.reload.name
   end
 
   # ---- Feed -------------------------------------------------------------

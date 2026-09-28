@@ -1018,13 +1018,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
   add_foreign_key "organization_members", "users"
   add_foreign_key "organizations", "users", column: "owner_id"
   add_foreign_key "portfolio_items", "users"
-  add_foreign_key "post_comments", "post_comments", column: "parent_id"
-  add_foreign_key "post_comments", "posts"
+  add_foreign_key "post_comments", "post_comments", column: "parent_id", on_delete: :cascade
+  add_foreign_key "post_comments", "posts", on_delete: :cascade
   add_foreign_key "post_comments", "users", column: "created_by_user_id"
-  add_foreign_key "post_reactions", "posts"
-  add_foreign_key "posts", "jobs", column: "shared_job_id"
-  add_foreign_key "posts", "portfolio_items", column: "shared_portfolio_item_id"
-  add_foreign_key "posts", "posts", column: "reshared_post_id"
+  add_foreign_key "post_reactions", "posts", on_delete: :cascade
+  add_foreign_key "posts", "jobs", column: "shared_job_id", on_delete: :nullify
+  add_foreign_key "posts", "portfolio_items", column: "shared_portfolio_item_id", on_delete: :nullify
+  add_foreign_key "posts", "posts", column: "reshared_post_id", on_delete: :nullify
   add_foreign_key "posts", "users", column: "created_by_user_id"
   add_foreign_key "profiles", "users"
   add_foreign_key "recent_activities", "users"

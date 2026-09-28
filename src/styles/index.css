@@ -2,6 +2,17 @@
 @import './tailwind.css';
 @import './theme.css';
 
+:root {
+  /* Native form controls (date pickers, any stray <select>) render with the dark OS palette. */
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: #15151f;
+  color: #f1f1f7;
+}
+
 html {
   color-scheme: dark;
   scroll-behavior: smooth;

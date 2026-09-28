@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { chooseOption } from './qa-helpers';
 
 // Mocked-API regressions for the artist/jobseeker area, found by clicking through every
 // /jobseeker screen. Live and integration runs use real data instead.
@@ -73,7 +74,7 @@ test('changing a filter re-runs the search without pressing Search', async ({ pa
   await page.goto('/jobseeker/jobs');
   await expect(page.getByText('No exact matches')).toBeVisible();
   await page.getByRole('button', { name: 'Filters' }).click();
-  await page.locator('select').first().selectOption('audition');
+  await chooseOption(page.getByLabel('Opportunity type'), 'Audition');
   await expect.poll(() => queries.some((q) => q.includes('kind=audition'))).toBe(true);
 });
 

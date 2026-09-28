@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from '../ui/alert-dialog';
 import { errorMessage } from '../../lib/errors';
+import { AppSelect } from '../ui/app-select';
 
 type Batch = {
   name: string;
@@ -178,19 +179,17 @@ export default function DemoDataPanel() {
             <label htmlFor="demo-size" className="block text-xs text-slate-400 mb-1">
               Size
             </label>
-            <select
+            <AppSelect
               id="demo-size"
               value={size}
-              onChange={(e) => setSize(e.target.value)}
+              onValueChange={setSize}
               disabled={busy}
-              className="h-9 rounded-md border border-white/15 bg-[#101323] px-3 text-sm"
-            >
-              {Object.entries(sizes).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {k[0].toUpperCase() + k.slice(1)} — {v.artists} artists, {v.employers} employers
-                </option>
-              ))}
-            </select>
+              className="h-9 min-w-72"
+              options={Object.entries(sizes).map(([k, v]) => ({
+                value: k,
+                label: `${k[0].toUpperCase() + k.slice(1)} — ${v.artists} artists, ${v.employers} employers`,
+              }))}
+            />
           </div>
           <Button onClick={create} disabled={busy || !data}>
             {busy ? <Loader2 size={15} className="mr-2 animate-spin" /> : <Sparkles size={15} className="mr-2" />}Create

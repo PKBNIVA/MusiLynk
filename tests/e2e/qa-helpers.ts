@@ -1,4 +1,4 @@
-import { expect, type Page, type TestInfo } from '@playwright/test';
+import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 
 export const publicRoutes = [
   ['Home', '/'],
@@ -121,4 +121,13 @@ export async function assertNoHorizontalOverflow(page: Page, testInfo: TestInfo)
     });
   }
   expect(overflow.scrollWidth, JSON.stringify(overflow.offenders)).toBeLessThanOrEqual(overflow.viewport + 2);
+}
+
+/** Picks an option from an AppSelect (the Radix listbox that replaced native <select>s). */
+export async function chooseOption(trigger: Locator, option: string | RegExp) {
+  await trigger.click();
+  await trigger
+    .page()
+    .getByRole('option', { name: option, exact: typeof option === 'string' })
+    .click();
 }

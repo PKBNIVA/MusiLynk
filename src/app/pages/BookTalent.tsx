@@ -13,11 +13,12 @@ import { NoResults, SearchNotice } from '../components/SearchFeedback';
 import { usePagedList, type PageMeta } from '../lib/usePagedList';
 import { useUrlFilters } from '../lib/useUrlFilters';
 import { Badge } from '../components/ui/badge';
-import { Field, FormDialog, selectClass, textareaClass } from '../components/booking/BookingDialogs';
+import { Field, FormDialog, textareaClass } from '../components/booking/BookingDialogs';
 import { Calendar, MapPin, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage, errorStatus } from '../lib/errors';
 import type { Act } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 
 type ActPage = PageMeta & { acts?: Act[] };
 const pickActs = (page: ActPage) => page.acts;
@@ -304,18 +305,13 @@ export default function BookTalent() {
           {booking && (
             <>
               <Field label="Event type" htmlFor="enquiry-type">
-                <select
+                <AppSelect
+                  className="h-11 rounded-xl"
                   id="enquiry-type"
-                  className={selectClass}
                   value={booking.eventType}
-                  onChange={(e) => setB('eventType', e.target.value)}
-                >
-                  {EVENT_TYPES.map((x) => (
-                    <option key={x} value={x}>
-                      {x.replace(/-/g, ' ')}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(v) => setB('eventType', v)}
+                  options={EVENT_TYPES}
+                />
               </Field>
               <div className="grid sm:grid-cols-2 gap-3">
                 <Field label="Event date" htmlFor="enquiry-date">

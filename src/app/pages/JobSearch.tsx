@@ -8,7 +8,7 @@ import { Search, Bookmark, BookmarkCheck, Bell, SlidersHorizontal } from 'lucide
 import { Link } from 'react-router';
 import { apiDelete, apiPost } from '../lib/api';
 import { LoadMoreJobs } from '../components/LoadMoreJobs';
-import { JobCard, titleCase } from '../components/JobCard';
+import { JobCard } from '../components/JobCard';
 import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../components/SearchFeedback';
 import { usePagedJobs } from '../lib/usePagedJobs';
 import { useLatestCallback } from '../lib/useLatestCallback';
@@ -17,6 +17,7 @@ import { useFunctionAreas } from '../lib/useTaxonomy';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
 import type { Job } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 
 const kinds = ['', 'job', 'gig', 'audition', 'session', 'tour', 'internship', 'collaboration'];
 const workplaces = ['', 'onsite', 'hybrid', 'remote', 'travel'];
@@ -140,44 +141,28 @@ export default function JobSearch() {
             </form>
             {showFilters && (
               <div className="grid md:grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/10">
-                <select
+                <AppSelect
                   aria-label="Opportunity type"
                   value={f.kind}
-                  onChange={(e) => update({ kind: e.target.value })}
-                  className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {kinds.map((x) => (
-                    <option key={x} value={x}>
-                      {x ? titleCase(x) : 'All opportunity types'}
-                    </option>
-                  ))}
-                </select>
-                <select
+                  onValueChange={(v) => update({ kind: v })}
+                  options={kinds.map((x) => (x ? x : { value: '', label: 'All opportunity types' }))}
+                />
+                <AppSelect
                   aria-label="Function"
                   value={f.function}
-                  onChange={(e) => update({ function: e.target.value })}
-                  className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  <option value="">All functions</option>
-                  {functions.map((x) => (
-                    <option key={x} value={x}>
-                      {x}
-                    </option>
-                  ))}
-                  {f.function && !functions.includes(f.function) && <option value={f.function}>{f.function}</option>}
-                </select>
-                <select
+                  onValueChange={(v) => update({ function: v })}
+                  options={[
+                    { value: '', label: 'All functions' },
+                    ...functions,
+                    ...(f.function && !functions.includes(f.function) ? [f.function] : []),
+                  ]}
+                />
+                <AppSelect
                   aria-label="Workplace"
                   value={f.workplace}
-                  onChange={(e) => update({ workplace: e.target.value })}
-                  className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {workplaces.map((x) => (
-                    <option key={x} value={x}>
-                      {x ? titleCase(x) : 'Any workplace'}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(v) => update({ workplace: v })}
+                  options={workplaces.map((x) => (x ? x : { value: '', label: 'Any workplace' }))}
+                />
                 <label className="flex items-center gap-2 text-sm text-slate-300">
                   <Checkbox checked={f.paid === 'true'} onCheckedChange={(v) => update({ paid: v ? 'true' : '' })} />
                   Paid only

@@ -14,6 +14,7 @@ import { useLatestCallback } from '../lib/useLatestCallback';
 import { usePagedList } from '../lib/usePagedList';
 import type { SearchResponse, SearchResult } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
+import { AppSelect } from '../components/ui/app-select';
 
 type ResultType = SearchResult['type'];
 const icons: Record<string, LucideIcon> = { jobs: Briefcase, talent: Users, acts: Music, samples: PlayCircle };
@@ -122,19 +123,16 @@ export default function GlobalSearch() {
           <label htmlFor="search-type" className="sr-only">
             Result type
           </label>
-          <select
+          <AppSelect
             id="search-type"
             value={selectedType}
-            onChange={(e) => (q.trim() ? searchFor(q.trim(), e.target.value) : setSp({ type: e.target.value }))}
-            className="h-12 rounded-xl border border-white/15 bg-[#101323] px-4"
-          >
-            <option value="all">Everything</option>
-            {TYPES.map((type) => (
-              <option key={type} value={type}>
-                {TYPE_LABELS[type][0]}
-              </option>
-            ))}
-          </select>
+            onValueChange={(v) => (q.trim() ? searchFor(q.trim(), v) : setSp({ type: v }))}
+            className="h-12 rounded-xl px-4 md:w-52"
+            options={[
+              { value: 'all', label: 'Everything' },
+              ...TYPES.map((type) => ({ value: type, label: TYPE_LABELS[type][0] })),
+            ]}
+          />
           <Button className="h-12 px-6" disabled={!q.trim() || (searched && loading)}>
             {searched && loading ? 'Searching…' : 'Search'}
           </Button>

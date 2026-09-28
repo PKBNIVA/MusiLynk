@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../lib/authContext';
 import { errorMessage } from '../lib/errors';
 import type { CrewPlan } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 const needOptions = ['music', 'sound', 'lighting', 'video', 'production'];
 export default function BuildMyCrew() {
   const [plans, setPlans] = useState<CrewPlan[]>([]),
@@ -129,13 +130,12 @@ export default function BuildMyCrew() {
                 />
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <select
+                <AppSelect
                   aria-label="Event type"
-                  className="h-10 min-w-0 rounded-md bg-slate-900 border border-white/10 px-3"
+                  className="min-w-0"
                   value={f.eventType}
-                  onChange={(e) => setF({ ...f, eventType: e.target.value })}
-                >
-                  {[
+                  onValueChange={(v) => setF({ ...f, eventType: v })}
+                  options={[
                     'Corporate event',
                     'Wedding',
                     'Concert',
@@ -144,10 +144,8 @@ export default function BuildMyCrew() {
                     'Awards show',
                     'Tour',
                     'Private event',
-                  ].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                  ]}
+                />
                 <Field id="crew-city" label="City" required>
                   <Input
                     placeholder="e.g. Goa"

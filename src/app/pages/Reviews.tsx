@@ -10,6 +10,7 @@ import { Star, Flag } from 'lucide-react';
 import { ReportDialog } from '../components/ReportDialog';
 import { errorMessage } from '../lib/errors';
 import type { PublicEmployer, Review } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 export default function Reviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [employers, setEmployers] = useState<PublicEmployer[]>([]);
@@ -71,31 +72,19 @@ export default function Reviews() {
                   </p>
                 )}
                 {employers.length > 0 && (
-                  <select
+                  <AppSelect
                     aria-label="Employer"
                     value={employerId}
-                    onChange={(e) => setEmployerId(e.target.value)}
-                    className="w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                  >
-                    {employers.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.companyName || e.name}
-                      </option>
-                    ))}
-                  </select>
+                    onValueChange={setEmployerId}
+                    options={employers.map((e) => ({ value: e.id, label: e.companyName || e.name }))}
+                  />
                 )}
-                <select
+                <AppSelect
                   aria-label="Rating"
-                  value={rating}
-                  onChange={(e) => setRating(Number(e.target.value))}
-                  className="w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {[5, 4, 3, 2, 1].map((n) => (
-                    <option key={n} value={n}>
-                      {n} stars
-                    </option>
-                  ))}
-                </select>
+                  value={String(rating)}
+                  onValueChange={(v) => setRating(Number(v))}
+                  options={[5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: `${n} star${n === 1 ? '' : 's'}` }))}
+                />
                 <Input
                   aria-label="Review title"
                   value={title}

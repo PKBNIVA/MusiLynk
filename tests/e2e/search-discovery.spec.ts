@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { chooseOption } from './qa-helpers';
 
 // Search and discovery (SRCH-01, 04, 05, 07, 08, 09, 11, 13) against a mocked API: URL state with
 // real history entries, did-you-mean notices and empty states, removable role filter, act search
@@ -194,19 +195,20 @@ test('signed-in job search keeps its filters in the URL (SRCH-06, SRCH-08)', asy
   await page.goto('/jobseeker/jobs');
   await page.getByRole('button', { name: 'Filters' }).click();
   const functions = page.getByLabel('Function');
-  await expect(functions.locator('option')).toHaveText([
+  await functions.click();
+  await expect(page.getByRole('option')).toHaveText([
     'All functions',
     'Performance',
     'Music Production',
     'Live Sound & Audio',
   ]);
-  await functions.selectOption('Music Production');
+  await page.getByRole('option', { name: 'Music Production' }).click();
   await expect(page).toHaveURL(/function=Music\+Production/);
   await expect.poll(() => apiCalls(calls, '/api/jobs').at(-1)?.searchParams.get('function')).toBe('Music Production');
 
   await page.reload();
   await expect(page.getByRole('button', { name: 'Filters' })).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.getByLabel('Function')).toHaveValue('Music Production');
+  await expect(page.getByLabel('Function')).toHaveText('Music Production');
   await page.goBack();
   await expect(page).toHaveURL(/\/jobseeker\/jobs$/);
   await expect.poll(() => apiCalls(calls, '/api/jobs').at(-1)?.searchParams.get('function')).toBeNull();
@@ -261,7 +263,7 @@ test('acts can be searched and filtered by city and type on /book-music (SRCH-11
   await page.getByLabel('Search acts').fill('wedding band');
   await page.getByLabel('City').fill('Goa');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
-  await page.getByLabel('Act type').selectOption('duo');
+  await chooseOption(page.getByLabel('Act type'), 'Duo');
   await expect(page).toHaveURL(/q=wedding\+band/);
   await expect(page).toHaveURL(/type=duo/);
   const last = () => apiCalls(calls, '/api/public/acts').at(-1)?.searchParams;

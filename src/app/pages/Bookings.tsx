@@ -6,13 +6,14 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { FormDialog, selectClass, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
+import { FormDialog, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
 import { Field, RequiredNote } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { toast } from 'sonner';
 import { BookingDepositPanel } from '../components/BookingDepositPanel';
 import { errorMessage } from '../lib/errors';
 import type { Booking, BookingPayment, ConversationCreated } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 
 const money = (currency: string | null | undefined, value: unknown) =>
   `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
@@ -517,18 +518,16 @@ export default function Bookings() {
                   />
                 </Field>
                 <Field id={QUOTE_IDS.currency} label="Currency" required error={quoteErrors.errors.currency}>
-                  <select
-                    className={selectClass}
+                  <AppSelect
+                    className="h-11 rounded-xl"
                     value={quote.currency}
-                    onChange={(e) => setQ('currency', e.target.value)}
-                  >
-                    {(QUOTE_CURRENCIES.includes(quote.currency)
-                      ? QUOTE_CURRENCIES
-                      : [quote.currency, ...QUOTE_CURRENCIES]
-                    ).map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
+                    onValueChange={(v) => setQ('currency', v)}
+                    options={
+                      QUOTE_CURRENCIES.includes(quote.currency)
+                        ? QUOTE_CURRENCIES
+                        : [quote.currency, ...QUOTE_CURRENCIES]
+                    }
+                  />
                 </Field>
                 <Field id={QUOTE_IDS.travelFee} label="Travel fee" optional error={quoteErrors.errors.travelFee}>
                   <Input

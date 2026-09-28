@@ -15,6 +15,7 @@ import { errorMessage } from '../lib/errors';
 import type { AccountUser } from '../lib/apiTypes';
 import { Field, FormError } from '../components/form/Field';
 import { PHONE_MESSAGE, URL_MESSAGE, isHttpUrl, isPhone, useFormErrors, useSubmitOnce } from '../lib/formErrors';
+import { AppSelect } from '../components/ui/app-select';
 // List fields arrive as arrays and are edited as text: comma-separated, credits one per line.
 type ListField =
   'skills' | 'genres' | 'instruments' | 'languages' | 'credits' | 'openTo' | 'roles' | 'gear' | 'software';
@@ -386,15 +387,11 @@ export default function ProfileSetup() {
               {numberField('tourDayRate')}
               {numberField('dayRate')}
               <Field id={fieldId('currency')} label="Currency" error={form.errors.currency}>
-                <select
+                <AppSelect
                   value={f.currency || 'INR'}
-                  onChange={(e) => set('currency', e.target.value)}
-                  className="w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {['INR', 'USD', 'EUR', 'GBP'].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                  onValueChange={(v) => set('currency', v)}
+                  options={['INR', 'USD', 'EUR', 'GBP']}
+                />
               </Field>
               {textField('phone', 'Phone', {
                 type: 'tel',

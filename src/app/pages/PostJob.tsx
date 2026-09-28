@@ -16,6 +16,7 @@ import { errorMessage, errorStatus } from '../lib/errors';
 import type { CreatedJob, Job } from '../lib/apiTypes';
 import { Field, FormError, RequiredNote } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
+import { AppSelect } from '../components/ui/app-select';
 
 type JobField =
   | 'title'
@@ -353,29 +354,23 @@ export default function PostJob() {
               </Field>
               <div>
                 <Label htmlFor="job-opportunity-type">Opportunity type</Label>
-                <select
+                <AppSelect
                   id="job-opportunity-type"
                   value={f.opportunityKind}
-                  onChange={(e) => set('opportunityKind', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {kinds.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                  onValueChange={(v) => set('opportunityKind', v)}
+                  className="mt-2"
+                  options={kinds}
+                />
               </div>
               <div>
                 <Label htmlFor="job-function">Function</Label>
-                <select
+                <AppSelect
                   id="job-function"
                   value={f.functionArea}
-                  onChange={(e) => set('functionArea', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {functions.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                  onValueChange={(v) => set('functionArea', v)}
+                  className="mt-2"
+                  options={functions}
+                />
               </div>
               <Field id="job-location" label="Location" required error={form.errors.location}>
                 <Input
@@ -388,29 +383,23 @@ export default function PostJob() {
               </Field>
               <div>
                 <Label htmlFor="job-workplace">Workplace</Label>
-                <select
+                <AppSelect
                   id="job-workplace"
                   value={f.workplace}
-                  onChange={(e) => set('workplace', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {['onsite', 'hybrid', 'remote', 'travel'].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                  onValueChange={(v) => set('workplace', v)}
+                  className="mt-2"
+                  options={['onsite', 'hybrid', 'remote', 'travel']}
+                />
               </div>
               <div>
                 <Label htmlFor="job-engagement">Engagement</Label>
-                <select
+                <AppSelect
                   id="job-engagement"
                   value={f.type}
-                  onChange={(e) => set('type', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {['Full-time', 'Part-time', 'Contract', 'Freelance', 'Project-based'].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                  onValueChange={(v) => set('type', v)}
+                  className="mt-2"
+                  options={['Full-time', 'Part-time', 'Contract', 'Freelance', 'Project-based']}
+                />
               </div>
               <div>
                 <Label htmlFor="job-genre-repertoire">Genre / repertoire</Label>
@@ -454,16 +443,13 @@ export default function PostJob() {
               </Field>
               <div>
                 <Label htmlFor="job-currency">Currency</Label>
-                <select
+                <AppSelect
                   id="job-currency"
                   value={f.currency}
-                  onChange={(e) => set('currency', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {['INR', 'USD', 'EUR', 'GBP'].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                  onValueChange={(v) => set('currency', v)}
+                  className="mt-2"
+                  options={['INR', 'USD', 'EUR', 'GBP']}
+                />
               </div>
               <div>
                 <Label htmlFor="job-pay-period">Pay period</Label>

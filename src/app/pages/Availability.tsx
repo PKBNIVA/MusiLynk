@@ -10,6 +10,7 @@ import { errorMessage } from '../lib/errors';
 import type { AvailabilityWindow } from '../lib/apiTypes';
 import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
+import { AppSelect } from '../components/ui/app-select';
 
 type SlotField = 'startAt' | 'endAt' | 'city' | 'status';
 const SLOT_IDS: Record<SlotField, string> = {
@@ -145,15 +146,12 @@ export default function Availability() {
                 />
               </Field>
               <Field id={SLOT_IDS.status} label="Status" error={errors.errors.status}>
-                <select
+                <AppSelect
                   value={form.status}
-                  onChange={(e) => set('status', e.target.value)}
-                  className="h-11 w-full rounded-xl bg-slate-900 border border-white/15 px-3"
-                >
-                  {['available', 'hold', 'tentative', 'booked', 'unavailable'].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                  onValueChange={(v) => set('status', v)}
+                  className="h-11 rounded-xl"
+                  options={['available', 'hold', 'tentative', 'booked', 'unavailable']}
+                />
               </Field>
               <Button type="submit" disabled={saving} aria-busy={saving} className="md:mt-6">
                 <CalendarPlus size={16} className="mr-2" />

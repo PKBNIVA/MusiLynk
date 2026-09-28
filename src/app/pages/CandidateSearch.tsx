@@ -18,7 +18,16 @@ import type {
   TalentFolder,
 } from '../lib/apiTypes';
 import { useLatestCallback } from '../lib/useLatestCallback';
-import { Search, MapPin, BookmarkPlus, BookmarkCheck, MessageSquare, ShieldCheck, FolderPlus } from 'lucide-react';
+import {
+  Search,
+  MapPin,
+  BookmarkPlus,
+  BookmarkCheck,
+  MessageSquare,
+  ShieldCheck,
+  FolderPlus,
+  Folder,
+} from 'lucide-react';
 import { WorkSamplePlayer } from '../components/WorkSamplePlayer';
 import { Label } from '../components/ui/label';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
@@ -28,6 +37,7 @@ import { usePagedList, type PageMeta } from '../lib/usePagedList';
 import { useUrlFilters } from '../lib/useUrlFilters';
 import { LoadMore } from '../components/LoadMore';
 import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../components/SearchFeedback';
+import { AppSelect } from '../components/ui/app-select';
 
 type CandidatePage = PageMeta & { candidates?: Professional[] };
 const pickCandidates = (page: CandidatePage) => page.candidates;
@@ -443,20 +453,20 @@ export default function CandidateSearch() {
               {folders.length > 0 && (
                 <div>
                   <Label htmlFor="talent-folder">Folder</Label>
-                  <select
+                  <AppSelect
                     id="talent-folder"
                     value={folderChoice}
-                    onChange={(e) => setFolderChoice(e.target.value)}
-                    className={fieldClass + ' bg-slate-900'}
-                  >
-                    {folders.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.name || 'Untitled folder'}
-                        {typeof x.count === 'number' ? ` (${x.count})` : ''}
-                      </option>
-                    ))}
-                    <option value="new">+ New folder…</option>
-                  </select>
+                    onValueChange={setFolderChoice}
+                    className="mt-2"
+                    options={[
+                      ...folders.map((x) => ({
+                        value: x.id,
+                        label: `${x.name || 'Untitled folder'}${typeof x.count === 'number' ? ` (${x.count})` : ''}`,
+                        icon: Folder,
+                      })),
+                      { value: 'new', label: 'New folder…', icon: FolderPlus },
+                    ]}
+                  />
                 </div>
               )}
               {folderChoice === 'new' && (

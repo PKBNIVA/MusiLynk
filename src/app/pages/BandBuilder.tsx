@@ -12,6 +12,7 @@ import { Field as FormField, FormError, RequiredNote } from '../components/form/
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { errorMessage } from '../lib/errors';
 import type { BandProject, BandProjectRole, Taxonomy } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 
 const list = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(String) : typeof value === 'string' && value ? [value] : [];
@@ -353,16 +354,13 @@ export default function BandBuilder() {
                   />
                 </Field>
                 <Field label="Skill level" htmlFor="seat-skill">
-                  <select
+                  <AppSelect
+                    className="h-11 rounded-xl"
                     id="seat-skill"
-                    className={selectClass}
                     value={role.skillLevel}
-                    onChange={(e) => setR('skillLevel', e.target.value)}
-                  >
-                    {['developing', 'intermediate', 'professional', 'touring', 'elite'].map((x) => (
-                      <option key={x}>{x}</option>
-                    ))}
-                  </select>
+                    onValueChange={(v) => setR('skillLevel', v)}
+                    options={['developing', 'intermediate', 'professional', 'touring', 'elite']}
+                  />
                 </Field>
               </div>
               <Field label="Compensation for this seat" htmlFor="seat-compensation">

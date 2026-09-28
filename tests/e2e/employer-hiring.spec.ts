@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { chooseOption } from './qa-helpers';
 
 // Mocked-API regressions for the poster side of hiring (employer pages and the jobseeker hiring routes).
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
@@ -172,7 +173,7 @@ test('interview scheduling and recruiter notes use in-page dialogs, not browser 
   await page.getByRole('button', { name: 'Rate / note' }).click();
   const notes = page.getByRole('dialog', { name: 'Rate and note' });
   await notes.getByLabel('Recruiter note').fill('Great feel');
-  await notes.getByLabel('Internal rating').selectOption('4');
+  await chooseOption(notes.getByLabel('Internal rating'), '4 / 5');
   await notes.getByRole('button', { name: 'Save notes' }).click();
   await expect(notes).toBeHidden();
 
@@ -197,13 +198,13 @@ test('talent can be filed into a new or existing folder from a dialog', async ({
   await page.goto('/employer/candidates');
   await page.getByRole('button', { name: 'Add Asha Rao to a folder' }).click();
   let dialog = page.getByRole('dialog', { name: 'Add to talent folder' });
-  await expect(dialog.getByLabel('Folder', { exact: true })).toHaveValue('f-1');
+  await expect(dialog.getByLabel('Folder', { exact: true })).toHaveText('Tour band (3)');
   await dialog.getByRole('button', { name: 'Add to folder' }).click();
   await expect(dialog).toBeHidden();
 
   await page.getByRole('button', { name: 'Add Vik Shah to a folder' }).click();
   dialog = page.getByRole('dialog', { name: 'Add to talent folder' });
-  await dialog.getByLabel('Folder', { exact: true }).selectOption('new');
+  await chooseOption(dialog.getByLabel('Folder', { exact: true }), 'New folder…');
   await dialog.getByLabel('New folder name').fill('Session players');
   await dialog.getByRole('button', { name: 'Add to folder' }).click();
   await expect(dialog).toBeHidden();

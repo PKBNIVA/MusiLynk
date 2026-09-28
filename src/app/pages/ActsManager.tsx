@@ -6,13 +6,14 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { FormDialog, selectClass, useConfirm } from '../components/booking/BookingDialogs';
+import { FormDialog, useConfirm } from '../components/booking/BookingDialogs';
 import { Music, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Field, FormError, RequiredNote } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { errorMessage } from '../lib/errors';
 import type { Act, ActMember, Taxonomy } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 
 const FALLBACK_ACT_TYPES = ['solo', 'duo', 'trio', 'band', 'ensemble', 'dj'];
 // Inputs hand back strings, so the lineup size holds whatever was typed until it is submitted.
@@ -208,15 +209,12 @@ export default function ActsManager() {
                   />
                 </Field>
                 <Field id="act-type" label="Act type">
-                  <select
-                    className={selectClass}
+                  <AppSelect
+                    className="h-11 rounded-xl"
                     value={f.actType}
-                    onChange={(e) => setF({ ...f, actType: e.target.value })}
-                  >
-                    {(actTypes.includes(f.actType) ? actTypes : [f.actType, ...actTypes]).map((x: string) => (
-                      <option key={x}>{x}</option>
-                    ))}
-                  </select>
+                    onValueChange={(v) => setF({ ...f, actType: v })}
+                    options={actTypes.includes(f.actType) ? actTypes : [f.actType, ...actTypes]}
+                  />
                 </Field>
                 <Field id="act-city" label="City / base" error={actErrors.errors.city}>
                   <Input

@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { Briefcase, CalendarDays, MapPin, ShieldCheck, Users, Wallet } from 'lucide-react';
+import { Briefcase, CalendarDays, MapPin, Music, ShieldCheck, Users, Wallet } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { DemoBadge } from './DemoBadge';
 import { formatDeadline, formatPay } from '../lib/format';
 import type { Job } from '../lib/apiTypes';
+import { optionLabel } from './ui/option-labels';
 
 /** "gig" → "Gig", "on-site work" → "On-site Work". */
 export const titleCase = (value: string) => value.replace(/(^|[\s-])\S/g, (m) => m.toUpperCase());
@@ -28,7 +29,7 @@ type Props = {
 export function JobCard({ job, to, index, aside }: Props) {
   const applicants = job.applicationsCount || 0;
   return (
-    <Card className="bg-white/[.055] border-white/10 hover:bg-white/[.075] transition" data-testid="job-card">
+    <Card className="verse-lift bg-white/[.055] border-white/10 hover:bg-white/[.075]" data-testid="job-card">
       <CardContent className="p-5 md:p-6">
         <div className="flex gap-4 justify-between">
           <Link
@@ -37,7 +38,7 @@ export function JobCard({ job, to, index, aside }: Props) {
             data-job-item={index}
           >
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <Badge variant="secondary">{titleCase(job.opportunity_kind || 'job')}</Badge>
+              <Badge variant="secondary">{optionLabel(job.opportunity_kind || 'job')}</Badge>
               <DemoBadge show={job.demo} />
               {job.employerVerified && (
                 <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-400/20">
@@ -56,7 +57,7 @@ export function JobCard({ job, to, index, aside }: Props) {
               <span className="flex items-center">
                 <MapPin size={15} className="mr-1" aria-hidden="true" />
                 {job.location}
-                {job.workplace ? ` · ${titleCase(job.workplace)}` : ''}
+                {job.workplace ? ` · ${optionLabel(job.workplace)}` : ''}
               </span>
               {(job.function_area || job.type) && (
                 <span className="flex items-center">
@@ -64,7 +65,12 @@ export function JobCard({ job, to, index, aside }: Props) {
                   {job.function_area || job.type}
                 </span>
               )}
-              {job.genre && <span>{job.genre}</span>}
+              {job.genre && (
+                <span className="flex items-center">
+                  <Music size={15} className="mr-1" aria-hidden="true" />
+                  {job.genre}
+                </span>
+              )}
               <span className="flex items-center">
                 <Wallet size={15} className="mr-1" aria-hidden="true" />
                 {formatPay(job, 'Pay not disclosed')}

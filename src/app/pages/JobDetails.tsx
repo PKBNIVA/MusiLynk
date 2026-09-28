@@ -20,6 +20,8 @@ import {
   BriefcaseBusiness,
   MessageSquare,
   Send,
+  FileText,
+  ListChecks,
 } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, Job } from '../lib/apiTypes';
@@ -188,11 +190,17 @@ export default function JobDetails() {
             </Card>
             <Card className="bg-white/[.055] border-white/10">
               <CardContent className="p-6 md:p-8">
-                <h2 className="text-xl font-semibold">About the opportunity</h2>
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <FileText aria-hidden="true" size={20} className="text-violet-300" />
+                  About the opportunity
+                </h2>
                 <p className="text-slate-300 mt-4 whitespace-pre-wrap leading-7">{job.description}</p>
                 {job.requirements && (
                   <>
-                    <h2 className="text-xl font-semibold mt-8">Requirements</h2>
+                    <h2 className="text-xl font-semibold mt-8 flex items-center gap-2">
+                      <ListChecks aria-hidden="true" size={20} className="text-violet-300" />
+                      Requirements
+                    </h2>
                     <p className="text-slate-300 mt-4 whitespace-pre-wrap leading-7">{job.requirements}</p>
                   </>
                 )}

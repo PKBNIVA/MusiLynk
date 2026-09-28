@@ -9,7 +9,20 @@ import { Progress } from '../components/ui/progress';
 import { apiGet } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { Link } from 'react-router';
-import { Briefcase, Calendar, Search, Bookmark, ArrowRight, ShieldCheck } from 'lucide-react';
+import {
+  Briefcase,
+  Calendar,
+  Search,
+  Bookmark,
+  ArrowRight,
+  ShieldCheck,
+  Bell,
+  Gauge,
+  MapPin,
+  Sparkles,
+} from 'lucide-react';
+import { EmptyState } from '../components/help/EmptyState';
+import { optionLabel } from '../components/ui/option-labels';
 import type { Job, JobSeekerDashboard } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
 export default function JobSeekerDashboard() {
@@ -70,17 +83,20 @@ export default function JobSeekerDashboard() {
             </Button>
           </div>
         )}
-        <div className="grid md:grid-cols-3 gap-4 mb-7">
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
           <Stat n={d.applications} label="Applications" icon={Briefcase} />
           <Stat n={d.interviews} label="Interviews" icon={Calendar} />
           <Stat n={d.saved} label="Saved opportunities" icon={Bookmark} />
         </div>
-        <Card className="bg-gradient-to-br from-violet-500/10 to-sky-500/[.06] border-white/10 mb-8">
+        <Card className="bg-gradient-to-br from-violet-500/10 to-sky-500/[.06] border-white/10 mb-10">
           <CardContent className="p-5 md:p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="max-w-2xl">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-semibold">Career profile strength</h2>
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <Gauge aria-hidden="true" size={20} className="text-violet-300" />
+                    Career profile strength
+                  </h2>
                   {user?.verified && (
                     <Badge className="bg-emerald-500/15 text-emerald-300">
                       <ShieldCheck size={13} className="mr-1" />
@@ -108,36 +124,45 @@ export default function JobSeekerDashboard() {
         </Card>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-semibold">Best current fits</h2>
+            <h2 className="text-2xl font-semibold flex items-center gap-2">
+              <Sparkles aria-hidden="true" size={24} className="text-violet-300" />
+              Best current fits
+            </h2>
             <p className="text-sm text-slate-500 mt-1">
               Transparent profile-fit score based on skills, genre, location and work mode—not a black-box AI verdict.
             </p>
           </div>
         </div>
         {state === 'ready' && !d.recommendedJobs?.length && (
-          <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-8 text-center text-slate-400">
-              No open opportunities to recommend right now.{' '}
-              <Link to="/jobseeker/alerts" className="text-violet-300">
-                Set up an alert
-              </Link>{' '}
-              to hear about new ones.
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Bell}
+            title="No open opportunities to recommend right now."
+            action={
+              <Button asChild variant="outline">
+                <Link to="/jobseeker/alerts">
+                  <Bell aria-hidden="true" size={16} className="mr-2" />
+                  Set up an alert
+                </Link>
+              </Button>
+            }
+          >
+            New gigs and sessions arrive every week. An alert tells you as soon as one fits.
+          </EmptyState>
         )}
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
           {d.recommendedJobs?.map((j) => (
             <Link key={j.id} to={`/jobseeker/jobs/${j.id}`}>
-              <Card className="h-full bg-white/[.055] border-white/10 hover:bg-white/[.075]">
+              <Card className="verse-lift h-full bg-white/[.055] border-white/10 hover:bg-white/[.075]">
                 <CardContent className="p-5">
                   <div className="flex justify-between gap-3">
-                    <Badge variant="secondary">{j.opportunity_kind}</Badge>
+                    <Badge variant="secondary">{optionLabel(j.opportunity_kind || 'job')}</Badge>
                     <Badge className="bg-sky-500/15 text-sky-200">{j.fitScore}% fit</Badge>
                   </div>
                   <h3 className="font-semibold text-lg mt-4">{j.title}</h3>
                   <p className="text-violet-300 text-sm mt-1">{j.company}</p>
-                  <p className="text-sm text-slate-400 mt-3">
-                    {j.location} · {j.workplace}
+                  <p className="text-sm text-slate-400 mt-3 flex items-center gap-1.5">
+                    <MapPin aria-hidden="true" size={16} />
+                    {[j.location, j.workplace && optionLabel(j.workplace)].filter(Boolean).join(' · ')}
                   </p>
                 </CardContent>
               </Card>

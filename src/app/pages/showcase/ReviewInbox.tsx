@@ -46,7 +46,9 @@ export default function ReviewInbox() {
   async function decide(s: Suggestion, action: 'accept' | 'reject') {
     setBusy(s.id);
     try {
-      const out = await apiPost<{ suggestion: Suggestion; applied?: boolean }>(`/suggestions/${s.id}/${action}`);
+      // Literal paths, so the API contract test can match each call to its route.
+      const path = action === 'accept' ? `/suggestions/${s.id}/accept` : `/suggestions/${s.id}/reject`;
+      const out = await apiPost<{ suggestion: Suggestion; applied?: boolean }>(path);
       setList((l) =>
         (l || [])
           .map((x) => (x.id === s.id ? out.suggestion : x))

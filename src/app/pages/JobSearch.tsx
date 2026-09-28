@@ -239,6 +239,7 @@ export default function JobSearch() {
                     aria-label={j.saved ? 'Remove from saved' : 'Save job'}
                     size="icon"
                     variant="ghost"
+                    className="tap-target-44"
                     onClick={() => toggleSave(j)}
                   >
                     {j.saved ? <BookmarkCheck className="text-violet-300" /> : <Bookmark />}

@@ -11,7 +11,9 @@ class MessagesController < ApplicationController
   # Opening (or polling) a conversation marks the counterpart's messages and the
   # matching message notification as read. Returns the most recent HISTORY_LIMIT
   # messages oldest-first; `before=<message id>` pages further back from that message.
-  # `truncated` means older messages exist before the first one returned.
+  # `after=<message id>` returns only messages newer than that one (oldest-first), so a
+  # tight poll interval stays cheap once the thread is already loaded. `truncated` means
+  # older messages exist before the first one returned (always false for `after`).
   def index
     scope = @conversation.messages
     if params[:before].present?
@@ -19,14 +21,25 @@ class MessagesController < ApplicationController
       anchor = scope.find_by(id: params[:before])
       return render_error("Message not found", :not_found) unless anchor
       scope = scope.where("(messages.created_at, messages.id) < (?, ?)", anchor.created_at, anchor.id)
-    else
-      now = Time.current
-      @conversation.messages.where.not(sender: current_user).where(read_at: nil).update_all(read_at: now, updated_at: now)
-      Notifier.conversation_read(@conversation, current_user)
+      recent = scope.order(created_at: :desc, id: :desc).limit(HISTORY_LIMIT + 1).to_a
+      truncated = recent.size > HISTORY_LIMIT
+      return render json: { messages: recent.first(HISTORY_LIMIT).reverse.map { serialize(_1) }, truncated:, limit: HISTORY_LIMIT, theirReadAt: their_read_at }
     end
+
+    if params[:after].present?
+      return render_error("after must be a single value.", :bad_request, "INVALID_PARAMETER") unless params[:after].is_a?(String)
+      anchor = scope.find_by(id: params[:after])
+      return render_error("Message not found", :not_found) unless anchor
+      scope = scope.where("(messages.created_at, messages.id) > (?, ?)", anchor.created_at, anchor.id)
+      mark_read!
+      newer = scope.order(created_at: :asc, id: :asc).limit(HISTORY_LIMIT).to_a
+      return render json: { messages: newer.map { serialize(_1) }, truncated: false, limit: HISTORY_LIMIT, theirReadAt: their_read_at }
+    end
+
+    mark_read!
     recent = scope.order(created_at: :desc, id: :desc).limit(HISTORY_LIMIT + 1).to_a
     truncated = recent.size > HISTORY_LIMIT
-    render json: { messages: recent.first(HISTORY_LIMIT).reverse.map { serialize(_1) }, truncated:, limit: HISTORY_LIMIT }
+    render json: { messages: recent.first(HISTORY_LIMIT).reverse.map { serialize(_1) }, truncated:, limit: HISTORY_LIMIT, theirReadAt: their_read_at }
   end
 
   def create
@@ -52,6 +65,18 @@ class MessagesController < ApplicationController
   end
 
   private
+
+  def mark_read!
+    now = Time.current
+    @conversation.messages.where.not(sender: current_user).where(read_at: nil).update_all(read_at: now, updated_at: now)
+    Notifier.conversation_read(@conversation, current_user)
+  end
+
+  # The most recent time the counterpart read one of the current user's own messages, so a poll that
+  # only fetches new messages (`after=`) can still update the sender's "Seen" receipt on an older one.
+  def their_read_at
+    @conversation.messages.where(sender: current_user).where.not(read_at: nil).maximum(:read_at)
+  end
 
   def load_conversation
     @conversation = Conversation.find_by(id: params[:conversation_id])

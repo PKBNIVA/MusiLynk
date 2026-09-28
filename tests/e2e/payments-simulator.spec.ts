@@ -35,6 +35,24 @@ test.describe('payments against the Razorpay simulator', () => {
     return { status: response.status(), body };
   };
 
+  // Admin sign-in is two steps (#61): a password login answers 202 with a second-factor
+  // challenge instead of a token; complete it via the debug code the test/dev env exposes
+  // (never called against production, where that field is absent and email delivery is real).
+  async function adminLogin(request: APIRequestContext) {
+    const login = await request.post(`${api()}/auth/login`, {
+      data: { email: 'admin@verse.local', password: 'Admin@12345' },
+    });
+    const body = await login.json();
+    if (login.status() === 200) return body.accessToken as string;
+    expect(login.status(), await login.text()).toBe(202);
+    expect(body.secondFactorRequired).toBe(true);
+    const second = await request.post(`${api()}/auth/second-factor`, {
+      data: { challengeToken: body.challengeToken, code: body.debugCode },
+    });
+    expect(second.status(), await second.text()).toBe(200);
+    return (await second.json()).accessToken as string;
+  }
+
   async function signIn(page: Page, user: { token: string; role: string }) {
     await page.addInitScript(({ token, role }) => {
       localStorage.setItem('verse_access_token', token);
@@ -137,10 +155,7 @@ test.describe('payments against the Razorpay simulator', () => {
     await expect(page.getByText('Checkout closed. Nothing was charged.')).toBeVisible();
     await expect(statusLabel(page)).toHaveText('Setup incomplete');
 
-    const admin = await request.post(`${api()}/auth/login`, {
-      data: { email: 'admin@verse.local', password: 'Admin@12345' },
-    });
-    const adminToken = (await admin.json()).accessToken;
+    const adminToken = await adminLogin(request);
     const subs = await call(request, adminToken, 'get', '/admin/subscriptions');
     expect(subs.body.subscriptions.filter((s: AdminSubscription) => s.email === user.email)).toHaveLength(1);
 

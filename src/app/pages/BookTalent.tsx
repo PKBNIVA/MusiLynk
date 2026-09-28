@@ -217,48 +217,67 @@ export default function BookTalent() {
         ) : (
           <>
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-7">
-              {acts.map((a, index) => {
-                const own = Boolean(user && a.owner_id && a.owner_id === user.id);
-                return (
-                  <Card key={a.id} className="bg-white/[.055] border-white/10" data-list-item={index} tabIndex={-1}>
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <Badge variant="secondary">{a.act_type}</Badge>
-                          <h3 className="text-xl font-semibold mt-2 break-words">{a.name}</h3>
+              {(() => {
+                // Acts can share a display name (different owners, same act name); append the
+                // owner's name in the list wherever that happens so the two are not confused.
+                const nameCounts = new Map<string, number>();
+                acts.forEach((a) => nameCounts.set(a.name, (nameCounts.get(a.name) || 0) + 1));
+                return acts.map((a, index) => {
+                  const own = Boolean(user && a.owner_id && a.owner_id === user.id);
+                  const ambiguous = (nameCounts.get(a.name) || 0) > 1 && Boolean(a.ownerName);
+                  const memberCount = a.members?.length || 0;
+                  return (
+                    <Card key={a.id} className="bg-white/[.055] border-white/10" data-list-item={index} tabIndex={-1}>
+                      <CardContent className="p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <Badge variant="secondary">{a.act_type}</Badge>
+                            <h3 className="text-xl font-semibold mt-2 break-words" data-testid="act-name">
+                              {a.name}
+                              {ambiguous && <span className="text-slate-400 font-normal"> · {a.ownerName}</span>}
+                            </h3>
+                          </div>
+                          {(a.verified || a.ownerVerified) && (
+                            <ShieldCheck aria-label="Verified" className="text-emerald-300 shrink-0" size={18} />
+                          )}
                         </div>
-                        {(a.verified || a.ownerVerified) && (
-                          <ShieldCheck aria-label="Verified" className="text-emerald-300 shrink-0" size={18} />
-                        )}
-                      </div>
-                      <div className="text-sm text-slate-400 mt-3 flex gap-2 items-center">
-                        <MapPin size={14} />
-                        {a.city || 'Flexible location'}
-                      </div>
-                      <div className="text-sm mt-3">
-                        {(Array.isArray(a.genres) && a.genres.slice(0, 5).join(' · ')) || 'Multi-genre'}
-                      </div>
-                      <div className="text-sm text-emerald-300 mt-4">
-                        {a.min_fee
-                          ? `From ${a.currency || 'INR'} ${Number(a.min_fee).toLocaleString('en-IN')}`
-                          : 'Ask for quote'}
-                      </div>
-                      <div className="flex gap-2 mt-5">
-                        <Button className="flex-1" onClick={() => openEnquiry(a)}>
-                          <Calendar size={16} className="mr-2" />
-                          Request availability
-                        </Button>
-                        <Button asChild variant="outline">
-                          <Link to={`/acts/${a.id}`} aria-label={`View ${a.name}`}>
-                            View
-                          </Link>
-                        </Button>
-                      </div>
-                      {own && <p className="text-xs text-slate-500 mt-2">This is one of your acts.</p>}
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                        <div className="text-sm text-slate-400 mt-3 flex flex-wrap gap-x-4 gap-y-1 items-center">
+                          <span className="flex gap-2 items-center">
+                            <MapPin size={14} />
+                            {a.city || 'Flexible location'}
+                          </span>
+                          {a.ownerName && <span>By {a.ownerName}</span>}
+                          {memberCount > 0 && (
+                            <span>
+                              {memberCount} member{memberCount === 1 ? '' : 's'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm mt-3">
+                          {(Array.isArray(a.genres) && a.genres.slice(0, 5).join(' · ')) || 'Multi-genre'}
+                        </div>
+                        <div className="text-sm text-emerald-300 mt-4">
+                          {a.min_fee
+                            ? `From ${a.currency || 'INR'} ${Number(a.min_fee).toLocaleString('en-IN')}`
+                            : 'Ask for quote'}
+                        </div>
+                        <div className="flex gap-2 mt-5">
+                          <Button className="flex-1" onClick={() => openEnquiry(a)}>
+                            <Calendar size={16} className="mr-2" />
+                            Request availability
+                          </Button>
+                          <Button asChild variant="outline">
+                            <Link to={`/acts/${a.id}`} aria-label={`View ${a.name}`}>
+                              View
+                            </Link>
+                          </Button>
+                        </div>
+                        {own && <p className="text-xs text-slate-500 mt-2">This is one of your acts.</p>}
+                      </CardContent>
+                    </Card>
+                  );
+                });
+              })()}
             </div>
             <LoadMore
               shown={acts.length}

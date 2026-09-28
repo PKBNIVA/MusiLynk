@@ -67,7 +67,7 @@ export default function JobDetails() {
   async function messageEmployer() {
     try {
       const d = await apiPost<ConversationCreated>('/conversations', { jobId: id });
-      nav(`/jobseeker/messages?conversation=${d.conversation.id}`);
+      nav(`/jobseeker/messages?c=${d.conversation.id}`);
     } catch (e: unknown) {
       toast.error(errorMessage(e));
     }
@@ -326,9 +326,14 @@ export default function JobDetails() {
                         )}
                       </>
                     )}
-                    <Button variant="ghost" className="w-full mt-2" onClick={messageEmployer}>
+                    <Button
+                      variant="ghost"
+                      className="w-full mt-2"
+                      onClick={messageEmployer}
+                      data-testid="message-employer"
+                    >
                       <MessageSquare size={16} className="mr-2" />
-                      Ask a question
+                      Message employer
                     </Button>
                   </>
                 )}

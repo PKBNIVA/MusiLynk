@@ -148,6 +148,20 @@ test.describe('admin console', () => {
     expect(errors).toEqual([]);
   });
 
+  test('a report links to the listing on the public site, absolutely, since the admin build has no public routes', async ({
+    page,
+  }) => {
+    await mockApi(page, adminFixtures(), admin);
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: /Reports/ }).click();
+    const link = page.getByRole('link', { name: 'job-1' });
+    await expect(link).toBeVisible();
+    // VITE_PUBLIC_URL for the admin build under test is set to the public preview's own origin
+    // (playwright.config.ts) — see src/app/lib/appTarget.ts's toPublicUrl.
+    await expect(link).toHaveAttribute('href', 'http://127.0.0.1:4173/opportunities/job-1');
+    await expect(link).toHaveAttribute('target', '_blank');
+  });
+
   test('rejecting an opportunity uses an in-page dialog and sends the reason', async ({ page }) => {
     let nativeDialog = false;
     page.on('dialog', (dialog) => {

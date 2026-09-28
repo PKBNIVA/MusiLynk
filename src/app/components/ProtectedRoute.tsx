@@ -1,9 +1,12 @@
+import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useAuth, Role } from '../lib/authContext';
 import { hasAccessToken } from '../lib/api';
 import { IS_ADMIN_SITE, signInPath } from '../lib/appTarget';
 import { Button } from './ui/button';
 import { PageLoading } from './ExperienceStates';
+
+const ROLE_LABEL: Record<string, string> = { employer: 'employers', jobseeker: 'job seekers', admin: 'admins' };
 export function ProtectedRoute({ roles, children }: { roles: Role[]; children: React.ReactNode }) {
   const { user, loading, refresh } = useAuth();
   const location = useLocation();
@@ -43,7 +46,20 @@ export function ProtectedRoute({ roles, children }: { roles: Role[]; children: R
   if (!roles.includes(user.role)) {
     /* Each site has one home per role; the other site's role goes to this site's front page. */
     const home = IS_ADMIN_SITE || user.role === 'admin' ? '/' : user.role === 'employer' ? '/employer' : '/jobseeker';
-    return <Navigate to={home} replace />;
+    return <WrongRoleRedirect home={home} roles={roles} />;
   }
   return <>{children}</>;
+}
+
+/** A page meant for a different role redirects the visitor home; this says why, once, instead of a silent bounce. */
+function WrongRoleRedirect({ home, roles }: { home: string; roles: Role[] }) {
+  useEffect(() => {
+    const audience = roles.length === 1 ? ROLE_LABEL[roles[0]] || `${roles[0]}s` : 'a different kind of account';
+    // ProtectedRoute sits in the eagerly-loaded route tree; sonner is otherwise kept out of the
+    // entry bundle (see App.tsx's lazy Toaster), so this toast is loaded on demand too.
+    import('sonner').then(({ toast }) => toast.error(`That page is for ${audience} — here's your dashboard.`));
+    // Shown once per redirect, not once per audience string.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return <Navigate to={home} replace />;
 }

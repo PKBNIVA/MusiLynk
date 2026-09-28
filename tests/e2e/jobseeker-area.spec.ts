@@ -77,6 +77,22 @@ test('changing a filter re-runs the search without pressing Search', async ({ pa
   await expect.poll(() => queries.some((q) => q.includes('kind=audition'))).toBe(true);
 });
 
+test('the job detail "Message employer" button opens (or starts) a conversation about the job', async ({ page }) => {
+  const posted: Record<string, unknown>[] = [];
+  await signIn(page, (request, path) => {
+    if (path === '/api/jobs/job-1') return { body: { job: job('job-1') } };
+    if (path === '/api/conversations' && request.method() === 'POST') {
+      posted.push(request.postDataJSON());
+      return { status: 201, body: { id: 'conv-1', conversation: { id: 'conv-1' } } };
+    }
+    return undefined;
+  });
+  await page.goto('/jobseeker/jobs/job-1');
+  await page.getByTestId('message-employer').click();
+  await expect(page).toHaveURL(/\/jobseeker\/messages\?c=conv-1$/);
+  expect(posted).toEqual([{ jobId: 'job-1' }]);
+});
+
 test('a removed opportunity shows a way back instead of loading forever', async ({ page }) => {
   const errors = await signIn(page, (_r, path) =>
     path === '/api/jobs/gone' ? { status: 404, body: { error: 'Not found' } } : undefined,

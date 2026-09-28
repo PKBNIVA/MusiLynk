@@ -19,14 +19,16 @@ class AiControllerTest < ActionDispatch::IntegrationTest
 
   teardown { Rails.cache = @original_cache }
 
-  test "status reports disabled with no key configured" do
+  test "status reports disabled with no key configured, and lists only the launch-enabled tasks" do
     with_env("ANTHROPIC_API_KEY" => nil) do
       get "/api/ai/status"
       assert_response :success
       body = response.parsed_body
       assert_equal false, body.fetch("enabled")
-      assert_includes body.fetch("tasks"), "post_caption"
+      assert_equal %w[profile_headline profile_bio job_description job_screening_questions].sort, body.fetch("tasks").sort
       assert_not_includes body.fetch("tasks"), "autocomplete"
+      assert_not_includes body.fetch("tasks"), "post_caption"
+      assert_not_includes body.fetch("tasks"), "cover_letter"
     end
   end
 
@@ -45,7 +47,7 @@ class AiControllerTest < ActionDispatch::IntegrationTest
 
   test "suggest answers 503 AI_DISABLED with no key configured" do
     with_env("ANTHROPIC_API_KEY" => nil) do
-      post "/api/ai/suggest", params: { task: "post_caption", context: { kind: "release" } }, headers: bearer(@token), as: :json
+      post "/api/ai/suggest", params: { task: "profile_headline", context: {} }, headers: bearer(@token), as: :json
       assert_response :service_unavailable
       assert_equal "AI_DISABLED", response.parsed_body["code"]
     end
@@ -59,15 +61,32 @@ class AiControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "suggest answers 403 AI_TASK_DISABLED for every task outside the launch allow-list" do
+    with_env("ANTHROPIC_API_KEY" => "sk-test") do
+      # classify_portfolio_item is never in AiAssist::Tasks::REGISTRY at all (it's the batch-only
+      # AiPortfolioItemClassifier, with its own prompt, and was never reachable through
+      # POST /api/ai/suggest even before launch mode) — so it stays a plain 422 UNKNOWN_TASK,
+      # covered by "suggest rejects an unknown task" above.
+      disabled_tasks = %w[cover_letter post_caption message_reply resume_summary improve_text portfolio_blurb
+        candidate_summary rank_applicants outreach_message interview_questions rejection_note
+        draft_portfolio tailor_resume]
+      disabled_tasks.each do |task|
+        post "/api/ai/suggest", params: { task:, context: {} }, headers: bearer(@token), as: :json
+        assert_response :forbidden
+        assert_equal "AI_TASK_DISABLED", response.parsed_body["code"], "expected #{task} to be disabled"
+      end
+    end
+  end
+
   test "suggest returns a suggestion on success and never exposes the task through /suggest for the internal autocomplete task" do
     with_env("ANTHROPIC_API_KEY" => "sk-test") do
-      stub_anthropic_success("Big news: our new single drops Friday!") do
-        post "/api/ai/suggest", params: { task: "post_caption", context: { kind: "release", notes: "new single" } }, headers: bearer(@token), as: :json
+      stub_anthropic_success("Session guitarist for Hindi and English rock acts") do
+        post "/api/ai/suggest", params: { task: "profile_headline", context: { roles: ["Guitarist"] } }, headers: bearer(@token), as: :json
       end
       assert_response :success
       body = response.parsed_body
-      assert_equal "Big news: our new single drops Friday!", body.fetch("suggestion")
-      assert_equal "post_caption", body.fetch("task")
+      assert_equal "Session guitarist for Hindi and English rock acts", body.fetch("suggestion")
+      assert_equal "profile_headline", body.fetch("task")
 
       post "/api/ai/suggest", params: { task: "autocomplete", context: { field: "cities", query: "mu" } }, headers: bearer(@token), as: :json
       assert_response :unprocessable_content
@@ -77,98 +96,79 @@ class AiControllerTest < ActionDispatch::IntegrationTest
 
   test "suggest enforces the per-user hourly rate limit" do
     with_env("ANTHROPIC_API_KEY" => "sk-test") do
-      stub_anthropic_success("ok") do
-        AiController::SUGGEST_LIMIT_PER_HOUR.times do
-          post "/api/ai/suggest", params: { task: "post_caption", context: { kind: "release" } }, headers: bearer(@token), as: :json
-          assert_response :success
+      AiPricing.stub(:talent_lifetime_limit, 1000) do
+        stub_anthropic_success("ok") do
+          AiController::SUGGEST_LIMIT_PER_HOUR.times do
+            post "/api/ai/suggest", params: { task: "profile_headline", context: {} }, headers: bearer(@token), as: :json
+            assert_response :success
+          end
+          post "/api/ai/suggest", params: { task: "profile_headline", context: {} }, headers: bearer(@token), as: :json
         end
-        post "/api/ai/suggest", params: { task: "post_caption", context: { kind: "release" } }, headers: bearer(@token), as: :json
+        assert_response :too_many_requests
+        assert_equal "RATE_LIMITED", response.parsed_body["code"]
       end
-      assert_response :too_many_requests
-      assert_equal "RATE_LIMITED", response.parsed_body["code"]
     end
   end
 
   test "suggest answers 429 AI_BUDGET_EXHAUSTED once the global daily cap is spent" do
     with_env("ANTHROPIC_API_KEY" => "sk-test", "AI_DAILY_REQUEST_CAP" => "1") do
       stub_anthropic_success("ok") do
-        post "/api/ai/suggest", params: { task: "post_caption", context: { kind: "release" } }, headers: bearer(@token), as: :json
+        post "/api/ai/suggest", params: { task: "profile_headline", context: {} }, headers: bearer(@token), as: :json
         assert_response :success
-        post "/api/ai/suggest", params: { task: "post_caption", context: { kind: "release" } }, headers: bearer(@employer_token), as: :json
+        post "/api/ai/suggest", params: { task: "profile_headline", context: {} }, headers: bearer(@employer_token), as: :json
       end
       assert_response :too_many_requests
       assert_equal "AI_BUDGET_EXHAUSTED", response.parsed_body["code"]
     end
   end
 
-  test "a recruiter task is refused for a job the caller is not the employer/admin/org member of" do
+  test "the talent lifetime usage cap answers 402 AI_USAGE_LIMIT_REACHED once used up" do
     with_env("ANTHROPIC_API_KEY" => "sk-test") do
-      job = Job.create!(employer: @employer, title: "Session Bassist", company: "Studio", location: "Mumbai", kind: "Contract",
-        genre: "Studio", description: "A" * 90, status: "published")
-      post "/api/ai/suggest", params: { task: "candidate_summary", context: { jobId: job.id, jobTitle: job.title } }, headers: bearer(@token), as: :json
-      assert_response :forbidden
-      assert_equal "AI_ACCESS_DENIED", response.parsed_body["code"]
-    end
-  end
-
-  test "a recruiter task succeeds for the job's employer, and rank_applicants drops any id the model invented" do
-    with_env("ANTHROPIC_API_KEY" => "sk-test") do
-      job = Job.create!(employer: @employer, title: "Session Bassist", company: "Studio", location: "Mumbai", kind: "Contract",
-        genre: "Studio", description: "A" * 90, status: "published")
-      fabricated = [{ "applicationId" => "app_real", "score" => 80, "reason" => "Great fit" },
-        { "applicationId" => "app_invented", "score" => 99, "reason" => "Invented" }].to_json
-      stub_anthropic_success(fabricated) do
-        post "/api/ai/suggest", params: { task: "rank_applicants", context: { jobId: job.id, jobTitle: job.title, applicants: [{ id: "app_real" }] } }, headers: bearer(@employer_token), as: :json
+      stub_anthropic_success("A headline") do
+        AiPricing.talent_lifetime_limit.times do
+          post "/api/ai/suggest", params: { task: "profile_headline", context: {} }, headers: bearer(@token), as: :json
+          assert_response :success
+        end
+        post "/api/ai/suggest", params: { task: "profile_bio", context: {} }, headers: bearer(@token), as: :json
       end
-      assert_response :success
-      ranked = JSON.parse(response.parsed_body.fetch("suggestion"))
-      assert_equal ["app_real"], ranked.map { _1["applicationId"] }
-    end
-  end
-
-  test "suggest answers 402 AI_CREDITS_EXHAUSTED with balance/resetsAt/upgradeOptions once credits run out" do
-    with_env("ANTHROPIC_API_KEY" => "sk-test") do
-      resolution = AiCreditAccount.for(@jobseeker)
-      AiCredits.with_account_lock(resolution.account_type, resolution.account_id) do
-        AiCreditLedger.where(account_type: resolution.account_type, account_id: resolution.account_id).delete_all
-      end
-      AiCredits.ensure_monthly_allowance!(resolution, hirer: false)
-      AiCredits.charge!(resolution, cost: AiCredits.balance(resolution.account_type, resolution.account_id), task: "post_caption")
-
-      post "/api/ai/suggest", params: { task: "post_caption", context: { kind: "release" } }, headers: bearer(@token), as: :json
       assert_response :payment_required
       body = response.parsed_body
-      assert_equal "AI_CREDITS_EXHAUSTED", body["code"]
-      assert_equal 0, body["balance"]
-      assert body.key?("resetsAt")
-      assert body.dig("upgradeOptions", "aiPlus").present?
+      assert_equal "AI_USAGE_LIMIT_REACHED", body["code"]
+      assert_equal 0, body["remaining"]
+      assert_equal AiPricing.talent_lifetime_limit, body["limit"]
+      assert_equal "lifetime", body["period"]
     end
   end
 
-  test "message_reply is refused for a conversation the caller does not belong to" do
+  test "the hirer monthly usage cap answers 402 AI_USAGE_LIMIT_REACHED once used up this month" do
     with_env("ANTHROPIC_API_KEY" => "sk-test") do
-      other_candidate = User.create!(name: "Other Candidate", email: "ai-other-candidate@example.com", password: PASSWORD, role: "jobseeker", status: "active")
-      other_employer = User.create!(name: "Other Employer", email: "ai-other-employer@example.com", password: PASSWORD, role: "employer", status: "active")
-      conversation = Conversation.create!(candidate: other_candidate, employer: other_employer)
-
-      post "/api/ai/suggest", params: { task: "message_reply", context: { conversationId: conversation.id } }, headers: bearer(@token), as: :json
-      assert_response :forbidden
-      assert_equal "AI_ACCESS_DENIED", response.parsed_body["code"]
-    end
-  end
-
-  test "message_reply fetches the last messages for a conversation the caller belongs to" do
-    with_env("ANTHROPIC_API_KEY" => "sk-test") do
-      conversation = Conversation.create!(candidate: @jobseeker, employer: @employer)
-      conversation.messages.create!(sender: @employer, body: "Are you free next week?")
-      conversation.messages.create!(sender: @jobseeker, body: "Possibly, what dates?")
-
-      stub_anthropic_success("Yes, I'm free on the 14th and 15th.") do
-        post "/api/ai/suggest", params: { task: "message_reply", context: { conversationId: conversation.id } }, headers: bearer(@token), as: :json
+      stub_anthropic_success("A description.") do
+        AiPricing.hirer_monthly_limit.times do
+          post "/api/ai/suggest", params: { task: "job_description", context: { title: "Session bassist" } }, headers: bearer(@employer_token), as: :json
+          assert_response :success
+        end
+        post "/api/ai/suggest", params: { task: "job_screening_questions", context: { title: "Session bassist" } }, headers: bearer(@employer_token), as: :json
       end
-      assert_response :success
-      assert_equal "Yes, I'm free on the 14th and 15th.", response.parsed_body.fetch("suggestion")
+      assert_response :payment_required
+      body = response.parsed_body
+      assert_equal "AI_USAGE_LIMIT_REACHED", body["code"]
+      assert_equal "month", body["period"]
     end
+  end
+
+  test "GET /api/ai/usage reports the caller's own launch task group" do
+    get "/api/ai/usage", headers: bearer(@token)
+    assert_response :success
+    body = response.parsed_body
+    assert_equal AiPricing.talent_lifetime_limit, body["limit"]
+    assert_equal "lifetime", body["period"]
+    assert_equal AiPricing.talent_lifetime_limit, body["remaining"]
+
+    get "/api/ai/usage", headers: bearer(@employer_token)
+    assert_response :success
+    body = response.parsed_body
+    assert_equal AiPricing.hirer_monthly_limit, body["limit"]
+    assert_equal "month", body["period"]
   end
 
   test "job_description is refused for a draft job the caller does not own" do
@@ -186,7 +186,7 @@ class AiControllerTest < ActionDispatch::IntegrationTest
   test "a timeout from the upstream call surfaces as a friendly error, not a 500" do
     with_env("ANTHROPIC_API_KEY" => "sk-test") do
       stub_anthropic_raising(Net::ReadTimeout.new) do
-        post "/api/ai/suggest", params: { task: "post_caption", context: { kind: "release" } }, headers: bearer(@token), as: :json
+        post "/api/ai/suggest", params: { task: "profile_headline", context: {} }, headers: bearer(@token), as: :json
       end
       assert_response :bad_gateway
       assert_equal "AI_TIMEOUT", response.parsed_body["code"]
@@ -196,7 +196,7 @@ class AiControllerTest < ActionDispatch::IntegrationTest
   test "a malformed upstream response surfaces as a friendly error, not a 500" do
     with_env("ANTHROPIC_API_KEY" => "sk-test") do
       stub_anthropic_body("not json") do
-        post "/api/ai/suggest", params: { task: "post_caption", context: { kind: "release" } }, headers: bearer(@token), as: :json
+        post "/api/ai/suggest", params: { task: "profile_headline", context: {} }, headers: bearer(@token), as: :json
       end
       assert_response :bad_gateway
       assert_equal "AI_MALFORMED_RESPONSE", response.parsed_body["code"]

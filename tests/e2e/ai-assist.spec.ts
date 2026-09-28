@@ -1,8 +1,10 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page, type Route } from '@playwright/test';
 
-// Mocked-API regressions for the AI Assist writing helpers: suggest/insert/replace, the reply
-// suggestion in Messages, the 402 paywall, and AI hiding entirely when the feature is disabled.
+// Mocked-API regressions for the AI Assist writing helpers, launch mode: only profile_headline,
+// profile_bio, job_description and job_screening_questions are ever listed or callable; every
+// other task (message_reply, improve_text, cover_letter, recruiter tasks…) is disabled, and the
+// 402 paywall is a friendly "used up" notice with no purchase offer.
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
 
 const employer = {
@@ -22,16 +24,10 @@ const jobseeker = {
   profileComplete: true,
 };
 
+// The real GET /api/ai/status at launch: only these four tasks, ever.
 const AI_STATUS_ENABLED = {
   enabled: true,
-  tasks: [
-    'job_description',
-    'job_screening_questions',
-    'profile_headline',
-    'profile_bio',
-    'improve_text',
-    'message_reply',
-  ],
+  tasks: ['job_description', 'job_screening_questions', 'profile_headline', 'profile_bio'],
 };
 const AI_STATUS_DISABLED = { enabled: false, tasks: [] };
 
@@ -64,7 +60,9 @@ async function mockRoutes(
   return calls;
 }
 
-test('a job description suggestion can be inserted, and Improve can replace it', async ({ page }) => {
+test('a job description suggestion can be inserted, with no Improve button (improve_text is disabled)', async ({
+  page,
+}) => {
   await mockRoutes(page, employer, async (route, path) => {
     if (path === '/ai/status') {
       await json(route, AI_STATUS_ENABLED);
@@ -80,11 +78,11 @@ test('a job description suggestion can be inserted, and Improve can replace it',
     }
     if (path === '/ai/suggest') {
       const task = (route.request().postDataJSON() as { task: string }).task;
-      const suggestion =
-        task === 'job_description'
-          ? 'Record layered guitar parts for a feature film score over three sessions.'
-          : 'Record layered guitar parts for a film score over three focused sessions.';
-      await json(route, { suggestion, task, model: 'qa-model' });
+      await json(route, {
+        suggestion: 'Record layered guitar parts for a feature film score over three sessions.',
+        task,
+        model: 'qa-model',
+      });
       return true;
     }
     return false;
@@ -108,18 +106,11 @@ test('a job description suggestion can be inserted, and Improve can replace it',
     'Record layered guitar parts for a feature film score over three sessions.',
   );
 
-  // Improve (improve_text) offers Insert too, appending the AI text below what's already there.
-  await page.getByRole('button', { name: 'Improve with AI' }).click();
-  await expect(
-    page.getByText('Record layered guitar parts for a film score over three focused sessions.'),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Insert' }).click();
-  await expect(page.getByLabel(/^Description/)).toHaveValue(
-    'Record layered guitar parts for a feature film score over three sessions.\n\nRecord layered guitar parts for a film score over three focused sessions.',
-  );
+  // improve_text is launch-disabled: no "Improve with AI" button once there's draft text.
+  await expect(page.getByRole('button', { name: 'Improve with AI' })).toHaveCount(0);
 });
 
-test('AI buttons and the credits badge are absent when AI assist is disabled', async ({ page }) => {
+test('AI buttons and the usage hint are absent when AI assist is disabled', async ({ page }) => {
   const calls = await mockRoutes(page, employer, async (route, path) => {
     if (path === '/ai/status') {
       await json(route, AI_STATUS_DISABLED);
@@ -144,18 +135,25 @@ test('AI buttons and the credits badge are absent when AI assist is disabled', a
 
   await expect(page.getByRole('button', { name: 'Write with AI' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Improve with AI' })).toHaveCount(0);
+  await expect(page.getByTestId('ai-credits-badge')).toHaveCount(0);
   expect(calls.some((c) => c.path === '/ai/suggest')).toBe(false);
 });
 
-test('a profile headline and bio suggestion can each be inserted', async ({ page }) => {
+test('a profile headline and bio suggestion can each be inserted, and the usage hint has no "credits" wording', async ({
+  page,
+}) => {
   await mockRoutes(page, jobseeker, async (route, path) => {
     if (path === '/ai/status') {
       await json(route, AI_STATUS_ENABLED);
       return true;
     }
+    if (path === '/ai/usage') {
+      await json(route, { remaining: 4, limit: 5, period: 'lifetime' });
+      return true;
+    }
     if (path === '/ai/suggest') {
       const task = (route.request().postDataJSON() as { task: string }).task;
-      const suggestion = task === 'profile_headline' ? 'Session guitarist, Hindi & English rock' : 'I play guitar.';
+      const suggestion = task === 'profile_headline' ? 'Session guitarist, Hindi and English rock' : 'I play guitar.';
       await json(route, { suggestion, task, model: 'qa-model' });
       return true;
     }
@@ -164,22 +162,23 @@ test('a profile headline and bio suggestion can each be inserted', async ({ page
 
   await page.goto('/jobseeker/profile');
   await page.getByRole('button', { name: 'Write with AI' }).first().click();
-  await expect(page.getByText('Session guitarist, Hindi & English rock')).toBeVisible();
+  await expect(page.getByText('Session guitarist, Hindi and English rock')).toBeVisible();
   await page.getByRole('button', { name: 'Replace' }).click();
-  await expect(page.getByLabel('Professional headline')).toHaveValue('Session guitarist, Hindi & English rock');
+  await expect(page.getByLabel('Professional headline')).toHaveValue('Session guitarist, Hindi and English rock');
 
   await page.getByRole('button', { name: 'Write with AI' }).nth(1).click();
   await expect(page.getByText('I play guitar.')).toBeVisible();
   await page.getByRole('button', { name: 'Replace' }).click();
   await expect(page.getByLabel('Bio')).toHaveValue('I play guitar.');
+
+  const hint = page.getByTestId('ai-credits-badge');
+  if (await hint.count()) {
+    await expect(hint).toContainText('AI help');
+    await expect(hint).not.toContainText('credit');
+  }
 });
 
-const conversationId = 'conv-1';
-const messages = [
-  { id: 'm1', senderId: 'them', body: 'Are you free next weekend?', createdAt: '2026-09-27T10:00:00Z', readAt: null },
-];
-
-test('Suggest a reply fills the composer without sending anything', async ({ page }) => {
+test('message_reply is disabled: no "Suggest a reply" button in Messages', async ({ page }) => {
   const calls = await mockRoutes(page, jobseeker, async (route, path) => {
     if (path === '/ai/status') {
       await json(route, AI_STATUS_ENABLED);
@@ -189,72 +188,45 @@ test('Suggest a reply fills the composer without sending anything', async ({ pag
       await json(route, {
         conversations: [
           {
-            id: conversationId,
+            id: 'conv-1',
             counterpartName: 'Studio',
             counterpartId: 'them',
             unreadCount: 0,
-            lastMessageAt: messages[0].createdAt,
+            lastMessageAt: '2026-09-27T10:00:00Z',
           },
         ],
       });
       return true;
     }
-    if (path === `/conversations/${conversationId}/messages` && route.request().method() === 'GET') {
-      await json(route, { messages, theirReadAt: null });
-      return true;
-    }
-    if (path === '/ai/suggest') {
-      await json(route, { suggestion: 'Yes, I can do Saturday afternoon!', task: 'message_reply', model: 'qa-model' });
+    if (path === '/conversations/conv-1/messages' && route.request().method() === 'GET') {
+      await json(route, {
+        messages: [
+          { id: 'm1', senderId: 'them', body: 'Are you free next weekend?', createdAt: '2026-09-27T10:00:00Z', readAt: null },
+        ],
+        theirReadAt: null,
+      });
       return true;
     }
     return false;
   });
 
-  await page.goto(`/jobseeker/messages?c=${conversationId}`);
-  await page.getByRole('button', { name: 'Suggest a reply with AI' }).click();
-  await expect(page.getByText('Yes, I can do Saturday afternoon!')).toBeVisible();
-  await page.getByRole('button', { name: 'Replace' }).click();
-  await expect(page.getByRole('textbox', { name: 'Message' })).toHaveValue('Yes, I can do Saturday afternoon!');
-  // Never sent on the person's behalf: no POST to the messages endpoint happened from the suggestion.
-  expect(calls.some((c) => c.method === 'POST' && c.path === `/conversations/${conversationId}/messages`)).toBe(false);
+  await page.goto('/jobseeker/messages?c=conv-1');
+  await expect(page.getByRole('button', { name: 'Suggest a reply with AI' })).toHaveCount(0);
+  expect(calls.some((c) => c.path === '/ai/suggest')).toBe(false);
 });
 
-test('an AI credits paywall (402) offers Verse AI Plus and a top-up instead of a broken suggestion', async ({
-  page,
-}) => {
+test('a used-up AI usage cap (402) shows a friendly notice with no purchase offer', async ({ page }) => {
   await mockRoutes(page, jobseeker, async (route, path) => {
     if (path === '/ai/status') {
       await json(route, AI_STATUS_ENABLED);
       return true;
     }
-    if (path === '/ai/pricing') {
-      await json(route, {
-        freeCreditsPerMonth: 20,
-        aiPlus: { planCode: 'ai_plus', priceInr: 199, creditsPerMonth: 400 },
-        planAllowances: { pro: 500, studio: 2000, enterprise: null },
-        topups: { small: { priceInr: 99, credits: 150 } },
-        topupExpiresAfterMonths: 12,
-        taskCosts: { profile_headline: 1 },
-      });
-      return true;
-    }
     if (path === '/ai/usage') {
-      await json(route, {
-        balance: 0,
-        monthlyAllowance: 20,
-        usedThisPeriod: 20,
-        resetsAt: '2026-10-01',
-        plan: 'free',
-        recent: [],
-      });
+      await json(route, { remaining: 0, limit: 5, period: 'lifetime' });
       return true;
     }
     if (path === '/ai/suggest') {
-      await json(
-        route,
-        { error: "You're out of AI credits.", code: 'AI_CREDITS_EXHAUSTED', balance: 0, resetsAt: '2026-10-01' },
-        402,
-      );
+      await json(route, { error: 'AI help is used up for now.', code: 'AI_USAGE_LIMIT_REACHED' }, 402);
       return true;
     }
     return false;
@@ -262,10 +234,9 @@ test('an AI credits paywall (402) offers Verse AI Plus and a top-up instead of a
 
   await page.goto('/jobseeker/profile');
   await page.getByRole('button', { name: 'Write with AI' }).first().click();
-  await expect(page.getByRole('dialog', { name: "You're out of AI credits" })).toBeVisible();
-  await expect(page.getByTestId('ai-paywall-balance')).toContainText('0 credits');
-  await expect(page.getByRole('button', { name: /Verse AI Plus/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Top up/ })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'AI help is used up for now' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Verse AI Plus/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Top up/ })).toHaveCount(0);
   const paywallAxe = await new AxeBuilder({ page })
     .include('[role="dialog"]')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

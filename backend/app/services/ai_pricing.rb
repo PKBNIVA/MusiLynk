@@ -21,6 +21,22 @@ class AiPricing
   def self.output_caps = config.fetch(:output_caps)
   def self.cache_ttl = config.fetch(:cache_ttl_hours).hours
 
+  # Launch mode (see config/ai_pricing.yml `launch:`): the only tasks reachable through
+  # GET /api/ai/status and POST /api/ai/suggest right now. Every other task stays fully wired
+  # (AiAssist::Tasks::REGISTRY, AiOrchestrator, the batch classifier…) so re-enabling one later,
+  # or restoring AI billing, is a config change, never a code change.
+  def self.launch = config.fetch(:launch)
+  def self.talent_tasks = launch.fetch(:talent_tasks).map(&:to_s)
+  def self.hirer_tasks = launch.fetch(:hirer_tasks).map(&:to_s)
+  def self.enabled_tasks = talent_tasks + hirer_tasks
+  def self.task_enabled?(task) = enabled_tasks.include?(task.to_s)
+  def self.talent_lifetime_limit = launch.fetch(:talent_lifetime_limit)
+  def self.hirer_monthly_limit = launch.fetch(:hirer_monthly_limit)
+
+  # AI_BILLING_ENABLED gates every purchase route (Ai::BillingController) and, here, whether the
+  # public pricing catalogue advertises anything to purchase at all.
+  def self.billing_enabled? = ENV["AI_BILLING_ENABLED"] == "true"
+
   # Credits charged for one call of `task`. `rank_applicants` costs 1 per 10 applicants
   # (rounded up); every other task costs a flat, task-specific amount.
   def self.cost_for(task, applicant_count: nil)
@@ -42,13 +58,17 @@ class AiPricing
   end
 
   def self.public_catalogue
-    {
+    base = {
       freeCreditsPerMonth: allowances.fetch(:talent_free),
-      aiPlus: { planCode: ai_plus.fetch(:plan_code), priceInr: ai_plus.fetch(:price_inr), creditsPerMonth: ai_plus.fetch(:credits_per_month) },
       planAllowances: { pro: allowances.fetch(:pro), studio: allowances.fetch(:studio), enterprise: allowances.fetch(:enterprise) },
-      topups: topups.except(:expires_after_months).transform_values { |v| { priceInr: v.fetch(:price_inr), credits: v.fetch(:credits) } },
-      topupExpiresAfterMonths: topups.fetch(:expires_after_months),
       taskCosts: task_costs
     }
+    return base unless billing_enabled?
+
+    base.merge(
+      aiPlus: { planCode: ai_plus.fetch(:plan_code), priceInr: ai_plus.fetch(:price_inr), creditsPerMonth: ai_plus.fetch(:credits_per_month) },
+      topups: topups.except(:expires_after_months).transform_values { |v| { priceInr: v.fetch(:price_inr), credits: v.fetch(:credits) } },
+      topupExpiresAfterMonths: topups.fetch(:expires_after_months)
+    )
   end
 end

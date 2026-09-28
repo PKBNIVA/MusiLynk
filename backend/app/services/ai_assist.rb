@@ -39,7 +39,13 @@ class AiAssist
     ENV["AI_MODEL"].presence || DEFAULT_MODEL
   end
 
-  def self.tasks = AiAssist::Tasks::PUBLIC_TASKS
+  # Launch mode: only the tasks AiPricing.enabled_tasks lists right now (see
+  # config/ai_pricing.yml `launch:`). `known_task?` is the full registry, independent of that —
+  # it's what tells a truly unknown task (422 UNKNOWN_TASK) apart from a real but currently
+  # disabled one (403 AI_TASK_DISABLED).
+  def self.tasks = AiAssist::Tasks::PUBLIC_TASKS.select { AiPricing.task_enabled?(_1) }
+
+  def self.known_task?(task) = AiAssist::Tasks::PUBLIC_TASKS.include?(task.to_s)
 
   # Hard output caps (AiPricing.output_caps), by task shape: classification < short < long.
   # Every task's own max_output_tokens is capped down to this (never up) so a task-level cap can

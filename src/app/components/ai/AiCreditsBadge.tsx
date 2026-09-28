@@ -6,12 +6,14 @@ export interface AiCreditsBadgeProps {
   className?: string;
 }
 
-/** A small badge showing the signed-in account's AI credits balance, with the reset date on hover. */
+/**
+ * A small hint next to the AI buttons showing how much of the account's own free AI help is
+ * left — never a "credits" number. `period` is "lifetime" for talent tasks (profile headline
+ * and bio) or "month" for hirer tasks (job description and screening questions).
+ */
 export function AiCreditsBadge({ className }: AiCreditsBadgeProps) {
   const { usage } = useAiUsage();
   if (!usage) return null;
-
-  const resetsAt = new Date(usage.resetsAt);
 
   return (
     <Tooltip>
@@ -21,13 +23,12 @@ export function AiCreditsBadge({ className }: AiCreditsBadgeProps) {
           data-testid="ai-credits-badge"
         >
           <Sparkles aria-hidden="true" className="size-3" />
-          {usage.balance} AI credits
+          AI help: {usage.remaining} of {usage.limit} left
         </span>
       </TooltipTrigger>
       <TooltipContent>
         <p>
-          Resets {resetsAt.toLocaleDateString()} · {usage.plan} plan
-          {typeof usage.monthlyAllowance === 'number' ? ` · ${usage.monthlyAllowance}/mo allowance` : ''}
+          {usage.period === 'month' ? 'Resets at the start of next month.' : 'A one-time allowance for your account.'}
         </p>
       </TooltipContent>
     </Tooltip>

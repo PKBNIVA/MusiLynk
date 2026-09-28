@@ -25,11 +25,13 @@ class AiController < ApplicationController
     return unless within_user_rate_limit?("ai-suggest-day", limit: SUGGEST_LIMIT_PER_DAY, period: 1.day)
 
     task = params[:task].to_s
-    return render_error("Unknown AI task.", :unprocessable_content, "UNKNOWN_TASK") unless AiAssist.tasks.include?(task)
+    return render_error("Unknown AI task.", :unprocessable_content, "UNKNOWN_TASK") unless AiAssist.known_task?(task)
+    return render_error("This AI feature isn't available right now.", :forbidden, "AI_TASK_DISABLED") unless AiPricing.task_enabled?(task)
 
     context = resolve_context(task, (params[:context].is_a?(ActionController::Parameters) ? params[:context].to_unsafe_h : params[:context]) || {})
     return if performed?
 
+    AiUsageCap.check!(current_user, task:)
     spend_daily_budget!
     applicant_count = task == "rank_applicants" ? Array(context["applicants"] || context[:applicants]).size : nil
     outcome = AiOrchestrator.run(user: current_user, task:, context:, hirer: current_user.role == "employer", applicant_count:,
@@ -41,16 +43,19 @@ class AiController < ApplicationController
   rescue AiAssist::Error => e
     status = e.code == "AI_DISABLED" ? :service_unavailable : (e.code == "INVALID_CONTEXT" || e.code == "UNKNOWN_TASK" ? :unprocessable_content : :bad_gateway)
     render_error(e.message, status, e.code)
+  rescue AiUsageCap::Exceeded => e
+    render json: { error: e.message, code: "AI_USAGE_LIMIT_REACHED", remaining: e.remaining, limit: e.limit, period: e.period }, status: :payment_required
   rescue AiCredits::InsufficientCredits => e
     render_credits_exhausted(e)
   rescue AiSpendGuard::Paused => e
-    render_error(e.message, e.code == "AI_FREE_PAUSED" ? :payment_required : :service_unavailable, e.code)
+    render_error(e.message, :payment_required, e.code)
   end
 
-  # GET /api/ai/usage
+  # GET /api/ai/usage — the signed-in account's launch-mode usage cap for its own task group
+  # (talent: lifetime; hirer: monthly). No balance, no allowance, no "credits" — just how many
+  # of the free AI uses are left, for the small hint next to the AI buttons.
   def usage
-    resolution = AiCreditAccount.for(current_user)
-    render json: AiUsageReport.for(resolution)
+    render json: AiUsageCap.for(current_user, hirer: current_user.role == "employer")
   end
 
   # GET /api/ai/pricing — public catalogue.

@@ -1,24 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Sparkles, Gift } from 'lucide-react';
-import { toast } from 'sonner';
-import { apiGet, apiPost } from '../../lib/api';
-import { Button } from '../../components/ui/button';
+import { Sparkles } from 'lucide-react';
+import { apiGet } from '../../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
 import { Progress } from '../../components/ui/progress';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../components/ui/dialog';
 import { errorMessage } from '../../lib/errors';
 import { Panel, Empty } from './shared';
-import { AdminPageHeader, AdminSelect, HowToCallout, InfoTip } from './ui';
+import { AdminPageHeader, HowToCallout } from './ui';
 
 // GET /api/admin/ai/costs (Admin::AiController#costs) — see backend/docs/ai-assist.md.
 type AiCosts = {
@@ -30,11 +17,6 @@ type AiCosts = {
   byTier: Record<string, number>;
   topAccounts: { accountType: string; accountId: string; spendInr: number }[];
 };
-
-const ACCOUNT_TYPES = [
-  { value: 'user', label: 'User' },
-  { value: 'organization', label: 'Organization' },
-] as const;
 
 const inr = (value: number) => `₹${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
@@ -53,14 +35,13 @@ function BudgetBar({ label, used, budget }: { label: string; used: number; budge
   );
 }
 
+// Launch mode: only profile_headline, profile_bio, job_description and job_screening_questions
+// can ever appear here (everything else answers 403 AI_TASK_DISABLED before it's ever charged),
+// and there is no grant-credits form — AI billing stays off, so there is nothing to grant against.
 export default function AdminAiTab() {
   const [costs, setCosts] = useState<AiCosts | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [grantOpen, setGrantOpen] = useState(false);
-  const [grantForm, setGrantForm] = useState({ accountType: 'user', accountId: '', credits: '', note: '' });
-  const [confirmingGrant, setConfirmingGrant] = useState(false);
-  const [granting, setGranting] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -74,45 +55,16 @@ export default function AdminAiTab() {
   };
   useEffect(load, []);
 
-  const creditsValid = /^\d+$/.test(grantForm.credits) && Number(grantForm.credits) > 0;
-
-  async function submitGrant() {
-    if (!creditsValid || granting) return;
-    setGranting(true);
-    try {
-      const d = await apiPost<{ ok: boolean; balance: number }>('/admin/ai/grants', {
-        accountType: grantForm.accountType,
-        accountId: grantForm.accountId.trim(),
-        credits: Number(grantForm.credits),
-        note: grantForm.note.trim() || undefined,
-      });
-      toast.success(`Granted ${grantForm.credits} credits. New balance: ${d.balance}.`);
-      setGrantOpen(false);
-      setConfirmingGrant(false);
-      setGrantForm({ accountType: 'user', accountId: '', credits: '', note: '' });
-      load();
-    } catch (e: unknown) {
-      toast.error(errorMessage(e, 'Could not grant credits.'));
-    } finally {
-      setGranting(false);
-    }
-  }
-
   return (
     <div>
       <AdminPageHeader
         icon={Sparkles}
-        title="AI"
-        description="This month's Verse AI spend, budget guardrails and manual credit grants."
+        title="AI spend"
+        description="This month's Verse AI spend and budget guardrails, for the free profile and job-post writing help."
       />
       <HowToCallout storageKey="ai">
         Spend is estimated from reported token usage and resets on the 1st (UTC). The <b>free-tier</b> and <b>hard</b>{' '}
-        bars are the guardrails that pause free usage, and then everyone, once crossed.{' '}
-        <InfoTip
-          label="Grant credits"
-          text="Adds credits to an account's ledger immediately, at no charge. Every grant is audited."
-        />{' '}
-        Use <b>Grant credits</b> for support cases or goodwill credit.
+        bars are the guardrails that pause AI help for the month once crossed.
       </HowToCallout>
       <Panel error={error} onRetry={load} loading={loading}>
         {costs && (
@@ -176,12 +128,8 @@ export default function AdminAiTab() {
             </Card>
             <Card className="bg-white/[.05] border-white/10 xl:col-span-2">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between gap-3">
+                <CardTitle>
                   <h2>Top accounts by spend</h2>
-                  <Button size="sm" onClick={() => setGrantOpen(true)}>
-                    <Gift aria-hidden="true" size={14} className="mr-2" />
-                    Grant credits
-                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 max-h-96 overflow-auto">
@@ -202,95 +150,6 @@ export default function AdminAiTab() {
           </div>
         )}
       </Panel>
-
-      <Dialog open={grantOpen} onOpenChange={setGrantOpen}>
-        <DialogContent className="bg-slate-950 border-white/15 text-white">
-          <DialogHeader>
-            <DialogTitle>Grant AI credits</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Adds credits to an account's balance immediately, at no charge. Recorded in the audit log.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="ai-grant-account-type">Account type</Label>
-                <AdminSelect
-                  id="ai-grant-account-type"
-                  value={grantForm.accountType}
-                  onChange={(v) => setGrantForm((f) => ({ ...f, accountType: v }))}
-                  options={ACCOUNT_TYPES}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="ai-grant-credits">Credits</Label>
-                <Input
-                  id="ai-grant-credits"
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  value={grantForm.credits}
-                  onChange={(e) => setGrantForm((f) => ({ ...f, credits: e.target.value }))}
-                  aria-invalid={!creditsValid && grantForm.credits !== ''}
-                  className="bg-white/5 border-white/15"
-                />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="ai-grant-account-id">Account id</Label>
-              <Input
-                id="ai-grant-account-id"
-                value={grantForm.accountId}
-                onChange={(e) => setGrantForm((f) => ({ ...f, accountId: e.target.value }))}
-                placeholder="user_… or orga_…"
-                className="bg-white/5 border-white/15 font-mono"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="ai-grant-note">Reason</Label>
-              <Textarea
-                id="ai-grant-note"
-                value={grantForm.note}
-                onChange={(e) => setGrantForm((f) => ({ ...f, note: e.target.value }))}
-                maxLength={500}
-                className="bg-white/5 border-white/15 min-h-20"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setGrantOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={!creditsValid || !grantForm.accountId.trim()}
-              onClick={() => setConfirmingGrant(true)}
-            >
-              Grant
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={confirmingGrant} onOpenChange={setConfirmingGrant}>
-        <DialogContent className="bg-slate-950 border-white/15 text-white">
-          <DialogHeader>
-            <DialogTitle>Confirm grant</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Grant {grantForm.credits} AI credits to {grantForm.accountType}:{grantForm.accountId}? This takes effect
-              immediately and cannot be undone from here.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setConfirmingGrant(false)} disabled={granting}>
-              Back
-            </Button>
-            <Button type="button" onClick={submitGrant} disabled={granting} aria-busy={granting}>
-              {granting ? 'Granting…' : 'Confirm grant'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

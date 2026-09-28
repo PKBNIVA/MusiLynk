@@ -180,9 +180,10 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/ai/status", :public, { keys: %w[enabled tasks] }],
     [:get, "/api/ai/autocomplete", :public, { params: { field: "cities", q: "mum" }, bad: { field: "not-a-field", q: "mum" }, bad_status: [422], keys: %w[field query suggestions] }],
     # No ANTHROPIC_API_KEY in this environment, so AI assist answers 503 AI_DISABLED for every allowed role.
-    [:post, "/api/ai/suggest", :any, { ok: [503], params: { task: "post_caption", context: { kind: "release" } }, bad: { task: "not_a_real_task", context: {} }, bad_status: [503] }],
-    [:get, "/api/ai/usage", :any, { keys: %w[balance monthlyAllowance usedThisPeriod resetsAt plan recent] }],
-    [:get, "/api/ai/pricing", :public, { keys: %w[freeCreditsPerMonth aiPlus planAllowances topups taskCosts] }],
+    [:post, "/api/ai/suggest", :any, { ok: [503], params: { task: "profile_headline", context: {} }, bad: { task: "not_a_real_task", context: {} }, bad_status: [503] }],
+    [:get, "/api/ai/usage", :any, { keys: %w[remaining limit period] }],
+    # AI_BILLING_ENABLED is not set in this environment, so the launch-only fields are all /api/ai/pricing returns.
+    [:get, "/api/ai/pricing", :public, { keys: %w[freeCreditsPerMonth planAllowances taskCosts] }],
     # AI_BILLING_ENABLED is not set in this environment, so every AI purchase route answers 503.
     [:post, "/api/ai/topups", :any, { ok: [503], params: { pack: "small" }, bad: { pack: "not-a-pack" }, bad_status: [503] }],
     [:post, "/api/ai/topups/verify", :any, { ok: [503], params: { paymentRecordId: "none", orderId: "none", paymentId: "none", signature: "none" }, bad: {}, bad_status: [503] }],

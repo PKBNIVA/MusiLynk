@@ -9,7 +9,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
-import { apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
+import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { toast } from 'sonner';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../lib/authContext';
@@ -17,14 +17,7 @@ import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, EmployerApplication, Job } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
-import {
-  isAiPaywallError,
-  purchaseAiTopup,
-  subscribeAiPlus,
-  suggestAi,
-  useAiTaskEnabled,
-  type AiPaywallError,
-} from '../lib/ai';
+import { isAiPaywallError, suggestAi, useAiTaskEnabled, type AiPaywallError } from '../lib/ai';
 import { AiCreditsBadge } from '../components/ai/AiCreditsBadge';
 import { AiPaywallDialog } from '../components/ai/AiPaywallDialog';
 import {
@@ -78,11 +71,6 @@ function parseCandidateSummary(text: string): CandidateSummary {
   return { bullets, fit: fitLine ? fitLine.replace(/^fit:\s*/i, '') : '' };
 }
 
-function billingDisabledMessage(error: unknown, fallback: string) {
-  if (error instanceof ApiError && error.code === 'AI_BILLING_DISABLED')
-    return 'AI credit purchases are not enabled yet.';
-  return error instanceof Error ? error.message : fallback;
-}
 // datetime-local value for "now", in the viewer's time zone.
 const localNow = () => {
   const d = new Date();
@@ -140,17 +128,6 @@ export default function EmployerApplications() {
   const interviewQEnabled = useAiTaskEnabled('interview_questions');
   const rejectionEnabled = useAiTaskEnabled('rejection_note');
   const recruiterAiAvailable = outreachEnabled || interviewQEnabled || rejectionEnabled;
-
-  function buyTopup(pack: string) {
-    purchaseAiTopup(pack)
-      .then(() => toast.success('Credits added to your account.'))
-      .catch((e: unknown) => toast.error(billingDisabledMessage(e, 'The top-up could not be completed.')));
-  }
-  function subscribePlus() {
-    subscribeAiPlus()
-      .then(() => toast.success('Verse AI Plus is active.'))
-      .catch((e: unknown) => toast.error(billingDisabledMessage(e, 'The subscription could not be started.')));
-  }
 
   async function summarize(a: EmployerApplication) {
     setSummaries((s) => ({ ...s, [a.id]: { ...s[a.id], loading: true, error: undefined, open: true } }));
@@ -773,14 +750,7 @@ export default function EmployerApplications() {
             )}
           </div>
         </FormDialog>
-        {paywall && (
-          <AiPaywallDialog
-            error={paywall}
-            onSubscribePlus={subscribePlus}
-            onBuyTopup={buyTopup}
-            onClose={() => setPaywall(null)}
-          />
-        )}
+        {paywall && <AiPaywallDialog error={paywall} onClose={() => setPaywall(null)} />}
       </main>
     </div>
   );

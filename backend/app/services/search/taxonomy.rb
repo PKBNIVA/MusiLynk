@@ -30,6 +30,14 @@ module Search
     # The search terms for a directory role key ("performer", "A&R"; any case), or nil.
     def talent_role_terms(key) = data[:role_lookup][key.to_s.strip.downcase]&.fetch(:terms)
 
+    # Genre names the portfolio classifier and rules recognise.
+    def genres = data[:genres]
+
+    # Flat value lists for GET /api/ai/autocomplete (AutocompleteTaxonomy).
+    def autocomplete_skills = data[:autocomplete_skills]
+    def autocomplete_genres = data[:autocomplete_genres]
+    def autocomplete_cities = data[:autocomplete_cities]
+
     def as_json
       { functionAreas: function_areas, legacyFunctionAreas: legacy_function_areas,
         talentRoles: talent_roles.map { |key, role| { key:, label: role[:label] } } }
@@ -44,8 +52,11 @@ module Search
         roles = raw.fetch("talent_roles").to_h do |key, role|
           [key, { label: role.fetch("label"), terms: role.fetch("terms").map { _1.to_s.downcase }.freeze }.freeze]
         end.freeze
-        { function_areas: functions, legacy:, lookup: lookup.freeze, talent_roles: roles,
-          role_lookup: roles.transform_keys(&:downcase).freeze }.freeze
+        { function_areas: functions, legacy:, lookup: lookup.freeze, talent_roles: roles, genres: raw.fetch("genres", []).map(&:to_s).freeze,
+          role_lookup: roles.transform_keys(&:downcase).freeze,
+          autocomplete_skills: raw.fetch("autocomplete_skills", []).freeze,
+          autocomplete_genres: raw.fetch("autocomplete_genres", []).freeze,
+          autocomplete_cities: raw.fetch("autocomplete_cities", []).freeze }.freeze
       end
     end
   end

@@ -5,6 +5,8 @@
 #   job alerts, notifications, availability, recent activity, verification evidence,
 #   applications, reviews written by or about the user, shortlists, talent folders,
 #   memberships, urgent-request responses and blocks.
+# - Showcase (see erase_showcase): personal portfolios, the career record, resumes and review
+#   suggestions are removed. Portfolios owned by an organization or act stay with the Page.
 # - Stage (The Stage community feed): follows the user made or received, and applause and
 #   comments they gave as themselves, are removed; posts they made as themselves are
 #   removed (which cascades their own reactions/comments and nulls out any reference to
@@ -57,6 +59,7 @@ class AccountErasure
     uploads = Upload.where(user: @user).to_a
     ActiveRecord::Base.transaction do
       @user.lock!
+      erase_showcase
       erase_owned_rows
       erase_stage_content
       retire_public_listings
@@ -102,6 +105,23 @@ class AccountErasure
     UserBlock.where(blocker_id: id).or(UserBlock.where(blocked_id: id)).delete_all
     @user.profile&.destroy!
   end
+
+  # --- Showcase: portfolios, career record, resumes and suggestions -------------------------
+  # Runs before erase_owned_rows deletes the work samples. Nothing references these rows by
+  # foreign key except applications (portfolio_id/resume_id ON DELETE SET NULL), and those
+  # applications are removed with the account anyway.
+  def erase_showcase
+    id = @user.id
+    item_ids = @user.portfolio_items.select(:id)
+    entry_ids = @user.career_entries.select(:id)
+    ShowcaseSuggestion.where(owner_type: "user", owner_id: id)
+      .or(ShowcaseSuggestion.where(subject_type: "portfolio_item", subject_id: item_ids))
+      .or(ShowcaseSuggestion.where(subject_type: "career_entry", subject_id: entry_ids)).delete_all
+    Portfolio.where(owner_type: "user", owner_id: id).delete_all
+    @user.resumes.delete_all
+    @user.career_entries.delete_all
+  end
+  # --- end Showcase ------------------------------------------------------------------------
 
   # Removes this person's own Stage activity (see the header). Posts, applause and comments
   # are gathered up front so the posts *other people* still have can be recounted afterwards —

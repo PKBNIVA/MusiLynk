@@ -5,7 +5,7 @@ class ReportsController < ApplicationController
   FIELD_LIMITS = { entityType: 40, entityId: 120, reason: 200, details: 5_000 }.freeze
   # Kept in step with src/app/components/ReportDialog.tsx REPORT_REASONS.
   REASONS = ["Harassment", "Asks for payment", "Spam or scam", "Unsafe contact request", "Misleading listing", "Other"].freeze
-  ENTITY_TYPES = %w[user job act review post comment].freeze
+  ENTITY_TYPES = %w[user job act review portfolio resume post comment].freeze
 
   def create
     return unless authenticate!
@@ -33,12 +33,21 @@ class ReportsController < ApplicationController
 
   private
 
+  def sent_to_reporter?(column, entity_id)
+    Application.joins(:job).where(jobs: { employer_id: current_user.id }).where(column => entity_id).exists?
+  end
+
   def entity_exists?(entity_type, entity_id)
     case entity_type
     when "user" then User.exists?(id: entity_id)
     when "job" then Job.exists?(id: entity_id)
     when "act" then Act.exists?(id: entity_id)
     when "review" then Review.exists?(id: entity_id)
+    # Only what the reporter can actually see: a public or link-only portfolio, or a portfolio or
+    # resume that was sent with an application to one of the reporter's jobs.
+    when "portfolio"
+      Portfolio.with_owner.find_by(id: entity_id)&.publicly_readable? || sent_to_reporter?(:portfolio_id, entity_id)
+    when "resume" then sent_to_reporter?(:resume_id, entity_id)
     when "post" then Post.exists?(id: entity_id)
     when "comment" then PostComment.exists?(id: entity_id)
     else false

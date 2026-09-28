@@ -109,9 +109,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
     t.jsonb "screening_answers", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "portfolio_id"
+    t.string "resume_id"
+    t.jsonb "materials_snapshot"
+    t.index "((materials_snapshot #>> '{resume,uploadId}'::text[]))", name: "index_applications_on_snapshot_upload_id", where: "(materials_snapshot IS NOT NULL)"
     t.index ["candidate_id"], name: "index_applications_on_candidate_id"
     t.index ["job_id", "candidate_id"], name: "index_applications_on_job_id_and_candidate_id", unique: true
     t.index ["job_id"], name: "index_applications_on_job_id"
+    t.index ["portfolio_id"], name: "index_applications_on_portfolio_id", where: "(portfolio_id IS NOT NULL)"
+    t.index ["resume_id"], name: "index_applications_on_resume_id", where: "(resume_id IS NOT NULL)"
   end
 
   create_table "audit_logs", id: :string, force: :cascade do |t|
@@ -281,6 +287,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
     t.index ["act_id"], name: "index_booking_requests_on_act_id"
     t.index ["requester_id"], name: "index_booking_requests_on_requester_id"
     t.check_constraint "status::text = ANY (ARRAY['requested'::character varying, 'viewed'::character varying, 'negotiating'::character varying, 'quoted'::character varying, 'accepted'::character varying, 'completed'::character varying, 'disputed'::character varying, 'declined'::character varying, 'cancelled'::character varying]::text[])", name: "booking_requests_status_valid"
+  end
+
+  create_table "career_entries", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.string "kind", null: false
+    t.jsonb "fields", default: {}, null: false
+    t.date "start_on"
+    t.date "end_on"
+    t.jsonb "tags", default: [], null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "backfilled", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "kind"], name: "index_career_entries_on_user_id_and_kind"
   end
 
   create_table "career_resources", id: :string, force: :cascade do |t|
@@ -538,10 +558,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
     t.datetime "published_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "posted_as_type"
+    t.string "posted_as_id"
     t.index "((skills)::text) gin_trgm_ops", name: "index_jobs_on_skills_text_trgm", using: :gin
     t.index ["company"], name: "index_jobs_on_company", opclass: :gin_trgm_ops, using: :gin
     t.index ["description"], name: "index_jobs_on_description", opclass: :gin_trgm_ops, using: :gin
     t.index ["employer_id"], name: "index_jobs_on_employer_id"
+    t.index ["posted_as_type", "posted_as_id"], name: "index_jobs_on_posted_as_type_and_posted_as_id", where: "(posted_as_id IS NOT NULL)"
     t.index ["status", "created_at"], name: "index_jobs_on_status_and_created_at"
     t.index ["title"], name: "index_jobs_on_title", opclass: :gin_trgm_ops, using: :gin
   end
@@ -633,6 +656,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
     t.index ["description"], name: "index_portfolio_items_on_description", opclass: :gin_trgm_ops, using: :gin
     t.index ["title"], name: "index_portfolio_items_on_title", opclass: :gin_trgm_ops, using: :gin
     t.index ["user_id"], name: "index_portfolio_items_on_user_id"
+  end
+
+  create_table "portfolios", id: :string, force: :cascade do |t|
+    t.string "owner_type", null: false
+    t.string "owner_id", null: false
+    t.string "title", null: false
+    t.string "purpose"
+    t.string "headline"
+    t.text "bio"
+    t.string "city"
+    t.jsonb "genres"
+    t.jsonb "rates"
+    t.jsonb "rules", default: {}, null: false
+    t.jsonb "pinned_item_ids", default: [], null: false
+    t.jsonb "excluded_item_ids", default: [], null: false
+    t.jsonb "item_order", default: [], null: false
+    t.string "visibility", default: "public", null: false
+    t.string "slug", null: false
+    t.boolean "is_default", default: false, null: false
+    t.string "status", default: "active", null: false
+    t.boolean "backfilled", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["owner_type", "owner_id"], name: "index_portfolios_on_owner_type_and_owner_id"
+    t.index ["owner_type", "owner_id"], name: "index_portfolios_one_default_per_owner", unique: true, where: "is_default"
+    t.index ["slug"], name: "index_portfolios_on_slug", unique: true
   end
 
   create_table "post_comments", id: :string, force: :cascade do |t|
@@ -775,6 +824,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
     t.index ["minute"], name: "index_request_metric_minutes_on_minute", unique: true
   end
 
+  create_table "resumes", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.string "title", null: false
+    t.string "target_role"
+    t.string "headline"
+    t.text "summary"
+    t.jsonb "rules", default: {}, null: false
+    t.jsonb "pinned_entry_ids", default: [], null: false
+    t.jsonb "excluded_entry_ids", default: [], null: false
+    t.jsonb "entry_order", default: [], null: false
+    t.jsonb "section_order", default: [], null: false
+    t.string "upload_id"
+    t.boolean "is_default", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["upload_id"], name: "index_resumes_on_upload_id"
+    t.index ["user_id"], name: "index_resumes_on_user_id"
+    t.index ["user_id"], name: "index_resumes_one_default_per_user", unique: true, where: "is_default"
+  end
+
   create_table "reviews", id: :string, force: :cascade do |t|
     t.string "author_id", null: false
     t.string "employer_id", null: false
@@ -809,6 +878,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
     t.datetime "flagged_at"
     t.index ["token_digest"], name: "index_sessions_on_token_digest", unique: true
     t.index ["user_id"], name: "index_sessions_on_user_id"
+  end
+
+  create_table "showcase_suggestions", id: :string, force: :cascade do |t|
+    t.string "owner_type", null: false
+    t.string "owner_id", null: false
+    t.string "target_type", null: false
+    t.string "target_id", null: false
+    t.string "subject_type", null: false
+    t.string "subject_id", null: false
+    t.string "kind", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.string "reason"
+    t.string "status", default: "pending", null: false
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["owner_type", "owner_id", "status"], name: "idx_on_owner_type_owner_id_status_473d48edb0"
+    t.index ["subject_type", "subject_id"], name: "index_showcase_suggestions_on_subject_type_and_subject_id"
+    t.index ["target_type", "target_id", "subject_type", "subject_id", "kind"], name: "index_showcase_suggestions_uniqueness", unique: true
   end
 
   create_table "sign_in_codes", id: :string, force: :cascade do |t|
@@ -984,6 +1072,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
   add_foreign_key "application_events", "applications"
   add_foreign_key "application_events", "users", column: "actor_id"
   add_foreign_key "applications", "jobs"
+  add_foreign_key "applications", "portfolios", on_delete: :nullify
+  add_foreign_key "applications", "resumes", on_delete: :nullify
   add_foreign_key "applications", "users", column: "candidate_id"
   add_foreign_key "audit_logs", "users", column: "actor_id"
   add_foreign_key "availability_windows", "users"
@@ -999,6 +1089,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
   add_foreign_key "booking_quotes", "users", column: "created_by_id"
   add_foreign_key "booking_requests", "acts"
   add_foreign_key "booking_requests", "users", column: "requester_id"
+  add_foreign_key "career_entries", "users"
   add_foreign_key "conversations", "jobs"
   add_foreign_key "conversations", "users", column: "candidate_id"
   add_foreign_key "conversations", "users", column: "employer_id"
@@ -1030,6 +1121,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
   add_foreign_key "recent_activities", "users"
   add_foreign_key "reports", "users", column: "reporter_id"
   add_foreign_key "reports", "users", column: "resolved_by_id"
+  add_foreign_key "resumes", "uploads", on_delete: :nullify
+  add_foreign_key "resumes", "users"
   add_foreign_key "reviews", "users", column: "author_id"
   add_foreign_key "reviews", "users", column: "employer_id"
   add_foreign_key "saved_jobs", "jobs"

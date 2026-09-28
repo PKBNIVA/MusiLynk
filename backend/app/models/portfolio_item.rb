@@ -1,6 +1,7 @@
 class PortfolioItem < ApplicationRecord
   MEDIA_URL_ATTRIBUTES = %w[url thumbnail_url waveform_url].freeze
   # Hosts that serve bucket objects directly; links there must be the user's own upload.
+  SYNC_ATTRIBUTES = %w[title description credited_as kind year tags genres roles instruments].freeze
   STORAGE_HOST_SUFFIXES = %w[.r2.cloudflarestorage.com .r2.dev .amazonaws.com].freeze
 
   belongs_to :user
@@ -16,6 +17,11 @@ class PortfolioItem < ApplicationRecord
   # Uploaded objects are deleted once no work sample refers to them any more.
   after_update_commit -> { release_uploads(previous_changes.slice(*MEDIA_URL_ATTRIBUTES).values.map(&:first)) }
   after_destroy_commit -> { release_uploads(attributes.values_at(*MEDIA_URL_ATTRIBUTES)) }
+  # Portfolios are views over the library: re-evaluate them when an item is added or its
+  # describing fields change (see ShowcaseSync).
+  after_commit -> { ShowcaseSync.item(self) }, on: :create
+  after_commit -> { ShowcaseSync.item(self) if (previous_changes.keys & SYNC_ATTRIBUTES).any? }, on: :update
+  after_destroy_commit -> { ShowcaseSync.forget_item(id) }
 
   def api_json = attributes.transform_keys { _1.camelize(:lower) }.merge(type: kind)
 

@@ -13,6 +13,13 @@ module ScalarParams
     false
   end
 
+  # The JSON value of params[key] as plain Hash/Array/scalar data (nil when absent), for
+  # structured fields that the model validates field by field (portfolio rates, resume sections).
+  def json_param(key)
+    value = params[key]
+    value.respond_to?(:as_json) ? value.as_json : value
+  end
+
   # A list of short strings from an array of scalars or a single scalar; nil for anything else.
   def string_list_param(key, max: 20)
     value = params[key]

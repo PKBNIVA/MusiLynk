@@ -79,6 +79,32 @@ Rails.application.routes.draw do
     end
 
     resources :portfolio, only: %i[index create update destroy], controller: "portfolio"
+    # Portfolios are views over the owner's work samples, resumes views over the career record.
+    resources :portfolios, only: %i[index show create update destroy] do
+      collection { post :draft }
+      member do
+        post :default, action: :make_default
+        post :reset
+        put "items/:itemId", action: :set_item
+      end
+    end
+    get "public/portfolios/:slug", to: "portfolios#public_show"
+    resources :career_entries, path: "career-entries", only: %i[index create update destroy]
+    resources :resumes, only: %i[index show create update destroy] do
+      member do
+        post :default, action: :make_default
+        post :reset
+        put "entries/:entryId", action: :set_entry
+      end
+    end
+    resources :suggestions, only: :index do
+      collection { post "accept-all", action: :accept_all }
+      member do
+        post :accept
+        post :reject
+      end
+    end
+    get "pages/:type/:id/jobs", to: "pages#jobs"
     get "notifications/unread", to: "notifications#unread"
     post "notifications/read-all", to: "notifications#read_all"
     get "notifications/preferences", to: "notifications#preferences"
@@ -92,6 +118,9 @@ Rails.application.routes.draw do
     resources :reviews, only: %i[index create]
     resources :resources, only: :index
     get "taxonomy", to: "catalog#taxonomy"
+    get "ai/status", to: "ai#status"
+    post "ai/suggest", to: "ai#suggest"
+    get "ai/autocomplete", to: "ai#autocomplete"
     get "dashboard", to: "dashboard#show"
     get "search", to: "search#index"
     get "search/status", to: "search#status"

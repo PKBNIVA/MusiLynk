@@ -2,6 +2,7 @@ class Act < ApplicationRecord
   belongs_to :owner, class_name: "User"
   has_many :act_members, dependent: :destroy
   has_many :booking_requests, dependent: :destroy
+  has_many :portfolios, -> { where(owner_type: "act") }, foreign_key: :owner_id, dependent: :destroy, inverse_of: false
   attribute :genres, :json, default: -> { [] }
   attribute :languages, :json, default: -> { [] }
   attribute :event_types, :json, default: -> { [] }

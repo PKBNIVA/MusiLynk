@@ -18,6 +18,9 @@ class AccountExport
       account: row(@user).except("synthetic_batch"),
       profile: @user.profile && row(@user.profile),
       portfolio: rows(@user.portfolio_items.order(:sort_order, :created_at)),
+      portfolios: rows(Portfolio.where(owner_type: "user", owner_id: @user.id).order(:created_at)),
+      careerEntries: rows(@user.career_entries.order(:kind, :position, :created_at)),
+      resumes: rows(@user.resumes.order(:created_at)),
       uploads: Upload.where(user: @user).order(:created_at).map { _1.slice(:id, :filename, :content_type, :byte_size, :public_url, :status, :created_at) },
       applications: @user.applications.includes(:job).order(:created_at).map { |application|
         row(application).merge("job" => application.job.slice(:id, :title, :company, :location))

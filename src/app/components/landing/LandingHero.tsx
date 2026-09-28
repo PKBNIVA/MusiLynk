@@ -1,7 +1,13 @@
 import { Link } from 'react-router';
+import { AppSelect, type AppSelectOption } from '../ui/app-select';
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, MapPin, Mic2, Play, Zap, type LucideIcon } from 'lucide-react';
 
 export const LAUNCH_CITIES = ['Mumbai'] as const;
+// Live cities, then a disabled row saying more are coming. The shared dark listbox, never the OS one.
+const CITY_OPTIONS: AppSelectOption[] = [
+  ...LAUNCH_CITIES.map((name) => ({ value: name, label: name, description: null })),
+  { value: 'more-cities-soon', label: 'More cities soon', description: null, disabled: true },
+];
 
 /**
  * Above the fold: the promise in one line, the city, and the two ways in. Sized so that on a
@@ -21,22 +27,16 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.05] py-1 pl-3 pr-1.5 text-sm text-slate-200">
             <MapPin aria-hidden="true" size={15} className="text-teal-300" />
-            <label htmlFor="landing-city">Now booking in</label>
-            <select
+            <span id="landing-city-label">Now booking in</span>
+            <AppSelect
               id="landing-city"
+              aria-labelledby="landing-city-label landing-city"
               value={city}
-              onChange={(event) => onCityChange(event.target.value)}
-              className="min-h-8 cursor-pointer rounded-full border border-white/15 bg-slate-900 px-2.5 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
-            >
-              {LAUNCH_CITIES.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-              <option disabled value="">
-                More cities soon
-              </option>
-            </select>
+              onValueChange={(value) => value && onCityChange(value)}
+              options={CITY_OPTIONS}
+              className="h-11 w-auto rounded-full bg-slate-900 px-3.5 font-semibold text-white sm:h-9"
+              contentClassName="min-w-48"
+            />
           </div>
           <h1
             id="hero-title"

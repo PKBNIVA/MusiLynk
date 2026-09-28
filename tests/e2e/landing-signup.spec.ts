@@ -22,6 +22,8 @@ test.describe('landing page', () => {
     await inViewport(page, /Hire a verified musician for your session or gig/, 'heading');
     await inViewport(page, /I'm hiring/);
     await inViewport(page, /I'm a musician or crew/);
+    const trigger = await page.getByRole('combobox', { name: /Now booking in/ }).boundingBox();
+    expect(trigger!.height, 'city picker is a 44px touch target').toBeGreaterThanOrEqual(44);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
@@ -29,7 +31,14 @@ test.describe('landing page', () => {
     await mockSignupApi(page);
     await page.goto('/');
     await expect(page).toHaveTitle(/Mumbai/);
-    await expect(page.getByLabel('Now booking in')).toHaveValue('Mumbai');
+    // The shared dark listbox (AppSelect), not the OS <select> list.
+    const city = page.getByRole('combobox', { name: /Now booking in/ });
+    await expect(city).toHaveText('Mumbai');
+    expect(await page.locator('select#landing-city').count()).toBe(0);
+    await city.click();
+    await expect(page.getByRole('option', { name: 'Mumbai' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('option', { name: 'More cities soon' })).toHaveAttribute('aria-disabled', 'true');
+    await page.keyboard.press('Escape');
     await page
       .getByTestId('hero-paths')
       .getByRole('link', { name: /I'm hiring/ })

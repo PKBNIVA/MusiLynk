@@ -1,11 +1,24 @@
 module Admin
   class OperationsController < BaseController
+    include AdminPagination
+
     # Traffic, background jobs, payments and email health for the last hour and day.
     def show = render(json: OperationsSnapshot.new.call)
 
-    def audit = render(json: { logs: AuditLog.includes(:actor).order(created_at: :desc).limit(300).map { _1.attributes.merge(actorName: _1.actor&.name) } })
-    def subscriptions = render(json: { subscriptions: Subscription.includes(:user).order(created_at: :desc).limit(500).map { _1.attributes.merge(name: _1.user.name, email: _1.user.email) } })
-    def billing_attempts = render(json: { attempts: BillingAttempt.includes(:user).order(created_at: :desc).limit(500).map { _1.attributes.merge(email: _1.user.email) } })
+    def audit
+      rows, meta = admin_paginate(AuditLog.includes(:actor).order(created_at: :desc), default_per: 100)
+      render json: { logs: rows.map { _1.attributes.merge(actorName: _1.actor&.name) } }.merge(meta)
+    end
+
+    def subscriptions
+      rows, meta = admin_paginate(Subscription.includes(:user).order(created_at: :desc), default_per: 100)
+      render json: { subscriptions: rows.map { _1.attributes.merge(name: _1.user.name, email: _1.user.email) } }.merge(meta)
+    end
+
+    def billing_attempts
+      rows, meta = admin_paginate(BillingAttempt.includes(:user).order(created_at: :desc), default_per: 100)
+      render json: { attempts: rows.map { _1.attributes.merge(email: _1.user.email) } }.merge(meta)
+    end
 
     def reconcile_billing_attempt
       attempt = BillingAttempt.find(params[:id])
@@ -22,10 +35,11 @@ module Admin
       render_error(error.message, :bad_gateway)
     end
     def bookings
-      rows = BookingRequest.includes(:requester, act: :owner, booking_payments: []).order(created_at: :desc).limit(500).map do |booking|
+      page_rows, meta = admin_paginate(BookingRequest.includes(:requester, act: :owner, booking_payments: []).order(created_at: :desc), default_per: 100)
+      rows = page_rows.map do |booking|
         booking.attributes.merge(actName: booking.act.name, actOwner: booking.act.owner.name, requesterName: booking.requester.name, paidAmount: booking.booking_payments.select { _1.status == "paid" }.sum(&:amount))
       end
-      render json: { bookings: rows }
+      render json: { bookings: rows }.merge(meta)
     end
   end
 end

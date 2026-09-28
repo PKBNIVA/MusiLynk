@@ -1,5 +1,7 @@
 module Admin
   class ReportsController < BaseController
+    include AdminPagination
+
     DECISIONS = %w[warn suspend dismiss].freeze
     EXCERPT_SIZE = 20
     HISTORY_WINDOW = 90.days
@@ -7,7 +9,10 @@ module Admin
     # Written by the conversation report flow at the end of `details` (after any text from the reporter).
     CONVERSATION_REFERENCE = /Reported from conversation (conv_[0-9a-f-]{36})\.?\s*\z/
 
-    def index = render(json: { reports: Report.includes(:reporter).order(created_at: :desc).limit(500).map { _1.attributes.merge(reporterName: _1.reporter&.name) } })
+    def index
+      rows, meta = admin_paginate(Report.includes(:reporter).order(created_at: :desc), default_per: 100)
+      render json: { reports: rows.map { _1.attributes.merge(reporterName: _1.reporter&.name) } }.merge(meta)
+    end
 
     def update
       return render_error("Invalid report status.", :bad_request) unless %w[resolved dismissed].include?(params[:status])

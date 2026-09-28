@@ -95,12 +95,54 @@ class Notifier
 
     def message_link(conversation) = "/messages?c=#{conversation.id}"
 
+    STAGE_APPLAUSE_KIND = "stage_applause".freeze
+    STAGE_COMMENT_KIND = "stage_comment".freeze
+
+    # Someone applauded your post. Coalesced per post the same way new-message notifications
+    # are: the recipient keeps at most one unread "applause" notice per post, refreshed as
+    # further applause arrives, instead of one row per reaction.
+    def stage_applause(post, actor)
+      recipient = post.created_by
+      return if recipient.nil? || recipient.id == actor.user&.id
+      link = "/stage/posts/#{post.id}"
+      coalesce(recipient, kind: STAGE_APPLAUSE_KIND, link:,
+        title: "New applause on your post", body: "#{actor.name} applauded your post.")
+    end
+
+    # Someone commented on your post. Same per-post coalescing as applause.
+    def stage_comment(post, comment, actor)
+      recipient = post.created_by
+      return if recipient.nil? || recipient.id == comment.created_by_user_id
+      link = "/stage/posts/#{post.id}"
+      coalesce(recipient, kind: STAGE_COMMENT_KIND, link:,
+        title: "New comment on your post", body: "#{actor.name} commented: #{comment.body.to_s.truncate(140)}")
+    end
+
+    def stage_new_follower(follow, follower)
+      return unless follow.followable_type == "user"
+      recipient = User.find_by(id: follow.followable_id)
+      return if recipient.nil? || recipient.id == follower.id
+      notify(recipient, kind: "stage_follower", title: "New follower", link: "/stage/authors/user/#{follower.id}",
+        body: "#{follower.name} started following you.")
+    end
+
     private
 
     def notify(user, **attributes)
       return unless user
 
       Notification.create!(user:, **attributes)
+    end
+
+    # Keeps at most one unread notification per (user, kind, link), refreshed in place as
+    # further events arrive, the same debouncing new_message uses for conversations.
+    def coalesce(user, kind:, link:, title:, body:)
+      existing = user.notifications.where(kind:, link:, read_at: nil).order(created_at: :desc).first
+      if existing
+        existing.update!(title:, body:, created_at: Time.current)
+      else
+        notify(user, kind:, title:, body:, link:)
+      end
     end
 
     def email(user, template, **params)

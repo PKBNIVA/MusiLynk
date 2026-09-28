@@ -5,7 +5,7 @@ class ReportsController < ApplicationController
   FIELD_LIMITS = { entityType: 40, entityId: 120, reason: 200, details: 5_000 }.freeze
   # Kept in step with src/app/components/ReportDialog.tsx REPORT_REASONS.
   REASONS = ["Harassment", "Asks for payment", "Spam or scam", "Unsafe contact request", "Misleading listing", "Other"].freeze
-  ENTITY_TYPES = %w[user job act review].freeze
+  ENTITY_TYPES = %w[user job act review post comment].freeze
 
   def create
     return unless authenticate!
@@ -39,6 +39,8 @@ class ReportsController < ApplicationController
     when "job" then Job.exists?(id: entity_id)
     when "act" then Act.exists?(id: entity_id)
     when "review" then Review.exists?(id: entity_id)
+    when "post" then Post.exists?(id: entity_id)
+    when "comment" then PostComment.exists?(id: entity_id)
     else false
     end
   end

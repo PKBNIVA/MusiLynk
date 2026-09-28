@@ -230,7 +230,25 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/admin/demo-data", :admin, { ok: [202], params: { size: "small" }, bad: { size: "enormous" }, bad_status: [422], keys: %w[jobId job] }],
     [:delete, "/api/admin/demo-data", :admin, { ok: [202], keys: %w[jobId job] }],
     [:get, "/api/admin/demo-data/jobs/{demo_job}", :admin, { missing: :demo_job, keys: %w[job] }],
-    [:delete, "/api/admin/demo-data/{demo_batch}", :admin, { ok: [202], keys: %w[jobId job] }]
+    [:delete, "/api/admin/demo-data/{demo_batch}", :admin, { ok: [202], keys: %w[jobId job] }],
+
+    [:get, "/api/stage/feed", :any, { keys: %w[posts nextCursor] }],
+    [:post, "/api/stage/posts", :any, { ok: [201], params: ->(_w, a) { { body: "Matrix new stage post by #{a}" } }, bad: {}, bad_status: [422], keys: %w[id post] }],
+    [:get, "/api/stage/posts/{stage_post}", :public, { keys: %w[post], missing: :stage_post }],
+    [:patch, "/api/stage/posts/{stage_post}", :any, { params: { body: "Matrix edited stage post" }, missing: :stage_post, bad: { body: "x" * 3001 }, bad_status: [422], keys: %w[post] }],
+    [:put, "/api/stage/posts/{stage_post}", :any, { params: { body: "Matrix edited stage post (put)" }, missing: :stage_post, keys: %w[post] }],
+    [:delete, "/api/stage/posts/{stage_post}", :any, { missing: :stage_post }],
+    [:get, "/api/stage/authors/user/{self}/posts", :public, { keys: %w[posts nextCursor] }],
+    [:post, "/api/stage/posts/{stage_post}/applause", :any, { ok: [201], missing: :stage_post, keys: %w[ok applauseCount] }],
+    [:delete, "/api/stage/posts/{stage_post}/applause", :any, { missing: :stage_post, keys: %w[ok applauseCount] }],
+    [:get, "/api/stage/posts/{stage_post}/comments", :public, { keys: %w[comments], missing: :stage_post }],
+    [:post, "/api/stage/posts/{stage_post}/comments", :any, { ok: [201], params: { body: "Matrix stage comment" }, bad: { body: "" }, bad_status: [422], missing: :stage_post, keys: %w[id comment] }],
+    [:delete, "/api/stage/comments/{stage_comment}", :any, { missing: :stage_comment }],
+    [:post, "/api/stage/follows", :any, { ok: [201], params: ->(w, _a) { { followableType: "user", followableId: w.refs[:shared][:stage_follow_target] } }, bad: { followableType: "bogus", followableId: "x" }, bad_status: [422] }],
+    [:delete, "/api/stage/follows/user/{stage_follow_target}", :any, {}],
+    [:get, "/api/stage/authors/user/{self}/followers", :public, { keys: %w[followersCount following] }],
+    [:get, "/api/stage/authors/user/{self}/following", :public, { keys: %w[followingCount] }],
+    [:get, "/api/stage/tags/matrixtag", :public, { keys: %w[tag posts nextCursor] }]
   ].freeze
 
   # Findings in files owned by other workstreams: label => [step, reason]. The generated test
@@ -342,6 +360,20 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
       peer = world.user(ApiMatrixWorld::PEER[actor])
       world.refs[actor][:received_application] = Application.create!(job: own, candidate: peer, status: "Applied").id
     end
+
+    ApiMatrixWorld::ACTORS.each do |actor|
+      owner = world.user(actor)
+      stage_post = Post.create!(author_type: "user", author_id: owner.id, created_by_user_id: owner.id, body: "Matrix stage post by #{actor}", visibility: "public")
+      world.refs[actor][:stage_post] = stage_post.id
+      world.refs[actor][:self] ||= owner.id
+      world.refs[actor][:stage_comment] = stage_post.post_comments.create!(author_type: "user", author_id: owner.id, created_by_user_id: owner.id, body: "Matrix comment", status: "active").id
+    end
+    world.refs[:shared][:stage_post] = world.refs[:js][:stage_post]
+    world.refs[:shared][:stage_comment] = world.refs[:js][:stage_comment]
+    world.refs[:shared][:stage_follow_target] = User.create!(name: "Matrix Stage Followable", email: "matrix-stage-follow-#{SecureRandom.hex(4)}@example.com",
+      password: ApiMatrixWorld::PASSWORD, role: "jobseeker", status: "active", profile_complete: true).id
+    world.refs[:shared][:stage_tag_post] = Post.create!(author_type: "user", author_id: world.user(:js).id, created_by_user_id: world.user(:js).id,
+      body: "Matrix #matrixtag post", visibility: "public").id
   end
 
   def ok_for(options, actor)

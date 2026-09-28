@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_140300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -364,6 +364,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_120000) do
     t.index ["user_id"], name: "index_email_tokens_on_user_id"
   end
 
+  create_table "follows", id: :string, force: :cascade do |t|
+    t.string "follower_user_id", null: false
+    t.string "followable_type", null: false
+    t.string "followable_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["followable_type", "followable_id"], name: "index_follows_on_followable_type_and_followable_id"
+    t.index ["follower_user_id", "followable_type", "followable_id"], name: "index_follows_on_follower_and_followable", unique: true
+  end
+
   create_table "good_job_batches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -623,6 +633,64 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_120000) do
     t.index ["description"], name: "index_portfolio_items_on_description", opclass: :gin_trgm_ops, using: :gin
     t.index ["title"], name: "index_portfolio_items_on_title", opclass: :gin_trgm_ops, using: :gin
     t.index ["user_id"], name: "index_portfolio_items_on_user_id"
+  end
+
+  create_table "post_comments", id: :string, force: :cascade do |t|
+    t.string "post_id", null: false
+    t.string "author_type", null: false
+    t.string "author_id", null: false
+    t.string "created_by_user_id", null: false
+    t.text "body", null: false
+    t.string "parent_id"
+    t.string "status", default: "active", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_user_id"], name: "index_post_comments_on_created_by_user_id"
+    t.index ["parent_id"], name: "index_post_comments_on_parent_id"
+    t.index ["post_id", "created_at"], name: "index_post_comments_on_post_id_and_created_at"
+  end
+
+  create_table "post_reactions", id: :string, force: :cascade do |t|
+    t.string "post_id", null: false
+    t.string "actor_type", null: false
+    t.string "actor_id", null: false
+    t.string "kind", default: "applause", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_type", "actor_id"], name: "index_post_reactions_on_actor_type_and_actor_id"
+    t.index ["post_id", "actor_type", "actor_id"], name: "index_post_reactions_on_post_and_actor", unique: true
+  end
+
+  create_table "posts", id: :string, force: :cascade do |t|
+    t.string "author_type", null: false
+    t.string "author_id", null: false
+    t.string "created_by_user_id", null: false
+    t.string "kind", default: "update", null: false
+    t.text "body"
+    t.jsonb "media", default: [], null: false
+    t.string "link_url"
+    t.string "shared_portfolio_item_id"
+    t.string "shared_job_id"
+    t.string "reshared_post_id"
+    t.string "city"
+    t.string "genres", default: [], null: false, array: true
+    t.string "hashtags", default: [], null: false, array: true
+    t.string "visibility", default: "public", null: false
+    t.string "status", default: "active", null: false
+    t.integer "applause_count", default: 0, null: false
+    t.integer "comment_count", default: 0, null: false
+    t.integer "reshare_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_type", "author_id", "created_at"], name: "index_posts_on_author_type_and_author_id_and_created_at"
+    t.index ["created_at", "id"], name: "index_posts_on_created_at_and_id"
+    t.index ["created_by_user_id"], name: "index_posts_on_created_by_user_id"
+    t.index ["genres"], name: "index_posts_on_genres", using: :gin
+    t.index ["hashtags"], name: "index_posts_on_hashtags", using: :gin
+    t.index ["reshared_post_id"], name: "index_posts_on_reshared_post_id"
+    t.index ["shared_job_id"], name: "index_posts_on_shared_job_id"
+    t.index ["shared_portfolio_item_id"], name: "index_posts_on_shared_portfolio_item_id"
+    t.index ["status"], name: "index_posts_on_status"
   end
 
   create_table "profiles", primary_key: "user_id", id: :string, force: :cascade do |t|
@@ -937,6 +1005,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_120000) do
   add_foreign_key "crew_plan_roles", "crew_plans"
   add_foreign_key "crew_plans", "users", column: "owner_id"
   add_foreign_key "email_tokens", "users"
+  add_foreign_key "follows", "users", column: "follower_user_id"
   add_foreign_key "job_alert_deliveries", "job_alerts"
   add_foreign_key "job_alert_deliveries", "jobs"
   add_foreign_key "job_alert_deliveries", "notifications", on_delete: :nullify
@@ -949,6 +1018,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_120000) do
   add_foreign_key "organization_members", "users"
   add_foreign_key "organizations", "users", column: "owner_id"
   add_foreign_key "portfolio_items", "users"
+  add_foreign_key "post_comments", "post_comments", column: "parent_id"
+  add_foreign_key "post_comments", "posts"
+  add_foreign_key "post_comments", "users", column: "created_by_user_id"
+  add_foreign_key "post_reactions", "posts"
+  add_foreign_key "posts", "jobs", column: "shared_job_id"
+  add_foreign_key "posts", "portfolio_items", column: "shared_portfolio_item_id"
+  add_foreign_key "posts", "posts", column: "reshared_post_id"
+  add_foreign_key "posts", "users", column: "created_by_user_id"
   add_foreign_key "profiles", "users"
   add_foreign_key "recent_activities", "users"
   add_foreign_key "reports", "users", column: "reporter_id"

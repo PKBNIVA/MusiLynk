@@ -41,7 +41,7 @@ class NotificationEmail
   # Transactional emails (sign-in codes, verification, password reset) do not go through this class.
   def self.deliverable_to?(user)
     EmailDelivery.configured? && user.email.present? && user.email_verified? && user.status == "active" && opted_in?(user) &&
-      !EmailSuppression.blocks_notifications?(user.email)
+      !EmailSuppression.blocks_notifications?(user.email) && !EmailDelivery.skip_reserved?(user.email)
   end
 
   # Users without a profile row (admins) keep the column default: opted in.

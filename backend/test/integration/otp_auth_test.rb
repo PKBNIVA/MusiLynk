@@ -104,7 +104,7 @@ class OtpAuthTest < ActionDispatch::IntegrationTest
         Struct.new(:status) { def success? = true }.new(201)
       end
       Faraday.stub(:post, transport) do
-        EmailDelivery.call(to: "a@example.invalid", template: "sign_in_code", data: { code: "042917" })
+        EmailDelivery.call(to: "a@example.com", template: "sign_in_code", data: { code: "042917" })
       end
       assert_equal "Your Verse sign-in code", body["subject"]
       assert_includes body["textContent"], "042917"

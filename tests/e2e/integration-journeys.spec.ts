@@ -10,7 +10,7 @@ test.describe('real frontend and Rails journeys', () => {
   for (const role of ['jobseeker', 'employer'] as const) {
     test(`${role} registers, signs out, signs back in, and keeps profile data`, async ({ page, request }) => {
       const email = `qa-${randomUUID()}@example.invalid`;
-      const password = 'IntegrationPass123!';
+      const password = 'Harbor-Lantern-4827!';
       const name = role === 'jobseeker' ? 'Integration Artist' : 'Integration Studio';
       const profilePath = `/${role}/profile`;
 
@@ -33,7 +33,7 @@ test.describe('real frontend and Rails journeys', () => {
       expect(forbidden.status()).toBe(403);
 
       // C5/CRAWL-03: the tour never auto-starts on the profile-setup page itself.
-      const tour = page.getByRole('dialog', { name: 'Verse product tour' });
+      const tour = page.getByRole('dialog').filter({ hasText: /Step \d+ of \d+/ });
       await expect(tour).toBeHidden();
 
       if (role === 'jobseeker') {

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
-  X,
   ChevronLeft,
   ChevronRight,
   Compass,
@@ -15,6 +14,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import type { LucideIcon } from 'lucide-react';
 
 type Role = 'jobseeker' | 'employer' | 'public';
@@ -128,10 +128,16 @@ const tours: { [k: string]: TourStep[] } = {
 export function ProductTour({
   role = 'public',
   forceOpen = false,
+  // Whether this render is allowed to auto-start the tour the first time it is seen
+  // (CRAWL-03/C5): the caller passes true only on the role's dashboard home, once the
+  // profile is complete — never on a profile-setup page, so the tour never covers the
+  // form the person is trying to fill in.
+  autoStart = false,
   onClose,
 }: {
   role?: Role;
   forceOpen?: boolean;
+  autoStart?: boolean;
   onClose?: () => void;
 }) {
   const key = `verse-tour-v2-${role}`,
@@ -139,12 +145,17 @@ export function ProductTour({
   const [open, setOpen] = useState(false),
     [i, setI] = useState(0);
   useEffect(() => {
+    if (forceOpen) {
+      setOpen(true);
+      return;
+    }
+    if (!autoStart) return;
     let seen: string | null = null;
     try {
       seen = localStorage.getItem(key);
     } catch {}
-    if (forceOpen || (!seen && role !== 'public')) setOpen(true);
-  }, [forceOpen, key, role]);
+    if (!seen) setOpen(true);
+  }, [forceOpen, autoStart, key]);
   const close = () => {
     try {
       localStorage.setItem(key, 'done');
@@ -152,17 +163,21 @@ export function ProductTour({
     setOpen(false);
     onClose?.();
   };
-  if (!open && !forceOpen) return null;
   const s = steps[i],
     Icon = s.icon || HelpCircle;
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm grid place-items-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Verse product tour"
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Radix calls this for Escape and a backdrop click too, so both now close the
+        // tour like every other dialog in the app (CRAWL-03).
+        if (!next) close();
+      }}
     >
-      <div className="w-full max-w-lg rounded-2xl border border-white/15 bg-slate-950 shadow-2xl overflow-hidden">
+      <DialogContent
+        className="w-full max-w-lg rounded-2xl border-white/15 bg-slate-950 p-0 text-white shadow-2xl overflow-hidden sm:max-w-lg"
+        aria-label="Verse product tour"
+      >
         <div className="h-1 bg-white/10">
           <div
             className="h-full bg-violet-500 transition-all"
@@ -170,18 +185,13 @@ export function ProductTour({
           />
         </div>
         <div className="p-6">
-          <div className="flex justify-between gap-4">
-            <div className="w-12 h-12 rounded-xl bg-violet-500/15 grid place-items-center">
-              <Icon className="text-violet-300" />
-            </div>
-            <Button variant="ghost" size="icon" onClick={close} aria-label="Close tour">
-              <X size={18} />
-            </Button>
+          <div className="w-12 h-12 rounded-xl bg-violet-500/15 grid place-items-center">
+            <Icon className="text-violet-300" />
           </div>
           <div className="text-xs uppercase tracking-[.18em] text-slate-500 mt-5">
             Step {i + 1} of {steps.length}
           </div>
-          <h2 className="text-2xl font-bold text-white mt-2">{s.title}</h2>
+          <DialogTitle className="text-2xl font-bold text-white mt-2">{s.title}</DialogTitle>
           <p className="text-slate-300 leading-7 mt-3">{s.text}</p>
           <div className="flex flex-wrap gap-2 mt-6">
             {s.to && (
@@ -212,8 +222,8 @@ export function ProductTour({
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

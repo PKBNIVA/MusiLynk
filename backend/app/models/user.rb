@@ -31,7 +31,9 @@ class User < ApplicationRecord
 
   validates :name, length: { minimum: 2, maximum: 120 }
   validates :email, presence: true, uniqueness: { case_sensitive: false }, format: { with: URI::MailTo::EMAIL_REGEXP }
-  validates :password, length: { minimum: 10 }, if: -> { password.present? }
+  # Operator-set passwords (db/seeds.rb) skip the strength rule; every password a person chooses through the API is checked.
+  attr_accessor :skip_password_strength
+  validate :password_strength, if: -> { password.present? && !skip_password_strength }
   validates :synthetic_batch, format: { with: /\A[a-z0-9][a-z0-9-]{2,63}\z/ }, allow_nil: true
   normalizes :email, with: ->(value) { value.strip.downcase }
 
@@ -42,4 +44,11 @@ class User < ApplicationRecord
 
   def profileComplete = profile_complete
   def emailVerified = email_verified
+
+  private
+
+  def password_strength
+    violation = PasswordStrength.violation(password, email:, name:)
+    errors.add(:password, violation) if violation
+  end
 end

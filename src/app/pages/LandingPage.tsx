@@ -74,7 +74,7 @@ export default function LandingPage() {
               className="border-0 bg-gradient-to-r from-fuchsia-500 to-violet-500 shadow-lg shadow-violet-950/40"
               asChild
             >
-              <Link to="/start">
+              <Link to="/auth/jobseeker?mode=register">
                 Join Verse <ArrowRight size={16} className="ml-2" />
               </Link>
             </Button>

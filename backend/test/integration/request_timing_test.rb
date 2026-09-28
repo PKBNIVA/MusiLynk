@@ -4,7 +4,7 @@ require "test_helper"
 # database time, so slow endpoints are visible in Railway logs and browser dev tools.
 class RequestTimingTest < ActionDispatch::IntegrationTest
   setup do
-    employer = User.create!(name: "Timing Employer", email: "timing-emp@example.com", password: "password123", role: "employer", status: "active")
+    employer = User.create!(name: "Timing Employer", email: "timing-emp@example.com", password: "VerseStagePass1!", role: "employer", status: "active")
     Job.create!(employer:, title: "Timing Session Drummer", company: "Timing Co", location: "Mumbai", kind: "Contract",
       opportunity_kind: "gig", workplace: "onsite", genre: "Live", skills: ["Drums"],
       description: "A clearly documented paid studio session with written terms and a two-hour call.", status: "published", published_at: Time.current)

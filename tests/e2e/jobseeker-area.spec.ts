@@ -140,6 +140,10 @@ test('credits keep one entry per line after saving twice', async ({ page }) => {
   await page.goto('/jobseeker/profile');
   const credits = page.getByPlaceholder('Track / project — role — artist / company — year');
   await expect(credits).toHaveValue('Song A — guitar — 2024');
+  await page
+    .getByRole('button', { name: /Music skills/ })
+    .first()
+    .click();
   await credits.fill('Song A — guitar — 2024\nSong B — bass — 2025');
   const save = page.getByRole('button', { name: 'Save career profile' });
   await save.click();

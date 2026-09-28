@@ -214,10 +214,16 @@ test.describe('in-app dialogs', () => {
   test('profile form fields are labelled', async ({ page }) => {
     await signInWithDialogFixtures(page);
     await page.goto('/jobseeker/profile');
-    for (const name of ['Professional headline', 'Base location', 'Bio', 'Skills', 'Website', 'Phone']) {
-      await expect(page.getByLabel(name, { exact: true })).toBeVisible();
+    // The profile is a stepped form; each step's fields are labelled once that step is open.
+    for (const [step, names] of [
+      [null, ['Professional headline', 'Base location', 'Bio']],
+      [/Music skills/, ['Skills']],
+      [/Rates & links/, ['Website', 'Phone']],
+    ] as const) {
+      if (step) await page.getByRole('button', { name: step }).first().click();
+      for (const name of names) await expect(page.getByLabel(name, { exact: true })).toBeVisible();
     }
-    await expect(page.getByLabel('Currency')).toHaveJSProperty('tagName', 'SELECT');
+    await expect(page.getByLabel('Currency')).toHaveAttribute('role', 'combobox');
     await expect(page.getByLabel('Professional headline', { exact: true })).toHaveValue('Session guitarist');
   });
 });

@@ -112,7 +112,16 @@ test('a saved draft can be reopened from the dashboard, edited and submitted for
   await expect(page.getByLabel('Title')).toHaveValue('Session guitarist');
   await expect(page.getByLabel('Skills')).toHaveValue('Guitar');
   await page.getByLabel('Location').fill('Mumbai');
+  // Editing opens the wizard with every step reachable; jump straight to Details.
+  await page
+    .getByRole('button', { name: /Details/ })
+    .first()
+    .click();
   await page.getByLabel(/^Description/).fill(description);
+  await page
+    .getByRole('button', { name: /Screening & review/ })
+    .first()
+    .click();
   await page.getByRole('button', { name: 'Submit for review' }).click();
 
   await expect(page).toHaveURL(/\/employer$/);
@@ -130,6 +139,23 @@ test('saving a draft without a title explains why instead of calling the API', a
   expect(calls.filter((c) => c.method === 'POST' && c.path === '/jobs')).toHaveLength(0);
 });
 
+test('the post wizard checks only the current step before moving on', async ({ page }) => {
+  const { calls } = await signIn(page, 'employer');
+  await page.goto('/employer/post-job');
+  await expect(page.getByText('Step 1 of 4')).toBeVisible();
+  await page.getByLabel('Title').fill('Tour keyboardist');
+  await page.getByRole('button', { name: 'Next: Details' }).click();
+  await expect(page.getByLabel('Location')).toBeFocused();
+  await page.getByLabel('Location').fill('Pune');
+  await page.getByRole('button', { name: 'Next: Details' }).click();
+  await expect(page.getByRole('heading', { name: 'Details', level: 2 })).toBeFocused();
+  await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
+  await expect(page.getByLabel(/^Description/)).toBeFocused();
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByLabel('Location')).toHaveValue('Pune');
+  expect(calls.filter((c) => c.method === 'POST' && c.path === '/jobs')).toHaveLength(0);
+});
+
 test('hitting the plan limit keeps the opportunity as a draft and links to plans', async ({ page }) => {
   const { calls } = await signIn(page, 'employer', (request, url) => {
     if (url.pathname !== '/api/jobs' || request.method() !== 'POST') return undefined;
@@ -141,7 +167,10 @@ test('hitting the plan limit keeps the opportunity as a draft and links to plans
   await page.goto('/employer/post-job');
   await page.getByLabel('Title').fill('Tour keyboardist');
   await page.getByLabel('Location').fill('Pune');
+  await page.getByRole('button', { name: 'Next: Details' }).click();
   await page.getByLabel(/^Description/).fill(description);
+  await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
+  await page.getByRole('button', { name: 'Next: Screening & review' }).click();
   await page.getByRole('button', { name: 'Submit for review' }).click();
   await expect(page.getByText(/saved as a draft/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'View plans' })).toBeVisible();

@@ -5,7 +5,7 @@ class ReportsController < ApplicationController
   FIELD_LIMITS = { entityType: 40, entityId: 120, reason: 200, details: 5_000 }.freeze
   # Kept in step with src/app/components/ReportDialog.tsx REPORT_REASONS.
   REASONS = ["Harassment", "Asks for payment", "Spam or scam", "Unsafe contact request", "Misleading listing", "Other"].freeze
-  ENTITY_TYPES = %w[user job act review portfolio resume].freeze
+  ENTITY_TYPES = %w[user job act review portfolio resume post comment].freeze
 
   def create
     return unless authenticate!
@@ -48,6 +48,8 @@ class ReportsController < ApplicationController
     when "portfolio"
       Portfolio.with_owner.find_by(id: entity_id)&.publicly_readable? || sent_to_reporter?(:portfolio_id, entity_id)
     when "resume" then sent_to_reporter?(:resume_id, entity_id)
+    when "post" then Post.exists?(id: entity_id)
+    when "comment" then PostComment.exists?(id: entity_id)
     else false
     end
   end

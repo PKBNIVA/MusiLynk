@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  Radio,
   Music,
   Search,
   Settings,
@@ -211,6 +212,17 @@ export function Navigation() {
                 Overview
               </Link>
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className={location.pathname.startsWith('/stage') ? 'bg-white/10 text-white' : 'text-slate-300'}
+            >
+              <Link to="/stage">
+                <Radio size={16} className="mr-2" aria-hidden="true" />
+                Stage
+              </Link>
+            </Button>
             {groups.map((group) => (
               <DropdownMenu key={group.label}>
                 <DropdownMenuTrigger asChild>
@@ -399,6 +411,12 @@ export function Navigation() {
                     <DropdownMenuSeparator />
                   </div>
                 ))}
+                <DropdownMenuItem asChild>
+                  <Link to="/stage">
+                    <Radio className="mr-2 h-4 w-4" />
+                    Stage
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to={`${baseUrl}/messages`}>
                     <MessageSquare className="mr-2 h-4 w-4" />

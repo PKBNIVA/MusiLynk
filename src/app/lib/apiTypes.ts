@@ -949,3 +949,32 @@ export interface BillingEventSummary {
   amount?: number | null;
   currency?: string | null;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Admin site: the signed-in admin's own account
+
+/**
+ * How the admin's second sign-in step stands: `enforced` (password + emailed code), `skipped`
+ * (the code could not be emailed, so password alone was accepted), `off` (turned off on the
+ * server) or `unavailable` (required but cannot be emailed).
+ */
+export type AdminSecondFactorState = 'enforced' | 'skipped' | 'off' | 'unavailable';
+
+/** Admin::AccountController#show (GET /admin/account): the health of the admin's own sign-in. */
+export interface AdminAccountHealth {
+  email: string;
+  /** False for addresses that can never receive mail (reserved domains, suppressed after bounces). */
+  emailDeliverable: boolean;
+  secondFactor: AdminSecondFactorState;
+  /** Whether the API only accepts admin requests from the admin site's origin. */
+  adminOrigin: boolean;
+}
+
+/** POST /admin/account/email/request: a code went to the new address; the token confirms it. */
+export interface AdminEmailChangeStarted {
+  changeToken: string;
+  expiresIn: number;
+  message?: string;
+  /** Only outside production when no email provider is configured. */
+  debugCode?: string;
+}

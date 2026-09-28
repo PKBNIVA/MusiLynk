@@ -1,4 +1,5 @@
 import { reportApiFailure } from './monitoring';
+import { PROTECTED_AREA, signInPath } from './appTarget';
 
 // `?.`: the Node smoke tests import this module without Vite, where import.meta.env is undefined.
 export const API_BASE = import.meta.env?.VITE_API_URL || '/api';
@@ -145,12 +146,12 @@ function redirectAfterUnauthorized(path: string, rejectedToken: string | null, s
   if (!hadSession || skipRedirect || path.startsWith('/auth/') || authRedirectStarted) return;
 
   const currentPath = `${window.location.pathname}${window.location.search}`;
-  if (!/^\/(jobseeker|employer|admin)(\/|$)/.test(window.location.pathname)) return;
+  if (!PROTECTED_AREA.test(window.location.pathname)) return;
 
   authRedirectStarted = true;
   writeStored('session', RETURN_TO_KEY, currentPath);
   const role = window.location.pathname.split('/')[1] || 'jobseeker';
-  window.location.replace(`/auth/${role}`);
+  window.location.replace(signInPath(role));
 }
 
 function retryDelay(response?: Response) {

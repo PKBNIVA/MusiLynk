@@ -511,6 +511,21 @@ describe('401 handling', () => {
     }
   });
 
+  it('sends an expired admin-site session back to the admin sign-in page', async () => {
+    vi.stubEnv('VITE_APP_TARGET', 'admin');
+    const { location, restore } = fakeLocation('/account');
+    try {
+      const { apiGet, setAccessToken, consumeReturnTo } = await loadApi();
+      setAccessToken('expired');
+      fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
+      await expect(apiGet('/admin/account')).rejects.toMatchObject({ status: 401 });
+      expect(location.replace).toHaveBeenCalledWith('/');
+      expect(consumeReturnTo()).toBe('/account');
+    } finally {
+      restore();
+    }
+  });
+
   it('does not redirect from public pages, auth calls or when asked not to', async () => {
     const { location, restore } = fakeLocation('/jobs');
     try {

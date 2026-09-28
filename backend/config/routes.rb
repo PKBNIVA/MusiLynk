@@ -37,6 +37,10 @@ Rails.application.routes.draw do
       post "health/sentry-test", to: "health#sentry_test"
       get :stats, to: "stats#index"
       get :tester, to: "tester#index"
+      get :account, to: "account#show"
+      post "account/email/request", to: "account#request_email_change"
+      post "account/email/confirm", to: "account#confirm_email_change"
+      post "account/password", to: "account#change_password"
       get "users/lookup", to: "users#lookup"
       resources :users, only: %i[index update] do
         member do

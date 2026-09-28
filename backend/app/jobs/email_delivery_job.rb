@@ -14,7 +14,9 @@ class EmailDeliveryJob < ApplicationJob
 
   LINK_PURPOSE = :email_delivery_link
   RECIPIENT_PURPOSE = :email_delivery_recipient
-  CODE_TEMPLATES = %w[sign_in_code].freeze
+  CODE_TEMPLATES = %w[sign_in_code admin_email_change].freeze
+  # Security notices carry a detail (e.g. the new address) instead of a secret.
+  NOTICE_TEMPLATES = %w[admin_email_changed].freeze
 
   queue_as :mailers
 
@@ -33,6 +35,14 @@ class EmailDeliveryJob < ApplicationJob
     perform_later(user&.id, template, seal(code, expires_in: SignInCode::LIFETIME), sealed_email)
   end
 
+  # Sends a notice to an address given explicitly (the user's row may no longer hold it,
+  # e.g. the previous address after an email change). Nothing in it is a secret, but the
+  # address is sealed like every other recipient so the job row holds no email address.
+  def self.enqueue_notice(template:, detail:, email:)
+    raise ArgumentError, "unknown notice template" unless NOTICE_TEMPLATES.include?(template)
+    perform_later(nil, template, seal(detail.to_s), seal(email, purpose: RECIPIENT_PURPOSE))
+  end
+
   def self.seal(value, purpose: LINK_PURPOSE, expires_in: 1.day) = encryptor.encrypt_and_sign(value, purpose:, expires_in:)
 
   def self.unseal(sealed, purpose: LINK_PURPOSE) = encryptor.decrypt_and_verify(sealed, purpose:)
@@ -48,7 +58,10 @@ class EmailDeliveryJob < ApplicationJob
     secret = self.class.unseal(sealed_link)
     return log_skip("link_unreadable", template) unless secret
 
-    data = CODE_TEMPLATES.include?(template) ? { code: secret } : { link: secret }
+    data = if CODE_TEMPLATES.include?(template) then { code: secret }
+    elsif NOTICE_TEMPLATES.include?(template) then { detail: secret }
+    else { link: secret }
+    end
     result = EmailDelivery.call(to:, template:, data:, raise_errors: true)
     raise ProviderUnavailable, "email provider returned #{result[:status]}" if result[:status].to_i >= 500
 

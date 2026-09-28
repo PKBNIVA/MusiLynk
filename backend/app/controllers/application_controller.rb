@@ -64,9 +64,16 @@ class ApplicationController < ActionController::API
     session&.record_activity!(request.user_agent)
     # Activity can shorten a session (a pre-two-step admin session is capped).
     session = nil if session && session.expires_at <= Time.current
+    @current_session = session
     @current_user = session&.user
     ErrorReporter.set_user(@current_user)
     @current_user
+  end
+
+  # The session behind the presented bearer token (nil when not signed in).
+  def current_session
+    current_user
+    @current_session
   end
 
   # See Session: a token presented by a different browser family than the one it

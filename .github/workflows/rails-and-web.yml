@@ -34,6 +34,9 @@ jobs:
       - run: npm run build
       - name: Check bundle size budget
         run: npm run check:bundle
+      # Builds the admin site too and proves neither build contains the other's pages.
+      - name: Check public/admin site split
+        run: npm run check:split
       - run: npm run test:all
       # Vitest unit tests for src/app/lib with a coverage floor (see vitest.config.ts).
       - run: npm run test:unit -- --coverage

@@ -8,9 +8,10 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
-import { MapPin, ShieldCheck, Wallet, CalendarDays } from 'lucide-react';
+import { Briefcase, MapPin, ShieldCheck, Wallet, CalendarDays } from 'lucide-react';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { Job } from '../../lib/apiTypes';
+import { formatDate, formatDeadline, formatPay } from '../../lib/format';
 
 export default function PublicOpportunity() {
   const { id } = useParams();
@@ -66,20 +67,32 @@ export default function PublicOpportunity() {
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mt-4 break-words">{j.title}</h1>
             <p className="text-xl text-violet-300 mt-2">{j.company}</p>
-            <div className="grid sm:grid-cols-3 gap-3 mt-7 text-sm text-slate-300">
+            <div className="grid sm:grid-cols-2 gap-3 mt-7 text-sm text-slate-300">
               <span className="flex gap-2">
                 <MapPin size={17} />
                 {j.location}
+                {j.workplace ? ` · ${j.workplace.charAt(0).toUpperCase()}${j.workplace.slice(1)}` : ''}
               </span>
+              {(j.function_area || j.type) && (
+                <span className="flex gap-2">
+                  <Briefcase size={17} />
+                  {j.function_area || j.type}
+                </span>
+              )}
               <span className="flex gap-2">
                 <Wallet size={17} />
-                {j.salary ||
-                  `${j.currency || 'INR'} ${j.compensation_min || ''}${j.compensation_max ? `–${j.compensation_max}` : ''}`}
+                {formatPay(j)}
               </span>
               <span className="flex gap-2">
                 <CalendarDays size={17} />
-                {j.application_deadline ? `Apply by ${j.application_deadline}` : 'Open until filled'}
+                {formatDeadline(j.application_deadline, { verb: 'Apply by' })}
               </span>
+              {j.start_date && (
+                <span className="flex gap-2">
+                  <CalendarDays size={17} />
+                  Starts {formatDate(j.start_date)}
+                </span>
+              )}
             </div>
             <div className="mt-8 pt-7 border-t border-white/10">
               <h2 className="text-xl font-semibold">About the opportunity</h2>

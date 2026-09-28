@@ -365,14 +365,17 @@ test.describe('messages', () => {
       await page.goto('/jobseeker/messages?c=c1');
       const log = page.getByRole('log', { name: 'Messages' });
       await expect(page.getByTestId('message-body').last()).toHaveText('message 30');
-      const box = await log.evaluate((el) => ({
-        scrollable: el.scrollHeight > el.clientHeight + 1,
-        atBottom: el.scrollHeight - el.scrollTop - el.clientHeight < 2,
-      }));
-      expect(box, `list scrolls and opens at the newest message at ${viewport.width}px`).toEqual({
-        scrollable: true,
-        atBottom: true,
-      });
+      // The scroll to the newest message lands after layout, so wait for it rather than checking once.
+      await expect
+        .poll(
+          () =>
+            log.evaluate((el) => ({
+              scrollable: el.scrollHeight > el.clientHeight + 1,
+              atBottom: el.scrollHeight - el.scrollTop - el.clientHeight < 2,
+            })),
+          { message: `list scrolls and opens at the newest message at ${viewport.width}px` },
+        )
+        .toEqual({ scrollable: true, atBottom: true });
       await expect(page.getByTestId('message-body').last()).toBeInViewport();
       const composer = page.getByRole('textbox', { name: 'Message' });
       await expect(composer).toBeInViewport();

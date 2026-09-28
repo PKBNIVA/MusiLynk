@@ -22,7 +22,6 @@ export const publicRoutes = [
   ['Forgot password', '/forgot-password'],
   ['Professional authentication', '/auth/jobseeker'],
   ['Employer authentication', '/auth/employer'],
-  ['Admin authentication', '/auth/admin'],
 ] as const;
 
 export const accessibilityRoutes = [

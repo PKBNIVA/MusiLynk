@@ -4,11 +4,14 @@ import { transformWithOxc } from 'vite';
 
 const source = await readFile(new URL('../src/app/lib/api.ts', import.meta.url), 'utf8');
 const { code: transformed } = await transformWithOxc(source, 'api.ts', { lang: 'ts', target: 'es2022' });
-// The module is imported from a data: URL, so its relative import of the (DSN-less, inert)
-// error-reporting module must be made absolute.
+// The module is imported from a data: URL, so its relative imports of the (DSN-less, inert)
+// error-reporting module and the build-target flags must be made absolute.
 const monitoringUrl = new URL('../src/app/lib/monitoring.ts', import.meta.url).href;
-const code = transformed.replace(/from ["']\.\/monitoring["']/, `from ${JSON.stringify(monitoringUrl)}`);
-assert.notEqual(code, transformed, 'api.ts imports ./monitoring');
+const appTargetUrl = new URL('../src/app/lib/appTarget.ts', import.meta.url).href;
+const withMonitoring = transformed.replace(/from ["']\.\/monitoring["']/, `from ${JSON.stringify(monitoringUrl)}`);
+assert.notEqual(withMonitoring, transformed, 'api.ts imports ./monitoring');
+const code = withMonitoring.replace(/from ["']\.\/appTarget["']/, `from ${JSON.stringify(appTargetUrl)}`);
+assert.notEqual(code, withMonitoring, 'api.ts imports ./appTarget');
 
 const fakeStorage = () => {
   const storage = new Map();

@@ -3,7 +3,6 @@ import { Navigation } from '../components/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
-import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { apiGet, apiPost, apiPut } from '../lib/api';
@@ -14,6 +13,8 @@ import { Checkbox } from '../components/ui/checkbox';
 import { DebugLinkDialog, VerificationRequestDialog } from '../components/VerificationDialogs';
 import { errorMessage } from '../lib/errors';
 import type { AccountUser } from '../lib/apiTypes';
+import { Field, FormError } from '../components/form/Field';
+import { PHONE_MESSAGE, URL_MESSAGE, isHttpUrl, isPhone, useFormErrors, useSubmitOnce } from '../lib/formErrors';
 // List fields arrive as arrays and are edited as text: comma-separated, credits one per line.
 type ListField =
   'skills' | 'genres' | 'instruments' | 'languages' | 'credits' | 'openTo' | 'roles' | 'gear' | 'software';
@@ -36,13 +37,62 @@ const toForm = (user: ProfileSource): ProfileForm => ({
   gear: joinList(user.gear, ', '),
   software: joinList(user.software, ', '),
 });
+// Limits match the Profile model (TEXT_LIMITS); counters show them while typing.
+const LIMITS = {
+  headline: 160,
+  location: 120,
+  experience: 60,
+  availability: 120,
+  bio: 2_000,
+  website: 500,
+  portfolioUrl: 500,
+  phone: 20,
+} as const;
+type TextField = 'headline' | 'location' | 'experience' | 'availability' | 'bio' | 'website' | 'portfolioUrl' | 'phone';
+type ProfileField = TextField | ListField | NumberField | 'currency';
+const NUMBER_LABELS: Record<NumberField, string> = {
+  yearsExperience: 'Years of experience',
+  hourlyRate: 'Hourly rate',
+  sessionRate: 'Session rate',
+  showRate: 'Show rate',
+  tourDayRate: 'Tour day rate',
+  dayRate: 'Typical day / session rate',
+};
+const MAX_NUMBER = 2_000_000_000;
+const fieldId = (name: string) => `profile-${name}`;
+
+/** The same rules the API applies (profiles#update and the Profile model), checked before sending. */
+function validateProfile(f: ProfileForm) {
+  const errors: Partial<Record<ProfileField, string>> = {};
+  const text = (k: TextField) => String(f[k] ?? '').trim();
+  (Object.keys(LIMITS) as TextField[]).forEach((k) => {
+    if (text(k).length > LIMITS[k]) errors[k] = `Keep this under ${LIMITS[k].toLocaleString()} characters.`;
+  });
+  (['website', 'portfolioUrl'] as const).forEach((k) => {
+    if (!errors[k] && text(k) && !isHttpUrl(text(k))) errors[k] = URL_MESSAGE;
+  });
+  if (!errors.phone && text('phone') && !isPhone(text('phone'))) errors.phone = PHONE_MESSAGE;
+  (Object.keys(NUMBER_LABELS) as NumberField[]).forEach((k) => {
+    const raw = f[k];
+    if (raw === null || raw === undefined || raw === '') return;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) errors[k] = `${NUMBER_LABELS[k]} must be a number.`;
+    else if (n < 0) errors[k] = `${NUMBER_LABELS[k]} cannot be negative.`;
+    else if (n > MAX_NUMBER) errors[k] = `${NUMBER_LABELS[k]} is too large.`;
+  });
+  return errors;
+}
+
 export default function ProfileSetup() {
   const { setUser } = useAuth();
+  const form = useFormErrors<ProfileField>({ idFor: fieldId });
+  const submit = useSubmitOnce();
+  const saving = submit.busy;
   const [f, setF] = useState<ProfileForm>({}),
-    [saving, setSaving] = useState(false),
     [loaded, setLoaded] = useState(false),
     [loadError, setLoadError] = useState(''),
     [verifying, setVerifying] = useState(false),
+    [emailError, setEmailError] = useState(''),
     [debugLink, setDebugLink] = useState<string | null>(null);
   const load = () => {
     setLoadError('');
@@ -54,41 +104,48 @@ export default function ProfileSetup() {
       .catch((e: unknown) => setLoadError(errorMessage(e, 'Your profile could not be loaded.')));
   };
   useEffect(load, []);
-  const set = <K extends keyof ProfileForm>(k: K, v: ProfileForm[K]) => setF((x) => ({ ...x, [k]: v }));
+  const set = <K extends keyof ProfileForm>(k: K, v: ProfileForm[K]) => {
+    setF((x) => ({ ...x, [k]: v }));
+    form.clear(k as ProfileField);
+  };
   const list = (v?: string) =>
     String(v || '')
       .split(',')
       .map((x) => x.trim())
       .filter(Boolean);
-  async function save(e: React.FormEvent) {
+  function save(e: React.FormEvent) {
     e.preventDefault();
-    if (saving || !loaded) return;
-    setSaving(true);
-    try {
-      const payload = {
-        ...f,
-        skills: list(f.skills),
-        genres: list(f.genres),
-        instruments: list(f.instruments),
-        languages: list(f.languages),
-        openTo: list(f.openTo),
-        roles: list(f.roles),
-        gear: list(f.gear),
-        software: list(f.software),
-        credits: String(f.credits || '')
-          .split('\n')
-          .map((x: string) => x.trim())
-          .filter(Boolean),
-      };
-      const d = await apiPut<{ user: AccountUser }>('/profile', payload);
-      setUser(d.user);
-      setF(toForm({ ...f, ...d.user }));
-      toast.success('Career profile saved');
-    } catch (e: unknown) {
-      toast.error(errorMessage(e));
-    } finally {
-      setSaving(false);
-    }
+    if (!loaded) return;
+    void submit.run(async () => {
+      form.setFormError('');
+      if (form.setErrors(validateProfile(f))) {
+        form.focusFirst();
+        return;
+      }
+      try {
+        const payload = {
+          ...f,
+          skills: list(f.skills),
+          genres: list(f.genres),
+          instruments: list(f.instruments),
+          languages: list(f.languages),
+          openTo: list(f.openTo),
+          roles: list(f.roles),
+          gear: list(f.gear),
+          software: list(f.software),
+          credits: String(f.credits || '')
+            .split('\n')
+            .map((x: string) => x.trim())
+            .filter(Boolean),
+        };
+        const d = await apiPut<{ user: AccountUser }>('/profile', payload);
+        setUser(d.user);
+        setF(toForm({ ...f, ...d.user }));
+        toast.success('Career profile saved');
+      } catch (e: unknown) {
+        if (form.setFromApi(e, 'Your profile could not be saved. Try again.')) form.focusFirst();
+      }
+    });
   }
   async function verify(evidenceUrl: string) {
     await apiPost('/verification-requests', {
@@ -99,6 +156,7 @@ export default function ProfileSetup() {
     toast.success('Verification request submitted for review');
   }
   async function verifyEmail() {
+    setEmailError('');
     try {
       const d = await apiPost<{ ok?: boolean; alreadyVerified?: boolean; debugLink?: string }>(
         '/auth/request-email-verification',
@@ -110,9 +168,56 @@ export default function ProfileSetup() {
         if (d.debugLink) setDebugLink(d.debugLink);
       }
     } catch (e: unknown) {
-      toast.error(errorMessage(e));
+      setEmailError(errorMessage(e, 'The verification email could not be sent. Try again.'));
     }
   }
+  type TextOptions = {
+    placeholder?: string;
+    type?: 'text' | 'url' | 'tel';
+    inputMode?: 'text' | 'url' | 'tel';
+    autoComplete?: string;
+    hint?: string;
+    className?: string;
+  };
+  const textField = (k: TextField | Exclude<ListField, 'credits'>, label: string, o: TextOptions = {}) => {
+    const max = k in LIMITS ? LIMITS[k as TextField] : undefined;
+    const value = String(f[k] ?? '');
+    return (
+      <Field
+        id={fieldId(k)}
+        label={label}
+        hint={o.hint}
+        className={o.className}
+        error={form.errors[k]}
+        count={max !== undefined && value.length > max * 0.8 ? value.length : undefined}
+        maxLength={max !== undefined && value.length > max * 0.8 ? max : undefined}
+      >
+        <Input
+          type={o.type ?? 'text'}
+          inputMode={o.inputMode}
+          autoComplete={o.autoComplete}
+          maxLength={max}
+          value={value}
+          onChange={(e) => set(k, e.target.value)}
+          placeholder={o.placeholder}
+          className="bg-black/20 border-white/15"
+        />
+      </Field>
+    );
+  };
+  const numberField = (k: NumberField) => (
+    <Field id={fieldId(k)} label={NUMBER_LABELS[k]} error={form.errors[k]}>
+      <Input
+        type="number"
+        inputMode="numeric"
+        min="0"
+        step="1"
+        value={f[k] ?? ''}
+        onChange={(e) => set(k, e.target.value)}
+        className="bg-black/20 border-white/15"
+      />
+    </Field>
+  );
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -149,6 +254,7 @@ export default function ProfileSetup() {
             )}
           </div>
         </div>
+        <FormError message={emailError} className="mb-5" />
         {loadError && (
           <div role="alert" className="mb-5 rounded-xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm">
             <p>{loadError}</p>
@@ -160,160 +266,61 @@ export default function ProfileSetup() {
             </Button>
           </div>
         )}
-        <form onSubmit={save} className="space-y-5">
+        <form onSubmit={save} className="space-y-5" noValidate>
           <Card className="bg-white/[.055] border-white/10">
             <CardHeader>
               <CardTitle>Positioning</CardTitle>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
-              <div>
-                <Label htmlFor="profile-headline">Professional headline</Label>
-                <Input
-                  id="profile-headline"
-                  value={f.headline || ''}
-                  onChange={(e) => set('headline', e.target.value)}
-                  placeholder="Playback singer · Vocal producer · Hindi / Punjabi"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-location">Base location</Label>
-                <Input
-                  id="profile-location"
-                  value={f.location || ''}
-                  onChange={(e) => set('location', e.target.value)}
-                  placeholder="Mumbai, Maharashtra"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-experience">Experience</Label>
-                <Input
-                  id="profile-experience"
-                  value={f.experience || ''}
-                  onChange={(e) => set('experience', e.target.value)}
-                  placeholder="5 years / 30+ sessions / emerging"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-availability">Availability</Label>
-                <Input
-                  id="profile-availability"
-                  value={f.availability || ''}
-                  onChange={(e) => set('availability', e.target.value)}
-                  placeholder="Available weekends / touring Oct–Dec"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="profile-bio">Bio</Label>
+              {textField('headline', 'Professional headline', {
+                placeholder: 'Playback singer · Vocal producer · Hindi / Punjabi',
+              })}
+              {textField('location', 'Base location', {
+                placeholder: 'Mumbai, Maharashtra',
+                autoComplete: 'address-level2',
+              })}
+              {textField('experience', 'Experience', { placeholder: '5 years / 30+ sessions / emerging' })}
+              {textField('availability', 'Availability', { placeholder: 'Available weekends / touring Oct–Dec' })}
+              <Field
+                id={fieldId('bio')}
+                label="Bio"
+                className="md:col-span-2"
+                error={form.errors.bio}
+                count={String(f.bio || '').length}
+                maxLength={LIMITS.bio}
+              >
                 <Textarea
-                  id="profile-bio"
+                  maxLength={LIMITS.bio}
                   value={f.bio || ''}
                   onChange={(e) => set('bio', e.target.value)}
                   placeholder="What you do, the contexts you work best in, notable experience and what you are looking for next."
-                  className="mt-2 bg-black/20 border-white/15 min-h-32"
+                  className="bg-black/20 border-white/15 min-h-32"
                 />
-              </div>
+              </Field>
             </CardContent>
           </Card>
           <Card className="bg-white/[.055] border-white/10">
             <CardHeader>
               <CardTitle>Music-specific signals</CardTitle>
+              <p className="text-xs text-slate-500">Separate several entries with commas.</p>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
-              <div>
-                <Label htmlFor="profile-skills">Skills</Label>
-                <Input
-                  id="profile-skills"
-                  value={f.skills || ''}
-                  onChange={(e) => set('skills', e.target.value)}
-                  placeholder="Mixing, toplining, vocal production"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-genres">Genres</Label>
-                <Input
-                  id="profile-genres"
-                  value={f.genres || ''}
-                  onChange={(e) => set('genres', e.target.value)}
-                  placeholder="Bollywood, Indie Pop, Hip-Hop"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-instruments">Instruments / voice</Label>
-                <Input
-                  id="profile-instruments"
-                  value={f.instruments || ''}
-                  onChange={(e) => set('instruments', e.target.value)}
-                  placeholder="Vocals, guitar, keys"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-languages">Languages</Label>
-                <Input
-                  id="profile-languages"
-                  value={f.languages || ''}
-                  onChange={(e) => set('languages', e.target.value)}
-                  placeholder="Hindi, English, Punjabi"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="profile-openTo">Open to</Label>
-                <Input
-                  id="profile-openTo"
-                  value={f.openTo || ''}
-                  onChange={(e) => set('openTo', e.target.value)}
-                  placeholder="Sessions, touring, full-time, sync, collaborations"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-roles">Professional roles</Label>
-                <Input
-                  id="profile-roles"
-                  value={f.roles || ''}
-                  onChange={(e) => set('roles', e.target.value)}
-                  placeholder="Session Bassist, Musical Director, FOH Engineer"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-gear">Gear / consoles / instruments</Label>
-                <Input
-                  id="profile-gear"
-                  value={f.gear || ''}
-                  onChange={(e) => set('gear', e.target.value)}
-                  placeholder="Fender Jazz V, DiGiCo Quantum, IEM rig"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-software">Software / DAWs</Label>
-                <Input
-                  id="profile-software"
-                  value={f.software || ''}
-                  onChange={(e) => set('software', e.target.value)}
-                  placeholder="Pro Tools, Logic Pro, Ableton Live"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-yearsExperience">Years of experience</Label>
-                <Input
-                  id="profile-yearsExperience"
-                  type="number"
-                  min="0"
-                  value={f.yearsExperience || ''}
-                  onChange={(e) => set('yearsExperience', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
+              {textField('skills', 'Skills', { placeholder: 'Mixing, toplining, vocal production' })}
+              {textField('genres', 'Genres', { placeholder: 'Bollywood, Indie Pop, Hip-Hop' })}
+              {textField('instruments', 'Instruments / voice', { placeholder: 'Vocals, guitar, keys' })}
+              {textField('languages', 'Languages', { placeholder: 'Hindi, English, Punjabi' })}
+              {textField('openTo', 'Open to', {
+                placeholder: 'Sessions, touring, full-time, sync, collaborations',
+                className: 'md:col-span-2',
+              })}
+              {textField('roles', 'Professional roles', {
+                placeholder: 'Session Bassist, Musical Director, FOH Engineer',
+              })}
+              {textField('gear', 'Gear / consoles / instruments', {
+                placeholder: 'Fender Jazz V, DiGiCo Quantum, IEM rig',
+              })}
+              {textField('software', 'Software / DAWs', { placeholder: 'Pro Tools, Logic Pro, Ableton Live' })}
+              {numberField('yearsExperience')}
               <div className="md:col-span-2 grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm text-slate-300">
                 <label className="flex gap-2 items-center">
                   <Checkbox checked={!!f.remoteRecording} onCheckedChange={(v) => set('remoteRecording', !!v)} />
@@ -339,18 +346,20 @@ export default function ProfileSetup() {
                   Travels internationally
                 </label>
               </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="profile-credits">
-                  Selected credits <span className="text-slate-500">(one per line)</span>
-                </Label>
+              <Field
+                id={fieldId('credits')}
+                label="Selected credits"
+                hint="One per line."
+                className="md:col-span-2"
+                error={form.errors.credits}
+              >
                 <Textarea
-                  id="profile-credits"
                   value={f.credits || ''}
                   onChange={(e) => set('credits', e.target.value)}
                   placeholder="Track / project — role — artist / company — year"
-                  className="mt-2 bg-black/20 border-white/15 min-h-32"
+                  className="bg-black/20 border-white/15 min-h-32"
                 />
-              </div>
+              </Field>
             </CardContent>
           </Card>
           <Card className="bg-white/[.055] border-white/10">
@@ -358,103 +367,44 @@ export default function ProfileSetup() {
               <CardTitle>Links & commercial details</CardTitle>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
-              <div>
-                <Label htmlFor="profile-website">Website</Label>
-                <Input
-                  id="profile-website"
-                  value={f.website || ''}
-                  onChange={(e) => set('website', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-portfolioUrl">Primary portfolio / showreel URL</Label>
-                <Input
-                  id="profile-portfolioUrl"
-                  value={f.portfolioUrl || ''}
-                  onChange={(e) => set('portfolioUrl', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-hourlyRate">Hourly rate</Label>
-                <Input
-                  id="profile-hourlyRate"
-                  type="number"
-                  min="0"
-                  value={f.hourlyRate || ''}
-                  onChange={(e) => set('hourlyRate', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-sessionRate">Session rate</Label>
-                <Input
-                  id="profile-sessionRate"
-                  type="number"
-                  min="0"
-                  value={f.sessionRate || ''}
-                  onChange={(e) => set('sessionRate', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-showRate">Show rate</Label>
-                <Input
-                  id="profile-showRate"
-                  type="number"
-                  min="0"
-                  value={f.showRate || ''}
-                  onChange={(e) => set('showRate', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-tourDayRate">Tour day rate</Label>
-                <Input
-                  id="profile-tourDayRate"
-                  type="number"
-                  min="0"
-                  value={f.tourDayRate || ''}
-                  onChange={(e) => set('tourDayRate', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-dayRate">Typical day / session rate</Label>
-                <Input
-                  id="profile-dayRate"
-                  type="number"
-                  min="0"
-                  value={f.dayRate || ''}
-                  onChange={(e) => set('dayRate', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profile-currency">Currency</Label>
+              {textField('website', 'Website', {
+                type: 'url',
+                inputMode: 'url',
+                autoComplete: 'url',
+                placeholder: 'https://your-site.com',
+                hint: 'Include https://',
+              })}
+              {textField('portfolioUrl', 'Primary portfolio / showreel URL', {
+                type: 'url',
+                inputMode: 'url',
+                placeholder: 'https://youtube.com/…',
+                hint: 'Include https://',
+              })}
+              {numberField('hourlyRate')}
+              {numberField('sessionRate')}
+              {numberField('showRate')}
+              {numberField('tourDayRate')}
+              {numberField('dayRate')}
+              <Field id={fieldId('currency')} label="Currency" error={form.errors.currency}>
                 <select
-                  id="profile-currency"
                   value={f.currency || 'INR'}
                   onChange={(e) => set('currency', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
+                  className="w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
                 >
                   {['INR', 'USD', 'EUR', 'GBP'].map((x) => (
                     <option key={x}>{x}</option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <Label htmlFor="profile-phone">Phone</Label>
-                <Input
-                  id="profile-phone"
-                  value={f.phone || ''}
-                  onChange={(e) => set('phone', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
+              </Field>
+              {textField('phone', 'Phone', {
+                type: 'tel',
+                inputMode: 'tel',
+                autoComplete: 'tel',
+                placeholder: '+91 98765 43210',
+              })}
             </CardContent>
           </Card>
+          <FormError message={form.formError} />
           <Button type="submit" className="w-full" disabled={saving || !loaded} aria-busy={saving}>
             {saving ? 'Saving…' : loaded ? 'Save career profile' : 'Loading profile…'}
           </Button>

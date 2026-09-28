@@ -23,6 +23,11 @@ import {
 } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, Job } from '../lib/apiTypes';
+import { Field, FormError } from '../components/form/Field';
+import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
+
+const COVER_MAX = 5_000;
+const answerId = (i: number) => `screening-${i}`;
 
 const title = (x?: string | null) => String(x || '').replace(/(^|\s)\S/g, (m) => m.toUpperCase());
 
@@ -33,7 +38,6 @@ export default function JobDetails() {
   const [job, setJob] = useState<Job>(),
     [cover, setCover] = useState(''),
     [answers, setAnswers] = useState<Record<number, string>>({}),
-    [busy, setBusy] = useState(false),
     [loadError, setLoadError] = useState(''),
     [reporting, setReporting] = useState(false);
   const load = useCallback(() => {
@@ -49,6 +53,15 @@ export default function JobDetails() {
     setJob(undefined);
     load();
   }, [load]);
+  // Field names are the control ids; the API names screening answers screeningAnswer0, 1, …
+  const applyForm = useFormErrors<string>({
+    ids: { coverLetter: 'cover-note' },
+    apiFields: Object.fromEntries(
+      (job?.screeningQuestions || []).map((_q: string, i: number) => [`screeningAnswer${i}`, answerId(i)]),
+    ),
+  });
+  const applySubmit = useSubmitOnce();
+  const busy = applySubmit.busy;
   const backTo = user?.role === 'employer' ? '/employer' : '/jobseeker/jobs';
   async function messageEmployer() {
     try {
@@ -58,21 +71,32 @@ export default function JobDetails() {
       toast.error(errorMessage(e));
     }
   }
-  async function apply() {
+  function apply() {
     if (!job) return;
-    setBusy(true);
-    try {
-      await apiPost(`/jobs/${id}/apply`, {
-        coverLetter: cover,
-        screeningAnswers: (job.screeningQuestions || []).map((q: string, i: number) => `${q} :: ${answers[i] || ''}`),
+    void applySubmit.run(async () => {
+      const questions: string[] = job.screeningQuestions || [];
+      const missing: Record<string, string> = {};
+      questions.forEach((q, i) => {
+        if (!answers[i]?.trim()) missing[answerId(i)] = 'Answer this question to apply.';
       });
-      setJob({ ...job, applied: true });
-      toast.success('Application submitted');
-    } catch (e: unknown) {
-      toast.error(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
+      if (cover.length > COVER_MAX)
+        missing.coverLetter = `Keep the note under ${COVER_MAX.toLocaleString()} characters.`;
+      applyForm.setFormError('');
+      if (applyForm.setErrors(missing)) {
+        applyForm.focusFirst();
+        return;
+      }
+      try {
+        await apiPost(`/jobs/${id}/apply`, {
+          coverLetter: cover,
+          screeningAnswers: questions.map((_q, i) => answers[i].trim()),
+        });
+        setJob({ ...job, applied: true });
+        toast.success('Application submitted');
+      } catch (e: unknown) {
+        if (applyForm.setFromApi(e, 'Your application could not be sent. Try again.')) applyForm.focusFirst();
+      }
+    });
   }
   async function save() {
     if (!job) return;
@@ -247,34 +271,51 @@ export default function JobDetails() {
                     ) : (
                       <>
                         {job.screeningQuestions?.length > 0 && (
-                          <div className="space-y-3 mb-4">
-                            <div className="text-sm font-medium">Screening questions</div>
+                          <fieldset className="space-y-3 mb-4">
+                            <legend className="text-sm font-medium mb-1">Screening questions</legend>
                             {job.screeningQuestions.map((q: string, i: number) => (
-                              <div key={q}>
-                                <label htmlFor={`screening-${i}`} className="block text-xs text-slate-400 mb-1">
-                                  {q}
-                                </label>
+                              <Field
+                                key={q}
+                                id={answerId(i)}
+                                label={q}
+                                required
+                                labelClassName="text-xs font-normal text-slate-300 [overflow-wrap:anywhere]"
+                                error={applyForm.errors[answerId(i)]}
+                              >
                                 <Textarea
-                                  id={`screening-${i}`}
                                   value={answers[i] || ''}
-                                  onChange={(e) => setAnswers({ ...answers, [i]: e.target.value })}
+                                  maxLength={COVER_MAX}
+                                  onChange={(e) => {
+                                    setAnswers({ ...answers, [i]: e.target.value });
+                                    applyForm.clear(answerId(i));
+                                  }}
                                   className="min-h-20 bg-black/20 border-white/15"
                                 />
-                              </div>
+                              </Field>
                             ))}
-                          </div>
+                          </fieldset>
                         )}
-                        <label htmlFor="cover-note" className="text-sm font-medium">
-                          Short note to the employer <span className="text-slate-500">(optional)</span>
-                        </label>
-                        <Textarea
+                        <Field
                           id="cover-note"
-                          value={cover}
-                          onChange={(e) => setCover(e.target.value)}
-                          placeholder="Why this opportunity fits your work and what relevant proof should they review…"
-                          className="mt-2 min-h-32 bg-black/20 border-white/15"
-                        />
-                        <Button className="w-full mt-3" disabled={busy} onClick={apply}>
+                          label="Short note to the employer"
+                          optional
+                          error={applyForm.errors.coverLetter}
+                          count={cover.length}
+                          maxLength={cover.length > COVER_MAX * 0.8 ? COVER_MAX : undefined}
+                        >
+                          <Textarea
+                            value={cover}
+                            maxLength={COVER_MAX}
+                            onChange={(e) => {
+                              setCover(e.target.value);
+                              applyForm.clear('coverLetter');
+                            }}
+                            placeholder="Why this opportunity fits your work and what relevant proof should they review…"
+                            className="min-h-32 bg-black/20 border-white/15"
+                          />
+                        </Field>
+                        <FormError message={applyForm.formError} className="mt-3" />
+                        <Button className="w-full mt-3" disabled={busy} aria-busy={busy} onClick={apply}>
                           <Send size={16} className="mr-2" />
                           {busy ? 'Applying…' : 'Apply now'}
                         </Button>

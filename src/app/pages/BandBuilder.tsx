@@ -8,6 +8,8 @@ import { Badge } from '../components/ui/badge';
 import { Field, FormDialog, selectClass, textareaClass } from '../components/booking/BookingDialogs';
 import { Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { Field as FormField, FormError, RequiredNote } from '../components/form/Field';
+import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { errorMessage } from '../lib/errors';
 import type { BandProject, BandProjectRole, Taxonomy } from '../lib/apiTypes';
 
@@ -37,11 +39,19 @@ export default function BandBuilder() {
       commitmentType: 'recurring-gig',
       compensationModel: '',
     }),
-    [creating, setCreating] = useState(false),
     [role, setRole] = useState<RoleDraft | null>(null),
     [roleError, setRoleError] = useState(''),
     [savingRole, setSavingRole] = useState(false),
-    [publishing, setPublishing] = useState<string | null>(null);
+    [publishing, setPublishing] = useState<string | null>(null),
+    [publishError, setPublishError] = useState('');
+  type ProjectField = 'name' | 'city' | 'genres' | 'concept' | 'compensationModel';
+  const projectErrors = useFormErrors<ProjectField>({ idFor: (k) => `project-${k}` });
+  const createOnce = useSubmitOnce();
+  const creating = createOnce.busy;
+  const setP = (k: ProjectField, v: string) => {
+    setF((current) => ({ ...current, [k]: v }));
+    projectErrors.clear(k);
+  };
   async function load() {
     try {
       const d = await apiGet<{ projects?: BandProject[] }>('/band-projects');
@@ -59,26 +69,32 @@ export default function BandBuilder() {
       .then((t) => setRoleOptions(Array.from(new Set(Object.values(t?.roleCategories || {}).flatMap((x) => list(x))))))
       .catch(() => {});
   }, []);
-  async function create() {
-    if (creating || !f.name.trim()) return;
-    setCreating(true);
-    try {
-      await apiPost('/band-projects', {
-        ...f,
-        name: f.name.trim(),
-        genres: f.genres
-          .split(',')
-          .map((x: string) => x.trim())
-          .filter(Boolean),
-      });
-      setF({ ...f, name: '', concept: '', city: '', genres: '', compensationModel: '' });
-      toast.success('Band project created');
-      await load();
-    } catch (e: unknown) {
-      toast.error(errorMessage(e));
-    } finally {
-      setCreating(false);
-    }
+  function create() {
+    return createOnce.run(async () => {
+      const errors: Partial<Record<ProjectField, string>> = {};
+      if (!f.name.trim()) errors.name = 'Enter the band or project name.';
+      else if (f.name.trim().length > 120) errors.name = 'Keep the name under 120 characters.';
+      projectErrors.setFormError('');
+      if (projectErrors.setErrors(errors)) {
+        projectErrors.focusFirst();
+        return;
+      }
+      try {
+        await apiPost('/band-projects', {
+          ...f,
+          name: f.name.trim(),
+          genres: f.genres
+            .split(',')
+            .map((x: string) => x.trim())
+            .filter(Boolean),
+        });
+        setF({ ...f, name: '', concept: '', city: '', genres: '', compensationModel: '' });
+        toast.success('Band project created');
+        await load();
+      } catch (e: unknown) {
+        if (projectErrors.setFromApi(e, 'The project could not be created. Try again.')) projectErrors.focusFirst();
+      }
+    });
   }
   async function addRole() {
     if (!role || savingRole) return;
@@ -107,12 +123,13 @@ export default function BandBuilder() {
   async function publish(projectId: string, roleId: string) {
     if (publishing) return;
     setPublishing(roleId);
+    setPublishError('');
     try {
       await apiPost(`/band-projects/${projectId}/roles/${roleId}/publish`, {});
       toast.success('Opening submitted for moderation');
       await load();
     } catch (e: unknown) {
-      toast.error(errorMessage(e));
+      setPublishError(errorMessage(e, 'This opening could not be submitted. Try again.'));
     } finally {
       setPublishing(null);
     }
@@ -136,44 +153,63 @@ export default function BandBuilder() {
             <CardContent className="p-6">
               <form
                 className="space-y-4"
+                noValidate
                 onSubmit={(e) => {
                   e.preventDefault();
                   void create();
                 }}
               >
                 <h2 className="text-xl font-semibold">New project</h2>
-                <Input
-                  aria-label="Band / project name"
-                  placeholder="Band / project name"
-                  value={f.name}
-                  onChange={(e) => setF({ ...f, name: e.target.value })}
-                />
-                <Input
-                  aria-label="City / rehearsal base"
-                  placeholder="City / rehearsal base"
-                  value={f.city}
-                  onChange={(e) => setF({ ...f, city: e.target.value })}
-                />
-                <Input
-                  aria-label="Genres"
-                  placeholder="Genres, comma separated"
-                  value={f.genres}
-                  onChange={(e) => setF({ ...f, genres: e.target.value })}
-                />
-                <textarea
-                  aria-label="Concept"
-                  className={textareaClass}
-                  placeholder="Sound, references, goals, current lineup…"
-                  value={f.concept}
-                  onChange={(e) => setF({ ...f, concept: e.target.value })}
-                />
-                <Input
-                  aria-label="Compensation model"
-                  placeholder="Compensation / revenue-share model"
-                  value={f.compensationModel}
-                  onChange={(e) => setF({ ...f, compensationModel: e.target.value })}
-                />
-                <Button type="submit" className="w-full" disabled={creating || !f.name.trim()} aria-busy={creating}>
+                <RequiredNote />
+                <FormField id="project-name" label="Band / project name" required error={projectErrors.errors.name}>
+                  <Input
+                    maxLength={120}
+                    placeholder="e.g. The Monsoon Collective"
+                    value={f.name}
+                    onChange={(e) => setP('name', e.target.value)}
+                  />
+                </FormField>
+                <FormField id="project-city" label="City / rehearsal base" error={projectErrors.errors.city}>
+                  <Input
+                    autoComplete="address-level2"
+                    placeholder="e.g. Bengaluru"
+                    value={f.city}
+                    onChange={(e) => setP('city', e.target.value)}
+                  />
+                </FormField>
+                <FormField
+                  id="project-genres"
+                  label="Genres"
+                  hint="Separate with commas."
+                  error={projectErrors.errors.genres}
+                >
+                  <Input
+                    placeholder="e.g. Indie rock, Fusion"
+                    value={f.genres}
+                    onChange={(e) => setP('genres', e.target.value)}
+                  />
+                </FormField>
+                <FormField id="project-concept" label="Concept" error={projectErrors.errors.concept}>
+                  <textarea
+                    className={textareaClass}
+                    placeholder="Sound, references, goals, current lineup…"
+                    value={f.concept}
+                    onChange={(e) => setP('concept', e.target.value)}
+                  />
+                </FormField>
+                <FormField
+                  id="project-compensationModel"
+                  label="Compensation / revenue-share model"
+                  error={projectErrors.errors.compensationModel}
+                >
+                  <Input
+                    placeholder="e.g. Fee per show, 50/50 split"
+                    value={f.compensationModel}
+                    onChange={(e) => setP('compensationModel', e.target.value)}
+                  />
+                </FormField>
+                <FormError message={projectErrors.formError} />
+                <Button type="submit" className="w-full" disabled={creating} aria-busy={creating}>
                   <Users size={16} className="mr-2" />
                   {creating ? 'Creating…' : 'Create project'}
                 </Button>
@@ -181,6 +217,7 @@ export default function BandBuilder() {
             </CardContent>
           </Card>
           <div className="space-y-4">
+            <FormError message={publishError} />
             {loading ? (
               <p className="text-slate-400 text-center py-16" role="status">
                 Loading projects…

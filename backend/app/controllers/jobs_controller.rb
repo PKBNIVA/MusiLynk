@@ -64,7 +64,7 @@ class JobsController < ApplicationController
     attributes = job_params(defaults: true)
     flags = moderation_flags_for(attributes)
     job = current_user.jobs.build(attributes.merge(status: draft ? "draft" : "pending", company: params[:company].presence || current_user.profile&.company_name || current_user.name, moderation_note: flags.join("; ").presence))
-    return render_error(job.errors.full_messages.to_sentence, :unprocessable_content) unless job.valid?
+    return render_error(job.errors.full_messages.to_sentence, :unprocessable_content, "VALIDATION_FAILED", fields: job.errors.to_hash(true)) unless job.valid?
     if !draft && (error = submission_error(job))
       return render_error(error, :unprocessable_content)
     end
@@ -89,8 +89,8 @@ class JobsController < ApplicationController
     cover_letter = params[:coverLetter]
     return render_error("The note to the employer must be text.", :unprocessable_content) unless cover_letter.nil? || cover_letter.is_a?(String)
     return render_error("The note to the employer must be 5,000 characters or fewer.", :unprocessable_content) if cover_letter.to_s.length > 5_000
-    answers = params[:screeningAnswers]
-    answers = Array(answers.is_a?(Array) ? answers : nil).select { _1.is_a?(String) }.map { _1.first(5_000) }
+    answers = screening_answers_for(job)
+    return if performed?
     application = job.applications.create!(candidate: current_user, cover_letter: cover_letter.presence, screening_answers: answers)
     application.application_events.create!(actor: current_user, event_type: "created", to_status: "Applied")
     Notifier.new_application(application)
@@ -124,6 +124,31 @@ class JobsController < ApplicationController
   end
 
   private
+
+  # Every screening question needs an answer. Answers arrive in question order, either as the bare
+  # answer or (older clients) as "Question :: answer"; they are stored as "Question :: answer" so
+  # the employer sees each question next to its answer.
+  def screening_answers_for(job)
+    questions = Array(job.screening_questions).map(&:to_s)
+    raw = params[:screeningAnswers]
+    raw = Array(raw.is_a?(Array) ? raw : nil).map { _1.is_a?(String) ? _1 : "" }
+    return raw.reject(&:empty?).map { _1.first(5_000) } if questions.empty?
+
+    missing = {}
+    answers = questions.each_with_index.map do |question, index|
+      answer = raw[index].to_s
+      answer = answer.delete_prefix("#{question} ::") if answer.start_with?("#{question} ::")
+      answer = answer.strip.first(5_000)
+      missing["screening_answer_#{index}"] = ["Answer this question: #{question}"] if answer.empty?
+      "#{question} :: #{answer}"
+    end
+    if missing.any?
+      count = missing.size
+      render_error("Answer #{count == 1 ? 'the screening question' : "all #{count} unanswered screening questions"} before applying.",
+        :unprocessable_content, "SCREENING_ANSWERS_REQUIRED", fields: missing)
+    end
+    answers
+  end
 
   # A whole number is clamped to 1..MAX_PAGE_SIZE; a missing or unreadable one means PAGE_SIZE.
   def page_size

@@ -6,9 +6,11 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { Field, FormDialog, selectClass, useConfirm } from '../components/booking/BookingDialogs';
+import { FormDialog, selectClass, useConfirm } from '../components/booking/BookingDialogs';
 import { Music, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { Field, FormError, RequiredNote } from '../components/form/Field';
+import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { errorMessage } from '../lib/errors';
 import type { Act, ActMember, Taxonomy } from '../lib/apiTypes';
 
@@ -42,7 +44,6 @@ export default function ActsManager() {
       lineupSize: 1,
       ownerRole: 'Band Leader',
     }),
-    [creating, setCreating] = useState(false),
     [member, setMember] = useState<{
       actId: string;
       actName: string;
@@ -52,8 +53,17 @@ export default function ActsManager() {
     } | null>(null),
     [memberError, setMemberError] = useState(''),
     [savingMember, setSavingMember] = useState(false),
-    [togglingId, setTogglingId] = useState<string | null>(null);
+    [togglingId, setTogglingId] = useState<string | null>(null),
+    [statusError, setStatusError] = useState('');
   const { ask, element: confirmDialog } = useConfirm();
+  type ActField = 'name' | 'city' | 'genres' | 'minFee' | 'maxFee' | 'lineupSize' | 'ownerRole';
+  const actErrors = useFormErrors<ActField>({ idFor: (k) => `act-${k}` });
+  const createOnce = useSubmitOnce();
+  const creating = createOnce.busy;
+  const setAct = (k: keyof ActForm, v: string) => {
+    setF((current) => ({ ...current, [k]: v }));
+    actErrors.clear(k as ActField);
+  };
   async function load() {
     try {
       const d = await apiGet<{ acts?: Act[] }>('/acts/me');
@@ -74,42 +84,44 @@ export default function ActsManager() {
       })
       .catch(() => {});
   }, []);
-  async function create() {
-    if (creating) return;
-    const minFee = f.minFee === '' ? null : Number(f.minFee);
-    const maxFee = f.maxFee === '' ? null : Number(f.maxFee);
-    if (
-      (minFee !== null && (!Number.isInteger(minFee) || minFee < 0)) ||
-      (maxFee !== null && (!Number.isInteger(maxFee) || maxFee < 0))
-    ) {
-      toast.error('Fees must be whole numbers of 0 or more.');
-      return;
-    }
-    if (minFee !== null && maxFee !== null && maxFee < minFee) {
-      toast.error('Max fee must be at least the min fee.');
-      return;
-    }
-    setCreating(true);
-    try {
-      await apiPost('/acts', {
-        ...f,
-        name: f.name.trim(),
-        genres: f.genres
-          .split(',')
-          .map((x: string) => x.trim())
-          .filter(Boolean),
-        minFee,
-        maxFee,
-        lineupSize: Math.max(1, Math.floor(Number(f.lineupSize)) || 1),
-      });
-      toast.success('Bookable act created');
-      setF((current) => ({ ...current, name: '', city: '', genres: '', minFee: '', maxFee: '' }));
-      await load();
-    } catch (e: unknown) {
-      toast.error(errorMessage(e));
-    } finally {
-      setCreating(false);
-    }
+  function create() {
+    return createOnce.run(async () => {
+      const minFee = f.minFee === '' ? null : Number(f.minFee);
+      const maxFee = f.maxFee === '' ? null : Number(f.maxFee);
+      const errors: Partial<Record<ActField, string>> = {};
+      if (!f.name.trim()) errors.name = 'Enter the act or stage name.';
+      else if (f.name.trim().length > 120) errors.name = 'Keep the name under 120 characters.';
+      if (minFee !== null && (!Number.isInteger(minFee) || minFee < 0))
+        errors.minFee = 'Enter a whole number of 0 or more.';
+      if (maxFee !== null && (!Number.isInteger(maxFee) || maxFee < 0))
+        errors.maxFee = 'Enter a whole number of 0 or more.';
+      else if (minFee !== null && maxFee !== null && maxFee < minFee)
+        errors.maxFee = 'Max fee must be at least the min fee.';
+      if (!(Number(f.lineupSize) >= 1)) errors.lineupSize = 'Lineup size must be at least 1.';
+      actErrors.setFormError('');
+      if (actErrors.setErrors(errors)) {
+        actErrors.focusFirst();
+        return;
+      }
+      try {
+        await apiPost('/acts', {
+          ...f,
+          name: f.name.trim(),
+          genres: f.genres
+            .split(',')
+            .map((x: string) => x.trim())
+            .filter(Boolean),
+          minFee,
+          maxFee,
+          lineupSize: Math.max(1, Math.floor(Number(f.lineupSize)) || 1),
+        });
+        toast.success('Bookable act created');
+        setF((current) => ({ ...current, name: '', city: '', genres: '', minFee: '', maxFee: '' }));
+        await load();
+      } catch (e: unknown) {
+        if (actErrors.setFromApi(e, 'The act could not be created. Try again.')) actErrors.focusFirst();
+      }
+    });
   }
   async function saveMember() {
     if (!member || savingMember) return;
@@ -145,6 +157,7 @@ export default function ActsManager() {
     });
   async function changeStatus(act: Act) {
     if (togglingId) return;
+    setStatusError('');
     setTogglingId(act.id);
     try {
       if (act.status === 'active') await apiDelete(`/acts/${act.id}`);
@@ -152,7 +165,7 @@ export default function ActsManager() {
       toast.success(act.status === 'active' ? 'Act hidden from booking' : 'Act published for booking');
       await load();
     } catch (e: unknown) {
-      toast.error(errorMessage(e));
+      setStatusError(errorMessage(e, 'The act could not be updated. Try again.'));
     } finally {
       setTogglingId(null);
     }
@@ -175,6 +188,7 @@ export default function ActsManager() {
             <CardContent className="p-6">
               <form
                 className="space-y-4"
+                noValidate
                 onSubmit={(e) => {
                   e.preventDefault();
                   void create();
@@ -184,69 +198,77 @@ export default function ActsManager() {
                   <Plus size={18} />
                   Create act
                 </h2>
-                <Input
-                  aria-label="Act / stage name"
-                  placeholder="Act / stage name"
-                  value={f.name}
-                  onChange={(e) => setF({ ...f, name: e.target.value })}
-                />
-                <select
-                  aria-label="Act type"
-                  className={selectClass}
-                  value={f.actType}
-                  onChange={(e) => setF({ ...f, actType: e.target.value })}
-                >
-                  {(actTypes.includes(f.actType) ? actTypes : [f.actType, ...actTypes]).map((x: string) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-                <Input
-                  aria-label="City / base"
-                  placeholder="City / base"
-                  value={f.city}
-                  onChange={(e) => setF({ ...f, city: e.target.value })}
-                />
-                <Input
-                  aria-label="Genres"
-                  placeholder="Genres, comma separated"
-                  value={f.genres}
-                  onChange={(e) => setF({ ...f, genres: e.target.value })}
-                />
+                <RequiredNote />
+                <Field id="act-name" label="Act / stage name" required error={actErrors.errors.name}>
+                  <Input
+                    placeholder="e.g. The Monsoon Collective"
+                    maxLength={120}
+                    value={f.name}
+                    onChange={(e) => setAct('name', e.target.value)}
+                  />
+                </Field>
+                <Field id="act-type" label="Act type">
+                  <select
+                    className={selectClass}
+                    value={f.actType}
+                    onChange={(e) => setF({ ...f, actType: e.target.value })}
+                  >
+                    {(actTypes.includes(f.actType) ? actTypes : [f.actType, ...actTypes]).map((x: string) => (
+                      <option key={x}>{x}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field id="act-city" label="City / base" error={actErrors.errors.city}>
+                  <Input
+                    placeholder="e.g. Mumbai"
+                    autoComplete="address-level2"
+                    value={f.city}
+                    onChange={(e) => setAct('city', e.target.value)}
+                  />
+                </Field>
+                <Field id="act-genres" label="Genres" hint="Separate with commas." error={actErrors.errors.genres}>
+                  <Input
+                    placeholder="e.g. Sufi, Bollywood"
+                    value={f.genres}
+                    onChange={(e) => setAct('genres', e.target.value)}
+                  />
+                </Field>
                 <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    aria-label="Min fee"
-                    type="number"
-                    min="0"
-                    placeholder="Min fee ₹"
-                    value={f.minFee}
-                    onChange={(e) => setF({ ...f, minFee: e.target.value })}
-                  />
-                  <Input
-                    aria-label="Max fee"
-                    type="number"
-                    min="0"
-                    placeholder="Max fee ₹"
-                    value={f.maxFee}
-                    onChange={(e) => setF({ ...f, maxFee: e.target.value })}
-                  />
+                  <Field id="act-minFee" label="Min fee (₹)" error={actErrors.errors.minFee}>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      value={f.minFee}
+                      onChange={(e) => setAct('minFee', e.target.value)}
+                    />
+                  </Field>
+                  <Field id="act-maxFee" label="Max fee (₹)" error={actErrors.errors.maxFee}>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      value={f.maxFee}
+                      onChange={(e) => setAct('maxFee', e.target.value)}
+                    />
+                  </Field>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    aria-label="Lineup size"
-                    type="number"
-                    min="1"
-                    placeholder="Lineup size"
-                    value={f.lineupSize}
-                    onChange={(e) => setF({ ...f, lineupSize: e.target.value })}
-                  />
-                  <Input
-                    aria-label="Your role"
-                    placeholder="Your role"
-                    value={f.ownerRole}
-                    onChange={(e) => setF({ ...f, ownerRole: e.target.value })}
-                  />
+                  <Field id="act-lineupSize" label="Lineup size" error={actErrors.errors.lineupSize}>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      value={f.lineupSize}
+                      onChange={(e) => setAct('lineupSize', e.target.value)}
+                    />
+                  </Field>
+                  <Field id="act-ownerRole" label="Your role" error={actErrors.errors.ownerRole}>
+                    <Input value={f.ownerRole} onChange={(e) => setAct('ownerRole', e.target.value)} />
+                  </Field>
                 </div>
-                <Button type="submit" className="w-full" disabled={creating || !f.name.trim()} aria-busy={creating}>
+                <FormError message={actErrors.formError} />
+                <Button type="submit" className="w-full" disabled={creating} aria-busy={creating}>
                   <Music size={16} className="mr-2" />
                   {creating ? 'Creating…' : 'Create bookable act'}
                 </Button>
@@ -254,6 +276,7 @@ export default function ActsManager() {
             </CardContent>
           </Card>
           <div className="space-y-4">
+            <FormError message={statusError} />
             {loading ? (
               <p className="text-slate-400 text-center py-16" role="status">
                 Loading your acts…
@@ -382,22 +405,14 @@ export default function ActsManager() {
         >
           {member && (
             <>
-              <Field label="Member name" htmlFor="member-name">
-                <Input
-                  id="member-name"
-                  value={member.displayName}
-                  onChange={(e) => setM('displayName', e.target.value)}
-                />
+              <Field id="member-name" label="Member name" required>
+                <Input value={member.displayName} onChange={(e) => setM('displayName', e.target.value)} />
               </Field>
-              <Field label="Role in the act" htmlFor="member-role" hint="For example Vocalist or Drummer">
-                <Input id="member-role" value={member.roleName} onChange={(e) => setM('roleName', e.target.value)} />
+              <Field id="member-role" label="Role in the act" required hint="For example Vocalist or Drummer">
+                <Input value={member.roleName} onChange={(e) => setM('roleName', e.target.value)} />
               </Field>
-              <Field label="Instrument or voice (optional)" htmlFor="member-instrument">
-                <Input
-                  id="member-instrument"
-                  value={member.instrument}
-                  onChange={(e) => setM('instrument', e.target.value)}
-                />
+              <Field id="member-instrument" label="Instrument or voice" optional>
+                <Input value={member.instrument} onChange={(e) => setM('instrument', e.target.value)} />
               </Field>
             </>
           )}

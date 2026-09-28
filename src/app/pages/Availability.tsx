@@ -8,6 +8,35 @@ import { Input } from '../components/ui/input';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { errorMessage } from '../lib/errors';
 import type { AvailabilityWindow } from '../lib/apiTypes';
+import { Field, FormError } from '../components/form/Field';
+import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
+
+type SlotField = 'startAt' | 'endAt' | 'city' | 'status';
+const SLOT_IDS: Record<SlotField, string> = {
+  startAt: 'availability-start',
+  endAt: 'availability-end',
+  city: 'availability-city',
+  status: 'availability-status',
+};
+// datetime-local value for "now" in the browser's zone, used as the earliest selectable start.
+const localNow = () => {
+  const d = new Date();
+  d.setSeconds(0, 0);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+};
+
+/** Mirrors AvailabilityWindow validations: both times, end after start, start not in the past. */
+function validateSlot(form: AvailabilityForm) {
+  const errors: Partial<Record<SlotField, string>> = {};
+  const start = form.startAt ? new Date(form.startAt).getTime() : NaN;
+  const end = form.endAt ? new Date(form.endAt).getTime() : NaN;
+  if (!form.startAt) errors.startAt = 'Choose a start time.';
+  else if (start < Date.now() - 5 * 60_000) errors.startAt = 'Choose a start time in the future.';
+  if (!form.endAt) errors.endAt = 'Choose an end time.';
+  else if (!Number.isNaN(start) && end <= start) errors.endAt = 'End must be after the start.';
+  if ((form.city || '').trim().length > 120) errors.city = 'Keep the city under 120 characters.';
+  return errors;
+}
 
 type AvailabilityForm = { startAt?: string; endAt?: string; city?: string; status: string };
 
@@ -15,12 +44,15 @@ export default function Availability() {
   const [items, setItems] = useState<AvailabilityWindow[]>([]);
   const [form, setForm] = useState<AvailabilityForm>({ status: 'available' });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const set = (key: keyof AvailabilityForm, value: string) => setForm((current) => ({ ...current, [key]: value }));
-  const validRange = Boolean(
-    form.startAt && form.endAt && new Date(form.endAt).getTime() > new Date(form.startAt).getTime(),
-  );
+  const [removeError, setRemoveError] = useState('');
+  const errors = useFormErrors<SlotField>({ ids: SLOT_IDS });
+  const submit = useSubmitOnce();
+  const saving = submit.busy;
+  const set = (key: SlotField, value: string) => {
+    setForm((current) => ({ ...current, [key]: value }));
+    errors.clear(key);
+  };
 
   async function load() {
     setLoading(true);
@@ -38,36 +70,38 @@ export default function Availability() {
     void load();
   }, []);
 
-  async function add() {
-    if (!validRange) {
-      toast.error('Choose an end time after the start time.');
-      return;
-    }
-    setSaving(true);
-    try {
-      // datetime-local has no zone; send an absolute instant so the server does not read it as UTC.
-      await apiPost('/availability', {
-        ...form,
-        startAt: new Date(form.startAt!).toISOString(),
-        endAt: new Date(form.endAt!).toISOString(),
-        city: form.city?.trim() || null,
-      });
-      setForm({ status: 'available' });
-      await load();
-      toast.success('Availability added.');
-    } catch (e: unknown) {
-      toast.error(errorMessage(e, 'Unable to add availability.'));
-    } finally {
-      setSaving(false);
-    }
+  function add(e?: React.FormEvent) {
+    e?.preventDefault();
+    void submit.run(async () => {
+      errors.setFormError('');
+      if (errors.setErrors(validateSlot(form))) {
+        errors.focusFirst();
+        return;
+      }
+      try {
+        // datetime-local has no zone; send an absolute instant so the server does not read it as UTC.
+        await apiPost('/availability', {
+          ...form,
+          startAt: new Date(form.startAt!).toISOString(),
+          endAt: new Date(form.endAt!).toISOString(),
+          city: form.city?.trim() || null,
+        });
+        setForm({ status: 'available' });
+        await load();
+        toast.success('Availability added.');
+      } catch (e: unknown) {
+        if (errors.setFromApi(e, 'Unable to add availability. Try again.')) errors.focusFirst();
+      }
+    });
   }
   async function remove(id: string) {
+    setRemoveError('');
     try {
       await apiDelete(`/availability/${id}`);
       setItems((current) => current.filter((item) => item.id !== id));
       toast.success('Availability removed.');
     } catch (e: unknown) {
-      toast.error(errorMessage(e, 'Unable to remove availability.'));
+      setRemoveError(errorMessage(e, 'Unable to remove availability.'));
     }
   }
 
@@ -80,57 +114,56 @@ export default function Availability() {
           Publish when you are available, on hold, tentative, booked or unavailable.
         </p>
         <Card className="bg-white/[.055] border-white/10 mt-7">
-          <CardContent className="p-5 grid md:grid-cols-5 gap-3">
-            <label className="sr-only" htmlFor="availability-start">
-              Start time
-            </label>
-            <Input
-              id="availability-start"
-              type="datetime-local"
-              value={form.startAt || ''}
-              onChange={(e) => set('startAt', e.target.value)}
-              className="bg-white/5 border-white/15"
-            />
-            <label className="sr-only" htmlFor="availability-end">
-              End time
-            </label>
-            <Input
-              id="availability-end"
-              type="datetime-local"
-              min={form.startAt}
-              value={form.endAt || ''}
-              onChange={(e) => set('endAt', e.target.value)}
-              className="bg-white/5 border-white/15"
-            />
-            <label className="sr-only" htmlFor="availability-city">
-              City
-            </label>
-            <Input
-              id="availability-city"
-              value={form.city || ''}
-              onChange={(e) => set('city', e.target.value)}
-              placeholder="City"
-              className="bg-white/5 border-white/15"
-            />
-            <label className="sr-only" htmlFor="availability-status">
-              Status
-            </label>
-            <select
-              id="availability-status"
-              value={form.status}
-              onChange={(e) => set('status', e.target.value)}
-              className="rounded-md bg-slate-900 border border-white/15 px-3"
-            >
-              {['available', 'hold', 'tentative', 'booked', 'unavailable'].map((x) => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
-            <Button onClick={add} disabled={!validRange || saving}>
-              <CalendarPlus size={16} className="mr-2" />
-              {saving ? 'Adding…' : 'Add'}
-            </Button>
+          <CardContent className="p-5">
+            <form onSubmit={add} noValidate className="grid md:grid-cols-5 gap-3 items-start">
+              <Field id={SLOT_IDS.startAt} label="Start" required error={errors.errors.startAt}>
+                <Input
+                  type="datetime-local"
+                  min={localNow()}
+                  value={form.startAt || ''}
+                  onChange={(e) => set('startAt', e.target.value)}
+                  className="bg-white/5 border-white/15"
+                />
+              </Field>
+              <Field id={SLOT_IDS.endAt} label="End" required error={errors.errors.endAt}>
+                <Input
+                  type="datetime-local"
+                  min={form.startAt || localNow()}
+                  value={form.endAt || ''}
+                  onChange={(e) => set('endAt', e.target.value)}
+                  className="bg-white/5 border-white/15"
+                />
+              </Field>
+              <Field id={SLOT_IDS.city} label="City" optional error={errors.errors.city}>
+                <Input
+                  value={form.city || ''}
+                  maxLength={120}
+                  autoComplete="address-level2"
+                  onChange={(e) => set('city', e.target.value)}
+                  placeholder="Mumbai"
+                  className="bg-white/5 border-white/15"
+                />
+              </Field>
+              <Field id={SLOT_IDS.status} label="Status" error={errors.errors.status}>
+                <select
+                  value={form.status}
+                  onChange={(e) => set('status', e.target.value)}
+                  className="h-11 w-full rounded-xl bg-slate-900 border border-white/15 px-3"
+                >
+                  {['available', 'hold', 'tentative', 'booked', 'unavailable'].map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+              </Field>
+              <Button type="submit" disabled={saving} aria-busy={saving} className="md:mt-6">
+                <CalendarPlus size={16} className="mr-2" />
+                {saving ? 'Adding…' : 'Add'}
+              </Button>
+              <FormError message={errors.formError} className="md:col-span-5" />
+            </form>
           </CardContent>
         </Card>
+        <FormError message={removeError} className="mt-4" />
         {loading ? (
           <p className="text-slate-400 text-center py-14" role="status">
             Loading availability…

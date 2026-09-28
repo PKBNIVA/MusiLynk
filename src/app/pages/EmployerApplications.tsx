@@ -18,6 +18,15 @@ const localNow = () => {
   d.setSeconds(0, 0);
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
+/** Stored answers read "Question :: answer"; older rows may be a bare answer or another value. */
+function screeningPair(value: unknown, index: number) {
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  const at = text.indexOf(' :: ');
+  if (at >= 0) return { question: text.slice(0, at), answer: text.slice(at + 4).trim() };
+  if (text.endsWith(' ::')) return { question: text.slice(0, -3), answer: '' };
+  return { question: `Question ${index + 1}`, answer: text.trim() };
+}
+
 export default function EmployerApplications() {
   const nav = useNavigate(),
     { user } = useAuth(),
@@ -224,11 +233,19 @@ export default function EmployerApplications() {
                       {a.screeningAnswers?.length > 0 && (
                         <div className="mt-4 text-sm space-y-2">
                           <div className="text-slate-500">Screening responses</div>
-                          {a.screeningAnswers.map((x, i: number) => (
-                            <div key={i} className="p-2 rounded bg-white/5 break-words">
-                              {typeof x === 'string' ? x : JSON.stringify(x)}
-                            </div>
-                          ))}
+                          <dl className="space-y-2">
+                            {a.screeningAnswers.map((x, i: number) => {
+                              const { question, answer } = screeningPair(x, i);
+                              return (
+                                <div key={i} className="p-2 rounded bg-white/5 [overflow-wrap:anywhere]">
+                                  <dt className="text-slate-400 text-xs">{question}</dt>
+                                  <dd className={answer ? 'mt-1 whitespace-pre-line' : 'mt-1 italic text-slate-500'}>
+                                    {answer || 'No answer'}
+                                  </dd>
+                                </div>
+                              );
+                            })}
+                          </dl>
                         </div>
                       )}
                       {(a.recruiterNote || a.recruiterRating) && (

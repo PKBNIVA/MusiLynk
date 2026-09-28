@@ -45,9 +45,9 @@ code, and the admin build has no public pages. `npm run check:split` builds the 
   confirming a code sent to the new mailbox. The page title is "Verse Admin" and
   `<meta name="robots" content="noindex, nofollow">` keeps it out of search results.
 - The admin site's exact origin (for example `https://verse-admin-xxxx.vercel.app`) is the
-  API's `ADMIN_ORIGIN`. Its URL is not linked from, or contained in, the public site: an admin who
-  signs in there is told "Admins sign in at the admin site." and any admin session started there
-  is ended at once.
+  API's `ADMIN_ORIGIN` (see "Admin site and `ADMIN_ORIGIN`" below for what that locks). Its URL is
+  not linked from, or contained in, the public site: an admin who signs in there is told "Admins
+  sign in at the admin site." and any admin session started there is ended at once.
 - Local: `VITE_APP_TARGET=admin npm run dev`. Playwright builds it into `dist-qa-admin/` and serves
   it on port 4176 for the `admin-desktop` project (`tests/e2e/admin-*.spec.ts`).
 - Rollback: revert the frontend PR (the public site gets `/admin` back), and unset `ADMIN_ORIGIN`

@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router';
 import { useAuth, Role } from '../lib/authContext';
 import { hasAccessToken } from '../lib/api';
+import { IS_ADMIN_SITE, signInPath } from '../lib/appTarget';
 import { Button } from './ui/button';
 import { PageLoading } from './ExperienceStates';
 export function ProtectedRoute({ roles, children }: { roles: Role[]; children: React.ReactNode }) {
@@ -37,10 +38,11 @@ export function ProtectedRoute({ roles, children }: { roles: Role[]; children: R
     );
   if (!user) {
     const authRole = roles.includes('employer') && !roles.includes('jobseeker') ? 'employer' : 'jobseeker';
-    return <Navigate to={`/auth/${authRole}`} state={{ from: `${location.pathname}${location.search}` }} replace />;
+    return <Navigate to={signInPath(authRole)} state={{ from: `${location.pathname}${location.search}` }} replace />;
   }
   if (!roles.includes(user.role)) {
-    const home = user.role === 'admin' ? '/admin' : user.role === 'employer' ? '/employer' : '/jobseeker';
+    /* Each site has one home per role; the other site's role goes to this site's front page. */
+    const home = IS_ADMIN_SITE || user.role === 'admin' ? '/' : user.role === 'employer' ? '/employer' : '/jobseeker';
     return <Navigate to={home} replace />;
   }
   return <>{children}</>;

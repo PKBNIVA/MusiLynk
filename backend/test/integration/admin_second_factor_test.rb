@@ -214,6 +214,30 @@ class AdminSecondFactorTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an admin on a reserved domain (the seeded admin@verse.local) is never sent a code: skipped under auto, refused under required" do
+    @admin.update!(email: "admin@verse.local")
+    production = ActiveSupport::EnvironmentInquirer.new("production")
+    with_env(PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => nil)) do
+      assert_no_enqueued_jobs(only: EmailDeliveryJob) { Rails.stub(:env, production) { password_login("admin@verse.local") } }
+      assert_response :success, "a code sent to an address that can never receive mail would lock the owner out"
+      assert_equal "email_address_undeliverable", AuditLog.where(action: "auth.admin_second_factor_skipped").sole.metadata["reason"]
+      token = response.parsed_body.fetch("accessToken")
+
+      Rails.stub(:env, production) { get "/api/admin/tester", headers: bearer(token) }
+      check = response.parsed_body["checks"].find { _1["name"] == "Admin 2-step sign-in" }
+      assert_equal false, check["pass"], "the tester flags any active admin whose address can't receive the code"
+      assert_match "can't receive mail", check["detail"]
+
+      Rails.stub(:env, production) { get "/api/admin/users/lookup", params: { email: "admin@verse.local" }, headers: bearer(token) }
+      note = response.parsed_body["diagnosis"].find { _1["code"] == "ADMIN_SECOND_FACTOR_SKIPPED" }
+      assert_match "can't receive mail", note["message"]
+    end
+    with_env(PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => "required")) do
+      Rails.stub(:env, production) { password_login("admin@verse.local") }
+      assert_response :service_unavailable
+    end
+  end
+
   test "the tester reports the second step as on when it is enforced" do
     token = with_env("ADMIN_SECOND_FACTOR" => "off") { password_login(@admin.email) && response.parsed_body.fetch("accessToken") }
     with_env(PROVIDER_ENV.merge("ADMIN_SECOND_FACTOR" => "required")) { get "/api/admin/tester", headers: bearer(token) }

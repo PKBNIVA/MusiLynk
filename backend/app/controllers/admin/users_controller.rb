@@ -115,7 +115,7 @@ module Admin
       if user.admin?
         case AuthController.admin_second_factor_state(user.email)
         when :skipped
-          add.call("warn", "ADMIN_SECOND_FACTOR_SKIPPED", facts[:email_provider] ? AuthController::SECOND_FACTOR_SUPPRESSED_WARNING : AuthController::SECOND_FACTOR_SKIPPED_WARNING)
+          add.call("warn", "ADMIN_SECOND_FACTOR_SKIPPED", AuthController.admin_second_factor_warning(user.email))
         when :off then add.call("warn", "ADMIN_SECOND_FACTOR_OFF", AuthController::SECOND_FACTOR_DISABLED_WARNING)
         when :unavailable then add.call("error", "ADMIN_SECOND_FACTOR_UNAVAILABLE", "ADMIN_SECOND_FACTOR=required but the code cannot be emailed to this admin (no email provider, or the address is suppressed), so their password sign-in is refused. Fix email, or set ADMIN_SECOND_FACTOR=auto.")
         end

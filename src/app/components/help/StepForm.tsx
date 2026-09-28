@@ -95,7 +95,7 @@ export function StepForm({
                 headings.current[i] = el;
               }}
               tabIndex={-1}
-              className="flex items-center gap-2 text-2xl font-semibold outline-none"
+              className="flex scroll-mt-28 items-center gap-2 text-2xl font-semibold outline-none"
             >
               <s.icon aria-hidden="true" size={24} className="text-violet-300" />
               {s.title}

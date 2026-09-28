@@ -126,6 +126,16 @@ class Notifier
         body: "#{follower.name} started following you.")
     end
 
+    # "Need someone by tomorrow": a musician was matched and notified about an open urgent
+    # request (UrgentMatcher). WhatsApp, when configured and consented, is sent separately
+    # (see WhatsappAlertJob); this always does in-app + email.
+    def urgent_request_alert(urgent_request, recipient)
+      notify(recipient, kind: "urgent_alert", title: "Urgent: #{urgent_request.role_name} needed in #{urgent_request.city}",
+        link: "/jobseeker/urgent", body: "#{urgent_request.title} — #{urgent_request.city}, #{urgent_request.start_at&.strftime('%d %b, %I:%M %p')}.")
+      email(recipient, "urgent_request_alert", title: urgent_request.title, role: urgent_request.role_name, city: urgent_request.city,
+        startAt: urgent_request.start_at&.iso8601)
+    end
+
     private
 
     def notify(user, **attributes)

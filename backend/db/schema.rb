@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_162100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -843,6 +843,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "email_notifications", default: true, null: false
+    t.string "phone_e164"
+    t.datetime "whatsapp_consented_at"
     t.index "((roles)::text) gin_trgm_ops", name: "index_profiles_on_roles_text_trgm", using: :gin
     t.index "((skills)::text) gin_trgm_ops", name: "index_profiles_on_skills_text_trgm", using: :gin
     t.index ["bio"], name: "index_profiles_on_bio", opclass: :gin_trgm_ops, using: :gin
@@ -1054,6 +1056,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.index ["user_id", "status"], name: "index_uploads_on_user_id_and_status"
   end
 
+  create_table "urgent_request_notifications", id: :string, force: :cascade do |t|
+    t.string "urgent_request_id", null: false
+    t.string "user_id", null: false
+    t.string "channel", null: false
+    t.string "notified_by_admin_id"
+    t.datetime "created_at", null: false
+    t.index ["notified_by_admin_id"], name: "index_urgent_request_notifications_on_notified_by_admin_id"
+    t.index ["urgent_request_id", "user_id", "channel"], name: "idx_urgent_notif_unique", unique: true
+    t.index ["user_id"], name: "index_urgent_request_notifications_on_user_id"
+  end
+
   create_table "urgent_request_responses", id: false, force: :cascade do |t|
     t.string "urgent_request_id", null: false
     t.string "user_id", null: false
@@ -1084,7 +1097,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
     t.boolean "travel_covered", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "notified_count", default: 0, null: false
+    t.datetime "first_notified_at"
+    t.datetime "last_notified_at"
+    t.string "filled_by_id"
+    t.text "founder_notes"
+    t.index ["filled_by_id"], name: "index_urgent_requests_on_filled_by_id"
     t.index ["requester_id"], name: "index_urgent_requests_on_requester_id"
+    t.index ["start_at"], name: "index_urgent_requests_on_start_at"
+    t.index ["status"], name: "index_urgent_requests_on_status"
   end
 
   create_table "user_blocks", id: :string, force: :cascade do |t|
@@ -1197,8 +1218,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
   add_foreign_key "talent_shortlists", "users", column: "candidate_id"
   add_foreign_key "talent_shortlists", "users", column: "employer_id"
   add_foreign_key "uploads", "users", on_delete: :nullify
+  add_foreign_key "urgent_request_notifications", "urgent_requests"
+  add_foreign_key "urgent_request_notifications", "users"
+  add_foreign_key "urgent_request_notifications", "users", column: "notified_by_admin_id"
   add_foreign_key "urgent_request_responses", "urgent_requests"
   add_foreign_key "urgent_request_responses", "users"
+  add_foreign_key "urgent_requests", "users", column: "filled_by_id"
   add_foreign_key "urgent_requests", "users", column: "requester_id"
   add_foreign_key "user_blocks", "users", column: "blocked_id", on_delete: :cascade
   add_foreign_key "user_blocks", "users", column: "blocker_id", on_delete: :cascade

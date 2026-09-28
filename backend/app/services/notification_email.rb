@@ -32,6 +32,12 @@ class NotificationEmail
       heading: ->(_) { "You have a new message" },
       copy: ->(p) { p["job"].present? ? "#{p['name']} sent you a message about #{p['job']}." : "#{p['name']} sent you a message." },
       action: "Read and reply", path: "/messages"
+    },
+    "urgent_request_alert" => {
+      subject: ->(p) { "Urgent: #{p['role']} needed in #{p['city']}" },
+      heading: ->(_) { "A hirer needs someone fast" },
+      copy: ->(p) { "#{p['title']} in #{p['city']}. If you're free, respond in one tap before someone else does." },
+      action: "See the request", path: "/jobseeker/urgent"
     }
   }.freeze
 

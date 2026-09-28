@@ -1,0 +1,30 @@
+# "Need someone by tomorrow": everything that governs the urgent-hire wedge (Mumbai first).
+# Read through UrgentConfig, never inline, so the founder can retune the promise and the
+# notify fan-out without a deploy touching code.
+default: &default
+  # Shown on the confirmation screen ("We're on it").
+  response_time_promise: "within 2 hours, 9am–11pm IST"
+  # Quiet hours: outside this local-time window, notifications queue for the next opening
+  # instead of alerting anyone at 3am. IST only for the beta (Mumbai first).
+  quiet_hours:
+    timezone: "Asia/Kolkata"
+    start_hour: 9
+    end_hour: 23
+  # UrgentMatcher ranks up to this many candidates; Notifier/WhatsappAlerts fan out to the
+  # top `notify_count` of them.
+  matcher:
+    candidate_limit: 30
+    notify_count: 15
+    # A candidate must have signed in or acted within this window to count as "recently active".
+    recent_activity_within_days: 30
+  # A request with no responses this long after posting is flagged red on the admin funnel.
+  no_response_after_minutes: 60
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

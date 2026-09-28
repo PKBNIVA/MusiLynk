@@ -24,6 +24,7 @@ Rails.application.routes.draw do
     post "account/email/confirm", to: "account#confirm_email_change"
     post "account/password", to: "account#change_password"
     put "profile", to: "profiles#update"
+    post "profile/whatsapp-consent", to: "profiles#whatsapp_consent"
 
     resources :jobs, only: %i[index show create] do
       member { post :apply }
@@ -79,6 +80,10 @@ Rails.application.routes.draw do
       delete "demo-data", to: "demo_data#destroy_all"
       get "demo-data/jobs/:id", to: "demo_data#job_status"
       delete "demo-data/:batch", to: "demo_data#destroy"
+      get "urgent-requests", to: "urgent_requests#index"
+      get "urgent-requests/:id/candidates", to: "urgent_requests#candidates"
+      post "urgent-requests/:id/notify", to: "urgent_requests#notify"
+      patch "urgent-requests/:id", to: "urgent_requests#update"
     end
 
     resources :portfolio, only: %i[index create update destroy], controller: "portfolio"
@@ -177,7 +182,7 @@ Rails.application.routes.draw do
         delete "members/:userId", to: "organizations#remove_member"
       end
     end
-    resources :urgent_requests, path: "urgent-requests", only: %i[index create update] do
+    resources :urgent_requests, path: "urgent-requests", only: %i[index show create update] do
       member do
         post :respond
         get :responses

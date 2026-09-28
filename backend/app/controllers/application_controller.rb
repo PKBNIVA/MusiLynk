@@ -175,7 +175,8 @@ class ApplicationController < ActionController::API
   end
 
   def public_profile(user)
-    public_user(user).except("email", "status", "profileComplete", "emailVerified", "last_login_at", "phone", "synthetic_batch")
+    public_user(user).except("email", "status", "profileComplete", "emailVerified", "last_login_at", "phone", "synthetic_batch",
+      "phoneE164", "whatsappConsentedAt")
       .merge("demo" => SyntheticQa::Demo.user?(user))
   end
 

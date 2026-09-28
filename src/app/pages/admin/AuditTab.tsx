@@ -1,17 +1,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import type { AuditLogEntry } from '../../lib/apiTypes';
-import { Panel, Empty, date } from './shared';
+import { Panel, Pager, Empty, date, type PageMeta } from './shared';
 
 export default function AuditTab({
   logs,
   error,
   loading,
   retry,
+  meta,
+  onPage,
 }: {
   logs: AuditLogEntry[];
   error?: string;
   loading: boolean;
   retry: () => void;
+  meta?: PageMeta;
+  onPage: (page: number) => void;
 }) {
   return (
     <Card className="bg-white/[.05] border-white/10">
@@ -38,6 +42,7 @@ export default function AuditTab({
             </div>
           ))}
           {!logs.length && <Empty text="No audit events yet." />}
+          <Pager meta={meta} onPage={onPage} loading={loading} />
         </Panel>
       </CardContent>
     </Card>

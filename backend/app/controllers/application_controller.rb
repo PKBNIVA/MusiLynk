@@ -6,7 +6,7 @@ class ApplicationController < ActionController::API
   around_action :log_request
   before_action :require_verified_email_for_mutation
   rescue_from ActiveRecord::RecordNotFound, with: -> { render_error("Not found", :not_found) }
-  rescue_from ActiveRecord::RecordInvalid, with: ->(error) { render_error(error.record.errors.full_messages.to_sentence, :unprocessable_content, "VALIDATION_FAILED") }
+  rescue_from ActiveRecord::RecordInvalid, with: :render_record_invalid
   # Client mistakes that would otherwise surface as 500s (or as framework error pages without
   # the {error, code} shape). Later declarations take precedence over earlier ones.
   rescue_from ArgumentError, with: :render_invalid_argument
@@ -113,9 +113,28 @@ class ApplicationController < ActionController::API
     true
   end
 
-  def render_error(message, status, code = nil)
+  # `fields` (optional) maps a request field name, as the client sends it (camelCase), to the
+  # messages for that field, so forms can show each error next to its input:
+  # `{ error: "Website must be…", code: "VALIDATION_FAILED", fields: { "website" => ["Website must be…"] } }`.
+  # Clients that only read `error`/`code` are unaffected.
+  def render_error(message, status, code = nil, fields: nil)
     report_handled_server_error(status, code)
-    render json: { error: message, code: code }.compact, status: status
+    body = { error: message, code: code }.compact
+    body[:fields] = normalize_error_fields(fields) if fields.present?
+    render json: body, status: status
+  end
+
+  def render_record_invalid(error)
+    errors = error.record.errors
+    render_error(errors.full_messages.to_sentence, :unprocessable_content, "VALIDATION_FAILED", fields: errors.to_hash(true))
+  end
+
+  def normalize_error_fields(fields)
+    fields.to_h.each_with_object({}) do |(name, messages), out|
+      key = name.to_s.tr(".", "_").camelize(:lower)
+      list = Array(messages).map(&:to_s).reject(&:empty?)
+      out[key] = ((out[key] || []) + list).uniq unless list.empty?
+    end
   end
 
   # A rescue (inline or rescue_from) that still answers 5xx is an operational failure the

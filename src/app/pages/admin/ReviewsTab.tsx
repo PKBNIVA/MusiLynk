@@ -2,7 +2,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import type { Review } from '../../lib/apiTypes';
-import { Panel, Empty, type AdminActions } from './shared';
+import { Panel, Pager, Empty, type AdminActions, type PageMeta } from './shared';
 
 export default function ReviewsTab({
   reviews,
@@ -10,12 +10,16 @@ export default function ReviewsTab({
   loading,
   retry,
   actions,
+  meta,
+  onPage,
 }: {
   reviews: Review[];
   error?: string;
   loading: boolean;
   retry: () => void;
   actions: AdminActions;
+  meta?: PageMeta;
+  onPage: (page: number) => void;
 }) {
   const { busy, patch } = actions;
   return (
@@ -59,6 +63,7 @@ export default function ReviewsTab({
           </CardContent>
         </Card>
       ))}
+      <Pager meta={meta} onPage={onPage} loading={loading} />
     </Panel>
   );
 }

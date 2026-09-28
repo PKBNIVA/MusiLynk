@@ -1,7 +1,7 @@
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import type { AdminVerification } from '../../lib/apiTypes';
-import { Panel, Empty, type AdminActions } from './shared';
+import { Panel, Pager, Empty, type AdminActions, type PageMeta } from './shared';
 
 export default function VerificationTab({
   verifications,
@@ -9,12 +9,16 @@ export default function VerificationTab({
   loading,
   retry,
   actions,
+  meta,
+  onPage,
 }: {
   verifications: AdminVerification[];
   error?: string;
   loading: boolean;
   retry: () => void;
   actions: AdminActions;
+  meta?: PageMeta;
+  onPage: (page: number) => void;
 }) {
   const { busy, patch } = actions;
   return (
@@ -64,6 +68,7 @@ export default function VerificationTab({
           </CardContent>
         </Card>
       ))}
+      <Pager meta={meta} onPage={onPage} loading={loading} />
     </Panel>
   );
 }

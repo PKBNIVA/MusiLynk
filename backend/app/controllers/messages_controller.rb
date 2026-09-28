@@ -58,6 +58,10 @@ class MessagesController < ApplicationController
     return unless within_user_rate_limit?("message", limit: SEND_LIMIT_PER_HOUR, period: 1.hour)
 
     message = Message.transaction do
+      # Lock the conversation first. Saving a message checks the conversation row (foreign key) and
+      # then touches it; two concurrent sends to one conversation deadlocked between those steps.
+      # Taking the row lock up front makes them queue instead.
+      @conversation.lock!
       # Scam signals never block sending; they drive a notice for the recipient and a moderator count.
       @conversation.messages.new(sender: current_user, body:).tap { _1.flag_scam_signals; _1.save! }.tap { Notifier.new_message(_1) }
     end

@@ -28,6 +28,7 @@ class EmailDelivery
   def self.call(to:, template:, data:, raise_errors: false)
     return { delivered: false, reason: "Recipient unavailable" } if to.blank?
     return { delivered: false, reason: "Recipient suppressed" } if EmailSuppression.blocks_all?(to)
+    return { delivered: false, reason: "Reserved address" } if skip_reserved?(to)
     return deliver_with_brevo(to:, template:, data:) if brevo_configured?
     return deliver_with_resend(to:, template:, data:) if ENV["RESEND_API_KEY"].present?
 
@@ -56,6 +57,20 @@ class EmailDelivery
   end
 
   def self.configured? = provider.present?
+
+  # Top-level domains reserved by RFC 2606/6761 plus common internal ones: mail sent there
+  # can never arrive (the seeded admin@verse.local, synthetic qa+…@example.invalid accounts).
+  RESERVED_TLDS = %w[local localhost invalid test example internal].freeze
+
+  def self.reserved_address?(email)
+    domain = email.to_s.strip.downcase.split("@", 2)[1].to_s.delete_suffix(".")
+    domain.present? && RESERVED_TLDS.include?(domain.split(".").last)
+  end
+
+  # Real providers (Brevo, Resend) are never asked to send to a reserved address: each attempt
+  # would hard-bounce and hurt the sending domain's reputation. The webhook provider is local
+  # QA plumbing and still receives them.
+  def self.skip_reserved?(email) = %w[brevo resend].include?(provider) && reserved_address?(email)
 
   def self.brevo_configured?
     ENV["BREVO_API_KEY"].present? && ENV["BREVO_SENDER_EMAIL"].present?

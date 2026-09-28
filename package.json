@@ -6,6 +6,8 @@
   "scripts": {
     "build": "vite build",
     "check:bundle": "node scripts/check-bundle-size.mjs",
+    "build:admin": "VITE_APP_TARGET=admin vite build --outDir dist-admin",
+    "check:split": "npm run build:admin && node scripts/check-site-split.mjs",
     "dev": "vite",
     "dev:web": "vite",
     "typecheck": "tsc --noEmit",

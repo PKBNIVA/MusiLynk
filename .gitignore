@@ -16,3 +16,4 @@ backend/tmp/
 backend/storage/
 backend/coverage/
 coverage/
+dist-admin/

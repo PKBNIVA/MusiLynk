@@ -26,6 +26,33 @@ Configure the repository root as a Vite project:
 
 `vercel.json` provides SPA routing, immutable asset caching, and browser security headers.
 
+### Admin site (second Vercel project from the same repository)
+
+The admin console is its own site, built from the same code with `VITE_APP_TARGET=admin`.
+`src/app/routes.tsx` picks the route table at build time, so each build contains only its own
+pages: the public build has no `/admin`, `/admin/tester` or `/auth/admin` (all 404) and no admin
+code, and the admin build has no public pages. `npm run check:split` builds the admin site into
+`dist-admin/` and fails if either build contains the other's pages (CI runs it).
+
+- Project settings: same as above (production branch `production`, `npm run build`, output `dist`).
+- Variables: `VITE_APP_TARGET=admin` (production and preview), the same `VITE_API_URL`,
+  `VITE_SENTRY_DSN` (the verse-web DSN) and `VITE_SENTRY_ENVIRONMENT=admin-production` so admin
+  errors can be told apart.
+- Pages: `/` sign-in (password, then the emailed 6-digit code when the second step applies),
+  `/admin` console, `/admin/tester`, `/account` (the admin's email and password). Every signed-in
+  page shows a warning while the admin's address cannot receive email or the second step is not
+  enforced (`GET /api/admin/account`), linking to `/account`, where the address is changed by
+  confirming a code sent to the new mailbox. The page title is "Verse Admin" and
+  `<meta name="robots" content="noindex, nofollow">` keeps it out of search results.
+- The admin site's exact origin (for example `https://verse-admin-xxxx.vercel.app`) is the
+  API's `ADMIN_ORIGIN`. Its URL is not linked from, or contained in, the public site: an admin who
+  signs in there is told "Admins sign in at the admin site." and any admin session started there
+  is ended at once.
+- Local: `VITE_APP_TARGET=admin npm run dev`. Playwright builds it into `dist-qa-admin/` and serves
+  it on port 4176 for the `admin-desktop` project (`tests/e2e/admin-*.spec.ts`).
+- Rollback: revert the frontend PR (the public site gets `/admin` back), and unset `ADMIN_ORIGIN`
+  on Railway so the API accepts admin requests from the public site again.
+
 ## API — Railway
 
 Configure one service from `backend/Dockerfile`:

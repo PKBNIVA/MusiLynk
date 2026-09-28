@@ -116,6 +116,34 @@ describe('api() error mapping', () => {
     expect(reportApiFailure).not.toHaveBeenCalled();
   });
 
+  it('carries per-field validation messages from the error body on ApiError.fields', async () => {
+    const { api, ApiError } = await loadApi();
+    fetchMock.mockResolvedValue(
+      jsonResponse(
+        {
+          error: 'Website must be a valid URL and Phone is invalid',
+          code: 'VALIDATION_FAILED',
+          fields: { website: ['Website must be a valid URL'], phone: 'Phone is invalid', junk: [1, ''], bad: null },
+        },
+        422,
+      ),
+    );
+    const error: unknown = await api('/profile', { method: 'PUT', body: '{}' }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    if (!(error instanceof ApiError)) return;
+    expect(error.fields).toEqual({ website: ['Website must be a valid URL'], phone: ['Phone is invalid'] });
+    expect(error.message).toBe('Website must be a valid URL and Phone is invalid');
+  });
+
+  it('leaves ApiError.fields undefined when the body has none or they are malformed', async () => {
+    const { api, parseFieldErrors } = await loadApi();
+    fetchMock.mockResolvedValue(jsonResponse({ error: 'Nope', code: 'X' }, 422));
+    await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({ message: 'Nope', fields: undefined });
+    expect(parseFieldErrors(['a'])).toBeUndefined();
+    expect(parseFieldErrors('text')).toBeUndefined();
+    expect(parseFieldErrors({ a: [] })).toBeUndefined();
+  });
+
   it('falls back to a generic message and a body request id', async () => {
     const { api } = await loadApi();
     fetchMock.mockResolvedValue(jsonResponse({ request_id: 'body-id' }, 409));

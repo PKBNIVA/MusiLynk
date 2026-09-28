@@ -1,0 +1,48 @@
+# Booking fee and cancellation policy. Loaded once per process by BookingFeePolicy.
+#
+# OFF BY DEFAULT: platform_fee_percent is 0 in every environment until the owner sets it, so
+# money behaviour (deposit amounts, Razorpay order totals) never changes on its own. Turning the
+# fee on only changes newly-created quotes/payments; nothing already stored is rewritten.
+#
+# policy_version is a plain integer the owner bumps whenever these numbers change, so every
+# quote/payment/invoice keeps the version that was in force when it was created (see
+# BookingQuote#fee_percent/#policy_version, BookingPayment#fee_percent/#policy_version) and old
+# records keep reading correctly even after the policy changes.
+default: &default
+  policy_version: 1
+
+  # The platform's commission on a booking, as a percent of the quote total. 0 = feature is off:
+  # no fee is added anywhere, and every amount charged is identical to before this feature shipped.
+  platform_fee_percent: 0
+
+  # "hirer": the fee (plus GST on it) is added on top of the hirer's deposit.
+  # "split": half the fee is added to the hirer's deposit (with GST on that half); the other half
+  # is recorded against the musician's payout, but Verse has no payout/disbursement system yet, so
+  # that half is never actually collected — it is tracked only for the eventual payout ledger. See
+  # backend/docs/compliance-checklist.md.
+  fee_paid_by: hirer
+
+  # A floor under the computed fee, in whole INR, so a tiny booking doesn't produce a fee of a few
+  # rupees. Applied only when platform_fee_percent > 0.
+  min_fee_inr: 0
+
+  # GST on the platform fee only (never on the artist's performance fee or deposit itself).
+  gst_percent: 18
+
+  cancellation:
+    # Hirer cancels more than this many days before the event: full refund of the deposit.
+    full_refund_days: 7
+    # Hirer cancels between partial_refund_days and full_refund_days before the event: this
+    # percent of the deposit is refunded.
+    partial_refund_days: 2
+    partial_refund_percent: 50
+    # Hirer cancels inside partial_refund_days: no refund of the deposit.
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

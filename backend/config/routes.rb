@@ -73,6 +73,8 @@ Rails.application.routes.draw do
       get "ai/usage", to: "ai#usage"
       post "ai/grants", to: "ai#create_grant"
       get :bookings, to: "operations#bookings"
+      resources :refunds, only: %i[index update]
+      get :funnel, to: "funnel#show"
       post "search/reindex", to: "search#reindex"
       get "demo-data", to: "demo_data#index"
       post "demo-data", to: "demo_data#create"
@@ -121,6 +123,9 @@ Rails.application.routes.draw do
     resources :reviews, only: %i[index create]
     resources :resources, only: :index
     get "taxonomy", to: "catalog#taxonomy"
+    get "legal/policy", to: "legal#policy"
+    post "events", to: "events#create"
+    resources :invoices, only: :show
     get "ai/status", to: "ai#status"
     post "ai/suggest", to: "ai#suggest"
     get "ai/autocomplete", to: "ai#autocomplete"

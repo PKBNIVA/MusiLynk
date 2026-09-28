@@ -236,13 +236,18 @@ module Billing
           payment.apply_failure!(entity:, event_at:, event_id:)
         end
         Rails.logger.error("razorpay duplicate booking capture payment=#{payment.id} provider_payment=#{entity["id"]}") if result == :duplicate_capture
+        InvoiceGenerator.for(payment) if %i[applied applied_after_failure].include?(result)
         [payment, result]
       when "refund.processed"
         refund = payload.dig("payload", "refund", "entity") || {}
         payment = BookingPayment.find_by(provider_payment_id: refund["payment_id"]) if refund["payment_id"].present?
         return [payment, :payment_not_found] unless payment&.provider == "razorpay"
 
-        [payment, payment.apply_refund!(refund:, payment_entity: payload.dig("payload", "payment", "entity"), event_at:, event_id:)]
+        result = payment.apply_refund!(refund:, payment_entity: payload.dig("payload", "payment", "entity"), event_at:, event_id:)
+        # A signed webhook just confirmed Razorpay actually processed this refund: any pending_manual
+        # RefundRecord an admin was tracking for this payment is now moot, so close it out too.
+        payment.refund_records.where(status: "pending_manual").update_all(status: "done", decided_at: Time.current, updated_at: Time.current) if result == :applied
+        [payment, result]
       else
         [nil, nil]
       end

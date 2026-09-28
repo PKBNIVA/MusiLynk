@@ -130,6 +130,11 @@ module ApiMatrixWorld
         world.refs[owner_key][:owned_booking] = booking.id
         world.refs[requester_key][:requested_booking] = booking.id
         world.refs[requester_key][:payment] = payment.id
+        world.refs[requester_key][:invoice] = Invoice.create!(booking_payment: payment, invoice_number: "V/matrix-#{SecureRandom.hex(4)}",
+          financial_year: "matrix-#{SecureRandom.hex(2)}", sequence_number: (Time.now.to_f * 1_000_000).to_i % 900_000 + 1,
+          deposit_amount: 250, fee_amount: 25, gst_amount: 5, total_amount: 280, currency: "INR", policy_version: 1).id
+        world.refs[requester_key][:refund] = RefundRecord.create!(booking_request: booking, booking_payment: payment, requested_by: requester,
+          amount: 250, currency: "INR", refund_percent: 50, reason: "hirer_cancel", status: "pending_manual", policy_version: 1).id
       end
     end
 
@@ -160,7 +165,8 @@ module ApiMatrixWorld
       verification: VerificationRequest.create!(user: u[:js], kind: "professional", status: "pending").id,
       report: Report.create!(reporter: u[:js], entity_type: "job", entity_id: world.refs[:emp][:job], reason: "spam", status: "open").id,
       billing_attempt: BillingAttempt.create!(user: u[:emp], operation: "subscription_create", provider: "razorpay",
-        idempotency_key: "matrix-#{SecureRandom.hex(4)}", state: "pending").id
+        idempotency_key: "matrix-#{SecureRandom.hex(4)}", state: "pending").id,
+      refund: world.refs[:js][:refund], invoice: world.refs[:js][:invoice]
     )
     world.refs[:admin][:notification] = Notification.create!(user: admin, kind: "system", title: "Admin note", body: "x").id
     CareerResource.create!(title: "Rider basics", category: "live", status: "published", description: "How to write a rider")

@@ -119,6 +119,10 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/admin/billing-attempts/{billing_attempt}/reconcile", :admin, { ok: [503], missing: :billing_attempt, note: "fails closed (503 PAYMENTS_NOT_CONFIGURED) without Razorpay keys" }],
     [:get, "/api/admin/bookings", :admin, { keys: %w[bookings] }],
     [:post, "/api/admin/search/reindex", :admin, { keys: %w[count] }],
+    [:get, "/api/admin/refunds", :admin, { keys: %w[refunds] }],
+    [:patch, "/api/admin/refunds/{refund}", :admin, { params: { note: "Reviewed" }, missing: :refund, keys: %w[status] }],
+    [:put, "/api/admin/refunds/{refund}", :admin, { params: { note: "Reviewed" }, missing: :refund, keys: %w[status] }],
+    [:get, "/api/admin/funnel", :admin, { keys: %w[windowDays funnel weekly medianFirstResponseMinutes retentionWeek1] }],
 
     [:get, "/api/portfolio", :jobseeker, { keys: %w[items] }],
     [:post, "/api/portfolio", :jobseeker, { ok: [201], params: { type: "audio", title: "Live take", url: "https://example.com/a.mp3" }, bad: { title: "No url" }, bad_status: [422], keys: %w[id item] }],
@@ -177,6 +181,9 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/reviews", :jobseeker, { ok: [201, 403, 409], params: ->(w, _a) { { employerId: w.user(:emp).id, rating: 5, body: "Great" } }, bad: { employerId: ApiMatrixWorld::MISSING_ID }, bad_status: [404, 422] }],
     [:get, "/api/resources", :public, { keys: %w[resources] }],
     [:get, "/api/taxonomy", :public, { keys: %w[opportunityKinds roleCategories instruments] }],
+    [:get, "/api/legal/policy", :public, { keys: %w[legal booking] }],
+    [:post, "/api/events", :public, { params: { events: [{ name: "landing_view", anonId: "matrix-anon" }] }, bad: { events: [] }, bad_status: [422], keys: %w[ok accepted dropped] }],
+    [:get, "/api/invoices/{invoice}", :talent, { idor: true, missing: :invoice, keys: %w[invoiceNumber financialYear] }],
     [:get, "/api/ai/status", :public, { keys: %w[enabled tasks] }],
     [:get, "/api/ai/autocomplete", :public, { params: { field: "cities", q: "mum" }, bad: { field: "not-a-field", q: "mum" }, bad_status: [422], keys: %w[field query suggestions] }],
     # No ANTHROPIC_API_KEY in this environment, so AI assist answers 503 AI_DISABLED for every allowed role.

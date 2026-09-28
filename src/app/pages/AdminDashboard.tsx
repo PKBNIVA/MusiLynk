@@ -17,6 +17,7 @@ import {
   History,
   Database,
   Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -61,6 +62,7 @@ const OperationsTab = lazy(() => import('./admin/OperationsTab'));
 const DemoDataTab = lazy(() => import('./admin/DemoDataTab'));
 const AuditTab = lazy(() => import('./admin/AuditTab'));
 const AdminAiTab = lazy(() => import('./admin/AdminAiTab'));
+const FunnelTab = lazy(() => import('./admin/FunnelTab'));
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth(),
@@ -304,6 +306,10 @@ export default function AdminDashboard() {
               <Sparkles aria-hidden="true" size={14} />
               AI
             </TabsTrigger>
+            <TabsTrigger value="funnel" className="flex-none gap-1.5">
+              <TrendingUp aria-hidden="true" size={14} />
+              Funnel
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="queue" className="space-y-3 mt-5">
@@ -421,6 +427,12 @@ export default function AdminDashboard() {
           <TabsContent value="ai" className="mt-5">
             <Suspense fallback={null}>
               <AdminAiTab />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="funnel" className="mt-5">
+            <Suspense fallback={null}>
+              <FunnelTab />
             </Suspense>
           </TabsContent>
 

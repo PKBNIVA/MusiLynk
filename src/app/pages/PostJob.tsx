@@ -38,6 +38,7 @@ import { AppSelect } from '../components/ui/app-select';
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { AutocompleteInput } from '../components/ai/AutocompleteInput';
 import { AiCreditsBadge } from '../components/ai/AiCreditsBadge';
+import { trackJobPosted } from '../lib/analytics';
 
 /** ActorResolver::Actor#as_json — the identities a person can post an opportunity as. */
 type Identity = { type: 'user' | 'organization' | 'act'; id: string; name: string; key: string };
@@ -350,6 +351,7 @@ export default function PostJob() {
         done();
       } else {
         const d = await apiPost<CreatedJob>('/jobs', { ...payload(), status: draft ? 'draft' : 'pending' });
+        if (!draft) trackJobPosted();
         if (d.moderationFlags?.length && !draft)
           toast.info(
             `Submitted with ${d.moderationFlags.length} moderation note${d.moderationFlags.length === 1 ? '' : 's'}`,

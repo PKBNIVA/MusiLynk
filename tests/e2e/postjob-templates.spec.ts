@@ -62,7 +62,7 @@ test('picking a template prefills title, description and screening questions', a
   await expect(page.getByLabel('Screening questions')).toHaveValue(/Can you read charts/);
 });
 
-test('picking a different template replaces the previous one\'s content', async ({ page }) => {
+test("picking a different template replaces the previous one's content", async ({ page }) => {
   await mockPostJob(page);
   await page.getByRole('button', { name: 'Studio session' }).click();
   await expect(page.getByLabel('Title')).toHaveValue('Session musician for a studio recording');

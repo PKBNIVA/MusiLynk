@@ -201,7 +201,13 @@ test('message_reply is disabled: no "Suggest a reply" button in Messages', async
     if (path === '/conversations/conv-1/messages' && route.request().method() === 'GET') {
       await json(route, {
         messages: [
-          { id: 'm1', senderId: 'them', body: 'Are you free next weekend?', createdAt: '2026-09-27T10:00:00Z', readAt: null },
+          {
+            id: 'm1',
+            senderId: 'them',
+            body: 'Are you free next weekend?',
+            createdAt: '2026-09-27T10:00:00Z',
+            readAt: null,
+          },
         ],
         theirReadAt: null,
       });

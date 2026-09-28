@@ -35,7 +35,9 @@ test('Pricing shows the plans and one line about free AI help, with no credits t
 
   await page.goto('/pricing');
   await expect(page.getByTestId('pricing-plans')).toBeVisible();
-  await expect(page.getByTestId('ai-help-note')).toHaveText(/Includes free AI help to write your profile and job posts\./);
+  await expect(page.getByTestId('ai-help-note')).toHaveText(
+    /Includes free AI help to write your profile and job posts\./,
+  );
   await expect(page.getByTestId('ai-pricing-section')).toHaveCount(0);
   await expect(page.getByText('credits/mo')).toHaveCount(0);
   await expect(page.getByText('Verse AI Plus')).toHaveCount(0);

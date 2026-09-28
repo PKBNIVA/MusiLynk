@@ -30,7 +30,11 @@ function BudgetBar({ label, used, budget }: { label: string; used: number; budge
           {inr(used)} / {inr(budget)} ({pct}%)
         </span>
       </div>
-      <Progress value={pct} className={pct >= 90 ? '[&_[data-slot=progress-indicator]]:bg-rose-500' : undefined} />
+      <Progress
+        value={pct}
+        aria-label={label}
+        className={pct >= 90 ? '[&_[data-slot=progress-indicator]]:bg-rose-500' : undefined}
+      />
     </div>
   );
 }

@@ -190,7 +190,7 @@ export default function LandingPage() {
                 <Point text="Application and audition tracking" />
                 <Point text="Availability, booking and messaging" />
               </div>
-              <Button className="mt-8 bg-fuchsia-600 hover:bg-fuchsia-500" asChild>
+              <Button className="mt-8 bg-fuchsia-700 hover:bg-fuchsia-600" asChild>
                 <Link to="/auth/jobseeker">
                   Build my profile <ArrowRight size={16} className="ml-2" />
                 </Link>
@@ -320,7 +320,9 @@ function HeroStage() {
               <span className="text-[11px] font-bold uppercase tracking-[.16em] text-fuchsia-200">
                 Example opportunity
               </span>
-              <h3 className="mt-2 text-xl font-black">Playback vocalist · Feature film</h3>
+              {/* First heading after the page's h1 (this mockup card sits directly beside it, before
+                  any h2 section heading), so it must not skip a level. */}
+              <h2 className="mt-2 text-xl font-black">Playback vocalist · Feature film</h2>
               <p className="mt-1 flex items-center text-sm text-slate-300">
                 <MapPin size={14} className="mr-1.5" /> Mumbai · Studio session
               </p>

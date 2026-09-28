@@ -73,7 +73,26 @@ a {
     background-color 0.18s ease,
     border-color 0.18s ease,
     transform 0.18s ease,
-    box-shadow 0.18s ease;
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
+}
+
+/* Every link or button should show *some* hover feedback. Most already do, via a component's own
+   `hover:` utility class (Tailwind keeps that literal string on the element, so `[class*="hover:"]`
+   reliably detects it) or the card-lift affordance; this is the fallback for the rest — plain text
+   links, icon-only nav buttons, filter chips — kept subtle on purpose. */
+a:not([class*='hover:']):not(.verse-card-lift):hover,
+button:not(:disabled):not([aria-disabled='true']):not([class*='hover:']):hover {
+  opacity: 0.82;
+}
+
+/* Every element that can take focus must show a visible indicator when reached by keyboard, even
+   if a component's own focus-visible ring didn't apply — e.g. a bespoke input that isn't built on
+   the shared Input/Textarea/Select primitives. :where() keeps it at zero specificity, so components
+   with their own focus-visible ring (or an explicit outline) are not double-outlined. */
+:where(:focus-visible) {
+  outline: 2px solid #b9a4ff;
+  outline-offset: 2px;
 }
 
 button:active,

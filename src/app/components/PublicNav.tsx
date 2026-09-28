@@ -31,16 +31,21 @@ export function PublicNav() {
 
   return (
     <>
-      <SkipLink />
       <nav
         className="sticky top-0 z-50 border-b border-white/10 bg-[#070813]/88 backdrop-blur-2xl"
         aria-label="Public navigation"
       >
+        <SkipLink />
         <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-3 px-4 md:px-6">
           <Link to="/" aria-label="Verse home" className="shrink-0">
             <BrandMark />
           </Link>
-          <form onSubmit={go} className="relative ml-3 hidden max-w-xs flex-1 lg:block" role="search">
+          <form
+            onSubmit={go}
+            className="relative ml-3 hidden max-w-xs flex-1 lg:block"
+            role="search"
+            aria-label="Quick search"
+          >
             <label htmlFor="public-search" className="sr-only">
               Search jobs, people and acts
             </label>
@@ -50,7 +55,7 @@ export function PublicNav() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search the music network"
-              className="h-10 w-full rounded-xl border border-white/15 bg-white/[.055] pl-10 pr-3 text-sm outline-none focus:border-violet-300/60 focus:bg-white/[.08]"
+              className="h-10 w-full rounded-xl border border-white/15 bg-white/[.055] pl-10 pr-3 text-sm outline-none focus:border-violet-300/60 focus:bg-white/[.08] focus-visible:ring-2 focus-visible:ring-violet-300/70"
             />
           </form>
           <div className="ml-auto hidden items-center gap-1 xl:flex">

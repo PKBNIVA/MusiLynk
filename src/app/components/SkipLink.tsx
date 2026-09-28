@@ -1,9 +1,21 @@
+import { useEffect } from 'react';
+
 // First focusable element on every page: lets keyboard and screen-reader users jump past navigation.
 export function SkipLink() {
+  // The link's href="#main" target must exist and be focusable *before* it is ever clicked (axe's
+  // skip-link rule checks this statically). Every page renders its own <main>, so give it the id
+  // and a permanent tabIndex here, once, instead of touching every page.
+  useEffect(() => {
+    const main = document.querySelector<HTMLElement>('main');
+    if (!main) return;
+    if (!main.id) main.id = 'main';
+    if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
+  }, []);
   const skip = (event: React.MouseEvent<HTMLAnchorElement>) => {
     const main = document.querySelector<HTMLElement>('main');
     if (!main) return;
     event.preventDefault();
+    if (!main.id) main.id = 'main';
     if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
     main.focus();
     main.scrollIntoView({ block: 'start' });

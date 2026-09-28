@@ -269,7 +269,7 @@ export default function ProfileSetup() {
         <form onSubmit={save} className="space-y-5" noValidate>
           <Card className="bg-white/[.055] border-white/10">
             <CardHeader>
-              <CardTitle>Positioning</CardTitle>
+              <CardTitle level={2}>Positioning</CardTitle>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
               {textField('headline', 'Professional headline', {
@@ -301,7 +301,7 @@ export default function ProfileSetup() {
           </Card>
           <Card className="bg-white/[.055] border-white/10">
             <CardHeader>
-              <CardTitle>Music-specific signals</CardTitle>
+              <CardTitle level={2}>Music-specific signals</CardTitle>
               <p className="text-xs text-slate-500">Separate several entries with commas.</p>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
@@ -364,7 +364,7 @@ export default function ProfileSetup() {
           </Card>
           <Card className="bg-white/[.055] border-white/10">
             <CardHeader>
-              <CardTitle>Links & commercial details</CardTitle>
+              <CardTitle level={2}>Links & commercial details</CardTitle>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
               {textField('website', 'Website', {

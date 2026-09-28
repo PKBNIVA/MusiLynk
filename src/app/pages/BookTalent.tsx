@@ -232,10 +232,10 @@ export default function BookTalent() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <Badge variant="secondary">{a.act_type}</Badge>
-                            <h3 className="text-xl font-semibold mt-2 break-words" data-testid="act-name">
+                            <h2 className="text-xl font-semibold mt-2 break-words" data-testid="act-name">
                               {a.name}
                               {ambiguous && <span className="text-slate-400 font-normal"> · {a.ownerName}</span>}
-                            </h3>
+                            </h2>
                           </div>
                           {(a.verified || a.ownerVerified) && (
                             <ShieldCheck aria-label="Verified" className="text-emerald-300 shrink-0" size={18} />
@@ -262,11 +262,11 @@ export default function BookTalent() {
                             : 'Ask for quote'}
                         </div>
                         <div className="flex gap-2 mt-5">
-                          <Button className="flex-1" onClick={() => openEnquiry(a)}>
+                          <Button className="flex-1 tap-target-44" onClick={() => openEnquiry(a)}>
                             <Calendar size={16} className="mr-2" />
                             Request availability
                           </Button>
-                          <Button asChild variant="outline">
+                          <Button asChild variant="outline" className="tap-target-44">
                             <Link to={`/acts/${a.id}`} aria-label={`View ${a.name}`}>
                               View
                             </Link>

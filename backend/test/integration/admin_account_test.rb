@@ -183,6 +183,9 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
   end
 
   test "wrong codes are limited per code and per admin, and a wrong code never changes anything" do
+    # The failure budget uses fixed 15-minute windows; freeze the clock so a run that crosses a
+    # window boundary does not reset the count halfway through.
+    freeze_time
     token, code = change_for(@admin, "owner@example.com")
     wrong = code == "111111" ? "222222" : "111111"
     SignInCode::MAX_ATTEMPTS.times do

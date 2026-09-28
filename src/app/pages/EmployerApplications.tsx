@@ -256,10 +256,11 @@ export default function EmployerApplications() {
                       )}
                     </div>
                     <div className="flex flex-wrap lg:flex-col gap-2 lg:w-52">
-                      <Button size="sm" onClick={() => message(a.candidateId, a.jobId)}>
+                      <Button className="tap-target-44" size="sm" onClick={() => message(a.candidateId, a.jobId)}>
                         Message
                       </Button>
                       <Button
+                        className="tap-target-44"
                         size="sm"
                         variant="outline"
                         disabled={!!updating[a.id]}
@@ -277,6 +278,7 @@ export default function EmployerApplications() {
                       {(a.allowedNextStatuses || []).map((s: string) => (
                         <Button
                           key={s}
+                          className="tap-target-44"
                           size="sm"
                           variant={s === 'Rejected' ? 'outline' : 'secondary'}
                           disabled={!!updating[a.id]}

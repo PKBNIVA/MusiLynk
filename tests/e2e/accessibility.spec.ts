@@ -95,3 +95,60 @@ test.describe('WCAG accessibility of in-app dialogs and signed-in forms', () => 
     });
   }
 });
+
+// Phase 3 fixes (P3-01, 05, 06, 09): a plain keyboard/mouse-interaction check for the pieces axe
+// cannot judge by itself — a real focus outline appearing, hover feedback appearing, the skip
+// link's target being reachable, and a toast surviving at least 4s.
+test.describe('Phase 3 UX regressions', () => {
+  test('a bespoke input not built on the shared Input primitive still gets a visible focus ring (P3-01)', async ({
+    page,
+  }) => {
+    // The nav search box is desktop-only (`hidden lg:block`); pin the viewport so this assertion
+    // doesn't depend on which device a project runs it under.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openSettledPage(page, '/pricing');
+    const search = page.locator('#public-search');
+    await search.focus();
+    await expect(search).toBeFocused();
+    const outline = await search.evaluate((el) => getComputedStyle(el).outlineStyle);
+    expect(outline).not.toBe('none');
+  });
+
+  test('a plain footer link with no hover styling of its own still shows hover feedback (P3-05)', async ({ page }) => {
+    await openSettledPage(page, '/about');
+    const link = page.getByRole('link', { name: 'Terms', exact: true });
+    const before = await link.evaluate((el) => getComputedStyle(el).opacity);
+    await link.hover();
+    await expect.poll(() => link.evaluate((el) => getComputedStyle(el).opacity)).not.toBe(before);
+  });
+
+  test("the skip link's target exists and is reachable by keyboard (P3-09)", async ({ page }) => {
+    await openSettledPage(page, '/');
+    // sr-only until focused, so a real keyboard user reaches it by Tab, not a pointer click.
+    const skipLink = page.getByRole('link', { name: 'Skip to main content' });
+    await expect(skipLink).toHaveAttribute('href', '#main');
+    await page.keyboard.press('Tab');
+    await expect(skipLink).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#main')).toBeFocused();
+  });
+
+  test('a toast stays visible for at least 4s (P3-06)', async ({ page }) => {
+    await openSettledPage(page, '/forgot-password');
+    // Force a response that makes ForgotPassword raise a toast (the plain success path shows no
+    // toast at all, and the catch-all API fixture above answers unmatched requests with `{}`).
+    await page.route('**/api/auth/forgot-password', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, debugLink: 'https://verse.local/reset/qa-fixture' }),
+      }),
+    );
+    await page.getByLabel('Email').fill('qa+demo-ux1000-professional-0001@example.invalid');
+    await page.getByRole('button', { name: 'Send reset link' }).click();
+    const toast = page.locator('[data-sonner-toast]').first();
+    await expect(toast).toBeVisible();
+    await page.waitForTimeout(4000);
+    await expect(toast).toBeVisible();
+  });
+});

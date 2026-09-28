@@ -1128,7 +1128,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
     t.string "channel", null: false
     t.string "notified_by_admin_id"
     t.datetime "created_at", null: false
-    t.index ["notified_by_admin_id"], name: "index_urgent_request_notifications_on_notified_by_admin_id"
     t.index ["urgent_request_id", "user_id", "channel"], name: "idx_urgent_notif_unique", unique: true
     t.index ["user_id"], name: "index_urgent_request_notifications_on_user_id"
   end
@@ -1168,7 +1167,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
     t.datetime "last_notified_at"
     t.string "filled_by_id"
     t.text "founder_notes"
-    t.index ["filled_by_id"], name: "index_urgent_requests_on_filled_by_id"
     t.index ["requester_id"], name: "index_urgent_requests_on_requester_id"
     t.index ["start_at"], name: "index_urgent_requests_on_start_at"
     t.index ["status"], name: "index_urgent_requests_on_status"

@@ -49,8 +49,10 @@ test('Pricing shows the Verse AI plans, the cost table and the FAQ lines', async
   await expect(section.getByText('400 credits/month')).toBeVisible();
   await expect(section.getByText('₹99 for 150 credits')).toBeVisible();
   await expect(section.getByText('₹399 for 700 credits')).toBeVisible();
-  await expect(section.getByText('Short help')).toBeVisible();
+  await expect(section.getByText('Short help: headlines, bios, captions, replies')).toBeVisible();
   await expect(section.getByText('Long writing')).toBeVisible();
+  await expect(section.getByText('Autocomplete for skills, genres and cities is always free.')).toBeVisible();
+  await expect(section.getByText('Every account with a verified email gets 20 free AI credits a month')).toBeVisible();
   await expect(section.getByText('Charged only on success', { exact: true })).toBeVisible();
   await expect(section.getByText('Monthly credits reset every billing period')).toBeVisible();
   await expect(section.getByText('Top-ups last 12 months')).toBeVisible();

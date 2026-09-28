@@ -1,14 +1,4 @@
-import {
-  ChevronDown,
-  ChevronUp,
-  Inbox,
-  ListOrdered,
-  Mail,
-  MessageCircleQuestion,
-  Plus,
-  Sparkles,
-  ThumbsDown,
-} from 'lucide-react';
+import { ChevronDown, Inbox, ListOrdered, Mail, MessageCircleQuestion, Plus, Sparkles, ThumbsDown } from 'lucide-react';
 import { EmptyState } from '../components/help/EmptyState';
 import { useCallback, useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
@@ -37,6 +27,12 @@ import {
 } from '../lib/ai';
 import { AiCreditsBadge } from '../components/ai/AiCreditsBadge';
 import { AiPaywallDialog } from '../components/ai/AiPaywallDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 
 // The application's snapshot of the portfolio/resume chosen at apply time (materialsSnapshot —
 // see backend/docs/api-pages-portfolios-resumes.md §8). Not in apiTypes yet, so kept local here.
@@ -620,59 +616,42 @@ export default function EmployerApplications() {
                         >
                           Rate / note
                         </Button>
-                        {summarizeEnabled && (
-                          <Button
-                            className="tap-target-44"
-                            size="sm"
-                            variant="outline"
-                            aria-expanded={!!summary?.open}
-                            onClick={() => toggleSummary(a)}
-                          >
-                            <Sparkles aria-hidden="true" size={14} className="mr-2" />
-                            Summarize
-                            {summary?.open ? (
-                              <ChevronUp aria-hidden="true" size={14} className="ml-1" />
-                            ) : (
-                              <ChevronDown aria-hidden="true" size={14} className="ml-1" />
-                            )}
-                          </Button>
-                        )}
-                        {recruiterAiAvailable && (
-                          <div className="flex flex-wrap lg:flex-col gap-2" role="group" aria-label="AI drafts">
-                            {outreachEnabled && (
-                              <Button
-                                className="tap-target-44"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openDraft('outreach_message', a)}
-                              >
-                                <Mail aria-hidden="true" size={14} className="mr-2" />
-                                Draft invite
+                        {(summarizeEnabled || recruiterAiAvailable) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button className="tap-target-44" size="sm" variant="outline">
+                                <Sparkles aria-hidden="true" size={14} className="mr-2" />
+                                AI help
+                                <ChevronDown aria-hidden="true" size={14} className="ml-1" />
                               </Button>
-                            )}
-                            {interviewQEnabled && (
-                              <Button
-                                className="tap-target-44"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openDraft('interview_questions', a)}
-                              >
-                                <MessageCircleQuestion aria-hidden="true" size={14} className="mr-2" />
-                                Interview questions
-                              </Button>
-                            )}
-                            {rejectionEnabled && (
-                              <Button
-                                className="tap-target-44"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openDraft('rejection_note', a)}
-                              >
-                                <ThumbsDown aria-hidden="true" size={14} className="mr-2" />
-                                Draft kind rejection
-                              </Button>
-                            )}
-                          </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {summarizeEnabled && (
+                                <DropdownMenuItem onSelect={() => toggleSummary(a)}>
+                                  <Sparkles aria-hidden="true" size={14} />
+                                  Summarize
+                                </DropdownMenuItem>
+                              )}
+                              {outreachEnabled && (
+                                <DropdownMenuItem onSelect={() => openDraft('outreach_message', a)}>
+                                  <Mail aria-hidden="true" size={14} />
+                                  Draft invite
+                                </DropdownMenuItem>
+                              )}
+                              {interviewQEnabled && (
+                                <DropdownMenuItem onSelect={() => openDraft('interview_questions', a)}>
+                                  <MessageCircleQuestion aria-hidden="true" size={14} />
+                                  Interview questions
+                                </DropdownMenuItem>
+                              )}
+                              {rejectionEnabled && (
+                                <DropdownMenuItem onSelect={() => openDraft('rejection_note', a)}>
+                                  <ThumbsDown aria-hidden="true" size={14} />
+                                  Draft kind rejection
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                         {(a.allowedNextStatuses || []).map((s: string) => (
                           <Button

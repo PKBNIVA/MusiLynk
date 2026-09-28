@@ -212,8 +212,8 @@ export default function Pricing() {
                 Writing help and recruiter tools, priced in credits
               </h2>
               <p className="text-slate-400 mt-3">
-                Every account gets {aiPricing.freeCreditsPerMonth} free AI credits a month. Charged only on success — a
-                failed or timed-out suggestion never costs a credit.
+                Every account with a verified email gets {aiPricing.freeCreditsPerMonth} free AI credits a month.
+                Charged only on success — a failed or timed-out suggestion never costs a credit.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-4 mt-8">
@@ -221,7 +221,9 @@ export default function Pricing() {
                 <CardContent className="p-5">
                   <h3 className="text-lg font-semibold">Free</h3>
                   <div className="text-2xl font-bold mt-2">{aiPricing.freeCreditsPerMonth} credits/mo</div>
-                  <p className="text-sm text-slate-400 mt-2">Included for every account, talent and hirer alike.</p>
+                  <p className="text-sm text-slate-400 mt-2">
+                    Included for every account with a verified email, talent and hirer alike.
+                  </p>
                 </CardContent>
               </Card>
               <Card className="bg-white/[.055] border-white/10 ring-1 ring-violet-400">
@@ -257,7 +259,7 @@ export default function Pricing() {
                 <h3 className="font-semibold mb-3">What costs what</h3>
                 <div className="grid sm:grid-cols-2 gap-3 text-sm text-slate-300">
                   <div className="flex justify-between gap-3 border-b border-white/10 pb-2">
-                    <span>Short help — headlines, replies, autocomplete</span>
+                    <span>Short help: headlines, bios, captions, replies</span>
                     <span className="font-semibold text-slate-100">1 credit</span>
                   </div>
                   <div className="flex justify-between gap-3 border-b border-white/10 pb-2">
@@ -265,6 +267,9 @@ export default function Pricing() {
                     <span className="font-semibold text-slate-100">3 credits</span>
                   </div>
                 </div>
+                <p className="text-sm text-slate-400 mt-3">
+                  Autocomplete for skills, genres and cities is always free.
+                </p>
               </CardContent>
             </Card>
             <ul className="grid sm:grid-cols-3 gap-3 mt-4 text-sm text-slate-400">

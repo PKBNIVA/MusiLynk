@@ -10,9 +10,12 @@ const publicPages = await Promise.all([
 ]);
 
 const detailState = await read('../src/app/components/PublicDetailState.tsx');
+// Paged lists keep their loading and error state in the shared usePagedList hook.
+const pagedList = await read('../src/app/lib/usePagedList.ts');
 for (const source of publicPages) {
-  assert.match(source, /setLoading\(true\)/, 'public API screens must expose a loading state');
-  assert.match(source, /setError\(/, 'public API screens must expose request failures');
+  const loader = /usePagedList/.test(source) ? pagedList : source;
+  assert.match(loader, /setLoading\(true\)/, 'public API screens must expose a loading state');
+  assert.match(loader, /setError\(/, 'public API screens must expose request failures');
   if (/PublicDetailState/.test(source)) {
     // The shared detail state renders the Try again button; the page must wire its retry.
     assert.match(source, /onRetry=/, 'public API screens must provide a retry action');

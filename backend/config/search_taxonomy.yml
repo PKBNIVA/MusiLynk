@@ -1,0 +1,64 @@
+# The one list of job functions and directory role groups. Served by GET /api/taxonomy and read by
+# posting, filtering, job alerts and the landing-page tiles (Search::Taxonomy).
+
+# What an employer picks when posting, and what the job filters offer.
+function_areas:
+  - Performance
+  - Composition & Songwriting
+  - Music Production
+  - Recording & Studio
+  - Live Sound & Audio
+  - Stage & Technical
+  - Tour & Production Management
+  - Lighting & Video
+  - A&R & Label
+  - Artist Management
+  - Booking & Events
+  - Publishing / Rights / Royalties
+  - Marketing / PR / Content
+  - Music Education
+  - Music Tech
+
+# Older values still stored on some jobs and alerts, mapped to their current function. The data
+# migration rewrites them; filters accept both spellings meanwhile.
+legacy_function_areas:
+  Production: Music Production
+  Audio Engineering: Recording & Studio
+  Composition: Composition & Songwriting
+  Live Sound: Live Sound & Audio
+  Live & Touring: Tour & Production Management
+  Touring: Tour & Production Management
+  Technical: Stage & Technical
+  Management: Artist Management
+  A&R: A&R & Label
+  Label Operations: A&R & Label
+  Marketing & PR: Marketing / PR / Content
+  Publishing & Rights: Publishing / Rights / Royalties
+
+# Directory role groups behind /music-professionals?role=<key> (the landing-page tiles). A
+# professional matches when a role, skill or headline contains any of the terms.
+talent_roles:
+  performer:
+    label: Artists & performers
+    terms: [performer, vocalist, singer, rapper, guitarist, bassist, drummer, keyboardist, pianist, violinist, cellist,
+      tabla player, percussionist, flautist, saxophonist, sitarist, dj, instrumentalist, session musician, band leader]
+  engineer:
+    label: Producers & engineers
+    terms: [music producer, producer, engineer, mixing, mastering, recording, beatmaker, sound designer]
+  A&R:
+    label: A&R & label teams
+    # Artist development sits with producers as often as with label staff.
+    terms: [a&r, artist and repertoire, label manager, label operations, talent scout, artist development,
+      music publisher, record producer, music producer]
+  manager:
+    label: Managers & artist services
+    terms: [manager, booking agent, promoter, artist services, publicist, coordinator]
+  live:
+    label: Live & touring crews
+    terms: [foh engineer, monitor engineer, live sound, tour manager, road manager, stage manager, production manager,
+      backline, roadie, lighting, rigger, stage technician, technical director]
+  music-tech:
+    label: Music-tech professionals
+    # Laptop-first production is where most music-tech work happens today.
+    terms: [music tech, music technologist, audio developer, audio programmer, plugin developer, sound designer,
+      dolby atmos, immersive audio, playback engineer, livestream engineer, electronic producer, music producer, mixing engineer]

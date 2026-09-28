@@ -19,7 +19,8 @@ class CatalogController < ApplicationController
   def taxonomy
     render json: {
       opportunityKinds: %w[job gig audition session tour internship collaboration],
-      functionAreas: ["Performance", "Production", "Audio Engineering", "Live & Touring", "Technical", "Management"],
+      # Search::Taxonomy is the single list for posting, filters, job alerts and the directory tiles.
+      **Search::Taxonomy.as_json,
       workplaces: %w[onsite hybrid remote travel], currencies: %w[INR USD EUR GBP],
       actTypes: ACT_TYPES, eventTypes: EVENT_TYPES, engagementTypes: ENGAGEMENT_TYPES,
       roleCategories: ROLE_CATEGORIES, instruments: INSTRUMENTS

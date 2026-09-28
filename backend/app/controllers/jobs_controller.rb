@@ -1,5 +1,6 @@
 class JobsController < ApplicationController
   include JobAuthoring
+  include ListPaging
   FILTER_PARAMS = %i[q location kind function workplace experience paid verified limit cursor].freeze
   LIST_LIMIT = 200
   # The public listing is paged with a keyset cursor: `?limit=` (default PAGE_SIZE, at most
@@ -7,6 +8,8 @@ class JobsController < ApplicationController
   # page's `nextCursor`.
   PAGE_SIZE = 30
   MAX_PAGE_SIZE = 100
+  LIST_ORDER = ["jobs.featured DESC", "jobs.created_at DESC", "jobs.id DESC"].freeze
+  LOCATION_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["jobs.location"])
 
   def index
     # ?location[]=a or ?kind[x]=y arrive as arrays/hashes; the filters below expect text.
@@ -14,36 +17,44 @@ class JobsController < ApplicationController
       return render_error("Search filter \"#{bad}\" must be a single text value.", :bad_request, "INVALID_FILTER")
     end
     limit = page_size
-    after = decode_cursor(params[:cursor])
-    return render_error("This list position is no longer valid. Start the search again.", :bad_request, "INVALID_CURSOR") if after == false
     # `id` breaks ties so the order (and so the cursor) is total.
-    jobs = Job.published.with_applications_count.includes(employer: :profile).order(featured: :desc, created_at: :desc, id: :desc)
+    jobs = Job.published.with_applications_count.includes(employer: :profile).order(*LIST_ORDER.map { Arel.sql(_1) })
     # Same rule as talent: non-demo synthetic QA batches are only listed to synthetic viewers.
     jobs = SyntheticQa::Demo.publicly_listed(jobs.joins(:employer)) unless current_user&.synthetic_batch.present?
-    query = params[:q].to_s.strip
-    if query.present?
-      q = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
-      jobs = jobs.where(<<~SQL.squish, q:)
-        jobs.title ILIKE :q OR jobs.company ILIKE :q OR jobs.description ILIKE :q OR
-        jobs.requirements ILIKE :q OR jobs.genre ILIKE :q OR jobs.function_area ILIKE :q OR
-        jobs.opportunity_kind ILIKE :q OR jobs.skills::text ILIKE :q
-      SQL
-    end
-    jobs = jobs.where("jobs.location ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:location])}%") if params[:location].present?
-    { kind: :opportunity_kind, function: :function_area, workplace: :workplace, experience: :experience_level }.each { |key, column| jobs = jobs.where(column => params[key]) if params[key].present? }
+    jobs = Search::Query.new(params[:location]).filter(jobs, LOCATION_FIELDS)
+    jobs = jobs.where(function_area: Search::Taxonomy.function_spellings(params[:function])) if params[:function].present?
+    { kind: :opportunity_kind, workplace: :workplace, experience: :experience_level }.each { |key, column| jobs = jobs.where(column => params[key]) if params[key].present? }
     jobs = jobs.where(paid: true) if params[:paid] == "true"
     jobs = jobs.joins(employer: :profile).where(profiles: { verified: true }) if params[:verified] == "true"
-    total = jobs.except(:select, :order, :includes).count
-    jobs = jobs.where("(jobs.featured, jobs.created_at, jobs.id) < (?, ?, ?)", *after) if after
-    page = jobs.limit(limit + 1).to_a
-    more = page.length > limit
-    page = page.first(limit)
+
+    query = Search::Query.new(params[:q])
+    if query.blank? && !query.inert?
+      # Browsing: keyset cursor over (featured, created_at, id).
+      after = decode_cursor(params[:cursor])
+      return render_error("This list position is no longer valid. Start the search again.", :bad_request, "INVALID_CURSOR") if after == false
+      total = jobs.except(:select, :order, :includes).count
+      jobs = jobs.where("(jobs.featured, jobs.created_at, jobs.id) < (?, ?, ?)", *after) if after
+      page = jobs.limit(limit + 1).to_a
+      more = page.length > limit
+      page = page.first(limit)
+      next_cursor = more ? encode_cursor(page.last) : nil
+      meta = {}
+    else
+      # Searching: ranked by relevance, so the cursor is a position in the ranking.
+      offset = list_offset
+      return render_invalid_cursor if offset.nil?
+      search = Search::Runner.call(jobs, query, Search::Targets::JOBS, order: LIST_ORDER, offset:, limit:)
+      page = search.rows
+      next_cursor = list_next_cursor(search, offset, limit)
+      total = search.total
+      meta = search.meta
+    end
     saved = current_user&.jobseeker? ? SavedJob.where(user: current_user, job_id: page.map(&:id)).pluck(:job_id).to_set : Set.new
     render json: {
       jobs: page.map { |job| job.api_json(current_user).merge(saved: saved.include?(job.id)) },
-      nextCursor: more ? encode_cursor(page.last) : nil,
+      nextCursor: next_cursor,
       total:
-    }
+    }.merge(meta)
   end
 
   def show

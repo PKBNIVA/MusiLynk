@@ -1,82 +1,56 @@
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
 import { Checkbox } from '../components/ui/checkbox';
-import {
-  Search,
-  MapPin,
-  Briefcase,
-  CalendarDays,
-  Bookmark,
-  BookmarkCheck,
-  Bell,
-  ShieldCheck,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { Search, Bookmark, BookmarkCheck, Bell, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router';
 import { apiDelete, apiPost } from '../lib/api';
 import { LoadMoreJobs } from '../components/LoadMoreJobs';
+import { JobCard, titleCase } from '../components/JobCard';
+import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../components/SearchFeedback';
 import { usePagedJobs } from '../lib/usePagedJobs';
 import { useLatestCallback } from '../lib/useLatestCallback';
+import { useUrlFilters } from '../lib/useUrlFilters';
+import { useFunctionAreas } from '../lib/useTaxonomy';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
 import type { Job } from '../lib/apiTypes';
-import { formatDeadline, formatPay } from '../lib/format';
 
 const kinds = ['', 'job', 'gig', 'audition', 'session', 'tour', 'internship', 'collaboration'];
-const functions = [
-  '',
-  'Performance',
-  'Production',
-  'Audio Engineering',
-  'Live & Touring',
-  'A&R',
-  'Artist Management',
-  'Marketing & PR',
-  'Publishing & Rights',
-  'Label Operations',
-  'Music Tech',
-];
 const workplaces = ['', 'onsite', 'hybrid', 'remote', 'travel'];
-const label = (s: string) => (s ? s.replace(/(^|\s)\S/g, (m) => m.toUpperCase()) : 'All');
+// URL keys are the API's filter names, so the URL is the search.
+const FILTERS = ['q', 'location', 'kind', 'function', 'workplace', 'paid', 'verified'] as const;
 
 export default function JobSearch() {
   const list = usePagedJobs<Job>();
-  const { jobs, setJobs, loading, total } = list;
-  const [showFilters, setShowFilters] = useState(false);
-  const [f, setF] = useState({
-    q: '',
-    location: '',
-    kind: '',
-    functionArea: '',
-    workplace: '',
-    paid: false,
-    verified: false,
-  });
-  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
-  const params = useMemo(() => {
-    const p = new URLSearchParams();
-    Object.entries(f).forEach(([k, v]) => {
-      if (v) {
-        const key = k === 'functionArea' ? 'function' : k;
-        p.set(key, String(v));
-      }
-    });
-    return p.toString();
-  }, [f]);
-  // Starts a new search from the first page. Only the newest search may update the list
-  // (usePagedJobs), so a slow earlier response cannot overwrite it.
-  const load = useLatestCallback(async () => {
-    const error = await list.search(params);
+  const { jobs, setJobs, loading, total, meta } = list;
+  const functions = useFunctionAreas();
+  // Filters and the query live in the URL: reload, share and bookmark a search; Back undoes the
+  // last change (SRCH-08). Selects apply at once; typed text waits for Search/Enter.
+  const { values: f, query, update, clear } = useUrlFilters(FILTERS);
+  const [showFilters, setShowFilters] = useState(() =>
+    Boolean(f.kind || f.function || f.workplace || f.paid || f.verified),
+  );
+  const [q, setQ] = useState(f.q),
+    [location, setLocation] = useState(f.location);
+  useEffect(() => {
+    setQ(f.q);
+    setLocation(f.location);
+  }, [f.q, f.location]);
+  // Only the newest search may update the list (usePagedJobs), so a slow earlier response cannot overwrite it.
+  const run = useLatestCallback(async () => {
+    const error = await list.search(query);
     if (error) toast.error(error);
   });
-  // Filters apply as soon as they change; typed text still waits for Search/Enter.
   useEffect(() => {
-    load();
-  }, [load, f.kind, f.functionArea, f.workplace, f.paid, f.verified]);
+    void run();
+  }, [query, run]);
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!update({ q, location })) void run();
+  };
   async function toggleSave(j: Job) {
     try {
       j.saved ? await apiDelete(`/saved-jobs/${j.id}`) : await apiPost(`/saved-jobs/${j.id}`);
@@ -93,7 +67,7 @@ export default function JobSearch() {
         query: f.q,
         location: f.location,
         opportunityKind: f.kind,
-        functionArea: f.functionArea,
+        functionArea: f.function,
         remoteOnly: f.workplace === 'remote',
         frequency: 'saved',
       });
@@ -127,28 +101,35 @@ export default function JobSearch() {
         </div>
         <Card className="bg-white/[.055] border-white/10 mb-7">
           <CardContent className="p-4 md:p-5">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                load();
-              }}
-              className="grid lg:grid-cols-[1.4fr_1fr_auto_auto] gap-3"
-            >
+            <form onSubmit={submit} className="grid lg:grid-cols-[1.4fr_1fr_auto_auto] gap-3" role="search">
+              <label htmlFor="job-search-query" className="sr-only">
+                Search opportunities
+              </label>
               <Input
+                id="job-search-query"
                 aria-label="Search opportunities"
-                value={f.q}
-                onChange={(e) => set('q', e.target.value)}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
                 placeholder="Role, skill, company, instrument…"
                 className="bg-black/20 border-white/15"
               />
+              <label htmlFor="job-search-location" className="sr-only">
+                Location
+              </label>
               <Input
+                id="job-search-location"
                 aria-label="Location"
-                value={f.location}
-                onChange={(e) => set('location', e.target.value)}
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
                 placeholder="City, state or remote"
                 className="bg-black/20 border-white/15"
               />
-              <Button type="button" variant="outline" onClick={() => setShowFilters(!showFilters)}>
+              <Button
+                type="button"
+                variant="outline"
+                aria-expanded={showFilters}
+                onClick={() => setShowFilters(!showFilters)}
+              >
                 <SlidersHorizontal className="w-4 h-4 mr-2" />
                 Filters
               </Button>
@@ -162,45 +143,50 @@ export default function JobSearch() {
                 <select
                   aria-label="Opportunity type"
                   value={f.kind}
-                  onChange={(e) => set('kind', e.target.value)}
+                  onChange={(e) => update({ kind: e.target.value })}
                   className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
                 >
                   {kinds.map((x) => (
                     <option key={x} value={x}>
-                      {x ? label(x) : 'All opportunity types'}
+                      {x ? titleCase(x) : 'All opportunity types'}
                     </option>
                   ))}
                 </select>
                 <select
                   aria-label="Function"
-                  value={f.functionArea}
-                  onChange={(e) => set('functionArea', e.target.value)}
+                  value={f.function}
+                  onChange={(e) => update({ function: e.target.value })}
                   className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
                 >
+                  <option value="">All functions</option>
                   {functions.map((x) => (
                     <option key={x} value={x}>
-                      {x || 'All functions'}
+                      {x}
                     </option>
                   ))}
+                  {f.function && !functions.includes(f.function) && <option value={f.function}>{f.function}</option>}
                 </select>
                 <select
                   aria-label="Workplace"
                   value={f.workplace}
-                  onChange={(e) => set('workplace', e.target.value)}
+                  onChange={(e) => update({ workplace: e.target.value })}
                   className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
                 >
                   {workplaces.map((x) => (
                     <option key={x} value={x}>
-                      {x ? label(x) : 'Any workplace'}
+                      {x ? titleCase(x) : 'Any workplace'}
                     </option>
                   ))}
                 </select>
                 <label className="flex items-center gap-2 text-sm text-slate-300">
-                  <Checkbox checked={f.paid} onCheckedChange={(v) => set('paid', !!v)} />
+                  <Checkbox checked={f.paid === 'true'} onCheckedChange={(v) => update({ paid: v ? 'true' : '' })} />
                   Paid only
                 </label>
                 <label className="flex items-center gap-2 text-sm text-slate-300">
-                  <Checkbox checked={f.verified} onCheckedChange={(v) => set('verified', !!v)} />
+                  <Checkbox
+                    checked={f.verified === 'true'}
+                    onCheckedChange={(v) => update({ verified: v ? 'true' : '' })}
+                  />
                   Verified employers only
                 </label>
               </div>
@@ -215,6 +201,7 @@ export default function JobSearch() {
             View saved opportunities
           </Link>
         </div>
+        {!loading && <SearchNotice meta={meta} query={f.q} />}
         {loading ? (
           <div className="grid gap-4">
             {[1, 2, 3].map((x) => (
@@ -223,79 +210,41 @@ export default function JobSearch() {
           </div>
         ) : jobs.length === 0 ? (
           <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-12 text-center">
-              <h3 className="font-semibold text-lg">No exact matches</h3>
-              <p className="text-slate-400 mt-2">
-                Try a wider location, fewer filters, or save this search as an alert.
-              </p>
+            <CardContent className="p-2">
+              <NoResults
+                noun="opportunities"
+                query={f.q}
+                meta={meta}
+                onSearch={(term) => update({ q: term })}
+                suggestions={POPULAR_SEARCHES}
+                onClear={query ? clear : undefined}
+              >
+                <Button variant="outline" onClick={createAlert}>
+                  <Bell className="w-4 h-4 mr-2" />
+                  Save as an alert
+                </Button>
+              </NoResults>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-4 mt-4">
             {jobs.map((j, index) => (
-              <Card key={j.id} className="bg-white/[.055] border-white/10 hover:bg-white/[.075] transition">
-                <CardContent className="p-5 md:p-6">
-                  <div className="flex gap-4 justify-between">
-                    <Link
-                      className="min-w-0 flex-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-                      to={`/jobseeker/jobs/${j.id}`}
-                      data-job-item={index}
-                    >
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <Badge variant="secondary">{label(j.opportunity_kind || 'job')}</Badge>
-                        {j.employerVerified && (
-                          <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-400/20">
-                            <ShieldCheck size={13} className="mr-1" />
-                            Verified
-                          </Badge>
-                        )}
-                        {j.featured && <Badge>Featured</Badge>}
-                        {j.fitScore && (
-                          <Badge className="bg-sky-500/15 text-sky-200 border-sky-400/20">
-                            {j.fitScore}% profile fit
-                          </Badge>
-                        )}
-                      </div>
-                      <h2 className="text-xl md:text-2xl font-semibold truncate">{j.title}</h2>
-                      <p className="text-violet-300 mt-1">{j.company}</p>
-                      <div className="text-sm text-slate-400 mt-3 flex flex-wrap gap-x-4 gap-y-2">
-                        <span className="flex items-center">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          {j.location}
-                        </span>
-                        <span className="flex items-center">
-                          <Briefcase className="w-4 h-4 mr-1" />
-                          {label(j.workplace || j.type)}
-                        </span>
-                        {j.function_area && <span>{j.function_area}</span>}
-                        <span>{j.genre}</span>
-                        <span className="flex items-center" data-job-deadline>
-                          <CalendarDays className="w-4 h-4 mr-1" />
-                          {formatDeadline(j.application_deadline)}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {j.skills?.slice(0, 6).map((s: string) => (
-                          <Badge variant="outline" key={s} className="border-white/15 text-slate-300">
-                            {s}
-                          </Badge>
-                        ))}
-                      </div>
-                    </Link>
-                    <div className="flex flex-col items-end gap-3">
-                      <Button aria-label="Save job" size="icon" variant="ghost" onClick={() => toggleSave(j)}>
-                        {j.saved ? <BookmarkCheck className="text-violet-300" /> : <Bookmark />}
-                      </Button>
-                      <div className="text-right hidden sm:block">
-                        <div className="font-semibold text-sm">{formatPay(j, 'Compensation not disclosed')}</div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          {j.applicationsCount} applicant{j.applicationsCount === 1 ? '' : 's'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <JobCard
+                key={j.id}
+                job={j}
+                index={index}
+                to={`/jobseeker/jobs/${j.id}`}
+                aside={
+                  <Button
+                    aria-label={j.saved ? 'Remove from saved' : 'Save job'}
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => toggleSave(j)}
+                  >
+                    {j.saved ? <BookmarkCheck className="text-violet-300" /> : <Bookmark />}
+                  </Button>
+                }
+              />
             ))}
           </div>
         )}

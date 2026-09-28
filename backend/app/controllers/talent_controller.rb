@@ -1,12 +1,16 @@
 class TalentController < ApplicationController
   include ScalarParams
+  include ListPaging
   LIST_LIMIT = 200
+  LIST_PARAMS = %i[q location role instrument verified remoteRecording limit cursor].freeze
+  # Tie-breaks after relevance, and the order of an unfiltered directory; ends in a unique column.
+  LIST_ORDER = ["profiles.verified DESC", "users.created_at DESC", "users.id ASC"].freeze
+  ROLE_FIELDS = Search::Query::Fields.new(primary: ["profiles.roles::text", "profiles.headline"], secondary: ["profiles.skills::text"], tertiary: [], location: [])
+  LOCATION_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["profiles.location"])
 
   def public_index
-    return unless require_scalar_params!(:q, :location, :role, :instrument, :verified, :remoteRecording)
-    scope = listing_scope
-    scope = filter(scope)
-    render json: { talent: scope.limit(100).map { public_profile(_1) } }
+    return unless require_scalar_params!(*LIST_PARAMS)
+    render_listing(:talent) { public_profile(_1) }
   end
 
   def public_show
@@ -16,9 +20,9 @@ class TalentController < ApplicationController
 
   def index
     return unless authenticate!("jobseeker", "employer")
-    return unless require_scalar_params!(:q, :location, :role, :instrument, :verified, :remoteRecording)
+    return unless require_scalar_params!(*LIST_PARAMS)
     shortlisted = TalentShortlist.where(employer: current_user).pluck(:candidate_id).to_set
-    render json: { candidates: filter(listing_scope).limit(100).map { public_profile(_1).merge(shortlisted: shortlisted.include?(_1.id)) } }
+    render_listing(:candidates) { public_profile(_1).merge(shortlisted: shortlisted.include?(_1.id)) }
   end
 
   def show
@@ -85,28 +89,47 @@ class TalentController < ApplicationController
 
   private
 
-  def public_scope = User.discoverable_talent.includes(:profile, :portfolio_items)
+  def public_scope = User.discoverable_talent.preload(:profile, :portfolio_items)
 
   # Browse/search listings hide synthetic QA accounts from real users (except badged demo-* batches);
   # synthetic viewers still see every batch.
   def listing_scope = current_user&.synthetic_batch.present? ? public_scope : SyntheticQa::Demo.publicly_listed(public_scope)
 
-  def filter(scope)
-    if params[:q].present?
-      q = "%#{ActiveRecord::Base.sanitize_sql_like(params[:q])}%"
-      scope = scope.joins(:profile).where(<<~SQL.squish, q:)
-        users.name ILIKE :q OR profiles.headline ILIKE :q OR profiles.bio ILIKE :q OR
-        profiles.skills::text ILIKE :q OR profiles.credits::text ILIKE :q OR
-        profiles.gear::text ILIKE :q OR profiles.software::text ILIKE :q OR
-        profiles.roles::text ILIKE :q OR profiles.instruments::text ILIKE :q OR
-        profiles.genres::text ILIKE :q
-      SQL
+  # One ranked page of professionals: `key` => rows, plus nextCursor, total and how the query was read.
+  def render_listing(key)
+    offset = list_offset
+    return render_invalid_cursor if offset.nil?
+    scope = filter(listing_scope.joins(:profile))
+    limit = list_limit
+    search = Search::Runner.call(scope, params[:q], Search::Targets::TALENT, order: LIST_ORDER, offset:, limit:)
+    body = { key => search.rows.map { yield _1 }, nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta)
+    if (role = role_filter)
+      body[:role] = role
     end
-    scope = scope.joins(:profile).where("profiles.location ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:location])}%") if params[:location].present?
-    scope = scope.joins(:profile).where("profiles.roles::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:role])}%") if params[:role].present?
-    scope = scope.joins(:profile).where("profiles.instruments::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:instrument])}%") if params[:instrument].present?
-    scope = scope.joins(:profile).where(profiles: { verified: true }) if params[:verified] == "true"
-    scope = scope.joins(:profile).where(profiles: { remote_recording: true }) if params[:remoteRecording] == "true"
+    render json: body
+  end
+
+  # A landing-page role group ("performer") or a free-text role, as { key:, label: }.
+  def role_filter
+    return nil if params[:role].blank?
+    key = Search::Taxonomy.talent_roles.keys.find { _1.casecmp?(params[:role].to_s.strip) }
+    key ? { key:, label: Search::Taxonomy.talent_roles[key][:label] } : { key: params[:role].to_s.strip, label: params[:role].to_s.strip }
+  end
+
+  def filter(scope)
+    scope = Search::Query.new(params[:location]).filter(scope, LOCATION_FIELDS)
+    if params[:role].present?
+      role = params[:role].to_s
+      role_query = if (terms = Search::Taxonomy.talent_role_terms(role))
+        Search::Query.new(role, tokens: [Search::Query::Token.new(text: role.downcase, words: terms, prefixes: [], location: false)])
+      else
+        Search::Query.new(role)
+      end
+      scope = role_query.filter(scope, ROLE_FIELDS)
+    end
+    scope = scope.where("profiles.instruments::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:instrument])}%") if params[:instrument].present?
+    scope = scope.where(profiles: { verified: true }) if params[:verified] == "true"
+    scope = scope.where(profiles: { remote_recording: true }) if params[:remoteRecording] == "true"
     scope
   end
 end

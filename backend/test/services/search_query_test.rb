@@ -1,0 +1,145 @@
+require "test_helper"
+
+class SearchQueryTest < ActiveSupport::TestCase
+  def texts(raw) = Search::Query.new(raw).tokens.map(&:text)
+
+  test "normalises case, spacing and punctuation" do
+    query = Search::Query.new("   SiNgEr!!   ")
+    assert_equal "singer", query.text
+    assert_equal ["singer"], query.tokens.map(&:text)
+    assert_equal "rock and roll", Search::Query.new("Rock & Roll").text
+  end
+
+  test "reads the longest vocabulary phrase first and folds plurals" do
+    assert_equal ["guitar player", "bombay"], texts("Guitar players in Bombay")
+    assert_equal ["bass guitarist"], texts("bass guitarist")
+    assert_equal ["singer"], texts("singers")
+    tokens = Search::Query.new("guitar players in Bombay").tokens
+    assert_includes tokens.first.alternatives, "guitarist"
+    assert tokens.last.location?, "a city is a location token"
+    assert_equal %w[mumbai bombay], tokens.last.alternatives
+  end
+
+  test "drops stop words from multi-word queries but keeps a lone one" do
+    assert_equal %w[vocalist wedding], texts("vocalist for a wedding")
+    assert_equal ["for"], texts("for")
+    assert_empty texts("a 1"), "a stop word next to a dropped fragment is not searched on its own"
+  end
+
+  test "unknown words match as prefixes with their singular; short ones as whole words" do
+    token = Search::Query.new("drums").tokens.first
+    assert_includes token.alternatives, "drummer", "drums is a synonym of drummer"
+    token = Search::Query.new("sessions").tokens.first
+    assert_equal %w[sessions session], token.prefixes
+    assert_not token.known?
+    short = Search::Query.new("ne").tokens.first
+    assert_equal ["ne"], short.words
+    assert_empty short.prefixes
+  end
+
+  test "english plural folding" do
+    { "singers" => "singer", "classes" => "class", "melodies" => "melody", "bass" => "bass", "chorus" => "chorus", "keys" => "key", "bus" => "bus" }.each do |word, singular|
+      assert_equal singular, Search::Query.singular(word), word
+    end
+  end
+
+  test "non-latin scripts and emoji are kept and matched by substring" do
+    token = Search::Query.new("गायक").tokens.first
+    assert_includes token.alternatives, "vocalist", "Hindi for singer is in the singer group"
+    emoji = Search::Query.new("🥁")
+    assert_equal ["🥁"], emoji.tokens.map(&:text)
+    assert_includes emoji.condition(Search::Targets::JOBS), "LIKE ANY"
+  end
+
+  test "code-like and symbol-only input is inert or exact" do
+    ["%", "_", "\\", "' OR '1'='1", "%' OR 1=1 --"].each do |raw|
+      query = Search::Query.new(raw)
+      assert query.inert?, "#{raw.inspect} leaves nothing to search"
+      assert_not query.natural?, "#{raw.inspect} is code-like"
+    end
+    assert_not Search::Query.new("'; DROP TABLE jobs; --").natural?
+    assert Search::Query.new("guitarist mumbai").natural?
+    assert_not Search::Query.new("").inert?, "an empty query is blank, not inert"
+    assert Search::Query.new("").blank?
+  end
+
+  test "interpretedAs lists the query and then every alternative" do
+    assert_equal ["bassoon"], Search::Query.new("bassoon").interpreted_as
+    interpreted = Search::Query.new("vocalist").interpreted_as
+    assert_equal "vocalist", interpreted.first
+    assert_includes interpreted, "playback singer"
+    assert_operator interpreted.size, :<=, Search::Query::MAX_INTERPRETED
+    assert_equal [], Search::Query.new("").interpreted_as
+  end
+
+  test "queries are cut to the maximum length and capped in tokens" do
+    assert_equal Search::Query::MAX_LENGTH, Search::Query.new("x" * 500).text.length
+    assert_equal Search::Query::MAX_TOKENS, Search::Query.new((1..20).map { "word#{_1}" }.join(" ")).tokens.size
+  end
+
+  test "conditions are AND across tokens and OR within one; partial is OR over the words" do
+    query = Search::Query.new("guitarist mumbai")
+    all = query.condition(Search::Targets::JOBS)
+    assert_includes all, " AND "
+    assert_includes all, "guitar player"
+    assert_includes all, "jobs.location"
+    partial = query.condition(Search::Targets::JOBS, mode: :partial)
+    assert_not_includes partial, " AND ", "partial mode ignores the city and needs one of the other words"
+    assert_includes query.score(Search::Targets::JOBS), "word_similarity"
+  end
+
+  test "replace swaps one token for the parse of another phrase" do
+    query = Search::Query.new("guitarst mumbai")
+    fixed = query.replace(query.tokens.first, "guitarist")
+    assert_equal "guitarist mumbai", fixed.text
+    assert fixed.tokens.first.known?
+    assert fixed.tokens.last.location?
+  end
+
+  test "regex special characters in words are escaped" do
+    sql = Search::Query.new("a&r hip-hop").condition(Search::Targets::TALENT)
+    assert_includes sql, "a\\&r"
+    assert_includes sql, "hip\\-hop"
+  end
+
+  test "synonyms file loads groups, one-way expansions, cities and stop words" do
+    assert_includes Search::Synonyms.expand("fiddle"), "violinist"
+    assert_includes Search::Synonyms.expand("percussionist"), "tabla player"
+    assert_not_includes Search::Synonyms.expand("tabla player"), "drummer", "broader terms are one-way"
+    assert_nil Search::Synonyms.expand("bassoon")
+    assert_equal %w[kochi cochin], Search::Synonyms.city("Cochin")
+    assert Search::Synonyms.stopword?("on"), "YAML must not read on as true"
+    assert Search::Synonyms.terms.all?(String)
+  end
+
+  test "spelling picks the fewest edits and prefers longer words on a tie" do
+    Search::Spelling.reset!
+    assert_equal 1, Search::Spelling.edit_distance("guitarst", "guitarist")
+    assert_equal 1, Search::Spelling.edit_distance("voilinist", "violinist"), "a swap is one edit"
+    assert_equal 0, Search::Spelling.edit_distance("", "")
+    assert_equal "vocalist", Search::Spelling.suggest("vocalst")
+    assert_equal "guitarist", Search::Spelling.suggest("guitarst")
+    assert_equal "tabla", Search::Spelling.suggest("tabala")
+    assert_nil Search::Spelling.suggest("zzqqxx")
+    assert_equal "vocalist", Search::Spelling.suggest("vocalst"), "cached"
+  end
+
+  test "taxonomy maps legacy function names and role tiles" do
+    assert_equal "Music Production", Search::Taxonomy.canonical_function("production")
+    assert_equal "Performance", Search::Taxonomy.canonical_function("Performance")
+    assert_equal "Something New", Search::Taxonomy.canonical_function("Something New")
+    assert_equal "", Search::Taxonomy.canonical_function(" ")
+    assert_equal ["Music Production", "Production"], Search::Taxonomy.function_spellings("Production")
+    assert_equal ["Tour & Production Management", "Live & Touring", "Touring"], Search::Taxonomy.function_spellings("Tour & Production Management")
+    assert_includes Search::Taxonomy.talent_role_terms("PERFORMER"), "vocalist"
+    assert_nil Search::Taxonomy.talent_role_terms("nobody")
+    assert_equal %w[performer engineer A&R manager live music-tech], Search::Taxonomy.as_json[:talentRoles].pluck(:key)
+  end
+
+  test "the posting form offers exactly the taxonomy's functions" do
+    source = Rails.root.join("../src/app/pages/PostJob.tsx").read
+    list = source[/const functions = \[(.*?)\];/m, 1]
+    assert list, "PostJob.tsx keeps its function list in `const functions = [...]` (update this check if it moves)"
+    assert_equal Search::Taxonomy.function_areas, list.scan(/'([^']+)'/).flatten
+  end
+end

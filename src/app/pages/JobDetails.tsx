@@ -29,6 +29,10 @@ import { formatDate, formatDeadline, formatPay } from '../lib/format';
 import { MoreDetails } from '../components/help/MoreDetails';
 import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
+import { PostedBy } from '../components/showcase/PostedBy';
+import { ApplyMaterials, type Materials } from '../components/showcase/ApplyMaterials';
+import { AiSuggestButton } from '../components/ai/AiSuggestButton';
+import type { Portfolio, Resume } from '../lib/showcase';
 
 const COVER_MAX = 5_000;
 const answerId = (i: number) => `screening-${i}`;
@@ -43,7 +47,9 @@ export default function JobDetails() {
     [cover, setCover] = useState(''),
     [answers, setAnswers] = useState<Record<number, string>>({}),
     [loadError, setLoadError] = useState(''),
-    [reporting, setReporting] = useState(false);
+    [reporting, setReporting] = useState(false),
+    [materials, setMaterials] = useState<Materials>({}),
+    [chosen, setChosen] = useState<{ portfolio?: Portfolio; resume?: Resume }>({});
   const load = useCallback(() => {
     setLoadError('');
     return apiGet<{ job?: Job }>(`/jobs/${id}`)
@@ -94,6 +100,8 @@ export default function JobDetails() {
         await apiPost(`/jobs/${id}/apply`, {
           coverLetter: cover,
           screeningAnswers: questions.map((_q, i) => answers[i].trim()),
+          ...(materials.portfolioId ? { portfolioId: materials.portfolioId } : {}),
+          ...(materials.resumeId ? { resumeId: materials.resumeId } : {}),
         });
         setJob({ ...job, applied: true });
         toast.success('Application submitted');
@@ -168,6 +176,7 @@ export default function JobDetails() {
                 </div>
                 <h1 className="text-3xl md:text-5xl font-bold mt-4 leading-tight">{job.title}</h1>
                 <p className="text-xl text-violet-300 mt-2">{job.company}</p>
+                <PostedBy postedAs={job.postedAs} className="mt-2" />
                 <div className="grid sm:grid-cols-2 gap-3 mt-6 text-sm text-slate-300">
                   <div className="flex gap-2">
                     <MapPin size={18} className="text-slate-500" />
@@ -276,6 +285,12 @@ export default function JobDetails() {
                       </div>
                     ) : (
                       <>
+                        <ApplyMaterials
+                          base="/jobseeker"
+                          value={materials}
+                          onChange={setMaterials}
+                          onDetails={setChosen}
+                        />
                         {job.screeningQuestions?.length > 0 && (
                           <fieldset className="space-y-3 mb-4">
                             <legend className="text-sm font-medium mb-1">Screening questions</legend>
@@ -328,6 +343,22 @@ export default function JobDetails() {
                               className="min-h-32 bg-black/20 border-white/15"
                             />
                           </Field>
+                          <AiSuggestButton
+                            task="cover_letter"
+                            value={cover}
+                            getContext={() => ({
+                              jobId: job.id,
+                              jobTitle: job.title,
+                              company: job.company,
+                              jobDescription: (job.description || '').slice(0, 1500),
+                              headline: chosen.portfolio?.headline || chosen.resume?.headline || undefined,
+                              resumeSummary: (chosen.resume?.summary || '').slice(0, 1000) || undefined,
+                            })}
+                            onAccept={(text) => {
+                              setCover(text);
+                              applyForm.clear('coverLetter');
+                            }}
+                          />
                         </MoreDetails>
                         <FormError message={applyForm.formError} className="mt-3" />
                         <Button className="w-full mt-3" disabled={busy} aria-busy={busy} onClick={apply}>

@@ -150,6 +150,8 @@ export interface Job {
   /** Employer::JobsController#owner_json and the employer dashboard. */
   applications?: number;
   allowedNextStatuses?: string[];
+  /** The Page (studio or band) the job was posted as; null for a personal post. */
+  postedAs?: { type: 'organization' | 'act'; id: string; name: string } | null;
 }
 
 /** POST /jobs. */

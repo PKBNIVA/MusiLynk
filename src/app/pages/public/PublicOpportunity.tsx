@@ -12,6 +12,7 @@ import { Briefcase, MapPin, ShieldCheck, Wallet, CalendarDays } from 'lucide-rea
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { Job } from '../../lib/apiTypes';
 import { formatDate, formatDeadline, formatPay } from '../../lib/format';
+import { PostedBy } from '../../components/showcase/PostedBy';
 
 export default function PublicOpportunity() {
   const { id } = useParams();
@@ -67,6 +68,7 @@ export default function PublicOpportunity() {
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mt-4 break-words">{j.title}</h1>
             <p className="text-xl text-violet-300 mt-2">{j.company}</p>
+            <PostedBy postedAs={j.postedAs} className="mt-2" />
             <div className="grid sm:grid-cols-2 gap-3 mt-7 text-sm text-slate-300">
               <span className="flex gap-2">
                 <MapPin size={17} />

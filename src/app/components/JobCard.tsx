@@ -7,6 +7,7 @@ import { DemoBadge } from './DemoBadge';
 import { formatDeadline, formatPay } from '../lib/format';
 import type { Job } from '../lib/apiTypes';
 import { optionLabel } from './ui/option-labels';
+import { PostedBy } from './showcase/PostedBy';
 
 /** "gig" → "Gig", "on-site work" → "On-site Work". */
 export const titleCase = (value: string) => value.replace(/(^|[\s-])\S/g, (m) => m.toUpperCase());
@@ -53,6 +54,7 @@ export function JobCard({ job, to, index, aside }: Props) {
             </div>
             <h2 className="text-xl md:text-2xl font-semibold break-words">{job.title}</h2>
             <p className="text-violet-300 mt-1">{job.company}</p>
+            <PostedBy postedAs={job.postedAs} link={false} className="mt-1" />
             <div className="text-sm text-slate-400 mt-3 flex flex-wrap gap-x-4 gap-y-2" data-testid="job-facts">
               <span className="flex items-center">
                 <MapPin size={15} className="mr-1" aria-hidden="true" />

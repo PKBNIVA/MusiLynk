@@ -64,7 +64,45 @@ function publicRoutes(): RouteObject[] {
   const Billing = L(() => import('./pages/Billing'));
   const AccountData = L(() => import('./pages/AccountData'));
   const AccountSettings = L(() => import('./pages/AccountSettings'));
+  // ---- Showcase (one library, many views; one account, many hats) — begin ----
+  const Showcase = React.lazy(() => import('./pages/showcase/ShowcasePage'));
+  const showcasePaths = {
+    library: 'library',
+    portfolios: 'portfolios',
+    newPortfolio: 'portfolios/new',
+    portfolio: 'portfolios/:id',
+    career: 'career',
+    resumes: 'resumes',
+    resume: 'resumes/:id',
+    resumePrint: 'resumes/:id/print',
+    review: 'review',
+  } as const;
+  // The work library (portfolio items) is a job-seeker feature; everything else serves both roles.
+  const showcase = (role: Role): RouteObject[] =>
+    Object.entries(showcasePaths)
+      .filter(([page]) => role === 'jobseeker' || page !== 'library')
+      .map(([page, path]) => ({
+        path,
+        element: (
+          <P roles={[role]}>
+            <Showcase page={page as keyof typeof showcasePaths} />
+          </P>
+        ),
+      }));
+  const showcasePublic: RouteObject[] = [
+    ['/p/:slug', 'publicPortfolio'],
+    ['/pages/:type/:id', 'pageJobs'],
+  ].map(([path, page]) => ({
+    path,
+    element: (
+      <S>
+        <Showcase page={page as 'pageJobs'} />
+      </S>
+    ),
+  }));
+  // ---- Showcase — end ----
   return [
+    ...showcasePublic,
     {
       path: '/',
       element: (
@@ -492,6 +530,7 @@ function publicRoutes(): RouteObject[] {
             </P>
           ),
         },
+        ...showcase('jobseeker'), // Showcase
       ],
     },
     {
@@ -657,6 +696,7 @@ function publicRoutes(): RouteObject[] {
             </P>
           ),
         },
+        ...showcase('employer'), // Showcase
       ],
     },
     // Admin pages live on the separate admin site; the old sign-in link here is gone too.

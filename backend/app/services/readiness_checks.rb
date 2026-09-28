@@ -14,6 +14,8 @@ class ReadinessChecks
       allowedOrigins: check(ENV["ALLOWED_ORIGINS"].present?, required: true),
       adminPassword: check(!Rails.env.production? || ENV.fetch("ADMIN_PASSWORD", "").length >= 14, required: true),
       demoData: check(!Rails.env.production? || ENV["SEED_DEMO_DATA"] != "true", required: true),
+      # Non-blocking until the admin site exists; see DEPLOYMENT.md → Admin site.
+      adminOrigin: check(!Rails.env.production? || AdminOrigin.locked?, required: false, locked: AdminOrigin.locked?),
       backgroundJobs: background_jobs_check,
       storage: storage_check,
       payments: check(payments_ready?, required: false,

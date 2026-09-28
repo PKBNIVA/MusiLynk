@@ -48,6 +48,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/auth/reset-password", :public, { ok: [400], params: { token: "not-a-token", password: "LongEnough123!" } }],
     [:get, "/api/auth/reset-password/check", :public, { params: { token: "not-a-token" }, keys: %w[valid] }],
     [:get, "/api/me", :any, { keys: %w[user] }],
+    [:get, "/api/me/identities", :talent, { keys: %w[identities] }],
     [:get, "/api/account/export", :any, { keys: %w[format version account profile conversations] }],
     # Without the typed email the request is refused, so the matrix never erases its own users.
     [:delete, "/api/account", :any, { ok: [422], params: { confirmEmail: "someone-else@example.com" } }],

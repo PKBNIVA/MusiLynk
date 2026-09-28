@@ -302,7 +302,7 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="ai" className="flex-none gap-1.5">
               <Sparkles aria-hidden="true" size={14} />
-              AI
+              AI spend
             </TabsTrigger>
           </TabsList>
 

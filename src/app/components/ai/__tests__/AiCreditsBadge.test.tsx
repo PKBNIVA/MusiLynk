@@ -32,20 +32,24 @@ describe('AiCreditsBadge', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('shows the balance once usage loads', () => {
+  it('shows how much AI help is left once usage loads, with no "credits" wording', () => {
     vi.mocked(useAiUsage).mockReturnValue({
-      usage: {
-        balance: 17,
-        monthlyAllowance: 20,
-        usedThisPeriod: 3,
-        resetsAt: '2026-10-01T00:00:00Z',
-        plan: 'free',
-        recent: [],
-      },
+      usage: { remaining: 3, limit: 5, period: 'lifetime' },
       reload: () => {},
     });
     act(() => root.render(<AiCreditsBadge />));
     const badge = container.querySelector('[data-testid="ai-credits-badge"]');
-    expect(badge?.textContent).toContain('17 AI credits');
+    expect(badge?.textContent).toContain('AI help: 3 of 5 left');
+    expect(container.textContent).not.toContain('credit');
+  });
+
+  it('shows the monthly period for a hirer task group', () => {
+    vi.mocked(useAiUsage).mockReturnValue({
+      usage: { remaining: 4, limit: 10, period: 'month' },
+      reload: () => {},
+    });
+    act(() => root.render(<AiCreditsBadge />));
+    const badge = container.querySelector('[data-testid="ai-credits-badge"]');
+    expect(badge?.textContent).toContain('AI help: 4 of 10 left');
   });
 });

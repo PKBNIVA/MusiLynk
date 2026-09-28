@@ -67,10 +67,29 @@ default: &default
     batch_discount: 0.5
     usd_to_inr: 85.0
 
-  # Spend guard, in INR/month (server-wall-clock calendar month, UTC).
+  # Spend guard, in INR/month (server-wall-clock calendar month, UTC). Both set to the launch
+  # cap (see `launch:` below) — there is no paid AI tier to protect separately right now.
   budgets:
-    free_tier_monthly_budget_inr: 3000
-    hard_monthly_budget_inr: 15000
+    free_tier_monthly_budget_inr: 1500
+    hard_monthly_budget_inr: 1500
+
+  # Launch mode (owner decision, 2026-09-28): "AI is way too costly right now, both for me and
+  # for the user." Only the tasks listed here are reachable through GET /api/ai/status and
+  # POST /api/ai/suggest — everything else in `task_costs` above stays in the registry (so the
+  # code paths, tests and future re-enable are all a config change) but answers
+  # 403 AI_TASK_DISABLED. Limits are enforced as usage caps read straight off the existing
+  # ai_credit_ledgers "usage" rows (see AiUsageCap) — never a number shown to the person as
+  # "credits". talent_lifetime_limit is a total per account, ever, across talent_tasks;
+  # hirer_monthly_limit resets every calendar month, across hirer_tasks.
+  launch:
+    talent_tasks:
+      - profile_headline
+      - profile_bio
+    hirer_tasks:
+      - job_description
+      - job_screening_questions
+    talent_lifetime_limit: 5
+    hirer_monthly_limit: 10
 
   # Output caps (max_tokens), tokens. System prompts must stay under 300 tokens (enforced in specs,
   # not runtime, since token counting the prompt itself would cost an API call).

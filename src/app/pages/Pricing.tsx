@@ -6,7 +6,6 @@ import { Card, CardContent } from '../components/ui/card';
 import { PublicNav } from '../components/PublicNav';
 import { usePageMeta } from '../components/PageMeta';
 import { apiGet } from '../lib/api';
-import { loadAiPricing, type AiPricingCatalogue } from '../lib/ai';
 import type { LucideIcon } from 'lucide-react';
 
 export type ApiPlan = {
@@ -100,7 +99,6 @@ export default function Pricing() {
   );
   const [plans, setPlans] = useState<ApiPlan[]>(FALLBACK_PLANS);
   const [live, setLive] = useState<boolean | null>(null);
-  const [aiPricing, setAiPricing] = useState<AiPricingCatalogue | null>(null);
   useEffect(() => {
     let active = true;
     apiGet<{ plans: ApiPlan[] }>('/billing/plans', { skipAuthRedirect: true })
@@ -115,12 +113,6 @@ export default function Pricing() {
       .catch(() => {
         if (active) setLive(false);
       });
-    loadAiPricing()
-      .then((p) => {
-        // Guards against an unmocked/misbehaving endpoint answering with an incomplete body.
-        if (active && p && typeof p.freeCreditsPerMonth === 'number' && p.aiPlus && p.topups) setAiPricing(p);
-      })
-      .catch(() => undefined);
     return () => {
       active = false;
     };
@@ -184,6 +176,13 @@ export default function Pricing() {
             );
           })}
         </div>
+        <p
+          className="text-center text-sm text-slate-400 mt-4 flex items-center justify-center gap-1.5"
+          data-testid="ai-help-note"
+        >
+          <Sparkles size={14} aria-hidden="true" className="text-violet-300" />
+          Includes free AI help to write your profile and job posts.
+        </p>
         <div className="grid md:grid-cols-3 gap-4 mt-8">
           <Value
             icon={BriefcaseBusiness}
@@ -201,93 +200,6 @@ export default function Pricing() {
             body="Profiles, rosters, shortlists, team seats, verification, messaging and admin controls in one workspace."
           />
         </div>
-        {aiPricing && (
-          <section className="mt-14" aria-labelledby="verse-ai-pricing" data-testid="ai-pricing-section">
-            <div className="text-center max-w-2xl mx-auto">
-              <div className="inline-flex items-center gap-2 rounded-full bg-violet-500/10 border border-violet-400/20 px-3 py-1.5 text-sm text-violet-200">
-                <Sparkles size={15} aria-hidden="true" />
-                Verse AI
-              </div>
-              <h2 id="verse-ai-pricing" className="text-3xl font-bold mt-4">
-                Writing help and recruiter tools, priced in credits
-              </h2>
-              <p className="text-slate-400 mt-3">
-                Every account with a verified email gets {aiPricing.freeCreditsPerMonth} free AI credits a month.
-                Charged only on success — a failed or timed-out suggestion never costs a credit.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-4 mt-8">
-              <Card className="bg-white/[.055] border-white/10">
-                <CardContent className="p-5">
-                  <h3 className="text-lg font-semibold">Free</h3>
-                  <div className="text-2xl font-bold mt-2">{aiPricing.freeCreditsPerMonth} credits/mo</div>
-                  <p className="text-sm text-slate-400 mt-2">
-                    Included for every account with a verified email, talent and hirer alike.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-white/[.055] border-white/10 ring-1 ring-violet-400">
-                <CardContent className="p-5">
-                  <h3 className="text-lg font-semibold">Verse AI Plus</h3>
-                  <div className="text-2xl font-bold mt-2">
-                    ₹{n(aiPricing.aiPlus.priceInr)}
-                    <span className="text-xs font-normal text-slate-400"> / month</span>
-                  </div>
-                  <p className="text-sm text-slate-400 mt-2">
-                    {n(aiPricing.aiPlus.creditsPerMonth)} credits/month, on top of your plan. Available to any account.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-white/[.055] border-white/10">
-                <CardContent className="p-5">
-                  <h3 className="text-lg font-semibold">Top-ups</h3>
-                  <div className="space-y-1 mt-2 text-sm">
-                    {Object.values(aiPricing.topups).map((t) => (
-                      <div key={`${t.priceInr}-${t.credits}`}>
-                        ₹{n(t.priceInr)} for {n(t.credits)} credits
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-sm text-slate-400 mt-2">
-                    Last {aiPricing.topupExpiresAfterMonths} months. Pro and Studio plans include AI credits too.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-            <Card className="mt-4 bg-white/[.03] border-white/10">
-              <CardContent className="p-5">
-                <h3 className="font-semibold mb-3">What costs what</h3>
-                <div className="grid sm:grid-cols-2 gap-3 text-sm text-slate-300">
-                  <div className="flex justify-between gap-3 border-b border-white/10 pb-2">
-                    <span>Short help: headlines, bios, captions, replies</span>
-                    <span className="font-semibold text-slate-100">1 credit</span>
-                  </div>
-                  <div className="flex justify-between gap-3 border-b border-white/10 pb-2">
-                    <span>Long writing — job descriptions, cover letters, resumes</span>
-                    <span className="font-semibold text-slate-100">3 credits</span>
-                  </div>
-                </div>
-                <p className="text-sm text-slate-400 mt-3">
-                  Autocomplete for skills, genres and cities is always free.
-                </p>
-              </CardContent>
-            </Card>
-            <ul className="grid sm:grid-cols-3 gap-3 mt-4 text-sm text-slate-400">
-              <li className="flex gap-2">
-                <Check size={15} aria-hidden="true" className="text-emerald-300 mt-0.5 shrink-0" />
-                Charged only on success
-              </li>
-              <li className="flex gap-2">
-                <Check size={15} aria-hidden="true" className="text-emerald-300 mt-0.5 shrink-0" />
-                Monthly credits reset every billing period
-              </li>
-              <li className="flex gap-2">
-                <Check size={15} aria-hidden="true" className="text-emerald-300 mt-0.5 shrink-0" />
-                Top-ups last {aiPricing.topupExpiresAfterMonths} months
-              </li>
-            </ul>
-          </section>
-        )}
         <Card className="mt-8 bg-amber-500/[.05] border-amber-400/15">
           <CardContent className="p-6 text-sm text-slate-300">
             <b>How billing works:</b> recurring plans are billed through Razorpay Subscriptions with server-side

@@ -9,11 +9,6 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let container: HTMLDivElement;
 let root: Root;
 
-const upgradeOptions = {
-  aiPlus: { planCode: 'ai_plus', priceInr: 199, creditsPerMonth: 400 },
-  topups: { small: { priceInr: 99, credits: 150 }, large: { priceInr: 399, credits: 700 } },
-};
-
 beforeEach(() => {
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -26,56 +21,39 @@ afterEach(() => {
 });
 
 describe('AiPaywallDialog', () => {
-  it('shows the balance and both offers for AI_CREDITS_EXHAUSTED when billing is enabled', () => {
-    const error = new AiPaywallError("You're out of AI credits.", 'AI_CREDITS_EXHAUSTED', {
-      balance: 0,
-      resetsAt: '2026-10-01T00:00:00Z',
-      upgradeOptions,
+  it('shows a used-up notice for AI_USAGE_LIMIT_REACHED with no purchase buttons', () => {
+    const error = new AiPaywallError('AI help is used up for now.', 'AI_USAGE_LIMIT_REACHED', {
+      remaining: 0,
+      limit: 5,
+      period: 'lifetime',
     });
-    const onSubscribePlus = vi.fn();
-    const onBuyTopup = vi.fn();
-    act(() =>
-      root.render(
-        <AiPaywallDialog error={error} onClose={() => {}} onSubscribePlus={onSubscribePlus} onBuyTopup={onBuyTopup} />,
-      ),
-    );
+    act(() => root.render(<AiPaywallDialog error={error} onClose={() => {}} />));
 
-    expect(document.body.textContent).toContain('AI credits');
-    expect(document.body.textContent).toContain('Verse AI Plus');
-    const buttons = Array.from(document.querySelectorAll('button'));
-    const plusButton = buttons.find((b) => b.textContent?.includes('Verse AI Plus'));
-    plusButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(onSubscribePlus).toHaveBeenCalled();
-  });
-
-  it('hides the offers for AI_HARD_PAUSED even when billing is enabled', () => {
-    const error = new AiPaywallError('Paused.', 'AI_HARD_PAUSED', { upgradeOptions });
-    act(() =>
-      root.render(
-        <AiPaywallDialog error={error} onClose={() => {}} onSubscribePlus={() => {}} onBuyTopup={() => {}} />,
-      ),
-    );
+    expect(document.body.textContent).toContain('AI help is used up for now');
     expect(document.body.textContent).not.toContain('Verse AI Plus');
+    expect(document.body.textContent).not.toContain('Top up');
+    expect(document.body.textContent).not.toContain('credit');
   });
 
-  it('hides the offers entirely when billing is disabled', () => {
-    const error = new AiPaywallError('Out of credits.', 'AI_CREDITS_EXHAUSTED', { upgradeOptions });
-    act(() =>
-      root.render(
-        <AiPaywallDialog
-          error={error}
-          onClose={() => {}}
-          billingEnabled={false}
-          onSubscribePlus={() => {}}
-          onBuyTopup={() => {}}
-        />,
-      ),
-    );
+  it('mentions next month for a hirer (monthly) usage cap', () => {
+    const error = new AiPaywallError('Used up.', 'AI_USAGE_LIMIT_REACHED', {
+      remaining: 0,
+      limit: 10,
+      period: 'month',
+    });
+    act(() => root.render(<AiPaywallDialog error={error} onClose={() => {}} />));
+    expect(document.body.textContent).toContain('next month');
+  });
+
+  it('shows the resting notice for AI_FREE_PAUSED, with the exact copy', () => {
+    const error = new AiPaywallError('Resting.', 'AI_FREE_PAUSED', {});
+    act(() => root.render(<AiPaywallDialog error={error} onClose={() => {}} />));
+    expect(document.body.textContent).toContain('AI help is resting this month. Everything else works as usual.');
     expect(document.body.textContent).not.toContain('Verse AI Plus');
   });
 
   it('calls onClose from the Close button', () => {
-    const error = new AiPaywallError('Out of credits.', 'AI_CREDITS_EXHAUSTED', {});
+    const error = new AiPaywallError('Used up.', 'AI_USAGE_LIMIT_REACHED', {});
     const onClose = vi.fn();
     act(() => root.render(<AiPaywallDialog error={error} onClose={onClose} />));
     const closeButton = Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Close');

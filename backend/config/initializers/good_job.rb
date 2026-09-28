@@ -1,3 +1,8 @@
+# Plain `require` (not autoloaded): this initializer runs before Zeitwerk's autoloading is set
+# up, and AiPricing has no dependencies of its own beyond Rails.root/YAML, so requiring it
+# directly here is safe regardless of load order.
+require Rails.root.join("app/services/ai_pricing")
+
 Rails.application.configure do
   config.good_job.execution_mode = ENV.fetch("GOOD_JOB_EXECUTION_MODE", Rails.env.production? ? "async" : "external").to_sym
   config.good_job.max_threads = ENV.fetch("GOOD_JOB_MAX_THREADS", "2").to_i
@@ -8,7 +13,7 @@ Rails.application.configure do
   # Errors inside GoodJob itself (not in a job) go to the error tracker; job failures are
   # reported by ApplicationJob#after_discard. Both are no-ops without SENTRY_DSN.
   config.good_job.on_thread_error = ->(error) { ErrorReporter.capture(error, tags: { source: "good_job_thread" }) }
-  config.good_job.cron = {
+  cron = {
     job_alert_sweep: {
       cron: "*/15 * * * *",
       class: "JobAlertSweepJob",
@@ -28,11 +33,17 @@ Rails.application.configure do
       cron: "43 4 * * *",
       class: "UploadSweepJob",
       description: "Delete stale pending uploads, unused or ownerless uploads, and orphaned bucket objects"
-    },
-    ai_batch_submit: {
-      cron: "*/30 * * * *",
-      class: "AiBatchSubmitJob",
-      description: "Submit queued portfolio item classifications as one Anthropic Message Batch, and ingest finished batches"
     }
   }
+  # classify_portfolio_item is launch-disabled (see config/ai_pricing.yml `launch:`), so the cron
+  # entry itself is left out — GoodJob never enqueues AiBatchSubmitJob at all, rather than
+  # enqueuing it to find nothing queued. Re-enabling the task brings the cron entry straight back,
+  # no code change needed. (AiBatchSubmitJob also no-ops if it's ever run directly while
+  # disabled — see its own disabled? guard — as a second line of defense.)
+  cron[:ai_batch_submit] = {
+    cron: "*/30 * * * *",
+    class: "AiBatchSubmitJob",
+    description: "Submit queued portfolio item classifications as one Anthropic Message Batch, and ingest finished batches"
+  } if AiPricing.task_enabled?("classify_portfolio_item")
+  config.good_job.cron = cron
 end

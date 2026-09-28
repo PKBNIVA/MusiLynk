@@ -315,6 +315,141 @@ module AiAssist::Tasks
     }
   )
 
+  # Recruiter tasks (Haiku; access-checked in AiController — the caller must be the job's
+  # employer, an admin, or a member of the organization that owns the job) and talent tasks
+  # (draft_portfolio, tailor_resume) that accept structured, id-tagged inputs so their output can
+  # be validated against the ids actually given, never invented ones.
+  REGISTRY["candidate_summary"] = Task.new(
+    key: "candidate_summary",
+    system_prompt: COMMON_SYSTEM_PROMPT + "\nWrite exactly 3 short bullet points (one per line, starting with \"- \") summarizing this candidate for a recruiter, then one final line starting \"Fit: \" with a one-sentence fit note. Use only the facts given.",
+    fields: {
+      candidateHeadline: Field.new(type: :string, max: 160),
+      candidateSkills: Field.new(type: :array, max: 80, items_max: 15),
+      candidateSummary: Field.new(type: :string, max: 1200),
+      jobTitle: Field.new(type: :string, max: 160, required: true),
+      screeningAnswers: Field.new(type: :array, max: 400, items_max: 10)
+    },
+    max_output_tokens: 200, max_output_chars: 900, long: false,
+    template: ->(c) {
+      <<~PROMPT
+        Job: #{c[:jobTitle]}
+        Candidate headline: #{c[:candidateHeadline].presence || "[not given]"}
+        Candidate skills: #{c[:candidateSkills].join(", ").presence || "[not given]"}
+        Candidate summary: #{c[:candidateSummary].presence || "[not given]"}
+        Screening answers:
+        #{join_lines(c[:screeningAnswers])}
+      PROMPT
+    }
+  )
+
+  REGISTRY["rank_applicants"] = Task.new(
+    key: "rank_applicants",
+    system_prompt: COMMON_SYSTEM_PROMPT + "\nScore each applicant's fit for the job on 0-100 with a one-sentence reason. Reply with strict JSON only: a single array of {\"applicationId\": string, \"score\": number, \"reason\": string}, one entry per applicant given, same order, no other text.",
+    fields: {
+      jobTitle: Field.new(type: :string, max: 160, required: true),
+      jobRequirements: Field.new(type: :string, max: 1200),
+      applicants: Field.new(type: :array, max: 4000, items_max: 100)
+    },
+    max_output_tokens: 200, max_output_chars: 4000, long: false,
+    template: ->(c) {
+      <<~PROMPT
+        Job: #{c[:jobTitle]}
+        Requirements: #{c[:jobRequirements].presence || "[not given]"}
+        Applicants (one JSON object per line, "id" is the applicationId to use in your output):
+        #{c[:applicants].join("\n")}
+      PROMPT
+    }
+  )
+
+  REGISTRY["outreach_message"] = Task.new(
+    key: "outreach_message",
+    system_prompt: COMMON_SYSTEM_PROMPT + "\nWrite a short, friendly outreach message (60-120 words) inviting this person to apply or connect about the opening. No salutation with a name unless one is given.",
+    fields: {
+      jobTitle: Field.new(type: :string, max: 160, required: true),
+      candidateHeadline: Field.new(type: :string, max: 160),
+      notes: Field.new(type: :string, max: 500)
+    },
+    max_output_tokens: 160, max_output_chars: 700, long: false,
+    template: ->(c) {
+      <<~PROMPT
+        Write outreach for this opening.
+        Job: #{c[:jobTitle]}
+        Candidate headline: #{c[:candidateHeadline].presence || "[not given]"}
+        Notes: #{c[:notes].presence || "[not given]"}
+      PROMPT
+    }
+  )
+
+  REGISTRY["interview_questions"] = Task.new(
+    key: "interview_questions",
+    system_prompt: COMMON_SYSTEM_PROMPT + "\nWrite 5 interview questions for this candidate and role, one per line, no numbering.",
+    fields: {
+      jobTitle: Field.new(type: :string, max: 160, required: true),
+      candidateHeadline: Field.new(type: :string, max: 160),
+      focusAreas: Field.new(type: :array, max: 80, items_max: 10)
+    },
+    max_output_tokens: 200, max_output_chars: 1200, long: false,
+    template: ->(c) {
+      <<~PROMPT
+        Job: #{c[:jobTitle]}
+        Candidate headline: #{c[:candidateHeadline].presence || "[not given]"}
+        Focus areas: #{c[:focusAreas].join(", ").presence || "[not given]"}
+      PROMPT
+    }
+  )
+
+  REGISTRY["rejection_note"] = Task.new(
+    key: "rejection_note",
+    system_prompt: COMMON_SYSTEM_PROMPT + "\nWrite a short, kind rejection note (40-90 words) for this candidate, no specifics that could be taken as legal commitments.",
+    fields: {
+      jobTitle: Field.new(type: :string, max: 160, required: true),
+      candidateHeadline: Field.new(type: :string, max: 160)
+    },
+    max_output_tokens: 160, max_output_chars: 700, long: false,
+    template: ->(c) {
+      <<~PROMPT
+        Job: #{c[:jobTitle]}
+        Candidate headline: #{c[:candidateHeadline].presence || "[not given]"}
+      PROMPT
+    }
+  )
+
+  REGISTRY["draft_portfolio"] = Task.new(
+    key: "draft_portfolio",
+    system_prompt: COMMON_SYSTEM_PROMPT + "\nPropose a new portfolio for the stated goal, drawn only from the given items. Reply with strict JSON only: {\"title\": string, \"blurb\": string, \"itemIds\": [string]} using only ids from the items given.",
+    fields: {
+      goal: Field.new(type: :string, max: 300, required: true),
+      items: Field.new(type: :array, max: 4000, items_max: 60)
+    },
+    max_output_tokens: 550, max_output_chars: 2000, long: true,
+    template: ->(c) {
+      <<~PROMPT
+        Goal: #{c[:goal]}
+        Items (one JSON object per line, "id" is the itemId to use in your output):
+        #{c[:items].join("\n")}
+      PROMPT
+    }
+  )
+
+  REGISTRY["tailor_resume"] = Task.new(
+    key: "tailor_resume",
+    system_prompt: COMMON_SYSTEM_PROMPT + "\nPropose which given career entries best fit the stated job, and write a short tailored summary. Reply with strict JSON only: {\"summary\": string, \"entryIds\": [string]} using only ids from the entries given.",
+    fields: {
+      jobTitle: Field.new(type: :string, max: 160, required: true),
+      jobSummary: Field.new(type: :string, max: 1200),
+      entries: Field.new(type: :array, max: 4000, items_max: 60)
+    },
+    max_output_tokens: 550, max_output_chars: 2000, long: true,
+    template: ->(c) {
+      <<~PROMPT
+        Job: #{c[:jobTitle]}
+        Job summary: #{c[:jobSummary].presence || "[not given]"}
+        Career entries (one JSON object per line, "id" is the entryId to use in your output):
+        #{c[:entries].join("\n")}
+      PROMPT
+    }
+  )
+
   PUBLIC_TASKS = (REGISTRY.keys - ["autocomplete"]).freeze
   REGISTRY.freeze
 end

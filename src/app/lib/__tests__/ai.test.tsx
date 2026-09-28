@@ -3,16 +3,24 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   autocompleteAi,
+  isAiPaywallError,
+  loadAiPricing,
   loadAiStatus,
+  loadAiUsage,
+  resetAiPricing,
   resetAiStatus,
   suggestAi,
   useAiStatus,
   useAiTaskEnabled,
+  type AiPricingCatalogue,
   type AiStatus,
 } from '../ai';
 
-vi.mock('../api', () => ({ apiGet: vi.fn(), apiPost: vi.fn() }));
-import { apiGet, apiPost } from '../api';
+vi.mock('../api', async () => {
+  const actual = await vi.importActual<typeof import('../api')>('../api');
+  return { ...actual, apiGet: vi.fn(), apiPost: vi.fn() };
+});
+import { apiGet, apiPost, ApiError } from '../api';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -100,17 +108,74 @@ describe('suggestAi', () => {
     const result = await suggestAi('post_caption', { kind: 'release', notes: 'new single' });
     expect(apiPost).toHaveBeenCalledWith(
       '/ai/suggest',
-      { task: 'post_caption', context: { kind: 'release', notes: 'new single' } },
+      { task: 'post_caption', context: { kind: 'release', notes: 'new single' }, regenerate: undefined },
       { signal: undefined },
     );
     expect(result.suggestion).toBe('Great caption!');
   });
 
-  it('forwards an abort signal', async () => {
+  it('forwards an abort signal and the regenerate flag', async () => {
     vi.mocked(apiPost).mockResolvedValue({ suggestion: '', task: 'post_caption', model: 'm' });
     const controller = new AbortController();
-    await suggestAi('post_caption', { kind: 'release' }, controller.signal);
-    expect(apiPost).toHaveBeenCalledWith(expect.anything(), expect.anything(), { signal: controller.signal });
+    await suggestAi('post_caption', { kind: 'release' }, { signal: controller.signal, regenerate: true });
+    expect(apiPost).toHaveBeenCalledWith(
+      '/ai/suggest',
+      { task: 'post_caption', context: { kind: 'release' }, regenerate: true },
+      { signal: controller.signal },
+    );
+  });
+
+  it('turns a 402 AI_CREDITS_EXHAUSTED into a typed AiPaywallError, enriched from the pricing catalogue', async () => {
+    resetAiPricing();
+    const pricing: AiPricingCatalogue = {
+      freeCreditsPerMonth: 20,
+      aiPlus: { planCode: 'ai_plus', priceInr: 199, creditsPerMonth: 400 },
+      planAllowances: { pro: 500, studio: 2000, enterprise: null },
+      topups: { small: { priceInr: 99, credits: 150 }, large: { priceInr: 399, credits: 700 } },
+      topupExpiresAfterMonths: 12,
+      taskCosts: { post_caption: 1 },
+    };
+    vi.mocked(apiPost).mockRejectedValue(new ApiError("You're out of AI credits.", 402, 'AI_CREDITS_EXHAUSTED'));
+    vi.mocked(apiGet).mockResolvedValue(pricing);
+
+    const error = await suggestAi('post_caption', { kind: 'release' }).catch((e: unknown) => e);
+    expect(isAiPaywallError(error)).toBe(true);
+    if (isAiPaywallError(error)) {
+      expect(error.code).toBe('AI_CREDITS_EXHAUSTED');
+      expect(error.upgradeOptions?.aiPlus.priceInr).toBe(199);
+      expect(error.upgradeOptions?.topups.small.credits).toBe(150);
+    }
+  });
+
+  it('leaves a non-paywall error (e.g. a validation error) as a plain ApiError', async () => {
+    vi.mocked(apiPost).mockRejectedValue(new ApiError('Unknown AI task.', 422, 'UNKNOWN_TASK'));
+    const error = await suggestAi('post_caption', { kind: 'release' }).catch((e: unknown) => e);
+    expect(isAiPaywallError(error)).toBe(false);
+    expect(error).toBeInstanceOf(ApiError);
+  });
+});
+
+describe('loadAiUsage / loadAiPricing', () => {
+  it('fetches usage from /ai/usage', async () => {
+    const usage = {
+      balance: 12,
+      monthlyAllowance: 20,
+      usedThisPeriod: 8,
+      resetsAt: '2026-10-01',
+      plan: 'free',
+      recent: [],
+    };
+    vi.mocked(apiGet).mockResolvedValue(usage);
+    await expect(loadAiUsage()).resolves.toEqual(usage);
+    expect(apiGet).toHaveBeenCalledWith('/ai/usage', { signal: undefined });
+  });
+
+  it('caches the pricing catalogue for the session', async () => {
+    resetAiPricing();
+    vi.mocked(apiGet).mockResolvedValue({ freeCreditsPerMonth: 20 });
+    await loadAiPricing();
+    await loadAiPricing();
+    expect(apiGet).toHaveBeenCalledTimes(1);
   });
 });
 

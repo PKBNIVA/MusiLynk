@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { apiGet, apiPost } from './api';
+import { apiGet, apiPost, ApiError } from './api';
 
 /**
  * Client for the AI Assist layer (AiController on the backend). Every suggestion is exactly
@@ -18,7 +18,14 @@ export type AiTask =
   | 'post_caption'
   | 'message_reply'
   | 'resume_summary'
-  | 'improve_text';
+  | 'improve_text'
+  | 'candidate_summary'
+  | 'rank_applicants'
+  | 'outreach_message'
+  | 'interview_questions'
+  | 'rejection_note'
+  | 'draft_portfolio'
+  | 'tailor_resume';
 
 export type AutocompleteField = 'skills' | 'genres' | 'instruments' | 'roles' | 'cities';
 
@@ -31,6 +38,69 @@ export interface AiSuggestion {
   suggestion: string;
   task: string;
   model: string;
+  cached?: boolean;
+  creditsCharged?: number;
+  balance?: number;
+}
+
+/** GET /api/ai/usage. */
+export interface AiUsage {
+  balance: number;
+  monthlyAllowance: number | null;
+  usedThisPeriod: number;
+  resetsAt: string;
+  plan: string;
+  recent: { task: string; credits: number; date: string }[];
+}
+
+/** GET /api/ai/pricing — the public AI credits catalogue. */
+export interface AiPricingCatalogue {
+  freeCreditsPerMonth: number;
+  aiPlus: { planCode: string; priceInr: number; creditsPerMonth: number };
+  planAllowances: Record<string, number | null>;
+  topups: Record<string, { priceInr: number; credits: number }>;
+  topupExpiresAfterMonths: number;
+  taskCosts: Record<string, number>;
+}
+
+/** What a 402 from /api/ai/suggest carries, offered by AiPaywallDialog. */
+export interface AiUpgradeOptions {
+  aiPlus: { planCode: string; priceInr: number; creditsPerMonth: number };
+  topups: Record<string, { priceInr: number; credits: number }>;
+}
+
+/**
+ * Thrown by `suggestAi` in place of a plain `ApiError` when the server refused the call for a
+ * credits/spend reason (never for a validation or access error, which stay plain `ApiError`s).
+ * `AI_CREDITS_EXHAUSTED` is the person's own balance; `AI_FREE_PAUSED` / `AI_HARD_PAUSED` are the
+ * spend guard. `balance`/`resetsAt` come straight off the 402 body when the server sent them;
+ * `upgradeOptions` is filled in from GET /api/ai/pricing so AiPaywallDialog always has an offer
+ * to show even though the generic API client drops extra error-body fields.
+ */
+export class AiPaywallError extends Error {
+  code: 'AI_CREDITS_EXHAUSTED' | 'AI_FREE_PAUSED' | 'AI_HARD_PAUSED';
+  balance?: number;
+  resetsAt?: string;
+  upgradeOptions?: AiUpgradeOptions;
+
+  constructor(
+    message: string,
+    code: AiPaywallError['code'],
+    extra?: { balance?: number; resetsAt?: string; upgradeOptions?: AiUpgradeOptions },
+  ) {
+    super(message);
+    this.name = 'AiPaywallError';
+    this.code = code;
+    this.balance = extra?.balance;
+    this.resetsAt = extra?.resetsAt;
+    this.upgradeOptions = extra?.upgradeOptions;
+  }
+}
+
+const PAYWALL_CODES = new Set(['AI_CREDITS_EXHAUSTED', 'AI_FREE_PAUSED', 'AI_HARD_PAUSED']);
+
+export function isAiPaywallError(error: unknown): error is AiPaywallError {
+  return error instanceof AiPaywallError;
 }
 
 export interface AutocompleteSuggestion {
@@ -91,8 +161,63 @@ export function useAiTaskEnabled(task: AiTask): boolean {
 }
 
 /** POST /api/ai/suggest — always a suggestion; the caller decides whether to use it. */
-export function suggestAi(task: AiTask, context: AiContext, signal?: AbortSignal): Promise<AiSuggestion> {
-  return apiPost<AiSuggestion>('/ai/suggest', { task, context }, { signal });
+export function suggestAi(
+  task: AiTask,
+  context: AiContext,
+  options?: { signal?: AbortSignal; regenerate?: boolean },
+): Promise<AiSuggestion> {
+  return apiPost<AiSuggestion>(
+    '/ai/suggest',
+    { task, context, regenerate: options?.regenerate },
+    { signal: options?.signal },
+  ).catch(async (error: unknown) => {
+    if (error instanceof ApiError && error.status === 402 && error.code && PAYWALL_CODES.has(error.code)) {
+      const upgradeOptions = await loadAiPricing()
+        .then((pricing) => ({ aiPlus: pricing.aiPlus, topups: pricing.topups }))
+        .catch(() => undefined);
+      throw new AiPaywallError(error.message, error.code as AiPaywallError['code'], { upgradeOptions });
+    }
+    throw error;
+  });
+}
+
+/** GET /api/ai/usage — the signed-in account's credits balance, allowance and recent activity. */
+export function loadAiUsage(signal?: AbortSignal): Promise<AiUsage> {
+  return apiGet<AiUsage>('/ai/usage', { signal });
+}
+
+let pricingCache: Promise<AiPricingCatalogue> | null = null;
+
+/** GET /api/ai/pricing — the public catalogue, cached for this session. */
+export function loadAiPricing(signal?: AbortSignal): Promise<AiPricingCatalogue> {
+  pricingCache ||= apiGet<AiPricingCatalogue>('/ai/pricing', { signal }).catch((error: unknown) => {
+    pricingCache = null;
+    throw error;
+  });
+  return pricingCache;
+}
+
+/** For tests: forget the fetched pricing catalogue. */
+export function resetAiPricing() {
+  pricingCache = null;
+}
+
+/** The signed-in account's AI credits, refetched on demand (used by AiCreditsBadge). */
+export function useAiUsage(): { usage: AiUsage | null; reload: () => void } {
+  const [usage, setUsage] = useState<AiUsage | null>(null);
+  const [generation, setGeneration] = useState(0);
+  useEffect(() => {
+    let live = true;
+    loadAiUsage()
+      .then((value) => {
+        if (live) setUsage(value);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [generation]);
+  return { usage, reload: () => setGeneration((n) => n + 1) };
 }
 
 /**

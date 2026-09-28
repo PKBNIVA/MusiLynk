@@ -26,7 +26,7 @@ class PasswordStrength
 
     downcased = value.downcase
     identity_fragments(email:, name:).each do |fragment|
-      return CONTAINS_IDENTITY if fragment.present? && fragment.length >= 3 && downcased.include?(fragment)
+      return CONTAINS_IDENTITY if fragment.present? && fragment.length >= 4 && downcased.include?(fragment)
     end
     nil
   end

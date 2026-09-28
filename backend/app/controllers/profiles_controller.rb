@@ -1,4 +1,24 @@
 class ProfilesController < ApplicationController
+  E164 = /\A\+[1-9]\d{6,14}\z/
+
+  # Opts a musician in (or out) of WhatsApp urgent alerts (see WhatsappAlerts). Kept separate
+  # from #update because whatsapp_consented_at is a consent timestamp the server sets, never a
+  # value the client hands us directly.
+  def whatsapp_consent
+    return unless authenticate!("jobseeker", "employer")
+    consent = ActiveModel::Type::Boolean.new.cast(params[:consent])
+    phone = params[:phoneE164].to_s.strip
+    if consent
+      return render_error("Enter your number in international format, e.g. +919812345678.", :unprocessable_content, "INVALID_PHONE") unless phone.match?(E164)
+    end
+    profile = current_user.profile || current_user.build_profile
+    profile.phone_e164 = phone.presence
+    profile.whatsapp_consented_at = consent && phone.present? ? Time.current : nil
+    profile.save!
+    audit!("profile.whatsapp_consent", current_user, consented: profile.whatsapp_consented_at.present?)
+    render json: { phoneE164: profile.phone_e164, whatsappConsentedAt: profile.whatsapp_consented_at }
+  end
+
   def update
     return unless authenticate!("jobseeker", "employer")
     attributes = profile_params

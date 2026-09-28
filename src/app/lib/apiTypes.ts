@@ -212,6 +212,10 @@ export interface JobSeekerDashboard {
   saved: number;
   profileScore: number;
   recommendedJobs: Job[];
+  urgentNearby?: {
+    count: number;
+    items: { id: string; title: string; city: string; roleName: string; startAt: string }[];
+  };
 }
 
 /** GET /dashboard for an employer. */
@@ -734,6 +738,38 @@ export interface UrgentRequest {
   requesterVerified: boolean;
   myResponse: boolean;
   responseCount: number;
+  notified_count?: number;
+  first_notified_at?: string | null;
+  founder_notes?: string | null;
+  filled_by_id?: string | null;
+}
+
+/** Admin::UrgentRequestsController#index row: the above plus founder-facing fields. */
+export interface AdminUrgentRequest extends UrgentRequest {
+  ageMinutes: number;
+  noResponseAfterWindow: boolean;
+  filledByName?: string | null;
+}
+
+/** Admin::UrgentRequestsController#candidates: one UrgentMatcher-ranked candidate. */
+export interface UrgentCandidate {
+  userId: string;
+  name: string;
+  score: number;
+  reasons: string[];
+  city?: string | null;
+  verified: boolean;
+  lastActiveAt?: string | null;
+  alreadyNotified: boolean;
+  alreadyResponded: boolean;
+}
+
+/** Admin::UrgentRequestsController#index funnel block. */
+export interface UrgentFunnel {
+  requestsToday: number;
+  notifiedToday: number;
+  respondedToday: number;
+  filledWithin24hToday: number;
 }
 
 /** UrgentRequestsController#responses: an urgent_request_responses row plus the responder. */

@@ -20,6 +20,7 @@ import {
   Gauge,
   MapPin,
   Sparkles,
+  Siren,
 } from 'lucide-react';
 import { EmptyState } from '../components/help/EmptyState';
 import { optionLabel } from '../components/ui/option-labels';
@@ -88,6 +89,35 @@ export default function JobSeekerDashboard() {
           <Stat n={d.interviews} label="Interviews" icon={Calendar} />
           <Stat n={d.saved} label="Saved opportunities" icon={Bookmark} />
         </div>
+        {Boolean(d.urgentNearby?.count) && (
+          <Card className="bg-gradient-to-br from-orange-500/15 to-rose-500/[.06] border-orange-400/20 mb-8">
+            <CardContent className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-orange-500/15 p-2.5 shrink-0">
+                  <Siren aria-hidden="true" size={20} className="text-orange-300" />
+                </div>
+                <div>
+                  <h2 className="font-semibold flex items-center gap-2">
+                    Urgent near you
+                    <Badge className="bg-orange-500/20 text-orange-200">{d.urgentNearby?.count}</Badge>
+                  </h2>
+                  <p className="text-sm text-slate-400 mt-1">
+                    {d.urgentNearby?.items
+                      .slice(0, 2)
+                      .map((r) => `${r.roleName} in ${r.city}`)
+                      .join(' · ')}
+                    {(d.urgentNearby?.count || 0) > 2 ? ' and more' : ''}
+                  </p>
+                </div>
+              </div>
+              <Button asChild variant="outline" className="shrink-0">
+                <Link to="/jobseeker/urgent">
+                  Respond now <ArrowRight size={14} className="ml-2" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         <Card className="bg-gradient-to-br from-violet-500/10 to-sky-500/[.06] border-white/10 mb-10">
           <CardContent className="p-5 md:p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

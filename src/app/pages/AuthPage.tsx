@@ -6,7 +6,8 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User } from '../lib/authContext';
-import { consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
+import { apiPost, consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
+import { consumeUrgentDraft } from '../lib/urgentDraft';
 import { toast } from 'sonner';
 import { BrandMark } from '../components/BrandMark';
 import { PasswordChecklist } from '../components/PasswordChecklist';
@@ -93,6 +94,42 @@ export default function AuthPage() {
       leaveChallenge();
       setError(ADMIN_SITE_MESSAGE);
       return;
+    }
+    // /urgent saved a draft before sending a signed-out hirer here to sign up; submit it now
+    // that their account exists and land them straight on the confirmation/status card
+    // instead of the ordinary post-sign-up destination.
+    if (mode === 'register') {
+      const draft = consumeUrgentDraft();
+      if (draft) {
+        try {
+          const d = await apiPost<{ id: string; notifiedCount: number; responseTimePromise: string }>(
+            '/urgent-requests',
+            {
+              title: draft.title,
+              roleName: draft.roleName,
+              city: draft.city,
+              startAt: draft.startAt,
+              budgetMin: draft.budgetMin ? Number(draft.budgetMin) : null,
+              budgetMax: draft.budgetMax ? Number(draft.budgetMax) : null,
+              requirements:
+                [draft.venue && `Venue/studio: ${draft.venue}`, draft.note].filter(Boolean).join('\n') || null,
+              genre: draft.genres?.join(', ') || null,
+            },
+          );
+          toast.success(welcome);
+          navigate('/urgent', {
+            replace: true,
+            state: {
+              confirmed: { id: d.id, notifiedCount: d.notifiedCount, responseTimePromise: d.responseTimePromise },
+            },
+          });
+          return;
+        } catch (e: unknown) {
+          toast.error(
+            errorMessage(e, 'Signed up, but the urgent request could not be posted. Please try again from /urgent.'),
+          );
+        }
+      }
     }
     toast.success(welcome);
     go(u.role, u.profileComplete);

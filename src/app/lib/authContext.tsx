@@ -16,6 +16,8 @@ export interface User {
   genres?: string[];
   credits?: string[];
   openTo?: string[];
+  phoneE164?: string | null;
+  whatsappConsentedAt?: string | null;
 }
 /* Admin password sign-in answers with this instead of a session; the code emailed to the admin completes it. */
 export interface SecondFactorChallenge {

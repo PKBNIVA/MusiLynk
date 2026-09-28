@@ -52,6 +52,7 @@ function publicRoutes(): RouteObject[] {
   const PublicAct = L(() => import('./pages/public/PublicAct'));
   const LegalPage = L(() => import('./pages/public/LegalPage'));
   const UrgentRequests = L(() => import('./pages/UrgentRequests'));
+  const UrgentHire = L(() => import('./pages/UrgentHire'));
   const Availability = L(() => import('./pages/Availability'));
   const VerifyEmail = L(() => import('./pages/VerifyEmail'));
   const Unsubscribe = L(() => import('./pages/Unsubscribe'));
@@ -315,6 +316,16 @@ function publicRoutes(): RouteObject[] {
       element: (
         <S>
           <AuthPage />
+        </S>
+      ),
+    },
+    {
+      // Public entry for "need someone by tomorrow": no sign-in required to fill the form,
+      // only to publish it (see UrgentHire.tsx).
+      path: '/urgent',
+      element: (
+        <S>
+          <UrgentHire />
         </S>
       ),
     },

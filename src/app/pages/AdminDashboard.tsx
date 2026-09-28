@@ -61,6 +61,7 @@ const OperationsTab = lazy(() => import('./admin/OperationsTab'));
 const DemoDataTab = lazy(() => import('./admin/DemoDataTab'));
 const AuditTab = lazy(() => import('./admin/AuditTab'));
 const AdminAiTab = lazy(() => import('./admin/AdminAiTab'));
+const UrgentTab = lazy(() => import('./admin/UrgentTab'));
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth(),
@@ -304,6 +305,10 @@ export default function AdminDashboard() {
               <Sparkles aria-hidden="true" size={14} />
               AI spend
             </TabsTrigger>
+            <TabsTrigger value="urgent" className="flex-none gap-1.5">
+              <AlertTriangle aria-hidden="true" size={14} />
+              Urgent matching
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="queue" className="space-y-3 mt-5">
@@ -421,6 +426,12 @@ export default function AdminDashboard() {
           <TabsContent value="ai" className="mt-5">
             <Suspense fallback={null}>
               <AdminAiTab />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="urgent" className="mt-5">
+            <Suspense fallback={null}>
+              <UrgentTab />
             </Suspense>
           </TabsContent>
 

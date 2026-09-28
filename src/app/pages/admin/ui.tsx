@@ -18,6 +18,12 @@ import {
 // equivalents there) — everything here lives only under src/app/pages/admin*
 // so the two refreshes never touch the same file.
 
+// Radix Select refuses an empty-string item value, but "All …" filter options use ''. Map it to a
+// sentinel inside the component so callers keep submitting '' exactly like a native select did.
+const EMPTY = '__admin_select_empty__';
+const toRadix = (v: string) => (v === '' ? EMPTY : v);
+const fromRadix = (v: string) => (v === EMPTY ? '' : v);
+
 /**
  * A dark-panel Radix dropdown that replaces the raw native <select>. Submits the
  * same `value` a native select would (labels are display-only, values are untouched).
@@ -45,7 +51,7 @@ export function AdminSelect({
 }) {
   const selected = options.find((o) => o.value === value);
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={toRadix(value)} onValueChange={(v) => onChange(fromRadix(v))}>
       <SelectTrigger
         id={id}
         aria-label={ariaLabel}
@@ -58,7 +64,7 @@ export function AdminSelect({
       </SelectTrigger>
       <SelectContent className="bg-slate-900 border-white/15 text-slate-100">
         {options.map((o) => (
-          <SelectItem key={o.value} value={o.value} className="focus:bg-white/10">
+          <SelectItem key={o.value || EMPTY} value={toRadix(o.value)} className="focus:bg-white/10">
             <span className="flex items-center gap-2">
               {o.icon && <o.icon aria-hidden="true" size={14} className="text-slate-400" />}
               {o.label}

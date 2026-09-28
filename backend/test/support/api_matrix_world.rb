@@ -203,6 +203,11 @@ module ApiMatrixAssertions
     assert_kind_of String, body["error"], "#{label} error body lacks an `error` string: #{response.body.first(200)}"
     assert body["code"].nil? || body["code"].is_a?(String), "#{label} error code must be a string"
     assert_nil body["traces"], "#{label} leaked a stack trace"
+    return unless body.key?("fields")
+    assert_kind_of Hash, body["fields"], "#{label} error fields must be an object"
+    body["fields"].each do |name, messages|
+      assert(messages.is_a?(Array) && messages.any? && messages.all?(String), "#{label} fields.#{name} must be a non-empty list of messages")
+    end
   end
 
   def parsed_json(label)

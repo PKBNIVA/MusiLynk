@@ -95,19 +95,39 @@ export interface ApiErrorBody {
   code?: string;
   requestId?: string;
   request_id?: string;
+  /** Per-field messages for validation errors, keyed by the camelCase request field name. */
+  fields?: unknown;
+}
+
+/** Validation messages per request field (camelCase), as `render_error(..., fields:)` sends them. */
+export type ApiFieldErrors = Record<string, string[]>;
+
+/** Keeps only well-formed `{name: [message, …]}` entries; anything else in the body is ignored. */
+export function parseFieldErrors(raw: unknown): ApiFieldErrors | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const fields: ApiFieldErrors = {};
+  for (const [name, value] of Object.entries(raw)) {
+    const list = (Array.isArray(value) ? value : [value]).filter(
+      (item): item is string => typeof item === 'string' && item.trim() !== '',
+    );
+    if (list.length) fields[name] = list;
+  }
+  return Object.keys(fields).length ? fields : undefined;
 }
 
 export class ApiError extends Error {
   status: number;
   code?: string;
   requestId?: string;
+  fields?: ApiFieldErrors;
 
-  constructor(message: string, status: number, code?: string, requestId?: string) {
+  constructor(message: string, status: number, code?: string, requestId?: string, fields?: ApiFieldErrors) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.requestId = requestId;
+    this.fields = fields;
   }
 }
 
@@ -239,7 +259,13 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
         if (response.status === 402 && PLAN_LIMIT_CODES.has(data.code ?? '')) announcePlanLimit(data.error);
         if (response.status >= 500)
           reportApiFailure({ status: response.status, code: data.code, method, path, requestId });
-        throw new ApiError(data.error || `Request failed (${response.status})`, response.status, data.code, requestId);
+        throw new ApiError(
+          data.error || `Request failed (${response.status})`,
+          response.status,
+          data.code,
+          requestId,
+          parseFieldErrors(data.fields),
+        );
       }
       return data;
     } catch (error) {

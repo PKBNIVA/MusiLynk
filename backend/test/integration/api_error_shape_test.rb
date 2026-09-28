@@ -16,6 +16,9 @@ class ApiErrorShapeTest < ActionDispatch::IntegrationTest
     def range = Job.new(slots: 10**20).tap { _1.save!(validate: false) }
     def programming_error = raise(ArgumentError, "wrong number of arguments (given 1, expected 0)")
     def json_body = render(json: { received: params[:payload] })
+    def record_invalid = AvailabilityWindow.create!(user: User.first, start_at: 1.hour.from_now, end_at: 2.hours.ago, status: "nope")
+    def field_errors = render_error("Fix the highlighted fields.", :unprocessable_content, "INVALID_PROFILE", fields: { "company_name" => "Company name is required.", phone: ["Phone is invalid", ""], "rates.hourly" => [] })
+    def plain_error = render_error("Plain", :conflict, "PLAIN", fields: {})
   end
 
   setup do
@@ -74,6 +77,36 @@ class ApiErrorShapeTest < ActionDispatch::IntegrationTest
       post "/probe/json_body", params: '{"payload": ', headers: { "CONTENT_TYPE" => "application/json" }
       assert_error(400, "MALFORMED_JSON")
     end
+  end
+
+  test "probe: RecordInvalid lists each invalid attribute under fields, camelCased, with full messages" do
+    with_probe_routes do
+      post "/probe/record_invalid", as: :json
+      assert_error(422, "VALIDATION_FAILED")
+      body = response.parsed_body
+      assert_match(/End at must be after the start/, body["error"], "the sentence stays for older clients")
+      assert_equal ["End at must be after the start"], body["fields"]["endAt"]
+      assert_equal ["Status is not included in the list"], body["fields"]["status"]
+      assert_equal %w[endAt status], body["fields"].keys.sort
+    end
+  end
+
+  test "probe: render_error fields are normalised; empty fields are omitted" do
+    with_probe_routes do
+      post "/probe/field_errors", as: :json
+      assert_error(422, "INVALID_PROFILE")
+      assert_equal({ "companyName" => ["Company name is required."], "phone" => ["Phone is invalid"] }, response.parsed_body["fields"])
+      post "/probe/plain_error", as: :json
+      assert_error(409, "PLAIN")
+      assert_equal %w[code error], response.parsed_body.keys.sort, "no fields key when there are none"
+    end
+  end
+
+  test "a real RecordInvalid endpoint returns fields next to the old sentence" do
+    post "/api/availability", params: { startAt: 2.days.from_now.iso8601, endAt: 1.day.from_now.iso8601 }, headers: @headers, as: :json
+    assert_error(422, "VALIDATION_FAILED")
+    assert_kind_of String, response.parsed_body["error"]
+    assert_includes response.parsed_body["fields"].keys, "endAt"
   end
 
   test "malformed JSON on real endpoints is 400 MALFORMED_JSON, never 500" do
@@ -162,7 +195,7 @@ class ApiErrorShapeTest < ActionDispatch::IntegrationTest
   def with_probe_routes(&)
     with_routing do |set|
       set.draw do
-        %w[parameter_missing bad_request not_unique enum_value range programming_error json_body].each do |action|
+        %w[parameter_missing bad_request not_unique enum_value range programming_error json_body record_invalid field_errors plain_error].each do |action|
           post "/probe/#{action}", to: "api_error_shape_test/probe##{action}"
         end
       end

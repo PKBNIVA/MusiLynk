@@ -65,3 +65,115 @@ for (const [role, path] of pages) {
     expect(covered, `"${covered}" sits under the bottom navigation`).toBeNull();
   });
 }
+
+// Scrolled all the way down, no visible control may sit under the bar (CRAWL-01: body used to be
+// viewport-tall, so its bottom padding never added scroll room and Save buttons ended up covered).
+const signedInPages: Array<[Role, string]> = [
+  ...(
+    [
+      '',
+      '/profile',
+      '/portfolio',
+      '/applications',
+      '/jobs',
+      '/saved',
+      '/alerts',
+      '/jobs/job-1',
+      '/messages',
+      '/notifications',
+      '/resources',
+      '/reviews',
+      '/acts',
+      '/book-talent',
+      '/bookings',
+      '/band-builder',
+      '/urgent',
+      '/availability',
+      '/hiring/post',
+      '/hiring/talent',
+      '/compare',
+      '/build-my-crew',
+      '/hiring/applicants',
+      '/billing',
+      '/account',
+      '/workspace',
+    ] as const
+  ).map((path): [Role, string] => ['jobseeker', `/jobseeker${path}`]),
+  ...(
+    [
+      '',
+      '/profile',
+      '/post-job',
+      '/candidates',
+      '/compare',
+      '/build-my-crew',
+      '/applications',
+      '/jobs/job-1',
+      '/messages',
+      '/notifications',
+      '/acts',
+      '/book-talent',
+      '/bookings',
+      '/band-builder',
+      '/urgent',
+      '/availability',
+      '/billing',
+      '/account',
+      '/workspace',
+    ] as const
+  ).map((path): [Role, string] => ['employer', `/employer${path}`]),
+];
+
+for (const viewport of [
+  { name: 'phone 390x844', size: { width: 390, height: 844 }, isMobile: true },
+  { name: 'tablet 768x1024', size: { width: 768, height: 1024 }, isMobile: false },
+]) {
+  test.describe(`scrolled to the end on a ${viewport.name}`, () => {
+    test.use({ viewport: viewport.size, isMobile: viewport.isMobile, hasTouch: true });
+    for (const [role, path] of signedInPages) {
+      test(`no control is under the bottom navigation on ${path}`, async ({ page }) => {
+        await signIn(page, role);
+        await page.goto(path);
+        const nav = page.getByRole('navigation', { name: 'Quick navigation' });
+        await expect(nav).toBeVisible();
+        await page.waitForLoadState('networkidle');
+        const result = await page.evaluate(async () => {
+          document.documentElement.style.scrollBehavior = 'auto';
+          window.scrollTo(0, document.documentElement.scrollHeight);
+          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const bar = document.querySelector('nav[aria-label="Quick navigation"]')!;
+          const barTop = bar.getBoundingClientRect().top;
+          const controls = [
+            ...document.querySelectorAll<HTMLElement>(
+              'main a[href], main button, main input:not([type=hidden]), main select, main textarea, main [role=button]',
+            ),
+          ].filter((element) => {
+            const style = getComputedStyle(element);
+            const box = element.getBoundingClientRect();
+            return (
+              box.width > 0 &&
+              box.height > 0 &&
+              style.visibility !== 'hidden' &&
+              element.getAttribute('aria-hidden') !== 'true' &&
+              box.bottom > 0 &&
+              box.top < innerHeight
+            );
+          });
+          const covered = controls
+            .filter((element) => {
+              const box = element.getBoundingClientRect();
+              const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+              return bar.contains(hit) || box.bottom > barTop + 1;
+            })
+            .map((element) =>
+              (element.innerText || element.getAttribute('aria-label') || element.id || element.tagName).trim(),
+            );
+          const lowest = Math.max(0, ...controls.map((element) => element.getBoundingClientRect().bottom));
+          return { covered, lowest: Math.round(lowest), barTop: Math.round(barTop), count: controls.length };
+        });
+        expect(result.covered, `controls under the bar (bar top ${result.barTop}px)`).toEqual([]);
+        expect(result.lowest).toBeLessThanOrEqual(result.barTop);
+      });
+    }
+  });
+}

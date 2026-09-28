@@ -22,6 +22,11 @@ spec fails the inventory test.
 ### Status codes and error body
 
 Every error is JSON `{ "error": "<human message>", "code": "<MACHINE_CODE>" }` (`code` optional).
+Validation errors may add `fields`, an object mapping each invalid request field (camelCase, as
+the client sends it) to a non-empty list of messages, e.g.
+`{ "error": "End at must be after the start", "code": "VALIDATION_FAILED", "fields": { "endAt": ["End at must be after the start"] } }`.
+`error` always carries the whole message, so clients that ignore `fields` keep working; forms use
+`fields` to show each message next to its input (`ApiError.fields` in `src/app/lib/api.ts`).
 
 | Status | Meaning | Typical codes |
 | --- | --- | --- |
@@ -35,7 +40,8 @@ Every error is JSON `{ "error": "<human message>", "code": "<MACHINE_CODE>" }` (
 | 429 | Rate limited (`Retry-After` on per-user limits) | `RATE_LIMITED` |
 | 502/503 | Payment provider failure / not configured; readiness not ready | `NOT_READY` |
 
-Generic mappings in `ApplicationController`: `RecordNotFound` 404, `RecordInvalid` 422,
+Generic mappings in `ApplicationController`: `RecordNotFound` 404, `RecordInvalid` 422
+`VALIDATION_FAILED` (with `fields` from the model's errors),
 `NotNullViolation` 422 `MISSING_FIELD` (names the camelCase field), `RecordNotUnique` 409
 `CONFLICT`, `ActiveModel::RangeError` 422 `OUT_OF_RANGE`, enum `ArgumentError` and NUL bytes
 422 `INVALID_VALUE`, `ParameterMissing` 400, `BadRequest` 400 (keeps its message),

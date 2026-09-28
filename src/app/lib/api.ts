@@ -10,6 +10,11 @@ const RETRYABLE_GET_STATUSES = new Set([429, 502, 503, 504]);
 let authRedirectStarted = false;
 const TOKEN_KEY = 'verse_access_token';
 const RETURN_TO_KEY = 'verse_return_to';
+const ACT_AS_KEY = 'verse_act_as';
+/** The header the API reads the "acting as" identity from (see ActingAs on the backend). */
+export const ACT_AS_HEADER = 'X-Verse-Act-As';
+/** Fired on window (detail: the new key or null) when the acting-as identity changes. */
+export const ACTING_AS_EVENT = 'verse:acting-as';
 type StoreKind = 'local' | 'session';
 // The access token lives in localStorage so new tabs, email links and browser
 // restarts keep the session; the return-to path stays per tab in sessionStorage.
@@ -202,6 +207,8 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
     headers.set('Content-Type', 'application/json');
   const token = readToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
+  const actingAs = token ? getActingAs() : null;
+  if (actingAs && !headers.has(ACT_AS_HEADER)) headers.set(ACT_AS_HEADER, actingAs);
 
   const method = (options.method || 'GET').toUpperCase();
   const canRetry = method === 'GET';
@@ -258,6 +265,8 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
       if (response.status === 401) redirectAfterUnauthorized(path, token, skipAuthRedirect);
       if (!response.ok) {
         if (response.status === 402 && PLAN_LIMIT_CODES.has(data.code ?? '')) announcePlanLimit(data.error);
+        // A Page the person can no longer act as (removed as admin, Page hidden): fall back to themselves.
+        if (response.status === 403 && data.code === 'ACT_AS_FORBIDDEN' && actingAs) setActingAs(null);
         if (response.status >= 500)
           reportApiFailure({ status: response.status, code: data.code, method, path, requestId });
         throw new ApiError(
@@ -299,11 +308,30 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
 }
 
 export function setAccessToken(token?: string | null) {
+  // Every sign-in starts as the person themselves, and signing out forgets the choice.
+  setActingAs(null);
   if (token) {
     writeToken(token);
     authRedirectStarted = false;
   } else {
     writeToken(null);
+  }
+}
+
+/** The identity key ("organization:<id>", "act:<id>") requests act as, or null for yourself. */
+export function getActingAs() {
+  return readStored('local', ACT_AS_KEY);
+}
+
+/** Persists the acting-as choice (null or a "user:" key means yourself) and announces it. */
+export function setActingAs(key: string | null) {
+  const next = key && !key.startsWith('user:') ? key : null;
+  if (next === getActingAs()) return;
+  writeStored('local', ACT_AS_KEY, next);
+  try {
+    window.dispatchEvent(new CustomEvent(ACTING_AS_EVENT, { detail: next }));
+  } catch {
+    /* non-browser */
   }
 }
 

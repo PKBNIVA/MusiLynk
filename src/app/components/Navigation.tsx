@@ -26,6 +26,10 @@ import {
   Mic2,
   UserSearch,
   BriefcaseBusiness,
+  Library,
+  Layers,
+  ScrollText,
+  Inbox,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '../lib/authContext';
@@ -46,6 +50,8 @@ import { BrandMark } from './BrandMark';
 import { SkipLink } from './SkipLink';
 import type { UnreadCounts } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
+import { ActingAsChip, IdentitySwitcher } from './showcase/IdentitySwitcher';
+import { usePendingSuggestions } from './showcase/usePendingSuggestions';
 
 const UNREAD_POLL_MS = 10_000;
 
@@ -90,6 +96,7 @@ export function Navigation() {
         {unreadMessages > 9 ? '9+' : unreadMessages}
       </span>
     ) : null;
+  const pendingReview = usePendingSuggestions(Boolean(user));
   const messagesLabel = unreadMessages > 0 ? `Messages, ${unreadMessages} unread` : 'Messages';
 
   const groups: NavGroup[] = isJobSeeker
@@ -101,7 +108,9 @@ export function Navigation() {
             { path: `${baseUrl}/jobs`, icon: Search, label: 'Explore work' },
             { path: `${baseUrl}/saved`, icon: Star, label: 'Saved' },
             { path: `${baseUrl}/applications`, icon: Briefcase, label: 'Applications' },
-            { path: `${baseUrl}/portfolio`, icon: FileText, label: 'Portfolio' },
+            { path: `${baseUrl}/library`, icon: Library, label: 'My work' },
+            { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Portfolios' },
+            { path: `${baseUrl}/resumes`, icon: ScrollText, label: 'Career record & resumes' },
             { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
             { path: `${baseUrl}/resources`, icon: BookOpen, label: 'Resources' },
           ],
@@ -149,6 +158,7 @@ export function Navigation() {
             { path: `${baseUrl}/band-builder`, icon: UserRoundPlus, label: 'Band builder' },
             { path: `${baseUrl}/urgent`, icon: Zap, label: 'Urgent replacement' },
             { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
+            { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Page portfolios' },
           ],
         },
       ];
@@ -245,6 +255,7 @@ export function Navigation() {
             </Button>
           </div>
           <div className="ml-auto flex items-center gap-1">
+            <IdentitySwitcher />
             <Button variant="ghost" size="icon" asChild className="relative text-slate-300 hover:text-white">
               <Link
                 to={`${baseUrl}/notifications`}
@@ -266,8 +277,10 @@ export function Navigation() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-11 gap-2 rounded-full px-1.5 pr-2 hover:bg-white/10"
-                  aria-label="Open account menu"
+                  className="relative h-11 gap-2 rounded-full px-1.5 pr-2 hover:bg-white/10"
+                  aria-label={
+                    pendingReview > 0 ? `Open account menu, ${pendingReview} changes to review` : 'Open account menu'
+                  }
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-gradient-to-br from-fuchsia-500 to-violet-600 text-xs font-bold text-white">
@@ -278,6 +291,15 @@ export function Navigation() {
                     {user?.name?.split(' ')[0]}
                   </span>
                   <ChevronDown size={14} className="hidden text-slate-400 sm:block" />
+                  {pendingReview > 0 && (
+                    <span
+                      aria-hidden="true"
+                      data-testid="review-badge"
+                      className="absolute -right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-teal-600 px-1 text-[9px] font-bold text-white"
+                    >
+                      {pendingReview > 9 ? '9+' : pendingReview}
+                    </span>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
@@ -290,6 +312,18 @@ export function Navigation() {
                   <Link to={`${baseUrl}/profile`}>
                     <User className="mr-2 h-4 w-4" />
                     Profile & verification
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to={`${baseUrl}/review`} data-testid="review-menu-item">
+                    <Inbox className="mr-2 h-4 w-4" />
+                    Review changes
+                    {pendingReview > 0 && (
+                      <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-[10px] font-bold text-white">
+                        {pendingReview}
+                        <span className="sr-only"> to review</span>
+                      </span>
+                    )}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -376,6 +410,7 @@ export function Navigation() {
           </div>
         </div>
       </nav>
+      <ActingAsChip />
       <nav
         className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-2xl border border-white/15 bg-[#101221]/94 p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden"
         aria-label="Quick navigation"

@@ -104,7 +104,10 @@ test('Summarize shows an AI candidate summary the recruiter can open and close',
   });
 
   // Asha Rao (app-1) renders first: applications load in server order until a rank sort is active.
-  await page.getByRole('button', { name: 'Summarize' }).first().click();
+  // Summarize, Draft invite, Interview questions and Draft kind rejection are grouped under one
+  // "AI help" dropdown per card, to keep the action list from overwhelming the applicant card.
+  await page.getByRole('button', { name: 'AI help' }).first().click();
+  await page.getByRole('menuitem', { name: 'Summarize' }).click();
   await expect(page.getByText('Reads charts fluently')).toBeVisible();
   await expect(page.getByText('Fit: Strong fit for a touring role.')).toBeVisible();
 
@@ -166,7 +169,8 @@ test('Draft invite opens an editable draft and sends it only when the recruiter 
     return false;
   });
 
-  await page.getByRole('button', { name: 'Draft invite' }).first().click();
+  await page.getByRole('button', { name: 'AI help' }).first().click();
+  await page.getByRole('menuitem', { name: 'Draft invite' }).click();
   const dialog = page.getByRole('dialog', { name: /Draft invite/ });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel('Message')).toHaveValue('Hi Asha, we loved your reel — want to chat about the tour?');

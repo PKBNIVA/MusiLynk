@@ -70,8 +70,13 @@ export function SignInDoctor() {
     [revoking, setRevoking] = useState(false);
   const lookup = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (loading) return;
     const value = email.trim();
-    if (!value || loading) return;
+    if (!value) {
+      setResult(null);
+      setError('Enter an email to diagnose.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -121,15 +126,17 @@ export function SignInDoctor() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="person@example.com"
               className="bg-white/5 border-white/15"
+              aria-invalid={!!error}
+              aria-describedby={error ? 'signin-doctor-email-error' : undefined}
             />
           </div>
-          <Button type="submit" disabled={loading || !email.trim()} aria-busy={loading}>
+          <Button type="submit" disabled={loading} aria-busy={loading}>
             <Search aria-hidden="true" size={15} className="mr-2" />
             {loading ? 'Checking…' : 'Diagnose'}
           </Button>
         </form>
         {error && (
-          <p role="alert" className="text-sm text-rose-300">
+          <p id="signin-doctor-email-error" role="alert" className="text-sm text-rose-300">
             {error}
           </p>
         )}

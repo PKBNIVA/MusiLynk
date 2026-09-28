@@ -234,7 +234,7 @@ class AuthorizationIntegrityTest < ActionDispatch::IntegrationTest
     assert_equal 3, Job.find(job.id).applications_count, "falls back to COUNT without the scope"
   end
 
-  test "admin moderation lists are capped to the newest 500" do
+  test "admin moderation lists are paged (page/perPage/total), never silently truncated" do
     admin = create_user("List Admin", "admin")
     reporter = create_user("Bulk Reporter", "jobseeker")
     now = Time.current
@@ -252,9 +252,20 @@ class AuthorizationIntegrityTest < ActionDispatch::IntegrationTest
     { "/api/admin/reports" => "reports", "/api/admin/verifications" => "requests", "/api/admin/reviews" => "reviews" }.each do |path, key|
       get path, headers: auth(admin)
       assert_response :success
-      rows = response.parsed_body.fetch(key)
-      assert_equal 500, rows.size, path
+      body = response.parsed_body
+      rows = body.fetch(key)
+      assert_equal 100, rows.size, path
+      assert_equal 1, body.fetch("page"), path
+      assert_equal 100, body.fetch("perPage"), path
+      assert_equal 502, body.fetch("total"), path
       assert_equal rows.pluck("created_at").sort.reverse, rows.pluck("created_at"), path
+
+      # A later page reaches rows page 1 could never show under the old cap-at-500 behaviour.
+      get path, params: { page: 6 }, headers: auth(admin)
+      assert_response :success
+      later_body = response.parsed_body
+      assert_equal 2, later_body.fetch(key).size, path
+      assert_equal 502, later_body.fetch("total"), path
     end
   end
 

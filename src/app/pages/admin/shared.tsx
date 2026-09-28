@@ -18,7 +18,6 @@ import type {
   AdminReport,
   AdminStats,
   AdminSubscription,
-  AdminUser,
   AdminVerification,
   AuditLogEntry,
   BillingAttempt,
@@ -30,11 +29,13 @@ import type { LucideIcon } from 'lucide-react';
 
 // Shared state, helpers and small dialogs used by every admin tab. Kept in one
 // file (rather than one file per helper) so the tabs stay easy to scan.
+//
+// Users is not here: it has its own server-side search and paging and fetches
+// itself directly from UsersTab (see FORM-01), so it never joins this bulk load.
 
 // Each panel loads independently: one failing endpoint must not blank the whole console.
 export type Data = {
   stats: Partial<AdminStats>;
-  users: AdminUser[];
   jobs: Job[];
   reviews: Review[];
   verifications: AdminVerification[];
@@ -47,9 +48,9 @@ export type Data = {
 };
 export type Source = keyof Data;
 // What the admin list endpoints answer with; each source reads its own key.
+// page/perPage/total are the shared pagination envelope every list endpoint adds (E2).
 export type Payload = Partial<{
   stats: AdminStats;
-  users: AdminUser[];
   jobs: Job[];
   reviews: Review[];
   requests: AdminVerification[];
@@ -59,12 +60,14 @@ export type Payload = Partial<{
   bookings: AdminBooking[];
   attempts: BillingAttempt[];
   events: BillingEventSummary[];
+  page: number;
+  perPage: number;
+  total: number;
 }>;
 export const SOURCES: {
   [K in Source]: readonly [path: string, read: (d: Payload | null) => Data[K]];
 } = {
   stats: ['/admin/stats', (d) => d?.stats || {}],
-  users: ['/admin/users', (d) => d?.users || []],
   jobs: ['/admin/jobs', (d) => d?.jobs || []],
   reviews: ['/admin/reviews', (d) => d?.reviews || []],
   verifications: ['/admin/verifications', (d) => d?.requests || []],
@@ -80,7 +83,6 @@ export const readSource = <K extends Source>(next: Partial<Data>, k: K, d: Paylo
 };
 export const EMPTY: Data = {
   stats: {},
-  users: [],
   jobs: [],
   reviews: [],
   verifications: [],
@@ -91,6 +93,13 @@ export const EMPTY: Data = {
   attempts: [],
   billingEvents: [],
 };
+
+// Pagination envelope every paged admin list answers with (page/perPage/total).
+export type PageMeta = { page: number; perPage: number; total: number };
+export const readMeta = (d: Payload | null): PageMeta | null =>
+  d && typeof d.page === 'number' && typeof d.perPage === 'number' && typeof d.total === 'number'
+    ? { page: d.page, perPage: d.perPage, total: d.total }
+    : null;
 export const GRANTABLE_PLANS = [
   ['pro', 'Pro'],
   ['studio', 'Studio'],
@@ -157,6 +166,46 @@ export function Stat({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Prev/Next paging + "Showing X-Y of Z" for a list backed by a page/perPage/total
+// response (E2). Renders nothing when everything already fits on one page.
+export function Pager({
+  meta,
+  onPage,
+  loading,
+}: {
+  meta?: PageMeta;
+  onPage: (page: number) => void;
+  loading: boolean;
+}) {
+  if (!meta || meta.total <= meta.perPage) return null;
+  const totalPages = Math.max(1, Math.ceil(meta.total / meta.perPage));
+  const from = meta.total === 0 ? 0 : (meta.page - 1) * meta.perPage + 1;
+  const to = Math.min(meta.page * meta.perPage, meta.total);
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+      <p className="text-sm text-slate-400" aria-live="polite">
+        Showing {from.toLocaleString()}–{to.toLocaleString()} of {meta.total.toLocaleString()}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" disabled={meta.page <= 1 || loading} onClick={() => onPage(meta.page - 1)}>
+          Previous
+        </Button>
+        <span className="text-sm text-slate-400">
+          Page {meta.page} of {totalPages}
+        </span>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={meta.page >= totalPages || loading}
+          onClick={() => onPage(meta.page + 1)}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
   );
 }
 

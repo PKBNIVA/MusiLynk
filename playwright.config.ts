@@ -5,28 +5,33 @@ const fullMatrix = process.env.QA_FULL_MATRIX === 'true';
 const integrationRun = process.env.QA_INTEGRATION === 'true';
 // Request-only specs (no browser): live API health and the signed-in live smoke.
 const apiSpecs = /(api-health|live-account-smoke)\.spec\.ts/;
+// Admin site specs (tests/e2e/admin-*.spec.ts) run against the admin build (VITE_APP_TARGET=admin).
+const adminSpecs = /[\\/]admin-[^\\/]*\.spec\.ts$/;
+const adminSiteUrl = 'http://127.0.0.1:4176';
+// Mocked-API runs only: live and integration runs have no admin build to open.
+const adminSiteRun = !liveBaseUrl && !integrationRun;
 
 const browserProjects = [
   {
     name: 'chromium-desktop',
-    testIgnore: apiSpecs,
+    testIgnore: [apiSpecs, adminSpecs],
     use: { ...devices['Desktop Chrome'] },
   },
   {
     name: 'chromium-mobile',
-    testIgnore: apiSpecs,
+    testIgnore: [apiSpecs, adminSpecs],
     use: { ...devices['Pixel 7'] },
   },
   ...(fullMatrix
     ? [
         {
           name: 'firefox-desktop',
-          testIgnore: apiSpecs,
+          testIgnore: [apiSpecs, adminSpecs],
           use: { ...devices['Desktop Firefox'] },
         },
         {
           name: 'webkit-mobile',
-          testIgnore: apiSpecs,
+          testIgnore: [apiSpecs, adminSpecs],
           use: { ...devices['iPhone 15'] },
         },
       ]
@@ -60,6 +65,15 @@ export default defineConfig({
       use: {},
     },
     ...browserProjects,
+    ...(adminSiteRun
+      ? [
+          {
+            name: 'admin-desktop',
+            testMatch: adminSpecs,
+            use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: adminSiteUrl },
+          },
+        ]
+      : []),
   ],
   webServer: liveBaseUrl
     ? undefined
@@ -90,6 +104,15 @@ export default defineConfig({
                   VITE_SENTRY_ENVIRONMENT: 'qa',
                   VITE_RELEASE: 'qa-sentry-build',
                 },
+                reuseExistingServer: !process.env.CI,
+                timeout: 120_000,
+              },
+              // The separate admin site: its own build with only the admin routes.
+              {
+                command:
+                  'npm exec vite build -- --outDir dist-qa-admin && npm exec vite preview -- --outDir dist-qa-admin --host 127.0.0.1 --port 4176',
+                url: adminSiteUrl,
+                env: { VITE_APP_TARGET: 'admin' },
                 reuseExistingServer: !process.env.CI,
                 timeout: 120_000,
               },

@@ -28,10 +28,13 @@ import {
   type Confirm,
   type Grant,
   type AdminActions,
+  type ReportFilters,
   SOURCES,
   readSource,
   readMeta,
+  reportsQuery,
   EMPTY,
+  DEFAULT_REPORT_FILTERS,
   Stat,
   ConfirmDialog,
   GrantPlanDialog,
@@ -63,11 +66,17 @@ export default function AdminDashboard() {
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [grant, setGrant] = useState<Grant | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
+  // D3: status/entityType/reason filters for the reports tab, on top of the shared page/perPage
+  // paging (E2/#76). Reports otherwise flow through the same `data`/`meta` buckets as every
+  // other tab; only the query string sent for that one source differs.
+  const [reportFilters, setReportFilters] = useState<ReportFilters>(DEFAULT_REPORT_FILTERS);
 
   const load = useCallback(async () => {
     setLoading(true);
     const keys = Object.keys(SOURCES) as Source[];
-    const settled = await Promise.allSettled(keys.map((k) => apiGet<Payload | null>(SOURCES[k][0])));
+    const settled = await Promise.allSettled(
+      keys.map((k) => apiGet<Payload | null>(k === 'reports' ? reportsQuery(reportFilters, 1) : SOURCES[k][0])),
+    );
     const next: Partial<Data> = {},
       nextErrors: Partial<Record<Source, string>> = {},
       nextMeta: Partial<Record<Source, PageMeta>> = {};
@@ -83,6 +92,7 @@ export default function AdminDashboard() {
     setErrors(nextErrors);
     setMeta((prev) => ({ ...prev, ...nextMeta }));
     setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reportFilters changes are handled by loadReports below
   }, []);
   useEffect(() => {
     void load();
@@ -93,7 +103,11 @@ export default function AdminDashboard() {
   const loadPage = useCallback(
     (source: Source, page: number) => {
       const perPage = meta[source]?.perPage ?? 100;
-      apiGet<Payload | null>(`${SOURCES[source][0]}?page=${page}&perPage=${perPage}`)
+      const path =
+        source === 'reports'
+          ? reportsQuery(reportFilters, page, perPage)
+          : `${SOURCES[source][0]}?page=${page}&perPage=${perPage}`;
+      apiGet<Payload | null>(path)
         .then((res) => {
           setData((prev) => ({ ...prev, [source]: SOURCES[source][1](res) }));
           const m = readMeta(res);
@@ -107,8 +121,17 @@ export default function AdminDashboard() {
         })
         .catch((e: unknown) => setErrors((prev) => ({ ...prev, [source]: errorMessage(e, 'Unable to load.') })));
     },
-    [meta],
+    [meta, reportFilters],
   );
+
+  // Applying a filter always restarts the reports tab at page 1.
+  const applyReportFilters = (changes: Partial<ReportFilters>) => {
+    setReportFilters((prev) => ({ ...prev, ...changes }));
+  };
+  useEffect(() => {
+    loadPage('reports', 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when the filters themselves change
+  }, [reportFilters]);
 
   // Every moderation action goes through here: one in flight at a time, toast on result, then refresh.
   const act = async (key: string, request: () => Promise<unknown>, message: string) => {
@@ -132,9 +155,11 @@ export default function AdminDashboard() {
   const { stats, jobs, reviews, verifications, reports, logs, subscriptions, bookings, attempts, billingEvents } = data;
   const pendingJobs = useMemo(() => jobs.filter((j) => j.status === 'pending'), [jobs]);
   const pendingVerifications = useMemo(() => verifications.filter((v) => v.status === 'pending'), [verifications]);
-  const openReports = useMemo(() => reports.filter((r) => r.status === 'open'), [reports]);
   const failedCount = Object.keys(errors).length;
-  const retry = () => void load();
+  const retry = () => {
+    void load();
+    loadPage('reports', 1);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -206,7 +231,7 @@ export default function AdminDashboard() {
               {failedCount} of {Object.keys(SOURCES).length} panels could not load. The rest of the console is up to
               date.
             </span>
-            <Button size="sm" variant="outline" onClick={() => void load()}>
+            <Button size="sm" variant="outline" onClick={retry}>
               Retry
             </Button>
           </div>
@@ -229,7 +254,7 @@ export default function AdminDashboard() {
               Verification ({errors.verifications ? '!' : pendingVerifications.length})
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex-none">
-              Reports ({errors.reports ? '!' : openReports.length})
+              Reports ({errors.stats ? '!' : (stats.openReports ?? 0)})
             </TabsTrigger>
             <TabsTrigger value="users" className="flex-none">
               Users
@@ -285,7 +310,7 @@ export default function AdminDashboard() {
           <TabsContent value="reports" className="space-y-3 mt-5">
             <Suspense fallback={null}>
               <ReportsTab
-                reports={openReports}
+                reports={reports}
                 error={errors.reports}
                 loading={loading}
                 retry={retry}
@@ -295,6 +320,8 @@ export default function AdminDashboard() {
                 onReview={setReviewing}
                 meta={meta.reports}
                 onPage={(p) => loadPage('reports', p)}
+                filters={reportFilters}
+                onFilter={applyReportFilters}
               />
             </Suspense>
           </TabsContent>

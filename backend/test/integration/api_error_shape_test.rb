@@ -151,8 +151,10 @@ class ApiErrorShapeTest < ActionDispatch::IntegrationTest
       post "/api/reports", params: { entityType: "job", entityId: "x", reason: { "$ne" => "" } }, headers: @headers, as: :json
     end
     assert_error(422, "INVALID_REPORT")
+    # :emp][:job] is not used here: the shared world already seeds an open report by :js on it
+    # (see api_matrix_world.rb `report:`), which would otherwise trip the duplicate-report check.
     assert_difference -> { Report.count }, 1 do
-      post "/api/reports", params: { entityType: "job", entityId: @world.refs[:emp][:job], reason: "Asks for a registration fee", details: "Details" }, headers: @headers, as: :json
+      post "/api/reports", params: { entityType: "job", entityId: @world.refs[:emp][:draft_job], reason: "Asks for payment", details: "Details" }, headers: @headers, as: :json
     end
     assert_response :created
     report = Report.order(:created_at).last

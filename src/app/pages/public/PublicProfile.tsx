@@ -7,16 +7,20 @@ import { usePageMeta } from '../../components/PageMeta';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { apiGet } from '../../lib/api';
-import { MapPin, ShieldCheck } from 'lucide-react';
+import { apiGet, apiPost } from '../../lib/api';
+import { MapPin, ShieldCheck, Flag } from 'lucide-react';
 import { WorkSamplePlayer } from '../../components/WorkSamplePlayer';
+import { ReportDialog } from '../../components/ReportDialog';
+import { useAuth } from '../../lib/authContext';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { PortfolioItem, Professional } from '../../lib/apiTypes';
 
 export default function PublicProfile() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [d, setD] = useState<{ professional: Professional; portfolio: PortfolioItem[] }>(),
     [loading, setLoading] = useState(true),
+    [reporting, setReporting] = useState(false),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const load = useCallback(async () => {
     setLoading(true);
@@ -114,14 +118,37 @@ export default function PublicProfile() {
                 <p className="mt-3 text-sm text-slate-400">No public work samples yet.</p>
               )}
             </div>
-            <Button className="mt-8" asChild>
-              <Link to="/auth/employer" state={{ from: '/employer/candidates' }}>
-                Sign in to hire or message
-              </Link>
-            </Button>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild>
+                <Link to="/auth/employer" state={{ from: '/employer/candidates' }}>
+                  Sign in to hire or message
+                </Link>
+              </Button>
+              {user ? (
+                <Button variant="outline" onClick={() => setReporting(true)}>
+                  <Flag size={15} aria-hidden="true" className="mr-2" />
+                  Report profile
+                </Button>
+              ) : (
+                <Button variant="outline" asChild>
+                  <Link to="/auth/employer" state={{ from: `/professionals/${id}` }}>
+                    Sign in to report this profile
+                  </Link>
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       </main>
+      <ReportDialog
+        open={reporting}
+        onOpenChange={setReporting}
+        title="Report this profile"
+        description="Tell our moderators what is wrong with this profile."
+        onSubmit={({ reason, details }) =>
+          apiPost('/reports', { entityType: 'user', entityId: c.id, reason, ...(details ? { details } : {}) })
+        }
+      />
     </div>
   );
 }

@@ -182,6 +182,68 @@ class ReportModerationTest < ActionDispatch::IntegrationTest
     assert @employer.reload.active?, "a closed report cannot be used to suspend"
   end
 
+  test "unpublish_job removes the job, auto-resolves other open reports on it and is audited" do
+    job = create_job(@employer)
+    report_a = Report.create!(reporter: @talent, entity_type: "job", entity_id: job.id, reason: "Misleading listing", status: "open")
+    other_reporter = create_user("Other Reporter", "jobseeker")
+    report_b = Report.create!(reporter: other_reporter, entity_type: "job", entity_id: job.id, reason: "Spam or scam", status: "open")
+
+    post "/api/admin/reports/#{report_a.id}/moderate", params: { decision: "unpublish_job", note: "Removed after a safety report" }, headers: auth(@admin), as: :json
+    assert_response :success
+    assert_equal ["rejected", "Removed after a safety report"], job.reload.values_at(:status, :moderation_note)
+    assert_equal %w[resolved unpublish_job], report_a.reload.values_at(:status, :action_taken)
+    assert_equal %w[resolved unpublish_job], report_b.reload.values_at(:status, :action_taken)
+    assert_includes response.parsed_body["resolvedReportIds"], report_b.id
+    assert AuditLog.exists?(action: "admin.report.unpublish_job", entity_id: report_a.id)
+    assert AuditLog.exists?(action: "admin.report.auto_resolved", entity_id: report_b.id)
+  end
+
+  test "hide_review rejects the review and hide_act hides the act; each only applies to its own entity type" do
+    review = Review.create!(author: @talent, employer: @employer, rating: 2, body: "Not a great experience overall, in detail.", status: "published")
+    report = Report.create!(reporter: @employer, entity_type: "review", entity_id: review.id, reason: "Harassment", status: "open")
+    post "/api/admin/reports/#{report.id}/moderate", params: { decision: "hide_act" }, headers: auth(@admin), as: :json
+    assert_response :unprocessable_content
+    assert_equal "WRONG_ENTITY_TYPE", response.parsed_body["code"]
+
+    post "/api/admin/reports/#{report.id}/moderate", params: { decision: "hide_review" }, headers: auth(@admin), as: :json
+    assert_response :success
+    assert_equal "rejected", review.reload.status
+    assert_equal %w[resolved hide_review], report.reload.values_at(:status, :action_taken)
+
+    act = Act.create!(owner: @employer, name: "Test Act", act_type: "Band", currency: "INR", fee_basis: "event", status: "active")
+    act_report = Report.create!(reporter: @talent, entity_type: "act", entity_id: act.id, reason: "Spam or scam", status: "open")
+    post "/api/admin/reports/#{act_report.id}/moderate", params: { decision: "hide_act" }, headers: auth(@admin), as: :json
+    assert_response :success
+    assert_equal "hidden", act.reload.status
+  end
+
+  test "a closed report cannot be used for a content action" do
+    job = create_job(@employer)
+    report = Report.create!(reporter: @talent, entity_type: "job", entity_id: job.id, reason: "Spam or scam", status: "dismissed")
+    post "/api/admin/reports/#{report.id}/moderate", params: { decision: "unpublish_job" }, headers: auth(@admin), as: :json
+    assert_response :conflict
+    assert_equal "REPORT_CLOSED", response.parsed_body["code"]
+    assert job.reload.published?
+  end
+
+  test "reports index filters by status, entity type and reason, and paginates" do
+    job = create_job(@employer)
+    Report.create!(reporter: @talent, entity_type: "job", entity_id: job.id, reason: "Spam or scam", status: "open")
+    Report.create!(reporter: @talent, entity_type: "user", entity_id: @employer.id, reason: "Harassment", status: "resolved")
+    3.times { |i| Report.create!(reporter: @talent, entity_type: "user", entity_id: @employer.id, reason: "Harassment", status: "open", created_at: i.minutes.ago) }
+
+    get "/api/admin/reports", params: { status: "open", entityType: "job" }, headers: auth(@admin)
+    assert_response :success
+    body = response.parsed_body
+    assert_equal 1, body["total"]
+    assert_equal "job", body["reports"].first["entity_type"]
+    assert_equal job.title, body["reports"].first["entityTitle"]
+
+    get "/api/admin/reports", params: { status: "open", entityType: "user", reason: "Harassment", perPage: "2" }, headers: auth(@admin)
+    body = response.parsed_body
+    assert_equal [3, 1, 2, 2], [body["total"], body["page"], body["perPage"], body["reports"].length]
+  end
+
   private
 
   def latest_flags = @conversation.messages.order(:created_at, :id).last.safety_flags

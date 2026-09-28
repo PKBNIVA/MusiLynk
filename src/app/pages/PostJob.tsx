@@ -35,6 +35,16 @@ import type { CreatedJob, Job } from '../lib/apiTypes';
 import { Field, FormError, RequiredNote } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { AppSelect } from '../components/ui/app-select';
+import { AiSuggestButton } from '../components/ai/AiSuggestButton';
+import { AutocompleteInput } from '../components/ai/AutocompleteInput';
+import { AiCreditsBadge } from '../components/ai/AiCreditsBadge';
+
+/** ActorResolver::Actor#as_json — the identities a person can post an opportunity as. */
+type Identity = { type: 'user' | 'organization' | 'act'; id: string; name: string; key: string };
+// Which Page (if any) this job is posted as, for this session only: no shared "acting as" key
+// exists yet elsewhere in the app (api.ts has none), so this is scoped to opportunity posting —
+// coordinate with any later global switcher before reusing the key name.
+const POSTED_AS_KEY = 'verse:post-job:posted-as';
 
 type JobField =
   | 'title'
@@ -178,6 +188,8 @@ export default function PostJob() {
     [loadingJob, setLoadingJob] = useState(!!editId),
     [loadError, setLoadError] = useState(''),
     [pipelineKey, setPipelineKey] = useState(0);
+  const [identities, setIdentities] = useState<Identity[]>([]);
+  const [postedAs, setPostedAs] = useState(''); // '' = personal; else "organization:<id>" / "act:<id>"
   const { setFormError, clear: clearErrors } = form;
   const set = <K extends keyof JobForm>(k: K, v: JobForm[K]) => {
     setF((x) => ({ ...x, [k]: v }));
@@ -185,11 +197,23 @@ export default function PostJob() {
   };
   const userId = user?.id;
   useEffect(() => {
+    apiGet<{ identities?: Identity[] }>('/me/identities')
+      .then((d) => setIdentities((d.identities || []).filter((i) => i.type !== 'user')))
+      .catch(() => setIdentities([]));
+  }, []);
+  useEffect(() => {
     clearErrors();
     if (!editId) {
       setJob(null);
       setLoadError('');
       setLoadingJob(false);
+      let saved = '';
+      try {
+        saved = localStorage.getItem(POSTED_AS_KEY) || '';
+      } catch {
+        /* best effort only */
+      }
+      setPostedAs(saved);
       return;
     }
     setLoadingJob(true);
@@ -200,11 +224,23 @@ export default function PostJob() {
           throw new Error('Opportunity not found');
         setJob(d.job);
         setF(toForm(d.job));
+        setPostedAs(d.job.postedAs ? `${d.job.postedAs.type}:${d.job.postedAs.id}` : '');
         setReached(STEP_IDS.length - 1);
       })
       .catch((e: unknown) => setLoadError(errorMessage(e, 'This opportunity could not be loaded.')))
       .finally(() => setLoadingJob(false));
   }, [editId, userId, clearErrors]);
+  function choosePostedAs(key: string) {
+    setPostedAs(key);
+    if (!job) {
+      try {
+        localStorage.setItem(POSTED_AS_KEY, key);
+      } catch {
+        /* best effort only */
+      }
+    }
+  }
+  const postedAsLabel = postedAs ? identities.find((i) => i.key === postedAs)?.name || postedAs : 'You, personally';
   const status = job?.status as string | undefined;
   const primary =
     !job || status === 'draft'
@@ -224,6 +260,9 @@ export default function PostJob() {
       skills: list(f.skills),
       languages: list(f.languages),
       screeningQuestions: lines(f.screeningQuestions),
+      // Create resolves the actor from `actingAs` (or defaults to personal); update only re-attaches
+      // when `postedAs` is sent explicitly, so both are always included to reflect this step's choice.
+      ...(job ? { postedAs: postedAs || null } : postedAs ? { actingAs: postedAs } : {}),
     };
   }
   // Every problem at once, per field (the API applies the same rules: Job model + submission_error).
@@ -376,6 +415,16 @@ export default function PostJob() {
         ? 'Paid · amount on request'
         : 'Unpaid';
   const questions = lines(f.screeningQuestions);
+  // Shared context for job_description / job_screening_questions: only the fields the task
+  // allow-lists, built fresh whenever a suggestion is requested.
+  const jobAiContext = () => ({
+    title: f.title,
+    type: f.type,
+    function: f.functionArea,
+    city: f.location,
+    pay: payText,
+    keyPoints: list(f.skills),
+  });
   const steps = [
     {
       id: STEP_IDS[0],
@@ -433,15 +482,43 @@ export default function PostJob() {
               options={functions}
             />
           </div>
-          <Field id="job-location" label="Location" required error={form.errors.location}>
-            <Input
-              value={f.location}
-              maxLength={160}
-              onChange={(e) => set('location', e.target.value)}
+          <div>
+            <AutocompleteInput
+              id="job-location"
+              field="cities"
+              label="Location (required)"
+              multiple={false}
+              values={f.location ? [f.location] : []}
+              onChange={(vs) => set('location', vs[0] || '')}
               placeholder="Mumbai, Maharashtra"
-              className={input}
             />
-          </Field>
+            {form.errors.location && (
+              <p role="alert" className="mt-1.5 text-sm text-rose-300">
+                {form.errors.location}
+              </p>
+            )}
+          </div>
+          {identities.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1">
+                <Label htmlFor="job-posted-as">Posting as</Label>
+                <FieldHelp topic="Posting as">
+                  Post this opportunity as yourself, or as a studio, label or act you run. It shows the Page's name
+                  instead of yours and appears on that Page's public listings.
+                </FieldHelp>
+              </div>
+              <AppSelect
+                id="job-posted-as"
+                value={postedAs}
+                onValueChange={choosePostedAs}
+                className="mt-2"
+                options={[
+                  { value: '', label: 'You, personally' },
+                  ...identities.map((i) => ({ value: i.key, label: i.name })),
+                ]}
+              />
+            </div>
+          )}
           <div>
             <div className="flex items-center gap-1">
               <Label htmlFor="job-workplace">Workplace</Label>
@@ -495,6 +572,25 @@ export default function PostJob() {
           <Field
             id="job-description"
             label="Description"
+            labelExtra={
+              <>
+                <AiSuggestButton
+                  task="job_description"
+                  label="Write with AI"
+                  getContext={jobAiContext}
+                  onAccept={(text) => set('description', text)}
+                />
+                {f.description.trim() && (
+                  <AiSuggestButton
+                    task="improve_text"
+                    label="Improve"
+                    value={f.description}
+                    getContext={() => ({ tone: 'clearer', text: f.description })}
+                    onAccept={(text) => set('description', text)}
+                  />
+                )}
+              </>
+            }
             required
             hint="At least 60 characters."
             help="Cover the scope, the dates or schedule, who they will work with and what a great result looks like. Specific listings get better applicants."
@@ -525,15 +621,13 @@ export default function PostJob() {
           </div>
           <div className="grid md:grid-cols-2 gap-5">
             <div>
-              <Label htmlFor="job-skills">
-                Skills <span className="text-slate-500">(comma separated)</span>
-              </Label>
-              <Input
+              <AutocompleteInput
                 id="job-skills"
-                value={f.skills}
-                onChange={(e) => set('skills', e.target.value)}
+                field="skills"
+                label="Skills"
+                values={list(f.skills)}
+                onChange={(vs) => set('skills', vs.join(', '))}
                 placeholder="Pro Tools, vocal comping, Hindi diction"
-                className={`mt-2 ${input}`}
               />
             </div>
             <div>
@@ -681,6 +775,14 @@ export default function PostJob() {
           <Field
             id="job-screening-questions"
             label="Screening questions"
+            labelExtra={
+              <AiSuggestButton
+                task="job_screening_questions"
+                label="Suggest questions"
+                getContext={jobAiContext}
+                onAccept={(text) => set('screeningQuestions', text)}
+              />
+            }
             optional
             hint="One per line, up to 8. Applicants must answer each one."
             help="Short questions every applicant answers, like “Can you sight-read charts?”. They help you shortlist quickly. Keep them to what really matters."
@@ -704,6 +806,7 @@ export default function PostJob() {
             </h3>
             <dl>
               <ReviewRow label="Title" value={f.title} onEdit={() => goTo(0)} />
+              {identities.length > 0 && <ReviewRow label="Posted as" value={postedAsLabel} onEdit={() => goTo(0)} />}
               <ReviewRow
                 label="Format"
                 value={[optionLabel(f.opportunityKind), f.functionArea, f.type].join(' · ')}
@@ -754,16 +857,19 @@ export default function PostJob() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-5xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="mb-7">
-          <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">
-            {job ? `Edit opportunity · ${jobStatusLabel[job.status] || job.status}` : 'Create opportunity'}
+        <div className="mb-7 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">
+              {job ? `Edit opportunity · ${jobStatusLabel[job.status] || job.status}` : 'Create opportunity'}
+            </div>
+            <h1 className="text-4xl font-bold">
+              {job ? job.title || 'Untitled opportunity' : 'Describe the work, not just the title'}
+            </h1>
+            <p className="text-slate-400 mt-2 max-w-3xl">
+              Four short steps. Clear format, pay and dates bring better applicants and fewer back-and-forth messages.
+            </p>
           </div>
-          <h1 className="text-4xl font-bold">
-            {job ? job.title || 'Untitled opportunity' : 'Describe the work, not just the title'}
-          </h1>
-          <p className="text-slate-400 mt-2 max-w-3xl">
-            Four short steps. Clear format, pay and dates bring better applicants and fewer back-and-forth messages.
-          </p>
+          <AiCreditsBadge />
         </div>
         {!job && (
           <HelpCallout

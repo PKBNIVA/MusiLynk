@@ -72,7 +72,7 @@ export default function PublicProfile() {
                 {c.location}
               </p>
             )}
-            <p className="text-slate-300 leading-7 mt-6">{c.bio}</p>
+            <p className="text-slate-300 leading-7 mt-6 whitespace-pre-line [overflow-wrap:anywhere]">{c.bio}</p>
             <div className="grid md:grid-cols-2 gap-6 mt-8">
               <div>
                 <h2 className="font-semibold">Roles & instruments</h2>

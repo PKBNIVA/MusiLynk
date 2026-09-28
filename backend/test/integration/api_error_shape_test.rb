@@ -86,7 +86,7 @@ class ApiErrorShapeTest < ActionDispatch::IntegrationTest
       body = response.parsed_body
       assert_match(/End at must be after the start/, body["error"], "the sentence stays for older clients")
       assert_equal ["End at must be after the start"], body["fields"]["endAt"]
-      assert_equal ["Status is not included in the list"], body["fields"]["status"]
+      assert_equal ["Status must be one of available, hold, tentative, booked, unavailable"], body["fields"]["status"]
       assert_equal %w[endAt status], body["fields"].keys.sort
     end
   end

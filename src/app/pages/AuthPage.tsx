@@ -9,7 +9,8 @@ import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User
 import { consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
 import { toast } from 'sonner';
 import { BrandMark } from '../components/BrandMark';
-import { errorCode, errorMessage } from '../lib/errors';
+import { errorCode, errorMessage, errorStatus } from '../lib/errors';
+import { useSubmitOnce } from '../lib/formErrors';
 import { CODE_LENGTH, CodeStep, FormError, focusField, useResendCooldown } from '../components/auth/CodeStep';
 
 /* Admins use the separate admin site; its address is deliberately not part of this bundle. */
@@ -90,7 +91,7 @@ export default function AuthPage() {
     toast.success(welcome);
     go(u.role, u.profileComplete);
   };
-  /* Code-flow errors are shown inline (role=alert) next to the field; password errors keep the existing toast. */
+  /* Errors are shown inline (role=alert) next to the fields, for both the code and password flows. */
   const fail = (e: unknown, fallback: string) => setError(errorMessage(e, fallback));
   const switchMethod = (next: 'code' | 'password') => {
     touched.current = true;
@@ -123,8 +124,13 @@ export default function AuthPage() {
     setError('');
   };
 
-  async function submit(e: React.FormEvent) {
+  /* Ref-based guard: rapid clicks on Sign in / Create account send one request (FORM-22). */
+  const passwordSubmit = useSubmitOnce();
+  function submit(e: React.FormEvent) {
     e.preventDefault();
+    void passwordSubmit.run(submitPassword);
+  }
+  async function submitPassword() {
     setLoading(true);
     setError('');
     try {
@@ -137,7 +143,11 @@ export default function AuthPage() {
     } catch (e: unknown) {
       /* The API refuses admin passwords from this site once the admin site is live. */
       if (errorCode(e) === 'ADMIN_USE_ADMIN_SITE') setError(errorMessage(e, ADMIN_SITE_MESSAGE));
-      else toast.error(errorMessage(e, 'Unable to continue'));
+      else {
+        /* Inline, announced, next to the fields; focus goes to the field to fix (FORM-08). */
+        setError(errorMessage(e, 'Unable to continue'));
+        focusField(mode === 'login' || errorStatus(e) !== 409 ? 'auth-password' : 'auth-email');
+      }
     } finally {
       setLoading(false);
     }
@@ -323,7 +333,12 @@ export default function AuthPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={mode === 'register' ? 10 : undefined}
-            aria-describedby={mode === 'register' ? 'password-help' : undefined}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={
+              [mode === 'register' ? 'password-help' : '', error ? 'auth-password-error' : '']
+                .filter(Boolean)
+                .join(' ') || undefined
+            }
             className="border-white/15 pr-12"
           />
           <button
@@ -341,7 +356,11 @@ export default function AuthPage() {
           </p>
         )}
       </div>
-      {errorBox}
+      {error && (
+        <div id="auth-password-error">
+          <FormError>{error}</FormError>
+        </div>
+      )}
       <Button disabled={loading} className="w-full border-0 bg-gradient-to-r from-fuchsia-600 to-violet-600">
         {loading ? 'Tuning your workspace…' : mode === 'login' ? 'Sign in' : 'Create account'}
       </Button>

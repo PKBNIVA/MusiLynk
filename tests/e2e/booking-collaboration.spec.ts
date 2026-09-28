@@ -216,11 +216,15 @@ test('each party only sees the actions its role can take', async ({ page }) => {
 
   await card('Owner New Enquiry').getByRole('button', { name: 'Send quote' }).click();
   const dialog = page.getByRole('dialog');
-  await page.getByLabel('Performance fee').fill('100');
-  await page.getByLabel('Currency').fill('R1');
-  await page.getByLabel('Cancellation and refund terms').fill('None');
+  // Currency is a select like every other money form; every problem is shown at once, per field.
+  await expect(dialog.getByLabel('Currency')).toHaveJSProperty('tagName', 'SELECT');
+  await page.getByLabel('Deposit %').fill('0');
   await dialog.getByRole('button', { name: 'Send quote' }).click();
-  await expect(dialog.getByRole('alert')).toContainText('3-letter code');
+  await expect(dialog.locator('#quote-performance-error')).toContainText('performance fee');
+  await expect(dialog.locator('#quote-deposit-error')).toContainText('between 1% and 100%');
+  await expect(dialog.locator('#quote-cancellation-error')).toContainText('cancellation and refund terms');
+  await expect(page.getByLabel('Performance fee')).toBeFocused();
+  await expect(page.getByLabel(/Cancellation and refund terms/)).toHaveAttribute('aria-required', 'true');
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   expect(failures).toEqual([]);

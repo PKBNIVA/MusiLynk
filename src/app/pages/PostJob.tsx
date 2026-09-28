@@ -14,6 +14,34 @@ import { useAuth } from '../lib/authContext';
 import { ShieldCheck } from 'lucide-react';
 import { errorMessage, errorStatus } from '../lib/errors';
 import type { CreatedJob, Job } from '../lib/apiTypes';
+import { Field, FormError, RequiredNote } from '../components/form/Field';
+import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
+
+type JobField =
+  | 'title'
+  | 'location'
+  | 'description'
+  | 'compensationMin'
+  | 'compensationMax'
+  | 'slots'
+  | 'applicationDeadline'
+  | 'screeningQuestions'
+  | 'company';
+const JOB_IDS: Partial<Record<JobField, string>> = {
+  title: 'job-title',
+  location: 'job-location',
+  description: 'job-description',
+  compensationMin: 'job-minimum',
+  compensationMax: 'job-maximum',
+  slots: 'job-open-slots',
+  applicationDeadline: 'job-application-deadline',
+  screeningQuestions: 'job-screening-questions',
+};
+const SCREENING_PLACEHOLDER = [
+  'Can you sight-read charts?',
+  'Which console / DAW do you use most?',
+  'Are you available for all tour dates?',
+].join('\n');
 const kinds = ['job', 'gig', 'audition', 'session', 'tour', 'internship', 'collaboration'];
 const functions = [
   'Performance',
@@ -108,16 +136,21 @@ export default function PostJob() {
   const seeker = user?.role === 'jobseeker';
   const editId = sp.get('edit') || '';
   const [f, setF] = useState<JobForm>(blank);
-  const [busy, setBusy] = useState(false);
+  const form = useFormErrors<JobField>({ ids: JOB_IDS });
+  const saveOnce = useSubmitOnce();
+  const busy = saveOnce.busy;
   const [job, setJob] = useState<Job | null>(null),
     [loadingJob, setLoadingJob] = useState(!!editId),
     [loadError, setLoadError] = useState(''),
-    [formError, setFormError] = useState(''),
     [pipelineKey, setPipelineKey] = useState(0);
-  const set = <K extends keyof JobForm>(k: K, v: JobForm[K]) => setF((x) => ({ ...x, [k]: v }));
+  const { setFormError, clear: clearErrors } = form;
+  const set = <K extends keyof JobForm>(k: K, v: JobForm[K]) => {
+    setF((x) => ({ ...x, [k]: v }));
+    form.clear(k as JobField);
+  };
   const userId = user?.id;
   useEffect(() => {
-    setFormError('');
+    clearErrors();
     if (!editId) {
       setJob(null);
       setLoadError('');
@@ -135,7 +168,7 @@ export default function PostJob() {
       })
       .catch((e: unknown) => setLoadError(errorMessage(e, 'This opportunity could not be loaded.')))
       .finally(() => setLoadingJob(false));
-  }, [editId, userId]);
+  }, [editId, userId, clearErrors]);
   const status = job?.status as string | undefined;
   const primary =
     !job || status === 'draft'
@@ -157,16 +190,25 @@ export default function PostJob() {
       screeningQuestions: lines(f.screeningQuestions),
     };
   }
+  // Every problem at once, per field (the API applies the same rules: Job model + submission_error).
   function check(draft: boolean) {
-    if (f.title.trim().length < 3) return 'Add a title of at least 3 characters.';
-    if (lines(f.screeningQuestions).length > 8) return 'Use at most 8 screening questions.';
-    if (draft) return '';
+    const errors: Partial<Record<JobField, string>> = {};
+    if (f.title.trim().length < 3) errors.title = 'Add a title of at least 3 characters.';
+    const questions = lines(f.screeningQuestions);
+    if (questions.length > 8) errors.screeningQuestions = 'Use at most 8 screening questions.';
+    else if (questions.some((q) => q.length >= 300))
+      errors.screeningQuestions = 'Keep each screening question under 300 characters.';
+    if (draft) return errors;
+    if (!f.location.trim()) errors.location = 'Add where the work happens (a city, or "Remote").';
+    if (f.description.trim().length < 60)
+      errors.description = `Describe the work in at least 60 characters (${f.description.trim().length} so far).`;
+    if (f.compensationMin !== '' && Number(f.compensationMin) < 0) errors.compensationMin = 'Pay cannot be negative.';
     if (f.compensationMin !== '' && f.compensationMax !== '' && Number(f.compensationMin) > Number(f.compensationMax))
-      return 'Maximum pay must be at least the minimum.';
-    if (Number(f.slots) < 1) return 'Open slots must be at least 1.';
+      errors.compensationMax = 'Maximum pay must be at least the minimum.';
+    if (!(Number(f.slots) >= 1)) errors.slots = 'Open slots must be at least 1.';
     if (f.applicationDeadline && f.applicationDeadline < new Date().toISOString().slice(0, 10))
-      return 'The application deadline must be in the future.';
-    return '';
+      errors.applicationDeadline = 'The application deadline must be in the future.';
+    return errors;
   }
   function done() {
     if (seeker) {
@@ -177,18 +219,16 @@ export default function PostJob() {
       window.scrollTo({ top: 0 });
     } else nav('/employer');
   }
-  async function submit(e: React.FormEvent | React.MouseEvent, mode: 'primary' | 'draft' = 'primary') {
+  function submit(e: React.FormEvent | React.MouseEvent, mode: 'primary' | 'draft' = 'primary') {
     e.preventDefault();
-    if (busy) return;
-    const draft = mode === 'draft';
-    const problem = check(draft);
-    if (problem) {
-      setFormError(problem);
-      if (problem.startsWith('Add a title')) document.getElementById('job-title')?.focus();
+    void saveOnce.run(() => persist(mode === 'draft'));
+  }
+  async function persist(draft: boolean) {
+    setFormError('');
+    if (form.setErrors(check(draft))) {
+      form.focusFirst();
       return;
     }
-    setFormError('');
-    setBusy(true);
     try {
       if (job) {
         const target = draft ? 'draft' : primary.status;
@@ -216,17 +256,16 @@ export default function PostJob() {
         /* Keep the work: save it as a draft so publishing can resume after an upgrade or closing another post. */ try {
           if (job) await apiPatch(`/employer/jobs/${job.id}`, { ...payload(), status: 'draft' });
           else await apiPost('/jobs', { ...payload(), status: 'draft' });
-          toast.error(`${errorMessage(e)} Your opportunity was saved as a draft.`, {
+          toast.warning(`${errorMessage(e)} Your opportunity was saved as a draft.`, {
             action: { label: 'View plans', onClick: () => nav(billing) },
           });
           done();
           return;
         } catch {}
       }
-      setFormError(errorMessage(e, ''));
-      toastJobError(e, billing, nav);
-    } finally {
-      setBusy(false);
+      // Plan limits keep their "View plans" toast; everything else is shown next to its field.
+      if (errorStatus(e) === 402) toastJobError(e, billing, nav);
+      if (form.setFromApi(e, 'This opportunity could not be saved. Try again.')) form.focusFirst();
     }
   }
   const backTo = seeker ? '/jobseeker/hiring/post' : '/employer';
@@ -296,25 +335,22 @@ export default function PostJob() {
             />
           </section>
         )}
-        <form onSubmit={(e) => submit(e)} className="space-y-5">
+        <form onSubmit={(e) => submit(e)} className="space-y-5" noValidate>
           <Card className="bg-white/[.055] border-white/10">
             <CardHeader>
               <CardTitle>Opportunity basics</CardTitle>
+              <RequiredNote className="mt-1" />
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
-              <div className="md:col-span-2">
-                <Label htmlFor="job-title">Title</Label>
+              <Field id="job-title" label="Title" required className="md:col-span-2" error={form.errors.title}>
                 <Input
-                  id="job-title"
-                  required
-                  minLength={3}
                   maxLength={160}
                   value={f.title}
                   onChange={(e) => set('title', e.target.value)}
                   placeholder="e.g. Session vocalist for Hindi indie EP"
-                  className="mt-2 bg-black/20 border-white/15"
+                  className="bg-black/20 border-white/15"
                 />
-              </div>
+              </Field>
               <div>
                 <Label htmlFor="job-opportunity-type">Opportunity type</Label>
                 <select
@@ -341,17 +377,15 @@ export default function PostJob() {
                   ))}
                 </select>
               </div>
-              <div>
-                <Label htmlFor="job-location">Location</Label>
+              <Field id="job-location" label="Location" required error={form.errors.location}>
                 <Input
-                  id="job-location"
-                  required
                   value={f.location}
+                  maxLength={160}
                   onChange={(e) => set('location', e.target.value)}
                   placeholder="Mumbai, Maharashtra"
-                  className="mt-2 bg-black/20 border-white/15"
+                  className="bg-black/20 border-white/15"
                 />
-              </div>
+              </Field>
               <div>
                 <Label htmlFor="job-workplace">Workplace</Label>
                 <select
@@ -398,28 +432,26 @@ export default function PostJob() {
                 <Checkbox checked={f.paid} onCheckedChange={(v) => set('paid', !!v)} />
                 <span className="text-sm">This is a paid opportunity</span>
               </label>
-              <div>
-                <Label htmlFor="job-minimum">Minimum</Label>
+              <Field id="job-minimum" label="Minimum pay" error={form.errors.compensationMin}>
                 <Input
-                  id="job-minimum"
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   value={f.compensationMin}
                   onChange={(e) => set('compensationMin', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
+                  className="bg-black/20 border-white/15"
                 />
-              </div>
-              <div>
-                <Label htmlFor="job-maximum">Maximum</Label>
+              </Field>
+              <Field id="job-maximum" label="Maximum pay" error={form.errors.compensationMax}>
                 <Input
-                  id="job-maximum"
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   value={f.compensationMax}
                   onChange={(e) => set('compensationMax', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
+                  className="bg-black/20 border-white/15"
                 />
-              </div>
+              </Field>
               <div>
                 <Label htmlFor="job-currency">Currency</Label>
                 <select
@@ -443,16 +475,15 @@ export default function PostJob() {
                   className="mt-2 bg-black/20 border-white/15"
                 />
               </div>
-              <div>
-                <Label htmlFor="job-application-deadline">Application deadline</Label>
+              <Field id="job-application-deadline" label="Application deadline" error={form.errors.applicationDeadline}>
                 <Input
-                  id="job-application-deadline"
                   type="date"
+                  min={new Date().toISOString().slice(0, 10)}
                   value={f.applicationDeadline}
                   onChange={(e) => set('applicationDeadline', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
+                  className="bg-black/20 border-white/15"
                 />
-              </div>
+              </Field>
               <div>
                 <Label htmlFor="job-start-date">Start date</Label>
                 <Input
@@ -473,17 +504,16 @@ export default function PostJob() {
                   className="mt-2 bg-black/20 border-white/15"
                 />
               </div>
-              <div>
-                <Label htmlFor="job-open-slots">Open slots</Label>
+              <Field id="job-open-slots" label="Open slots" required error={form.errors.slots}>
                 <Input
-                  id="job-open-slots"
                   type="number"
+                  inputMode="numeric"
                   min="1"
                   value={f.slots}
                   onChange={(e) => set('slots', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
+                  className="bg-black/20 border-white/15"
                 />
-              </div>
+              </Field>
             </CardContent>
           </Card>
           <Card className="bg-white/[.055] border-white/10">
@@ -491,20 +521,20 @@ export default function PostJob() {
               <CardTitle>What the person will actually do</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div>
-                <Label htmlFor="job-description">
-                  Description <span className="text-slate-500">(at least 60 characters)</span>
-                </Label>
+              <Field
+                id="job-description"
+                label="Description"
+                required
+                hint="At least 60 characters."
+                error={form.errors.description}
+              >
                 <Textarea
-                  id="job-description"
-                  required
-                  minLength={60}
                   value={f.description}
                   onChange={(e) => set('description', e.target.value)}
                   placeholder="Scope, deliverables, collaborators, expected schedule, reporting line and what success looks like…"
-                  className="mt-2 bg-black/20 border-white/15 min-h-44"
+                  className="bg-black/20 border-white/15 min-h-44"
                 />
-              </div>
+              </Field>
               <div>
                 <Label htmlFor="job-requirements">Requirements</Label>
                 <Textarea
@@ -541,18 +571,20 @@ export default function PostJob() {
                   />
                 </div>
               </div>
-              <div>
-                <Label htmlFor="job-screening-questions">
-                  Screening questions <span className="text-slate-500">(optional, one per line; max 8)</span>
-                </Label>
+              <Field
+                id="job-screening-questions"
+                label="Screening questions"
+                optional
+                hint="One per line, up to 8. Applicants must answer each one."
+                error={form.errors.screeningQuestions}
+              >
                 <Textarea
-                  id="job-screening-questions"
                   value={f.screeningQuestions}
                   onChange={(e) => set('screeningQuestions', e.target.value)}
-                  placeholder="Can you sight-read charts?\nWhich console / DAW do you use most?\nAre you available for all tour dates?"
-                  className="mt-2 bg-black/20 border-white/15 min-h-28"
+                  placeholder={SCREENING_PLACEHOLDER}
+                  className="bg-black/20 border-white/15 min-h-28"
                 />
-              </div>
+              </Field>
               <label className="flex gap-2 items-center">
                 <Checkbox checked={f.portfolioRequired} onCheckedChange={(v) => set('portfolioRequired', !!v)} />
                 <span className="text-sm">Require a portfolio / work sample</span>
@@ -566,11 +598,7 @@ export default function PostJob() {
               employers receive a trust marker, but verification never replaces candidate due diligence.
             </p>
           </div>
-          {formError && (
-            <p role="alert" className="text-sm text-rose-300">
-              {formError}
-            </p>
-          )}
+          <FormError message={form.formError} />
           <div className="flex flex-col sm:flex-row gap-3">
             <Button disabled={busy} aria-busy={busy} type="submit" className="flex-1">
               {busy ? 'Saving…' : primary.label}

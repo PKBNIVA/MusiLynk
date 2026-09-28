@@ -17,6 +17,7 @@ export default function Reviews() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [loadError, setLoadError] = useState('');
   const load = () =>
     apiGet<{ reviews?: Review[]; eligibleEmployers?: PublicEmployer[] }>('/reviews')
@@ -37,6 +38,7 @@ export default function Reviews() {
     e.preventDefault();
     if (submitting) return;
     setSubmitting(true);
+    setSubmitError('');
     try {
       await apiPost('/reviews', { employerId, rating, title, body });
       setTitle('');
@@ -44,7 +46,7 @@ export default function Reviews() {
       toast.success('Review submitted for moderation');
       await load();
     } catch (e: unknown) {
-      toast.error(errorMessage(e));
+      setSubmitError(errorMessage(e, 'Your review could not be submitted. Try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -107,6 +109,11 @@ export default function Reviews() {
                   placeholder="Share a useful, factual experience…"
                   className="bg-black/20 border-white/15 min-h-28"
                 />
+                {submitError && (
+                  <p role="alert" className="text-sm text-rose-300">
+                    {submitError}
+                  </p>
+                )}
                 <Button type="submit" className="w-full" disabled={!employerId || submitting} aria-busy={submitting}>
                   {submitting ? 'Submitting…' : 'Submit review'}
                 </Button>

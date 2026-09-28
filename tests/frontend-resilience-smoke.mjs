@@ -68,7 +68,11 @@ assert.doesNotMatch(legal, /HttpOnly cookie/, 'session notice must not claim an 
 assert.match(legal, /mailto:/, 'support pages must provide an actionable contact link');
 
 const availability = await read('../src/app/pages/Availability.tsx');
-assert.match(availability, /validRange/, 'availability submission must validate its date range before calling the API');
+assert.match(
+  availability,
+  /validateSlot\(form\)/,
+  'availability submission must validate its date range before calling the API',
+);
 assert.match(availability, /Try again/, 'availability load failures must provide a retry action');
 assert.match(availability, /Unable to remove availability/, 'availability deletion failures must be visible');
 

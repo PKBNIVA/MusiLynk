@@ -21,6 +21,8 @@ class SearchLimitsTest < ActionDispatch::IntegrationTest
   end
 
   test "each IP gets a bounded number of searches per minute" do
+    # The limit counts in fixed one-minute windows; freeze the clock so a slow run can't cross one.
+    freeze_time
     SearchController::REQUESTS_PER_MINUTE.times do
       get "/api/search", params: { q: "drummer" }
       assert_response :success

@@ -88,10 +88,11 @@ button:not(:disabled):not([aria-disabled='true']):not([class*='hover:']):hover {
 
 /* Every element that can take focus must show a visible indicator when reached by keyboard, even
    if a component's own focus-visible ring didn't apply — e.g. a bespoke input that isn't built on
-   the shared Input/Textarea/Select primitives (those already carry a focus-visible ring). */
-:focus-visible {
-  outline: 2px solid #b9a4ff !important;
-  outline-offset: 2px !important;
+   the shared Input/Textarea/Select primitives. :where() keeps it at zero specificity, so components
+   with their own focus-visible ring (or an explicit outline) are not double-outlined. */
+:where(:focus-visible) {
+  outline: 2px solid #b9a4ff;
+  outline-offset: 2px;
 }
 
 button:active,

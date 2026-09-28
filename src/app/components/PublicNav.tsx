@@ -55,7 +55,7 @@ export function PublicNav() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search the music network"
-              className="h-10 w-full rounded-xl border border-white/15 bg-white/[.055] pl-10 pr-3 text-sm outline-none focus:border-violet-300/60 focus:bg-white/[.08]"
+              className="h-10 w-full rounded-xl border border-white/15 bg-white/[.055] pl-10 pr-3 text-sm outline-none focus:border-violet-300/60 focus:bg-white/[.08] focus-visible:ring-2 focus-visible:ring-violet-300/70"
             />
           </form>
           <div className="ml-auto hidden items-center gap-1 xl:flex">

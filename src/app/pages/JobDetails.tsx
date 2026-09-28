@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, Job } from '../lib/apiTypes';
+import { formatDate, formatDeadline, formatPay } from '../lib/format';
 
 const title = (x?: string | null) => String(x || '').replace(/(^|\s)\S/g, (m) => m.toUpperCase());
 
@@ -117,11 +118,7 @@ export default function JobDetails() {
         )}
       </div>
     );
-  const pay =
-    job.salary ||
-    (job.compensation_min || job.compensation_max
-      ? `${job.currency || 'INR'} ${job.compensation_min || ''}${job.compensation_max ? `–${job.compensation_max}` : ''}${job.compensation_period ? ` / ${job.compensation_period}` : ''}`
-      : 'Not disclosed');
+  const pay = formatPay(job);
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -159,7 +156,7 @@ export default function JobDetails() {
                   </div>
                   <div className="flex gap-2">
                     <CalendarDays size={18} className="text-slate-500" />
-                    {job.application_deadline ? `Apply by ${job.application_deadline}` : 'Open until filled'}
+                    {formatDeadline(job.application_deadline, { verb: 'Apply by' })}
                   </div>
                 </div>
               </CardContent>
@@ -194,7 +191,7 @@ export default function JobDetails() {
                   {job.start_date && (
                     <div>
                       <div className="text-slate-500 mb-1">Start date</div>
-                      <div>{job.start_date}</div>
+                      <div>{formatDate(job.start_date)}</div>
                     </div>
                   )}
                   {job.duration && (

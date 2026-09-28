@@ -5,7 +5,17 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Checkbox } from '../components/ui/checkbox';
-import { Search, MapPin, Briefcase, Bookmark, BookmarkCheck, Bell, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import {
+  Search,
+  MapPin,
+  Briefcase,
+  CalendarDays,
+  Bookmark,
+  BookmarkCheck,
+  Bell,
+  ShieldCheck,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { Link } from 'react-router';
 import { apiDelete, apiPost } from '../lib/api';
 import { LoadMoreJobs } from '../components/LoadMoreJobs';
@@ -14,6 +24,7 @@ import { useLatestCallback } from '../lib/useLatestCallback';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
 import type { Job } from '../lib/apiTypes';
+import { formatDeadline, formatPay } from '../lib/format';
 
 const kinds = ['', 'job', 'gig', 'audition', 'session', 'tour', 'internship', 'collaboration'];
 const functions = [
@@ -258,6 +269,10 @@ export default function JobSearch() {
                         </span>
                         {j.function_area && <span>{j.function_area}</span>}
                         <span>{j.genre}</span>
+                        <span className="flex items-center" data-job-deadline>
+                          <CalendarDays className="w-4 h-4 mr-1" />
+                          {formatDeadline(j.application_deadline)}
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-2 mt-4">
                         {j.skills?.slice(0, 6).map((s: string) => (
@@ -272,12 +287,7 @@ export default function JobSearch() {
                         {j.saved ? <BookmarkCheck className="text-violet-300" /> : <Bookmark />}
                       </Button>
                       <div className="text-right hidden sm:block">
-                        <div className="font-semibold text-sm">
-                          {j.salary ||
-                            (j.compensation_min || j.compensation_max
-                              ? `${j.currency || 'INR'} ${j.compensation_min || ''}${j.compensation_max ? `–${j.compensation_max}` : ''}`
-                              : 'Compensation not disclosed')}
-                        </div>
+                        <div className="font-semibold text-sm">{formatPay(j, 'Compensation not disclosed')}</div>
                         <div className="text-xs text-slate-500 mt-1">
                           {j.applicationsCount} applicant{j.applicationsCount === 1 ? '' : 's'}
                         </div>

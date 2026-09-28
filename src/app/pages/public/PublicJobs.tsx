@@ -2,7 +2,7 @@ import { DemoBadge } from '../../components/DemoBadge';
 import { usePageMeta } from '../../components/PageMeta';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { Briefcase, MapPin, Search, ShieldCheck } from 'lucide-react';
+import { Briefcase, CalendarDays, MapPin, Search, ShieldCheck } from 'lucide-react';
 import { PublicNav } from '../../components/PublicNav';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -12,6 +12,7 @@ import { LoadMoreJobs } from '../../components/LoadMoreJobs';
 import { usePagedJobs } from '../../lib/usePagedJobs';
 import { useLatestCallback } from '../../lib/useLatestCallback';
 import type { Job } from '../../lib/apiTypes';
+import { formatDeadline, formatPay } from '../../lib/format';
 
 const kinds = ['jobs', 'gigs', 'auditions', 'sessions', 'tours'] as const;
 
@@ -152,13 +153,14 @@ export default function PublicJobs() {
                               <Briefcase size={15} className="mr-1" />
                               {j.function_area || j.type}
                             </span>
+                            <span className="flex items-center" data-job-deadline>
+                              <CalendarDays size={15} className="mr-1" />
+                              {formatDeadline(j.application_deadline)}
+                            </span>
                           </div>
                         </div>
                         <div className="text-sm text-right text-slate-300">
-                          {j.salary ||
-                            (j.compensation_min || j.compensation_max
-                              ? `${j.currency || 'INR'} ${j.compensation_min || ''}${j.compensation_max ? `–${j.compensation_max}` : ''}`
-                              : 'Terms disclosed in listing')}
+                          {formatPay(j, 'Terms disclosed in listing')}
                         </div>
                       </div>
                     </CardContent>

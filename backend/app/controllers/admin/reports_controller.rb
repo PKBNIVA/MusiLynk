@@ -7,11 +7,12 @@ module Admin
     # Decisions against the reported *content* itself: each removes the content from public view
     # and auto-resolves every other open report on the same entity, since there is nothing left
     # for a second reviewer to act on.
-    CONTENT_DECISIONS = %w[unpublish_job hide_review hide_act hide_portfolio].freeze
+    CONTENT_DECISIONS = %w[unpublish_job hide_review hide_act hide_portfolio hide_post hide_comment].freeze
     DECISIONS = (USER_DECISIONS + CONTENT_DECISIONS).freeze
-    CONTENT_ENTITY_TYPE = { "unpublish_job" => "job", "hide_review" => "review", "hide_act" => "act", "hide_portfolio" => "portfolio" }.freeze
+    CONTENT_ENTITY_TYPE = { "unpublish_job" => "job", "hide_review" => "review", "hide_act" => "act", "hide_portfolio" => "portfolio",
+      "hide_post" => "post", "hide_comment" => "comment" }.freeze
     STATUSES = %w[open resolved dismissed].freeze
-    ENTITY_TYPES = %w[user job act review portfolio resume].freeze
+    ENTITY_TYPES = %w[user job act review portfolio resume post comment].freeze
     EXCERPT_SIZE = 20
     HISTORY_WINDOW = 90.days
     NOTE_LIMIT = 1_000
@@ -128,6 +129,8 @@ module Admin
         when "hide_review" then entity.update!(status: "rejected")
         when "hide_act" then entity.update!(status: "hidden")
         when "hide_portfolio" then entity.update!(status: "hidden")
+        when "hide_post" then entity.update!(status: "hidden")
+        when "hide_comment" then entity.update!(status: "hidden")
         end
         audit!("admin.report.#{decision}", report, entityType: expected_type, entityId: entity.id)
 
@@ -149,6 +152,8 @@ module Admin
       when "review" then Review.find_by(id: entity_id)
       when "act" then Act.find_by(id: entity_id)
       when "portfolio" then Portfolio.find_by(id: entity_id)
+      when "post" then Post.find_by(id: entity_id)
+      when "comment" then PostComment.find_by(id: entity_id)
       end
     end
 
@@ -228,6 +233,8 @@ module Admin
       Portfolio.where(id: ids_for.call("portfolio")).pluck(:id, :title).each { |id, title| titles[["portfolio", id]] = title }
       Resume.where(id: ids_for.call("resume")).pluck(:id, :title).each { |id, title| titles[["resume", id]] = title }
       Review.where(id: ids_for.call("review")).pluck(:id, :title).each { |id, title| titles[["review", id]] = title.presence || "Review" }
+      Post.where(id: ids_for.call("post")).find_each { |post| titles[["post", post.id]] = post.body.to_s.truncate(60).presence || "Post" }
+      PostComment.where(id: ids_for.call("comment")).find_each { |comment| titles[["comment", comment.id]] = comment.body.to_s.truncate(60) }
       titles
     end
 

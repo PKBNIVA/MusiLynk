@@ -195,6 +195,23 @@ Rails.application.routes.draw do
     resources :crew_plans, path: "crew-plans", only: %i[index create] do
       member { post :convert }
     end
+    namespace :stage do
+      get "feed", to: "feed#index"
+      get "authors/:type/:authorId/posts", to: "posts#by_author"
+      get "authors/:type/:id/followers", to: "follows#followers"
+      get "authors/:type/:id/following", to: "follows#following"
+      get "tags/:tag", to: "tags#show"
+      post "follows", to: "follows#create"
+      delete "follows/:type/:id", to: "follows#destroy"
+      delete "comments/:id", to: "post_comments#destroy"
+      resources :posts, only: %i[create show update destroy] do
+        member do
+          post :applause, to: "applause#create"
+          delete :applause, to: "applause#destroy"
+        end
+        resources :comments, only: %i[index create], controller: "post_comments"
+      end
+    end
     namespace :billing do
       get :plans, to: "billing#plans"
       get :subscription, to: "billing#subscription"

@@ -7,10 +7,21 @@
 #   memberships, urgent-request responses and blocks.
 # - Showcase (see erase_showcase): personal portfolios, the career record, resumes and review
 #   suggestions are removed. Portfolios owned by an organization or act stay with the Page.
+# - Stage (The Stage community feed): follows the user made or received, and applause and
+#   comments they gave as themselves, are removed; posts they made as themselves are
+#   removed (which cascades their own reactions/comments and nulls out any reference to
+#   them — a portfolio/job share or a reshare — the same way a deleted portfolio item, job
+#   share or reshared post degrades to an "unavailable" preview instead of failing; see the
+#   posts migrations and Post#shared_entity_preview). Posts they made as a Page they run (an
+#   organization or an act) are NOT removed — that content belongs to the Page, not the
+#   person — and keep `created_by_user_id` pointing at this row: the user row is anonymised
+#   below, not deleted, so that foreign key stays valid throughout. Other people's posts that
+#   lost one of this user's applause, comments or reshares have their counters recounted.
 # - Kept but anonymised: the user row itself (name "Deleted account", an unusable
 #   email and password, status "deleted"), messages already sent to other people,
 #   reports the user filed, jobs, acts and requests they posted (closed or cancelled),
-#   and billing records, which Indian tax rules require us to keep.
+#   posts they made as a Page (see above), and billing records, which Indian tax rules
+#   require us to keep.
 #
 # Deletion is refused while money or a counterpart depends on the account: an active
 # subscription or an open booking must be cancelled or finished first.
@@ -50,6 +61,7 @@ class AccountErasure
       @user.lock!
       erase_showcase
       erase_owned_rows
+      erase_stage_content
       retire_public_listings
       anonymise_user
     end
@@ -110,6 +122,40 @@ class AccountErasure
     @user.career_entries.delete_all
   end
   # --- end Showcase ------------------------------------------------------------------------
+
+  # Removes this person's own Stage activity (see the header). Posts, applause and comments
+  # are gathered up front so the posts *other people* still have can be recounted afterwards —
+  # once this user's rows are gone, there is nothing left to compute the old counts from.
+  def erase_stage_content
+    id = @user.id
+    own_post_ids = Post.where(author_type: "user", author_id: id).pluck(:id)
+    affected_post_ids = (
+      PostReaction.where(actor_type: "user", actor_id: id).pluck(:post_id) +
+      PostComment.where(created_by_user_id: id).pluck(:post_id) +
+      Post.where(id: own_post_ids).where.not(reshared_post_id: nil).pluck(:reshared_post_id)
+    ).uniq - own_post_ids
+
+    Follow.where(follower_user_id: id).or(Follow.where(followable_type: "user", followable_id: id)).delete_all
+    PostReaction.where(actor_type: "user", actor_id: id).delete_all
+    PostComment.where(created_by_user_id: id).delete_all
+    # Cascades that post's own reactions/comments, and nulls out shared_portfolio_item_id/
+    # shared_job_id/reshared_post_id on any other post that pointed at it (see the migrations).
+    Post.where(id: own_post_ids).delete_all
+
+    recount_post_counters(affected_post_ids)
+  end
+
+  def recount_post_counters(post_ids)
+    return if post_ids.empty?
+
+    Post.where(id: post_ids).find_each do |post|
+      post.update_columns(
+        applause_count: PostReaction.where(post_id: post.id).count,
+        comment_count: PostComment.where(post_id: post.id).where.not(status: "deleted").count,
+        reshare_count: Post.where(reshared_post_id: post.id).count
+      )
+    end
+  end
 
   def retire_public_listings
     @user.jobs.where.not(status: "closed").update_all(status: "closed", updated_at: Time.current)

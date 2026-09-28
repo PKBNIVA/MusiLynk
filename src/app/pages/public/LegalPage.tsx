@@ -234,7 +234,9 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
  * not legal advice, and a lawyer/CA still needs to sign off on the wording (see
  * backend/docs/compliance-checklist.md). */
 function dynamicItems(key: string, policy: LegalPolicy | null): [string, string][] {
-  if (!policy) return [];
+  // The page must never crash on a missing or partial policy (API down, or an old/odd response):
+  // it just shows the static text without the generated sections.
+  if (!policy?.legal?.grievanceOfficer || !Array.isArray(policy.booking?.plainEnglish)) return [];
   if (key === 'privacy') {
     const officer = policy.legal.grievanceOfficer;
     return [

@@ -148,7 +148,7 @@ test('a corrected misspelling is announced and an empty search suggests the fix 
   await expect(page).toHaveURL(/\/music-jobs$/);
 });
 
-test('a landing tile opens a labelled, removable role filter (SRCH-01)', async ({ page }) => {
+test('a landing role link opens a labelled, removable role filter (SRCH-01)', async ({ page }) => {
   const calls = await mockApi(page, null, {
     '/api/public/talent': (url) => ({
       talent: url.searchParams.get('role') ? [pro(1)] : [pro(1), pro(2)],
@@ -157,14 +157,15 @@ test('a landing tile opens a labelled, removable role filter (SRCH-01)', async (
       ...(url.searchParams.get('role') ? { role: { key: 'performer', label: 'Artists & performers' } } : {}),
     }),
   });
+  // The landing page links role × city searches into the directory (the label comes from the API).
   await page.goto('/');
-  await page.getByRole('link', { name: /Artists & performers/ }).click();
-  await expect(page).toHaveURL(/\/music-professionals\?role=performer/);
+  await page.getByRole('link', { name: 'Hire a drummer in Mumbai' }).click();
+  await expect(page).toHaveURL(/\/music-professionals\?role=drummer/);
   const chip = page.getByTestId('role-filter');
   await expect(chip).toContainText('Showing: Artists & performers');
   await expect(page.getByTestId('result-count')).toHaveText('1 professional');
   await chip.getByRole('button', { name: 'Remove filter Artists & performers' }).click();
-  await expect(page).toHaveURL(/\/music-professionals$/);
+  await expect(page).not.toHaveURL(/role=/);
   await expect(page.getByTestId('result-count')).toHaveText('2 professionals');
   expect(apiCalls(calls, '/api/public/talent').at(-1)?.searchParams.get('role')).toBeNull();
 });

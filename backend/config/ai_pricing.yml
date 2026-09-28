@@ -1,0 +1,91 @@
+# Verse AI Credits: every number that governs pricing, allowances and cost controls.
+# Nothing here is client-configurable; the frontend only ever reads it back through
+# GET /api/ai/pricing and GET /api/ai/usage.
+default: &default
+  # Monthly credit allowances. "any_account" plans (ai_plus) are on top of whatever the
+  # account's subscription plan already grants; the higher of the two applies, they don't stack.
+  allowances:
+    talent_free: 20
+    hirer_free: 20
+    ai_plus: 400
+    pro: 500
+    studio: 2000
+    # enterprise is custom; a nil allowance means "ask the account's subscription/contract",
+    # resolved as unlimited for cost-guard purposes but still spend-guarded globally.
+    enterprise: null
+
+  # Top-up packs: one-time credit purchases that never expire until `expires_after_months`.
+  topups:
+    small:
+      price_inr: 99
+      credits: 150
+    large:
+      price_inr: 399
+      credits: 700
+    expires_after_months: 12
+
+  # Verse AI Plus subscription: available to any account, independent of hiring/talent plan.
+  ai_plus:
+    plan_code: ai_plus
+    price_inr: 199
+    credits_per_month: 400
+
+  # Credit cost per task. rank_applicants is per 10 applicants, rounded up.
+  task_costs:
+    job_description: 1
+    job_screening_questions: 1
+    profile_headline: 1
+    profile_bio: 1
+    portfolio_blurb: 1
+    cover_letter: 1
+    post_caption: 1
+    message_reply: 1
+    resume_summary: 1
+    improve_text: 1
+    candidate_summary: 1
+    rank_applicants: 1
+    outreach_message: 1
+    interview_questions: 1
+    rejection_note: 1
+    draft_portfolio: 3
+    tailor_resume: 3
+    classify_portfolio_item: 1
+
+  # Long-form tasks that get the higher output cap (still Haiku only).
+  long_tasks:
+    - job_description
+    - cover_letter
+    - resume_summary
+    - draft_portfolio
+    - tailor_resume
+
+  # Anthropic list pricing, USD per million tokens, plus the INR conversion used to estimate
+  # spend. batch_discount applies to any call placed through the Message Batches API.
+  model_pricing:
+    input_per_mtok_usd: 1.0
+    output_per_mtok_usd: 5.0
+    batch_discount: 0.5
+    usd_to_inr: 85.0
+
+  # Spend guard, in INR/month (server-wall-clock calendar month, UTC).
+  budgets:
+    free_tier_monthly_budget_inr: 3000
+    hard_monthly_budget_inr: 15000
+
+  # Output caps (max_tokens), tokens. System prompts must stay under 300 tokens (enforced in specs,
+  # not runtime, since token counting the prompt itself would cost an API call).
+  output_caps:
+    short_max_tokens: 160
+    long_max_tokens: 550
+    classification_max_tokens: 200
+
+  cache_ttl_hours: 24
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

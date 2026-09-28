@@ -18,14 +18,12 @@ class AiAssistTest < ActiveSupport::TestCase
     with_env("ANTHROPIC_API_KEY" => "sk-test", "AI_ASSIST_ENABLED" => "false") { assert_not AiAssist.enabled? }
   end
 
-  test "model names fall back to defaults and read AI_MODEL / AI_MODEL_LONG" do
-    with_env("AI_MODEL" => nil, "AI_MODEL_LONG" => nil) do
+  test "model name falls back to Haiku and reads AI_MODEL" do
+    with_env("AI_MODEL" => nil) do
       assert_equal "claude-haiku-4-5-20251001", AiAssist.model_name
-      assert_equal "claude-sonnet-5", AiAssist.long_model_name
     end
-    with_env("AI_MODEL" => "custom-fast", "AI_MODEL_LONG" => "custom-long") do
+    with_env("AI_MODEL" => "custom-fast") do
       assert_equal "custom-fast", AiAssist.model_name
-      assert_equal "custom-long", AiAssist.long_model_name
     end
   end
 
@@ -58,13 +56,31 @@ class AiAssistTest < ActiveSupport::TestCase
     end
   end
 
-  test "long-writing tasks use AI_MODEL_LONG" do
+  test "long-writing tasks still use Haiku, capped at the tighter of the task's own cap and the hard long cap" do
     with_ai_enabled do
-      with_env("AI_MODEL_LONG" => "custom-long") do
-        client = FakeClient.new(200, anthropic_body("A description."), [])
-        result = AiAssist.new(client:).suggest(task: "job_description", context: { title: "Session Guitarist" })
-        assert_equal "custom-long", result[:model]
-      end
+      client = FakeClient.new(200, anthropic_body("A description."), [])
+      result = AiAssist.new(client:).suggest(task: "job_description", context: { title: "Session Guitarist" })
+      assert_equal AiAssist::DEFAULT_MODEL, result[:model]
+      payload = JSON.parse(client.calls.first[:body])
+      assert_operator payload["max_tokens"], :<=, AiPricing.output_caps.fetch(:long_max_tokens)
+    end
+  end
+
+  test "short tasks are capped at the hard short output cap" do
+    with_ai_enabled do
+      client = FakeClient.new(200, anthropic_body("A caption."), [])
+      AiAssist.new(client:).suggest(task: "post_caption", context: { kind: "release" })
+      payload = JSON.parse(client.calls.first[:body])
+      assert_operator payload["max_tokens"], :<=, AiPricing.output_caps.fetch(:short_max_tokens)
+    end
+  end
+
+  test "improve_text (a long-spec task not on the long_tasks list) is still capped by the short hard cap" do
+    with_ai_enabled do
+      client = FakeClient.new(200, anthropic_body("Rewritten."), [])
+      AiAssist.new(client:).suggest(task: "improve_text", context: { tone: "clearer", text: "hello" })
+      payload = JSON.parse(client.calls.first[:body])
+      assert_equal AiPricing.output_caps.fetch(:short_max_tokens), payload["max_tokens"]
     end
   end
 

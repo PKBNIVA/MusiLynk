@@ -24,8 +24,10 @@ class AiAssist
 
   API_URL = "https://api.anthropic.com/v1/messages".freeze
   ANTHROPIC_VERSION = "2023-06-01".freeze
+  # Haiku only, everywhere: it is the only model any AiAssist task uses. ENV["AI_MODEL"] can
+  # still override it (e.g. to pin a dated snapshot), but there is no separate "long" model —
+  # long tasks get a bigger output cap (AiPricing.output_caps), never a bigger model.
   DEFAULT_MODEL = "claude-haiku-4-5-20251001".freeze
-  DEFAULT_LONG_MODEL = "claude-sonnet-5".freeze
   OPEN_TIMEOUT = 5
   READ_TIMEOUT = 20
 
@@ -37,11 +39,23 @@ class AiAssist
     ENV["AI_MODEL"].presence || DEFAULT_MODEL
   end
 
-  def self.long_model_name
-    ENV["AI_MODEL_LONG"].presence || DEFAULT_LONG_MODEL
-  end
-
   def self.tasks = AiAssist::Tasks::PUBLIC_TASKS
+
+  # Hard output caps (AiPricing.output_caps), by task shape: classification < short < long.
+  # Every task's own max_output_tokens is capped down to this (never up) so a task-level cap can
+  # tighten it further but never exceed the global hard cap.
+  def self.max_tokens_for(task)
+    caps = AiPricing.output_caps
+    hard_cap = if task.to_s == "classify_portfolio_item"
+      caps.fetch(:classification_max_tokens)
+    elsif AiPricing.long_task?(task)
+      caps.fetch(:long_max_tokens)
+    else
+      caps.fetch(:short_max_tokens)
+    end
+    spec_cap = AiAssist::Tasks::REGISTRY[task.to_s]&.max_output_tokens
+    spec_cap ? [spec_cap, hard_cap].min : hard_cap
+  end
 
   # `client:` is only ever supplied by tests. It must respond to
   # `#post(url, headers:, body:, open_timeout:, read_timeout:) -> [status_code, response_body_string]`.
@@ -58,11 +72,12 @@ class AiAssist
 
     clean_context = AiAssist::Tasks.validate!(spec, context)
     user_prompt = spec.build_prompt(clean_context)
-    model = spec.long? ? self.class.long_model_name : self.class.model_name
+    model = self.class.model_name
+    max_tokens = self.class.max_tokens_for(task)
 
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     begin
-      status, raw_body = call_anthropic(model:, system_prompt: spec.system_prompt, user_prompt:, max_tokens: spec.max_output_tokens)
+      status, raw_body = call_anthropic(model:, system_prompt: spec.system_prompt, user_prompt:, max_tokens:)
     rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error, IOError, SocketError, Errno::ECONNREFUSED => e
       log(task:, status: "timeout", latency_ms: elapsed_ms(started))
       raise Error.new("The AI assistant is taking too long. Try again in a moment.", code: "AI_TIMEOUT")
@@ -76,7 +91,20 @@ class AiAssist
     text, usage = extract_text_and_usage(raw_body)
     log(task:, status: "ok", latency_ms: elapsed_ms(started), input_tokens: usage[:input], output_tokens: usage[:output])
 
-    { suggestion: sanitize_output(text, spec.max_output_chars), task: task.to_s, model: }
+    { suggestion: sanitize_output(text, spec.max_output_chars), task: task.to_s, model:,
+      inputTokens: usage[:input], outputTokens: usage[:output] }
+  end
+
+  # Raw single-call helper for services with their own system prompt (AiPortfolioItemClassifier)
+  # rather than one of the fixed AiAssist::Tasks templates. Returns { text:, usage: }.
+  def suggest_raw(model:, system_prompt:, user_prompt:, max_tokens:)
+    status, raw_body = call_anthropic(model:, system_prompt:, user_prompt:, max_tokens:)
+    raise Error.new("The AI assistant is unavailable right now.", code: "AI_UPSTREAM_ERROR") unless status == 200
+
+    text, usage = extract_text_and_usage(raw_body)
+    { text:, usage: }
+  rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error, IOError, SocketError, Errno::ECONNREFUSED
+    raise Error.new("The AI assistant is taking too long. Try again in a moment.", code: "AI_TIMEOUT")
   end
 
   private

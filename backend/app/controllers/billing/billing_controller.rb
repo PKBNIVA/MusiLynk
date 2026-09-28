@@ -1,10 +1,12 @@
 module Billing
   class BillingController < ApplicationController
+    # aiCredits is an extra, informational field only (AiPricing is the source of truth for AI
+    # credits/pricing): the monthly AI credit allowance this plan grants on top of Verse AI Plus.
     PLANS = {
-      "free" => { code: "free", name: "Free", monthly: 0, trialDays: 0, activePosts: 1, seats: 1, shortlist: 20, bookings: 2 },
-      "pro" => { code: "pro", name: "Pro", monthly: 2499, trialDays: 14, activePosts: 10, seats: 2, shortlist: 250, bookings: 20 },
-      "studio" => { code: "studio", name: "Studio", monthly: 5999, trialDays: 14, activePosts: 50, seats: 8, shortlist: 2_000, bookings: 100 },
-      "enterprise" => { code: "enterprise", name: "Enterprise", monthly: nil, trialDays: 0, activePosts: 9999, seats: 999, shortlist: 99999, bookings: 9999 }
+      "free" => { code: "free", name: "Free", monthly: 0, trialDays: 0, activePosts: 1, seats: 1, shortlist: 20, bookings: 2, aiCredits: 20 },
+      "pro" => { code: "pro", name: "Pro", monthly: 2499, trialDays: 14, activePosts: 10, seats: 2, shortlist: 250, bookings: 20, aiCredits: 500 },
+      "studio" => { code: "studio", name: "Studio", monthly: 5999, trialDays: 14, activePosts: 50, seats: 8, shortlist: 2_000, bookings: 100, aiCredits: 2_000 },
+      "enterprise" => { code: "enterprise", name: "Enterprise", monthly: nil, trialDays: 0, activePosts: 9999, seats: 999, shortlist: 99999, bookings: 9999, aiCredits: nil }
     }.freeze
 
     # Razorpay subscription events -> local status (allowed by the subscriptions_status_valid check).

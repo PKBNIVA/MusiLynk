@@ -107,6 +107,9 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/admin/reports", :admin, { keys: %w[reports] }],
     [:patch, "/api/admin/reports/{report}", :admin, { params: { status: "resolved" }, missing: :report, bad: { status: "x" }, bad_status: [400] }],
     [:put, "/api/admin/reports/{report}", :admin, { params: { status: "dismissed" }, missing: :report }],
+    [:get, "/api/admin/ai/costs", :admin, { keys: %w[totalSpendInr freeTierSpendInr byTask byTier topAccounts] }],
+    [:get, "/api/admin/ai/usage?accountType=user&accountId=none", :admin, { keys: %w[balance monthlyAllowance usedThisPeriod resetsAt plan recent] }],
+    [:post, "/api/admin/ai/grants", :admin, { params: ->(w, _a) { { accountType: "user", accountId: w.user(:js).id, credits: 10 } }, bad: { accountType: "user", accountId: "x", credits: 0 }, bad_status: [400] }],
     [:get, "/api/admin/reports/{report}/context", :admin, { missing: :report, keys: %w[report reportedUser history conversation guidelinesUrl] }],
     [:post, "/api/admin/reports/{report}/moderate", :admin, { params: { decision: "dismiss" }, missing: :report, bad: { decision: "ban" }, bad_status: [400], keys: %w[ok report] }],
     [:get, "/api/admin/operations", :admin, { keys: %w[generatedAt requests jobs payments email] }],
@@ -178,6 +181,12 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/ai/autocomplete", :public, { params: { field: "cities", q: "mum" }, bad: { field: "not-a-field", q: "mum" }, bad_status: [422], keys: %w[field query suggestions] }],
     # No ANTHROPIC_API_KEY in this environment, so AI assist answers 503 AI_DISABLED for every allowed role.
     [:post, "/api/ai/suggest", :any, { ok: [503], params: { task: "post_caption", context: { kind: "release" } }, bad: { task: "not_a_real_task", context: {} }, bad_status: [503] }],
+    [:get, "/api/ai/usage", :any, { keys: %w[balance monthlyAllowance usedThisPeriod resetsAt plan recent] }],
+    [:get, "/api/ai/pricing", :public, { keys: %w[freeCreditsPerMonth aiPlus planAllowances topups taskCosts] }],
+    # AI_BILLING_ENABLED is not set in this environment, so every AI purchase route answers 503.
+    [:post, "/api/ai/topups", :any, { ok: [503], params: { pack: "small" }, bad: { pack: "not-a-pack" }, bad_status: [503] }],
+    [:post, "/api/ai/topups/verify", :any, { ok: [503], params: { paymentRecordId: "none", orderId: "none", paymentId: "none", signature: "none" }, bad: {}, bad_status: [503] }],
+    [:post, "/api/ai/plus/subscribe", :any, { ok: [503], bad: {}, bad_status: [503] }],
     [:get, "/api/dashboard", :any, {}],
     [:get, "/api/search?q=mix", :public, { keys: %w[results interpretedAs status] }],
     [:get, "/api/search/status", :public, { keys: %w[provider healthy] }],

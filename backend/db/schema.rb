@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_130600) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_150200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -83,6 +83,68 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_130600) do
     t.index ["name"], name: "index_acts_on_name", opclass: :gin_trgm_ops, using: :gin
     t.index ["owner_id"], name: "index_acts_on_owner_id"
     t.index ["tagline"], name: "index_acts_on_tagline", opclass: :gin_trgm_ops, using: :gin
+  end
+
+  create_table "ai_batch_classifications", id: :string, force: :cascade do |t|
+    t.string "portfolio_item_id", null: false
+    t.string "account_type", null: false
+    t.string "account_id", null: false
+    t.string "status", default: "queued", null: false
+    t.string "batch_id"
+    t.string "custom_id"
+    t.jsonb "input_context", default: {}, null: false
+    t.jsonb "result"
+    t.string "error"
+    t.datetime "submitted_at"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["batch_id"], name: "index_ai_batch_classifications_on_batch_id"
+    t.index ["portfolio_item_id"], name: "index_ai_batch_classifications_on_portfolio_item_id"
+    t.index ["status"], name: "index_ai_batch_classifications_on_status"
+    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying::text, 'submitted'::character varying::text, 'completed'::character varying::text, 'failed'::character varying::text])", name: "ai_batch_classifications_status_valid"
+  end
+
+  create_table "ai_credit_ledgers", id: :string, force: :cascade do |t|
+    t.string "account_type", null: false
+    t.string "account_id", null: false
+    t.integer "delta", null: false
+    t.string "reason", null: false
+    t.string "task"
+    t.string "period"
+    t.decimal "cost_inr", precision: 10, scale: 4, default: "0.0", null: false
+    t.integer "tokens_in"
+    t.integer "tokens_out"
+    t.boolean "cached", default: false, null: false
+    t.boolean "batch", default: false, null: false
+    t.datetime "expires_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_type", "account_id", "created_at"], name: "idx_on_account_type_account_id_created_at_c06154401d"
+    t.index ["account_type", "account_id", "period"], name: "index_ai_credit_ledgers_on_account_and_period"
+    t.index ["account_type", "account_id", "reason", "period"], name: "index_ai_credit_ledgers_unique_allowance_per_period", unique: true, where: "((reason)::text = 'monthly_allowance'::text)"
+    t.check_constraint "account_type::text = ANY (ARRAY['user'::character varying::text, 'organization'::character varying::text])", name: "ai_credit_ledgers_account_type_valid"
+    t.check_constraint "reason::text = ANY (ARRAY['monthly_allowance'::character varying::text, 'usage'::character varying::text, 'refund'::character varying::text, 'topup'::character varying::text, 'admin_grant'::character varying::text, 'expiry'::character varying::text])", name: "ai_credit_ledgers_reason_valid"
+  end
+
+  create_table "ai_topup_payments", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.string "pack", null: false
+    t.integer "amount", null: false
+    t.string "currency", default: "INR", null: false
+    t.string "provider", null: false
+    t.string "status", default: "created", null: false
+    t.string "provider_order_id"
+    t.string "provider_payment_id"
+    t.integer "credits", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider_order_id"], name: "index_ai_topup_payments_on_provider_order_id", unique: true, where: "(provider_order_id IS NOT NULL)"
+    t.index ["provider_payment_id"], name: "index_ai_topup_payments_on_provider_payment_id", unique: true, where: "(provider_payment_id IS NOT NULL)"
+    t.index ["user_id"], name: "index_ai_topup_payments_on_user_id"
+    t.check_constraint "pack::text = ANY (ARRAY['small'::character varying::text, 'large'::character varying::text])", name: "ai_topup_payments_pack_valid"
+    t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying::text, 'razorpay'::character varying::text])", name: "ai_topup_payments_provider_valid"
+    t.check_constraint "status::text = ANY (ARRAY['created'::character varying::text, 'paid'::character varying::text, 'failed'::character varying::text])", name: "ai_topup_payments_status_valid"
   end
 
   create_table "application_events", id: :string, force: :cascade do |t|

@@ -7,11 +7,11 @@ module Admin
     # Decisions against the reported *content* itself: each removes the content from public view
     # and auto-resolves every other open report on the same entity, since there is nothing left
     # for a second reviewer to act on.
-    CONTENT_DECISIONS = %w[unpublish_job hide_review hide_act].freeze
+    CONTENT_DECISIONS = %w[unpublish_job hide_review hide_act hide_portfolio].freeze
     DECISIONS = (USER_DECISIONS + CONTENT_DECISIONS).freeze
-    CONTENT_ENTITY_TYPE = { "unpublish_job" => "job", "hide_review" => "review", "hide_act" => "act" }.freeze
+    CONTENT_ENTITY_TYPE = { "unpublish_job" => "job", "hide_review" => "review", "hide_act" => "act", "hide_portfolio" => "portfolio" }.freeze
     STATUSES = %w[open resolved dismissed].freeze
-    ENTITY_TYPES = %w[user job act review].freeze
+    ENTITY_TYPES = %w[user job act review portfolio resume].freeze
     EXCERPT_SIZE = 20
     HISTORY_WINDOW = 90.days
     NOTE_LIMIT = 1_000
@@ -58,7 +58,7 @@ module Admin
     #   warn         - the reported user gets an in-app notice pointing at the community guidelines
     #   suspend      - the reported user is suspended and signed out everywhere (as from the Users tab)
     #   dismiss      - no action against anyone
-    #   unpublish_job/hide_review/hide_act - the reported content itself is taken down; every other
+    #   unpublish_job/hide_review/hide_act/hide_portfolio - the reported content itself is taken down; every other
     #                  open report on that same entity is auto-resolved with the same decision
     def moderate
       decision = params[:decision]
@@ -127,6 +127,7 @@ module Admin
         when "unpublish_job" then entity.update!(status: "rejected", moderation_note: "Removed after a safety report")
         when "hide_review" then entity.update!(status: "rejected")
         when "hide_act" then entity.update!(status: "hidden")
+        when "hide_portfolio" then entity.update!(status: "hidden")
         end
         audit!("admin.report.#{decision}", report, entityType: expected_type, entityId: entity.id)
 
@@ -147,6 +148,7 @@ module Admin
       when "job" then Job.find_by(id: entity_id)
       when "review" then Review.find_by(id: entity_id)
       when "act" then Act.find_by(id: entity_id)
+      when "portfolio" then Portfolio.find_by(id: entity_id)
       end
     end
 
@@ -156,6 +158,17 @@ module Admin
       when "user" then User.find_by(id: report.entity_id)
       when "job" then Job.find_by(id: report.entity_id)&.employer
       when "act" then Act.find_by(id: report.entity_id)&.owner
+      when "portfolio" then portfolio_owner_user(Portfolio.find_by(id: report.entity_id))
+      when "resume" then Resume.find_by(id: report.entity_id)&.user
+      end
+    end
+
+    # The person answerable for a portfolio: its owner, or the owner of the Page that owns it.
+    def portfolio_owner_user(portfolio)
+      owner = portfolio&.owner
+      case owner
+      when User then owner
+      when Organization, Act then owner.owner
       end
     end
 
@@ -199,6 +212,8 @@ module Admin
       Report.where(entity_type: %w[user User], entity_id: user.id)
         .or(Report.where(entity_type: %w[job Job], entity_id: Job.where(employer_id: user.id).select(:id)))
         .or(Report.where(entity_type: %w[act Act], entity_id: Act.where(owner_id: user.id).select(:id)))
+        .or(Report.where(entity_type: "portfolio", entity_id: Portfolio.where(owner_type: "user", owner_id: user.id).select(:id)))
+        .or(Report.where(entity_type: "resume", entity_id: Resume.where(user_id: user.id).select(:id)))
     end
 
     # A short label per (entity_type, entity_id) so the reports list can show what was reported
@@ -210,6 +225,8 @@ module Admin
       User.where(id: ids_for.call("user")).pluck(:id, :name).each { |id, name| titles[["user", id]] = name }
       Job.where(id: ids_for.call("job")).pluck(:id, :title).each { |id, title| titles[["job", id]] = title }
       Act.where(id: ids_for.call("act")).pluck(:id, :name).each { |id, name| titles[["act", id]] = name }
+      Portfolio.where(id: ids_for.call("portfolio")).pluck(:id, :title).each { |id, title| titles[["portfolio", id]] = title }
+      Resume.where(id: ids_for.call("resume")).pluck(:id, :title).each { |id, title| titles[["resume", id]] = title }
       Review.where(id: ids_for.call("review")).pluck(:id, :title).each { |id, title| titles[["review", id]] = title.presence || "Review" }
       titles
     end

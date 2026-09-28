@@ -1,5 +1,10 @@
 class Job < ApplicationRecord
   belongs_to :employer, class_name: "User"
+  # The Page the job is posted as (see posted_as_page). Two plain associations on the same key
+  # instead of a polymorphic one, so listings can preload them and the stored type stays the
+  # ActorResolver type ("organization"/"act") rather than a class name.
+  belongs_to :posted_as_organization, class_name: "Organization", foreign_key: :posted_as_id, optional: true
+  belongs_to :posted_as_act, class_name: "Act", foreign_key: :posted_as_id, optional: true
   has_many :applications, dependent: :destroy
   has_many :saved_jobs, dependent: :destroy
   has_many :job_alert_deliveries, dependent: :destroy
@@ -10,6 +15,8 @@ class Job < ApplicationRecord
 
   enum :status, { draft: "draft", pending: "pending", published: "published", rejected: "rejected", closed: "closed" }, validate: true
   validates :title, :company, presence: true
+  validates :posted_as_type, inclusion: { in: PageDirectory::TYPES }, allow_nil: true
+  validates :posted_as_id, presence: true, if: :posted_as_type
   validates :title, length: { maximum: 160 }
   # Drafts (and drafts that were closed) may be incomplete; a job is fully validated whenever it
   # is submitted for review or live.
@@ -23,6 +30,9 @@ class Job < ApplicationRecord
 
   # Adds an `applications_total` column computed by a correlated COUNT (served by the
   # applications(job_id, candidate_id) index) so listings never load application rows.
+  scope :with_posted_as, -> { preload(:posted_as_organization, :posted_as_act) }
+  scope :posted_as, ->(type, id) { where(posted_as_type: type, posted_as_id: id) }
+
   scope :with_applications_count, -> {
     select(arel_table[Arel.star], "(SELECT COUNT(*) FROM applications WHERE applications.job_id = jobs.id) AS applications_total")
   }
@@ -38,7 +48,7 @@ class Job < ApplicationRecord
     id employer_id title company location kind genre salary description requirements skills languages
     screening_questions experience_level status opportunity_kind function_area workplace currency
     compensation_period duration compensation_min compensation_max slots featured paid portfolio_required
-    application_deadline start_date published_at created_at updated_at
+    application_deadline start_date published_at created_at updated_at posted_as_type posted_as_id
   ].freeze
 
   def visible_in_full_to?(viewer) = viewer.present? && (viewer.admin? || viewer.id == employer_id)
@@ -54,12 +64,37 @@ class Job < ApplicationRecord
       "employerVerified" => employer.profile&.verified || false,
       "demo" => SyntheticQa::Demo.user?(employer),
       "applicationsCount" => applications_count,
+      "postedAs" => posted_as_json(viewer),
       "createdAt" => created_at,
       "updatedAt" => updated_at
     )
   end
 
   def listed? = pending? || published?
+
+  # The organization or act this job is posted as, or nil for a personal post (or a Page that
+  # no longer exists).
+  def posted_as_page
+    case posted_as_type
+    when "organization" then posted_as_organization
+    when "act" then posted_as_act
+    end
+  end
+
+  # Sets (or, with a personal actor, clears) the Page this job is posted as.
+  def posted_as_actor=(actor)
+    page = actor.user? ? nil : actor.record
+    self.posted_as_type = page && actor.type
+    self.posted_as_id = page&.id
+  end
+
+  # {type, id, name} of the Page, or nil. Others only see a Page that is publicly visible; the
+  # owner and admins always see what the job is attached to.
+  def posted_as_json(viewer = nil)
+    page = posted_as_page
+    return nil unless page && (visible_in_full_to?(viewer) || PageDirectory.public?(page))
+    PageDirectory.ref(posted_as_type, page)
+  end
 
   private
 

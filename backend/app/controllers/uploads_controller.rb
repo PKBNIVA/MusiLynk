@@ -60,7 +60,7 @@ class UploadsController < ApplicationController
   # Discards an upload the user no longer needs (e.g. replaced before saving).
   def destroy
     upload = Upload.where(user: current_user).find(params[:id])
-    return render_error("This file is used by a work sample. Delete the work sample instead.", :conflict, "UPLOAD_IN_USE") if upload.referenced?
+    return render_error("This file is in use by a work sample, a resume or an application you sent.", :conflict, "UPLOAD_IN_USE") if upload.referenced?
     upload.purge!
     render json: { ok: true }
   end

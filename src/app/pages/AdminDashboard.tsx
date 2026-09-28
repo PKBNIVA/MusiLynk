@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ShieldCheck,
   Users,
@@ -6,16 +6,10 @@ import {
   FileText,
   Activity,
   LogOut,
-  Check,
-  X,
-  Ban,
-  Undo2,
-  Flag,
-  UserCheck,
   RefreshCw,
   AlertTriangle,
-  Gift,
-  Search,
+  UserCheck,
+  Flag,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -23,130 +17,37 @@ import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { usePageMeta } from '../components/PageMeta';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Badge } from '../components/ui/badge';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog';
-import DemoDataPanel from '../components/admin/DemoDataPanel';
-import { SignInDoctor } from '../components/admin/SignInDoctor';
 import { ReportReview } from '../components/admin/ReportReview';
-import OperationsPanel from '../components/admin/OperationsPanel';
 import { errorMessage } from '../lib/errors';
-import type {
-  AdminBooking,
-  AdminReport,
-  AdminStats,
-  AdminSubscription,
-  AdminUser,
-  AdminVerification,
-  AuditLogEntry,
-  BillingAttempt,
-  BillingEventSummary,
-  Job,
-  Review,
-} from '../lib/apiTypes';
-import type { LucideIcon } from 'lucide-react';
+import {
+  type Data,
+  type Source,
+  type Payload,
+  type Confirm,
+  type Grant,
+  type AdminActions,
+  SOURCES,
+  readSource,
+  EMPTY,
+  Stat,
+  ConfirmDialog,
+  GrantPlanDialog,
+} from './admin/shared';
 
-// Each panel loads independently: one failing endpoint must not blank the whole console.
-type Data = {
-  stats: Partial<AdminStats>;
-  users: AdminUser[];
-  jobs: Job[];
-  reviews: Review[];
-  verifications: AdminVerification[];
-  reports: AdminReport[];
-  logs: AuditLogEntry[];
-  subscriptions: AdminSubscription[];
-  bookings: AdminBooking[];
-  attempts: BillingAttempt[];
-  billingEvents: BillingEventSummary[];
-};
-type Source = keyof Data;
-// What the admin list endpoints answer with; each source reads its own key.
-type Payload = Partial<{
-  stats: AdminStats;
-  users: AdminUser[];
-  jobs: Job[];
-  reviews: Review[];
-  requests: AdminVerification[];
-  reports: AdminReport[];
-  logs: AuditLogEntry[];
-  subscriptions: AdminSubscription[];
-  bookings: AdminBooking[];
-  attempts: BillingAttempt[];
-  events: BillingEventSummary[];
-}>;
-const SOURCES: { [K in Source]: readonly [path: string, read: (d: Payload | null) => Data[K]] } = {
-  stats: ['/admin/stats', (d) => d?.stats || {}],
-  users: ['/admin/users', (d) => d?.users || []],
-  jobs: ['/admin/jobs', (d) => d?.jobs || []],
-  reviews: ['/admin/reviews', (d) => d?.reviews || []],
-  verifications: ['/admin/verifications', (d) => d?.requests || []],
-  reports: ['/admin/reports', (d) => d?.reports || []],
-  logs: ['/admin/audit', (d) => d?.logs || []],
-  subscriptions: ['/admin/subscriptions', (d) => d?.subscriptions || []],
-  bookings: ['/admin/bookings', (d) => d?.bookings || []],
-  attempts: ['/admin/billing-attempts', (d) => d?.attempts || []],
-  billingEvents: ['/admin/billing-events', (d) => d?.events || []],
-};
-const readSource = <K extends Source>(next: Partial<Data>, k: K, d: Payload | null) => {
-  next[k] = SOURCES[k][1](d);
-};
-const EMPTY: Data = {
-  stats: {},
-  users: [],
-  jobs: [],
-  reviews: [],
-  verifications: [],
-  reports: [],
-  logs: [],
-  subscriptions: [],
-  bookings: [],
-  attempts: [],
-  billingEvents: [],
-};
-const GRANTABLE_PLANS = [
-  ['pro', 'Pro'],
-  ['studio', 'Studio'],
-  ['enterprise', 'Enterprise'],
-] as const;
-const RECONCILABLE = new Set(['pending', 'ambiguous', 'failed']);
-const USER_PAGE = 150;
-
-type Confirm = {
-  title: string;
-  description: string;
-  confirmLabel: string;
-  reasonLabel?: string;
-  reasonRequired?: boolean;
-  destructive?: boolean;
-  run: (reason: string) => Promise<void>;
-};
-type Grant = { id: string; name: string; email: string };
-
-const date = (value: string | null | undefined, withTime = false) => {
-  if (!value) return '—';
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '—' : withTime ? d.toLocaleString() : d.toLocaleDateString();
-};
-const entityLink = (type: string, id: string) =>
-  type === 'Job' || type === 'job'
-    ? `/opportunities/${id}`
-    : type === 'User' || type === 'user'
-      ? `/professionals/${id}`
-      : type === 'Act' || type === 'act'
-        ? `/acts/${id}`
-        : null;
+// Every tab is its own file under pages/admin/ so this file stays a thin shell:
+// data loading, the shared moderation-action bag, and the tab list. Each tab
+// is lazy-loaded so opening the console never pulls in every tab's code.
+const QueueTab = lazy(() => import('./admin/QueueTab'));
+const VerificationTab = lazy(() => import('./admin/VerificationTab'));
+const ReportsTab = lazy(() => import('./admin/ReportsTab'));
+const UsersTab = lazy(() => import('./admin/UsersTab'));
+const ReviewsTab = lazy(() => import('./admin/ReviewsTab'));
+const SignInDoctorTab = lazy(() => import('./admin/SignInDoctorTab'));
+const CommerceTab = lazy(() => import('./admin/CommerceTab'));
+const OperationsTab = lazy(() => import('./admin/OperationsTab'));
+const DemoDataTab = lazy(() => import('./admin/DemoDataTab'));
+const AuditTab = lazy(() => import('./admin/AuditTab'));
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth(),
@@ -158,7 +59,6 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [grant, setGrant] = useState<Grant | null>(null);
-  const [userQuery, setUserQuery] = useState('');
   const [reviewing, setReviewing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -197,6 +97,7 @@ export default function AdminDashboard() {
   };
   const patch = (key: string, path: string, body: Record<string, unknown>, message: string) =>
     act(key, () => apiPatch(path, body), message).catch(() => {});
+  const actions: AdminActions = { busy, act, patch, setConfirm, setGrant };
 
   const {
     stats,
@@ -214,25 +115,7 @@ export default function AdminDashboard() {
   const pendingJobs = useMemo(() => jobs.filter((j) => j.status === 'pending'), [jobs]);
   const pendingVerifications = useMemo(() => verifications.filter((v) => v.status === 'pending'), [verifications]);
   const openReports = useMemo(() => reports.filter((r) => r.status === 'open'), [reports]);
-  const filteredUsers = useMemo(() => {
-    const q = userQuery.trim().toLowerCase();
-    return q ? users.filter((u) => `${u.name} ${u.email} ${u.role} ${u.status}`.toLowerCase().includes(q)) : users;
-  }, [users, userQuery]);
   const failedCount = Object.keys(errors).length;
-
-  const Stat = ({ label, value, icon: I }: { label: string; value?: number; icon: LucideIcon }) => (
-    <Card className="bg-white/[.055] border-white/10">
-      <CardContent className="p-4 md:p-5 flex items-center gap-4">
-        <div className="p-3 rounded-xl bg-violet-500/10">
-          <I aria-hidden="true" className="text-violet-300" />
-        </div>
-        <div>
-          <div className="text-2xl font-bold text-white">{errors.stats ? '—' : (value ?? 0)}</div>
-          <div className="text-sm text-slate-400">{label}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
   const retry = () => void load();
 
   return (
@@ -311,13 +194,13 @@ export default function AdminDashboard() {
           </div>
         )}
         <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 md:gap-4 mb-8">
-          <Stat label="Users" value={stats.users} icon={Users} />
-          <Stat label="Live opportunities" value={stats.liveJobs} icon={Briefcase} />
-          <Stat label="Applications" value={stats.applications} icon={FileText} />
-          <Stat label="Hires" value={stats.hires} icon={UserCheck} />
-          <Stat label="Open reports" value={stats.openReports} icon={Flag} />
-          <Stat label="Bookings" value={stats.bookings} icon={Activity} />
-          <Stat label="Paid plans" value={stats.activeSubscriptions} icon={ShieldCheck} />
+          <Stat label="Users" value={stats.users} icon={Users} hasError={!!errors.stats} />
+          <Stat label="Live opportunities" value={stats.liveJobs} icon={Briefcase} hasError={!!errors.stats} />
+          <Stat label="Applications" value={stats.applications} icon={FileText} hasError={!!errors.stats} />
+          <Stat label="Hires" value={stats.hires} icon={UserCheck} hasError={!!errors.stats} />
+          <Stat label="Open reports" value={stats.openReports} icon={Flag} hasError={!!errors.stats} />
+          <Stat label="Bookings" value={stats.bookings} icon={Activity} hasError={!!errors.stats} />
+          <Stat label="Paid plans" value={stats.activeSubscriptions} icon={ShieldCheck} hasError={!!errors.stats} />
         </div>
         <Tabs defaultValue="queue">
           <TabsList className="bg-white/5 border border-white/10 flex flex-wrap justify-start h-auto w-full md:w-auto gap-1 p-1">
@@ -354,582 +237,92 @@ export default function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="queue" className="space-y-3 mt-5">
-            <Panel error={errors.jobs} onRetry={retry} loading={loading}>
-              {pendingJobs.length === 0 && <Empty text="No opportunities waiting for review." />}
-              {pendingJobs.map((j) => (
-                <Card key={j.id} className="bg-white/[.05] border-white/10">
-                  <CardContent className="p-5">
-                    <div className="flex flex-col xl:flex-row gap-5 justify-between">
-                      <div className="max-w-4xl min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary">{j.opportunity_kind || 'job'}</Badge>
-                          <h2 className="font-semibold text-lg break-words">{j.title}</h2>
-                          {j.employerVerified && (
-                            <Badge className="bg-emerald-500/15 text-emerald-300">Verified employer</Badge>
-                          )}
-                        </div>
-                        <div className="text-sm text-slate-400 mt-2">
-                          {[j.company, j.location, j.workplace, j.type].filter(Boolean).join(' · ')}
-                        </div>
-                        <p className="text-sm text-slate-300 mt-3 line-clamp-3">{j.description}</p>
-                        <div className="mt-3 text-sm">
-                          <span className="text-slate-400">Compensation:</span>{' '}
-                          {j.salary ||
-                            `${j.currency || 'INR'} ${j.compensation_min || '?'}–${j.compensation_max || '?'}`}
-                        </div>
-                        {j.moderation_note && (
-                          <div className="mt-3 rounded-lg bg-amber-500/10 border border-amber-400/20 p-3 text-sm text-amber-200">
-                            Automated review hints: {j.moderation_note}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex xl:flex-col gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          disabled={!!busy}
-                          onClick={() =>
-                            patch(
-                              `job:${j.id}`,
-                              `/admin/jobs/${j.id}`,
-                              { status: 'published' },
-                              'Opportunity published',
-                            )
-                          }
-                        >
-                          <Check aria-hidden="true" size={15} className="mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={!!busy}
-                          onClick={() =>
-                            setConfirm({
-                              title: `Reject “${j.title}”?`,
-                              description:
-                                'The employer is notified and sees your reason. Be specific about what needs to change.',
-                              confirmLabel: 'Reject opportunity',
-                              reasonLabel: 'Reason / changes needed',
-                              reasonRequired: true,
-                              destructive: true,
-                              run: (note) =>
-                                act(
-                                  `job:${j.id}`,
-                                  () => apiPatch(`/admin/jobs/${j.id}`, { status: 'rejected', note }),
-                                  'Opportunity rejected',
-                                ),
-                            })
-                          }
-                        >
-                          <X aria-hidden="true" size={15} className="mr-1" />
-                          Reject
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </Panel>
+            <Suspense fallback={null}>
+              <QueueTab jobs={pendingJobs} error={errors.jobs} loading={loading} retry={retry} actions={actions} />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="verification" className="space-y-3 mt-5">
-            <Panel error={errors.verifications} onRetry={retry} loading={loading}>
-              {pendingVerifications.length === 0 && <Empty text="No verification requests waiting." />}
-              {pendingVerifications.map((v) => (
-                <Card key={v.id} className="bg-white/[.05] border-white/10">
-                  <CardContent className="p-5 flex flex-col md:flex-row justify-between gap-4">
-                    <div className="min-w-0">
-                      <h2 className="font-semibold">{v.companyName || v.name}</h2>
-                      <div className="text-sm text-slate-400 break-words">
-                        {v.email} · {v.role} · {v.kind}
-                      </div>
-                      {v.note && <p className="text-sm text-slate-300 mt-3">{v.note}</p>}
-                      {v.evidence_url && (
-                        <a
-                          className="text-sm text-sky-300 mt-2 inline-block"
-                          href={v.evidence_url}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                        >
-                          Open evidence ↗<span className="sr-only"> (opens in a new tab)</span>
-                        </a>
-                      )}
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        disabled={!!busy}
-                        onClick={() =>
-                          patch(
-                            `ver:${v.id}`,
-                            `/admin/verifications/${v.id}`,
-                            { status: 'approved' },
-                            'Verification approved',
-                          )
-                        }
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!!busy}
-                        onClick={() =>
-                          patch(
-                            `ver:${v.id}`,
-                            `/admin/verifications/${v.id}`,
-                            { status: 'rejected' },
-                            'Verification rejected',
-                          )
-                        }
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </Panel>
+            <Suspense fallback={null}>
+              <VerificationTab
+                verifications={pendingVerifications}
+                error={errors.verifications}
+                loading={loading}
+                retry={retry}
+                actions={actions}
+              />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-3 mt-5">
-            <Panel error={errors.reports} onRetry={retry} loading={loading}>
-              {!errors.stats && (
-                <p className="text-sm text-slate-400 flex items-center gap-2" data-testid="flagged-messages">
-                  <AlertTriangle
-                    size={15}
-                    aria-hidden="true"
-                    className={stats.flaggedMessages ? 'text-amber-300' : 'text-slate-500'}
-                  />
-                  {stats.flaggedMessages ?? 0} message{stats.flaggedMessages === 1 ? '' : 's'} flagged for scam patterns
-                  in the last 30 days. Recipients see a safety notice; open a report to see flags in context.
-                </p>
-              )}
-              {openReports.length === 0 && <Empty text="No open safety reports." />}
-              {openReports.map((r) => {
-                const href = entityLink(r.entity_type, r.entity_id);
-                return (
-                  <Card key={r.id} className="bg-white/[.05] border-white/10">
-                    <CardContent className="p-5 flex flex-col md:flex-row justify-between gap-4">
-                      <div className="min-w-0">
-                        <h2 className="font-semibold break-all">
-                          {r.entity_type} ·{' '}
-                          {href ? (
-                            <Link className="text-sky-300 underline underline-offset-4" to={href} target="_blank">
-                              {r.entity_id}
-                            </Link>
-                          ) : (
-                            r.entity_id
-                          )}
-                        </h2>
-                        <div className="text-sm text-rose-300 mt-1">{r.reason}</div>
-                        {r.details && <p className="text-sm text-slate-300 mt-2">{r.details}</p>}
-                        <p className="text-xs text-slate-400 mt-2">
-                          Reported by {r.reporterName || 'Unknown'} · {date(r.created_at, true)}
-                        </p>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          disabled={!!busy}
-                          onClick={() => setReviewing(r.id)}
-                          aria-label={`Review report: ${r.reason}`}
-                        >
-                          Review
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </Panel>
+            <Suspense fallback={null}>
+              <ReportsTab
+                reports={openReports}
+                error={errors.reports}
+                loading={loading}
+                retry={retry}
+                flaggedMessages={stats.flaggedMessages ?? 0}
+                flaggedMessagesAvailable={!errors.stats}
+                actions={actions}
+                onReview={setReviewing}
+              />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="users" className="space-y-3 mt-5">
-            <Panel error={errors.users} onRetry={retry} loading={loading}>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="relative flex-1 max-w-md">
-                  <Label htmlFor="admin-user-filter" className="sr-only">
-                    Filter users
-                  </Label>
-                  <Search
-                    aria-hidden="true"
-                    size={15}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                  <Input
-                    id="admin-user-filter"
-                    value={userQuery}
-                    onChange={(e) => setUserQuery(e.target.value)}
-                    placeholder="Filter by name, email, role or status"
-                    className="pl-9 bg-white/5 border-white/15"
-                  />
-                </div>
-                <p className="text-sm text-slate-400" aria-live="polite">
-                  {filteredUsers.length} of {users.length} users
-                  {filteredUsers.length > USER_PAGE ? ` · showing first ${USER_PAGE}` : ''}
-                </p>
-              </div>
-              {filteredUsers.length === 0 && (
-                <Empty text={users.length ? 'No users match this filter.' : 'No users yet.'} />
-              )}
-              {filteredUsers.slice(0, USER_PAGE).map((u) => (
-                <Card key={u.id} className="bg-white/[.05] border-white/10">
-                  <CardContent className="p-4 md:p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h2 className="font-semibold break-words">{u.name}</h2>
-                        {u.verified && <ShieldCheck size={15} className="text-emerald-300" aria-label="Verified" />}
-                      </div>
-                      <div className="text-sm text-slate-400 break-all">
-                        {u.email} · {u.role} · joined {date(u.createdAt)}
-                      </div>
-                      <Badge className="mt-2">{u.status}</Badge>
-                    </div>
-                    {u.role !== 'admin' && (
-                      <div className="flex flex-wrap gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={!!busy}
-                          onClick={() => setGrant({ id: u.id, name: u.name, email: u.email })}
-                        >
-                          <Gift aria-hidden="true" size={15} className="mr-1" />
-                          Grant plan
-                        </Button>
-                        {u.status === 'active' ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!!busy}
-                            onClick={() =>
-                              setConfirm({
-                                title: `Suspend ${u.name}?`,
-                                description: `${u.email} will be signed out everywhere and cannot sign in until restored.`,
-                                confirmLabel: 'Suspend user',
-                                destructive: true,
-                                run: () =>
-                                  act(
-                                    `user:${u.id}`,
-                                    () => apiPatch(`/admin/users/${u.id}`, { status: 'suspended' }),
-                                    'User suspended',
-                                  ),
-                              })
-                            }
-                          >
-                            <Ban aria-hidden="true" size={15} className="mr-1" />
-                            Suspend
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            disabled={!!busy}
-                            onClick={() =>
-                              patch(`user:${u.id}`, `/admin/users/${u.id}`, { status: 'active' }, 'User restored')
-                            }
-                          >
-                            <Undo2 aria-hidden="true" size={15} className="mr-1" />
-                            Restore
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </Panel>
+            <Suspense fallback={null}>
+              <UsersTab users={users} error={errors.users} loading={loading} retry={retry} actions={actions} />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="reviews" className="space-y-3 mt-5">
-            <Panel error={errors.reviews} onRetry={retry} loading={loading}>
-              {reviews.length === 0 && <Empty text="No reviews yet." />}
-              {reviews.map((r) => (
-                <Card key={r.id} className="bg-white/[.05] border-white/10">
-                  <CardContent className="p-5">
-                    <div className="flex flex-col sm:flex-row justify-between gap-4">
-                      <div className="min-w-0">
-                        <h2 className="font-semibold">
-                          {r.authorName} → {r.employerName} · {r.rating}/5
-                        </h2>
-                        <p className="text-sm text-slate-300 mt-2 break-words">{r.body}</p>
-                        <Badge className="mt-2">{r.status}</Badge>
-                      </div>
-                      {r.status === 'pending' && (
-                        <div className="flex gap-2 shrink-0">
-                          <Button
-                            size="sm"
-                            disabled={!!busy}
-                            onClick={() =>
-                              patch(
-                                `rev:${r.id}`,
-                                `/admin/reviews/${r.id}`,
-                                { status: 'published' },
-                                'Review published',
-                              )
-                            }
-                          >
-                            Publish
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!!busy}
-                            onClick={() =>
-                              patch(`rev:${r.id}`, `/admin/reviews/${r.id}`, { status: 'rejected' }, 'Review rejected')
-                            }
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </Panel>
+            <Suspense fallback={null}>
+              <ReviewsTab reviews={reviews} error={errors.reviews} loading={loading} retry={retry} actions={actions} />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="signin" className="mt-5">
-            <SignInDoctor />
+            <Suspense fallback={null}>
+              <SignInDoctorTab />
+            </Suspense>
           </TabsContent>
 
-          <TabsContent value="commerce" className="mt-5 grid xl:grid-cols-2 gap-5">
-            <Card className="bg-white/[.05] border-white/10 xl:col-span-2">
-              <CardHeader>
-                <CardTitle>
-                  <h2>Billing attempts</h2>
-                </CardTitle>
-                <p className="text-sm text-slate-400">
-                  Provider calls that did not finish cleanly. Reconcile asks Razorpay for the real state and attaches
-                  it.
-                </p>
-              </CardHeader>
-              <CardContent
-                className="space-y-3 max-h-[520px] overflow-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
-                tabIndex={0}
-                role="region"
-                aria-label="Billing attempts"
-              >
-                <Panel error={errors.attempts} onRetry={retry} loading={loading}>
-                  {attempts.map((a) => {
-                    const canReconcile = RECONCILABLE.has(a.state) && !!a.provider_resource_id;
-                    return (
-                      <div
-                        key={a.id}
-                        className="border-b border-white/10 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-3"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <b>{a.operation}</b>
-                            <Badge
-                              className={
-                                a.state === 'succeeded'
-                                  ? 'bg-emerald-500/15 text-emerald-300'
-                                  : a.state === 'failed'
-                                    ? 'bg-rose-500/15 text-rose-300'
-                                    : 'bg-amber-500/15 text-amber-200'
-                              }
-                            >
-                              {a.state}
-                            </Badge>
-                          </div>
-                          <div className="text-xs text-slate-400 mt-1 break-all">
-                            {a.email} · {a.provider} · {a.provider_resource_id || 'no provider id'} ·{' '}
-                            {date(a.created_at, true)}
-                          </div>
-                          {a.error_message && (
-                            <div className="text-xs text-rose-300 mt-1">
-                              {a.error_code ? `${a.error_code}: ` : ''}
-                              {a.error_message}
-                            </div>
-                          )}
-                        </div>
-                        {RECONCILABLE.has(a.state) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!!busy || !canReconcile}
-                            title={
-                              canReconcile ? undefined : 'No provider id was recorded, so there is nothing to look up.'
-                            }
-                            onClick={() =>
-                              act(
-                                `bill:${a.id}`,
-                                () => apiPost(`/admin/billing-attempts/${a.id}/reconcile`),
-                                'Billing attempt reconciled',
-                              ).catch(() => {})
-                            }
-                          >
-                            <RefreshCw aria-hidden="true" size={14} className="mr-1" />
-                            {busy === `bill:${a.id}` ? 'Reconciling…' : 'Reconcile'}
-                          </Button>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {!attempts.length && <Empty text="No billing attempts recorded." />}
-                </Panel>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/[.05] border-white/10 xl:col-span-2">
-              <CardHeader>
-                <CardTitle>
-                  <h2>Billing events</h2>
-                </CardTitle>
-                <p className="text-sm text-slate-400">
-                  Razorpay webhooks as they were processed (read-only, newest first).
-                </p>
-              </CardHeader>
-              <CardContent
-                className="space-y-3 max-h-[520px] overflow-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
-                tabIndex={0}
-                role="region"
-                aria-label="Billing events"
-              >
-                <Panel error={errors.billingEvents} onRetry={retry} loading={loading}>
-                  {billingEvents.map((e) => (
-                    <div
-                      key={e.id}
-                      className="border-b border-white/10 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-2"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <b className="break-all">{e.eventType}</b>
-                          <Badge
-                            className={
-                              /fail|error|reject/i.test(e.processingResult || '')
-                                ? 'bg-rose-500/15 text-rose-300'
-                                : 'bg-white/10 text-slate-200'
-                            }
-                          >
-                            {e.processingResult || 'received'}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-slate-400 mt-1 break-all">
-                          {[e.email, e.subscriptionId, e.paymentId, e.orderId].filter(Boolean).join(' · ') ||
-                            e.providerEventId}
-                        </div>
-                      </div>
-                      <div className="text-xs text-slate-400 shrink-0">
-                        {e.amount != null
-                          ? `${(e.currency || 'INR').toUpperCase()} ${(Number(e.amount) / 100).toLocaleString()} · `
-                          : ''}
-                        {date(e.processedAt || e.createdAt, true)}
-                      </div>
-                    </div>
-                  ))}
-                  {!billingEvents.length && <Empty text="No billing events received." />}
-                </Panel>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/[.05] border-white/10">
-              <CardHeader>
-                <CardTitle>
-                  <h2>Subscriptions</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent
-                className="space-y-3 max-h-[650px] overflow-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
-                tabIndex={0}
-                role="region"
-                aria-label="Subscriptions"
-              >
-                <Panel error={errors.subscriptions} onRetry={retry} loading={loading}>
-                  {subscriptions.map((s) => (
-                    <div key={s.id} className="border-b border-white/10 pb-3">
-                      <div className="flex justify-between gap-3">
-                        <div className="min-w-0">
-                          <b>{s.name}</b>
-                          <div className="text-xs text-slate-400 break-all">{s.email}</div>
-                        </div>
-                        <Badge>
-                          {s.plan_code} · {s.status}
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-slate-400 mt-2">
-                        {s.provider} · created {date(s.created_at)}
-                        {s.current_period_end ? ` · until ${date(s.current_period_end)}` : ''}
-                      </div>
-                    </div>
-                  ))}
-                  {!subscriptions.length && <Empty text="No paid subscription history." />}
-                </Panel>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/[.05] border-white/10">
-              <CardHeader>
-                <CardTitle>
-                  <h2>Booking operations</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent
-                className="space-y-3 max-h-[650px] overflow-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
-                tabIndex={0}
-                role="region"
-                aria-label="Booking operations"
-              >
-                <Panel error={errors.bookings} onRetry={retry} loading={loading}>
-                  {bookings.map((b) => (
-                    <div key={b.id} className="border-b border-white/10 pb-3">
-                      <div className="flex justify-between gap-3">
-                        <div className="min-w-0">
-                          <b>{b.actName}</b>
-                          <div className="text-xs text-slate-400">
-                            {b.requesterName} → {b.actOwner}
-                          </div>
-                        </div>
-                        <Badge>{b.status}</Badge>
-                      </div>
-                      <div className="text-xs text-slate-400 mt-2">
-                        {[b.event_type, b.event_date, b.city].filter(Boolean).join(' · ')}
-                        {Number(b.paidAmount) > 0
-                          ? ` · paid ${b.currency || 'INR'} ${Number(b.paidAmount).toLocaleString()}`
-                          : ''}
-                      </div>
-                    </div>
-                  ))}
-                  {!bookings.length && <Empty text="No bookings yet." />}
-                </Panel>
-              </CardContent>
-            </Card>
+          <TabsContent value="commerce" className="mt-5">
+            <Suspense fallback={null}>
+              <CommerceTab
+                attempts={attempts}
+                billingEvents={billingEvents}
+                subscriptions={subscriptions}
+                bookings={bookings}
+                errors={{
+                  attempts: errors.attempts,
+                  billingEvents: errors.billingEvents,
+                  subscriptions: errors.subscriptions,
+                  bookings: errors.bookings,
+                }}
+                loading={loading}
+                retry={retry}
+                actions={actions}
+              />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="operations" className="mt-5">
-            <OperationsPanel />
+            <Suspense fallback={null}>
+              <OperationsTab />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="demo" className="mt-5">
-            <DemoDataPanel />
+            <Suspense fallback={null}>
+              <DemoDataTab />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="audit" className="mt-5">
-            <Card className="bg-white/[.05] border-white/10">
-              <CardHeader>
-                <CardTitle>
-                  <h2>Audit trail</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent
-                className="space-y-3 max-h-[700px] overflow-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
-                tabIndex={0}
-                role="region"
-                aria-label="Audit trail"
-              >
-                <Panel error={errors.logs} onRetry={retry} loading={loading}>
-                  {logs.map((l) => (
-                    <div key={l.id} className="border-b border-white/10 pb-3">
-                      <div className="text-sm">
-                        <b>{l.actorName || 'System'}</b> · {l.action}
-                      </div>
-                      <div className="text-xs text-slate-400 mt-1 break-all">
-                        {l.entity_type} {l.entity_id} · {date(l.created_at, true)}
-                      </div>
-                    </div>
-                  ))}
-                  {!logs.length && <Empty text="No audit events yet." />}
-                </Panel>
-              </CardContent>
-            </Card>
+            <Suspense fallback={null}>
+              <AuditTab logs={logs} error={errors.logs} loading={loading} retry={retry} />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </main>
@@ -955,208 +348,5 @@ export default function AdminDashboard() {
         }
       />
     </div>
-  );
-}
-
-function ConfirmDialog({ value, onClose }: { value: Confirm | null; onClose: () => void }) {
-  const [reason, setReason] = useState(''),
-    [pending, setPending] = useState(false);
-  useEffect(() => {
-    setReason('');
-    setPending(false);
-  }, [value]);
-  const trimmed = reason.trim(),
-    invalid = !!value?.reasonRequired && trimmed.length < 5;
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!value || invalid || pending) return;
-    setPending(true);
-    try {
-      await value.run(trimmed);
-      onClose();
-    } catch {
-      setPending(false);
-    }
-  };
-  return (
-    <Dialog
-      open={!!value}
-      onOpenChange={(open) => {
-        if (!open && !pending) onClose();
-      }}
-    >
-      <DialogContent className="bg-slate-950 border-white/15 text-white">
-        <form onSubmit={submit} className="grid gap-4">
-          <DialogHeader>
-            <DialogTitle>{value?.title}</DialogTitle>
-            <DialogDescription className="text-slate-400">{value?.description}</DialogDescription>
-          </DialogHeader>
-          {value?.reasonLabel && (
-            <div className="grid gap-2">
-              <Label htmlFor="admin-confirm-reason">
-                {value.reasonLabel}
-                {value.reasonRequired && <span aria-hidden="true"> *</span>}
-              </Label>
-              <Textarea
-                id="admin-confirm-reason"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                required={value.reasonRequired}
-                minLength={value.reasonRequired ? 5 : undefined}
-                maxLength={2000}
-                aria-describedby="admin-confirm-reason-hint"
-                className="bg-white/5 border-white/15 min-h-28"
-                autoFocus
-              />
-              <p id="admin-confirm-reason-hint" className="text-xs text-slate-400">
-                {value.reasonRequired ? 'At least 5 characters. ' : ''}Shown to the account owner.
-              </p>
-            </div>
-          )}
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant={value?.destructive ? 'destructive' : 'default'}
-              disabled={invalid || pending}
-              aria-busy={pending}
-            >
-              {pending ? 'Working…' : value?.confirmLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function GrantPlanDialog({
-  value,
-  busy,
-  onClose,
-  onGrant,
-}: {
-  value: Grant | null;
-  busy: boolean;
-  onClose: () => void;
-  onGrant: (g: Grant, planCode: string, days: number) => Promise<void>;
-}) {
-  const [plan, setPlan] = useState('pro'),
-    [days, setDays] = useState('30'),
-    [pending, setPending] = useState(false);
-  useEffect(() => {
-    setPlan('pro');
-    setDays('30');
-    setPending(false);
-  }, [value]);
-  const n = Number(days),
-    valid = /^\d+$/.test(days) && n >= 1 && n <= 366;
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!value || !valid || pending || busy) return;
-    setPending(true);
-    try {
-      await onGrant(value, plan, n);
-      onClose();
-    } catch {
-      setPending(false);
-    }
-  };
-  return (
-    <Dialog
-      open={!!value}
-      onOpenChange={(open) => {
-        if (!open && !pending) onClose();
-      }}
-    >
-      <DialogContent className="bg-slate-950 border-white/15 text-white">
-        <form onSubmit={submit} className="grid gap-4">
-          <DialogHeader>
-            <DialogTitle>Grant a plan to {value?.name}</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              {value?.email}. Any current subscription is cancelled and replaced by an internal, unpaid plan.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="admin-grant-plan">Plan</Label>
-              <select
-                id="admin-grant-plan"
-                value={plan}
-                onChange={(e) => setPlan(e.target.value)}
-                className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-              >
-                {GRANTABLE_PLANS.map(([code, name]) => (
-                  <option key={code} value={code}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="admin-grant-days">Days</Label>
-              <Input
-                id="admin-grant-days"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={366}
-                value={days}
-                onChange={(e) => setDays(e.target.value)}
-                aria-invalid={!valid}
-                aria-describedby="admin-grant-days-hint"
-                className="bg-white/5 border-white/15"
-              />
-              <p id="admin-grant-days-hint" className={`text-xs ${valid ? 'text-slate-400' : 'text-rose-300'}`}>
-                Whole days, 1–366.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!valid || pending || busy} aria-busy={pending}>
-              {pending ? 'Granting…' : 'Grant plan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Panel({
-  error,
-  onRetry,
-  loading,
-  children,
-}: {
-  error?: string;
-  onRetry: () => void;
-  loading: boolean;
-  children: React.ReactNode;
-}) {
-  return error ? <PanelError message={error} onRetry={onRetry} loading={loading} /> : <>{children}</>;
-}
-function PanelError({ message, onRetry, loading }: { message: string; onRetry: () => void; loading: boolean }) {
-  return (
-    <Card className="bg-rose-500/[.06] border-rose-400/20">
-      <CardContent className="p-6 text-center" role="alert">
-        <p className="text-rose-200">This panel could not load: {message}</p>
-        <Button size="sm" variant="outline" className="mt-4" disabled={loading} onClick={onRetry}>
-          Try again
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-function Empty({ text }: { text: string }) {
-  return (
-    <Card className="bg-white/[.03] border-white/10">
-      <CardContent className="p-10 text-center text-slate-400">{text}</CardContent>
-    </Card>
   );
 }

@@ -774,7 +774,7 @@ export default function PostJob() {
               {
                 icon: BadgeCheck,
                 title: 'We review it',
-                text: 'Our team checks every listing for clarity and safety, usually within a day.',
+                text: 'Our team checks every listing for clarity and safety before it goes live.',
               },
               {
                 icon: Inbox,

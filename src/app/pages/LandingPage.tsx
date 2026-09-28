@@ -42,6 +42,40 @@ const roles = [
   ['Music-tech professionals', WandSparkles, 'Products powering music', 'music-tech'],
 ] as const;
 
+/* A thin, static sound-wave line behind the hero. Decorative only. */
+function SoundWave() {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      className="pointer-events-none absolute inset-x-0 bottom-10 h-32 w-full opacity-50 md:bottom-16"
+      viewBox="0 0 1440 120"
+      preserveAspectRatio="none"
+      fill="none"
+    >
+      <defs>
+        <linearGradient id="verse-wave" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stopColor="#a855f7" stopOpacity="0" />
+          <stop offset=".35" stopColor="#d946ef" stopOpacity=".7" />
+          <stop offset=".7" stopColor="#2dd4bf" stopOpacity=".6" />
+          <stop offset="1" stopColor="#2dd4bf" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M0 60 C 90 20 150 100 240 60 S 390 10 480 60 S 630 110 720 60 S 870 15 960 60 S 1110 105 1200 60 S 1350 30 1440 60"
+        stroke="url(#verse-wave)"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M0 60 C 120 40 180 80 300 60 S 480 35 600 60 S 780 85 900 60 S 1080 38 1200 60 S 1380 75 1440 60"
+        stroke="url(#verse-wave)"
+        strokeWidth="1"
+        opacity=".5"
+      />
+    </svg>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen overflow-hidden bg-slate-950 text-white">
@@ -87,6 +121,7 @@ export default function LandingPage() {
           <div className="verse-grid absolute inset-0 pointer-events-none" />
           <div className="verse-orb absolute -left-36 -top-44 h-[34rem] w-[34rem] rounded-full bg-fuchsia-600/60" />
           <div className="verse-orb absolute -right-40 top-16 h-[32rem] w-[32rem] rounded-full bg-cyan-500/35 [animation-delay:-4s]" />
+          <SoundWave />
           <div className="relative mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1.04fr_.96fr]">
             <div>
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-fuchsia-300/25 bg-fuchsia-400/10 px-3.5 py-2 text-sm font-semibold text-fuchsia-100 shadow-lg shadow-fuchsia-950/20">

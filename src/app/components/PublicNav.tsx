@@ -128,10 +128,6 @@ export function PublicNav() {
                   Employer account
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/auth/admin">Operations</Link>
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" asChild className="border-0 bg-gradient-to-r from-fuchsia-500 to-violet-500">

@@ -5,25 +5,24 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge } from '../lib/authContext';
+import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User } from '../lib/authContext';
 import { consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
 import { toast } from 'sonner';
 import { BrandMark } from '../components/BrandMark';
 import { PasswordChecklist } from '../components/PasswordChecklist';
 import { errorCode, errorMessage } from '../lib/errors';
+import { CODE_LENGTH, CodeStep, FormError, focusField, useResendCooldown } from '../components/auth/CodeStep';
 
-const RESEND_COOLDOWN_SECONDS = 60;
-const CODE_LENGTH = 6;
-const digitsOnly = (value: string) => value.replace(/\D/g, '').slice(0, CODE_LENGTH);
+/* Admins use the separate admin site; its address is deliberately not part of this bundle. */
+const ADMIN_SITE_MESSAGE = 'Admins sign in at the admin site.';
 
 export default function AuthPage() {
   const { userType = 'jobseeker' } = useParams();
-  const isAdmin = userType === 'admin';
   const role = userType === 'employer' ? 'employer' : 'jobseeker';
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { login, register, verifyCode, completeSecondFactor } = useAuth();
+  const { login, register, verifyCode, completeSecondFactor, logout } = useAuth();
   // C4/FORM-11: "Join Verse" and /start link straight to `?mode=register` so a new
   // visitor lands on the sign-up form instead of the sign-in form.
   const [mode, setMode] = useState<'login' | 'register'>(
@@ -42,23 +41,14 @@ export default function AuthPage() {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [cooldown, setCooldown] = useState(0);
+  const [cooldown, startCooldown] = useResendCooldown();
   /* Until the API says otherwise both paths are offered; an explicit `false` means email cannot be delivered. */
   const [codesAvailable, setCodesAvailable] = useState(true);
   const [emailAvailable, setEmailAvailable] = useState(true);
   const touched = useRef(false);
-  /* Input does not forward refs, so the code field is focused by id. */
-  const focusCode = () => document.getElementById('auth-code')?.focus();
+  const focusCode = () => focusField('auth-code');
   const verifying = useRef(false);
 
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = window.setTimeout(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
-    return () => window.clearTimeout(timer);
-  }, [cooldown]);
-  useEffect(() => {
-    if (codeStep === 'code') focusCode();
-  }, [codeStep]);
   useEffect(() => {
     let active = true;
     getSignInMethods()
@@ -80,24 +70,31 @@ export default function AuthPage() {
 
   const go = (r: string, complete = true) => {
     const requested = (location.state as { from?: unknown } | null)?.from ?? consumeReturnTo();
-    const allowed =
-      typeof requested === 'string' &&
-      (requested.startsWith(`/${r === 'jobseeker' ? 'jobseeker' : r}`) ||
-        (r === 'admin' && requested.startsWith('/admin')));
+    const allowed = typeof requested === 'string' && requested.startsWith(`/${r}`);
     navigate(
       allowed
         ? requested
-        : r === 'admin'
-          ? '/admin'
-          : r === 'employer'
-            ? complete
-              ? '/employer'
-              : '/employer/profile'
-            : complete
-              ? '/jobseeker'
-              : '/jobseeker/profile',
+        : r === 'employer'
+          ? complete
+            ? '/employer'
+            : '/employer/profile'
+          : complete
+            ? '/jobseeker'
+            : '/jobseeker/profile',
       { replace: true },
     );
+  };
+  /* This site has no admin area: an admin session started here (possible while the API's admin
+     origin lock is not configured) is ended at once and the admin is told where to go. */
+  const finish = async (u: User, welcome: string) => {
+    if (u.role === 'admin') {
+      await logout().catch(() => undefined);
+      leaveChallenge();
+      setError(ADMIN_SITE_MESSAGE);
+      return;
+    }
+    toast.success(welcome);
+    go(u.role, u.profileComplete);
   };
   /* Code-flow errors are shown inline (role=alert) next to the field; password errors keep the existing toast. */
   const fail = (e: unknown, fallback: string) => setError(errorMessage(e, fallback));
@@ -122,7 +119,7 @@ export default function AuthPage() {
     setCode('');
     setError('');
     setCodeStep('code');
-    setCooldown(RESEND_COOLDOWN_SECONDS);
+    startCooldown();
     toast.success('Check your email for a 6-digit code');
   };
   const switchMode = () => {
@@ -142,11 +139,11 @@ export default function AuthPage() {
         startChallenge(result);
         return;
       }
-      const u = result;
-      toast.success(mode === 'login' ? 'Welcome back' : 'Account created. Next: set up your profile.');
-      go(u.role, u.profileComplete);
+      await finish(result, mode === 'login' ? 'Welcome back' : 'Account created. Next: set up your profile.');
     } catch (e: unknown) {
-      toast.error(errorMessage(e, 'Unable to continue'));
+      /* The API refuses admin passwords from this site once the admin site is live. */
+      if (errorCode(e) === 'ADMIN_USE_ADMIN_SITE') setError(errorMessage(e, ADMIN_SITE_MESSAGE));
+      else toast.error(errorMessage(e, 'Unable to continue'));
     } finally {
       setLoading(false);
     }
@@ -174,11 +171,11 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      const response = await requestSignInCode(mode === 'register' && !isAdmin ? { email, name, role } : { email });
+      const response = await requestSignInCode(mode === 'register' ? { email, name, role } : { email });
       setDebugCode(response.debugCode);
       setCode('');
       setCodeStep('code');
-      setCooldown(RESEND_COOLDOWN_SECONDS);
+      startCooldown();
       toast.success('Check your email for a 6-digit code');
     } catch (e: unknown) {
       if (errorCode(e) === 'OTP_UNAVAILABLE') {
@@ -204,8 +201,7 @@ export default function AuthPage() {
       const u = challenge
         ? await completeSecondFactor(challenge.challengeToken, value)
         : await verifyCode(email, value);
-      toast.success(mode === 'register' ? 'Account created. Next: set up your profile.' : 'Welcome back');
-      go(u.role, u.profileComplete);
+      await finish(u, mode === 'register' ? 'Account created. Next: set up your profile.' : 'Welcome back');
     } catch (e: unknown) {
       /* An expired or unusable challenge cannot be retried; start again from the password. */
       if (challenge && errorCode(e) === 'SECOND_FACTOR_EXPIRED') {
@@ -222,12 +218,9 @@ export default function AuthPage() {
     }
   }
 
-  const onCodeChange = (raw: string) => {
-    const value = digitsOnly(raw);
+  const onCodeChange = (value: string) => {
     setCode(value);
     if (error) setError('');
-    /* Typing or pasting the last digit submits, so a pasted code signs in in one step. */
-    if (value.length === CODE_LENGTH && !loading) void confirmCode(value);
   };
 
   const inputClass = 'mt-2 border-white/15';
@@ -265,12 +258,7 @@ export default function AuthPage() {
       />
     </div>
   );
-  const errorBox = error && (
-    <p role="alert" className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
-      {error}
-    </p>
-  );
-  const linkButton = 'min-h-11 text-sm font-semibold text-violet-200 hover:text-white disabled:text-slate-500';
+  const errorBox = error && <FormError>{error}</FormError>;
 
   const codeForms =
     codeStep === 'email' ? (
@@ -287,99 +275,40 @@ export default function AuthPage() {
         </p>
       </form>
     ) : (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void confirmCode();
-        }}
-        className="space-y-4"
-        aria-busy={loading}
-      >
-        {challenge ? (
-          <p className="text-sm leading-6 text-slate-300" aria-live="polite">
-            Admin sign-in needs one more step. We emailed a 6-digit code to{' '}
-            <span className="font-semibold text-white">{email}</span>. It expires in 10 minutes.
-          </p>
-        ) : (
-          <p className="text-sm leading-6 text-slate-300" aria-live="polite">
-            If <span className="font-semibold text-white">{email}</span> can be used on Verse, a 6-digit code is on its
-            way. It expires in 10 minutes.
-          </p>
-        )}
-        <div>
-          <Label htmlFor="auth-code" className="text-slate-200">
-            Sign-in code
-          </Label>
-          <Input
-            id="auth-code"
-            aria-label="Sign-in code"
-            value={code}
-            onChange={(e) => onCodeChange(e.target.value)}
-            onPaste={(e) => {
-              e.preventDefault();
-              onCodeChange(e.clipboardData.getData('text'));
-            }}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            pattern="[0-9]{6}"
-            maxLength={CODE_LENGTH}
-            placeholder="••••••"
-            aria-invalid={Boolean(error)}
-            aria-describedby="auth-code-help"
-            readOnly={loading}
-            className="mt-2 border-white/15 text-center font-mono text-2xl tracking-[.5em]"
-          />
-          <p id="auth-code-help" className="mt-1.5 text-xs text-slate-400">
-            Paste or type the code from your email.
-          </p>
-        </div>
-        {debugCode && (
-          <p className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
-            Local testing: email is not configured, your code is{' '}
-            <span className="font-mono font-bold" data-testid="debug-code">
-              {debugCode}
-            </span>
-          </p>
-        )}
-        {errorBox}
-        <Button
-          disabled={loading || code.length !== CODE_LENGTH}
-          className="w-full border-0 bg-gradient-to-r from-fuchsia-600 to-violet-600"
-        >
-          {loading
-            ? 'Checking code…'
-            : mode === 'register' && !isAdmin
-              ? 'Verify and create account'
-              : 'Verify and sign in'}
-        </Button>
-        <div className="flex items-center justify-between gap-3">
-          {challenge ? (
-            <button type="button" onClick={leaveChallenge} className={linkButton}>
-              Back to sign in
-            </button>
+      <CodeStep
+        intro={
+          challenge ? (
+            <>
+              Admin sign-in needs one more step. We emailed a 6-digit code to{' '}
+              <span className="font-semibold text-white">{email}</span>. It expires in 10 minutes.
+            </>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setCodeStep('email');
-                setCode('');
-                setError('');
-              }}
-              className={linkButton}
-            >
-              Use a different email
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => void sendCode()}
-            disabled={loading || cooldown > 0}
-            className={linkButton}
-          >
-            {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
-          </button>
-        </div>
-      </form>
+            <>
+              If <span className="font-semibold text-white">{email}</span> can be used on Verse, a 6-digit code is on
+              its way. It expires in 10 minutes.
+            </>
+          )
+        }
+        code={code}
+        onCodeChange={onCodeChange}
+        onSubmit={(value) => void confirmCode(value)}
+        loading={loading}
+        error={error}
+        debugCode={debugCode}
+        submitLabel={mode === 'register' ? 'Verify and create account' : 'Verify and sign in'}
+        backLabel={challenge ? 'Back to sign in' : 'Use a different email'}
+        onBack={() => {
+          if (challenge) {
+            leaveChallenge();
+            return;
+          }
+          setCodeStep('email');
+          setCode('');
+          setError('');
+        }}
+        cooldown={cooldown}
+        onResend={() => void sendCode()}
+      />
     );
 
   const passwordForm = (
@@ -418,6 +347,7 @@ export default function AuthPage() {
           </div>
         )}
       </div>
+      {errorBox}
       <Button disabled={loading} className="w-full border-0 bg-gradient-to-r from-fuchsia-600 to-violet-600">
         {loading ? 'Tuning your workspace…' : mode === 'login' ? 'Sign in' : 'Create account'}
       </Button>
@@ -457,7 +387,7 @@ export default function AuthPage() {
             <Card className="verse-surface border-white/15 bg-transparent shadow-2xl">
               <CardHeader className="text-center">
                 <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-500/30 to-violet-500/25 text-violet-200">
-                  {isAdmin ? <ShieldCheck /> : role === 'employer' ? <Briefcase /> : <Users />}
+                  {role === 'employer' ? <Briefcase /> : <Users />}
                 </div>
                 <CardTitle className="mt-2 text-2xl font-black text-white">
                   {(method === 'code' || challenge) && codeStep === 'code'
@@ -467,15 +397,13 @@ export default function AuthPage() {
                       : 'Create your Verse account'}
                 </CardTitle>
                 <CardDescription className="text-slate-300">
-                  {isAdmin
-                    ? 'Verse trust and operations'
-                    : role === 'employer'
-                      ? 'Hire music talent and manage every candidate'
-                      : 'Find work and build a career people can hear'}
+                  {role === 'employer'
+                    ? 'Hire music talent and manage every candidate'
+                    : 'Find work and build a career people can hear'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {!isAdmin && codeStep === 'email' && (
+                {codeStep === 'email' && (
                   <div className="mb-5 grid grid-cols-2 rounded-xl border border-white/10 bg-black/15 p-1">
                     <Link
                       to={mode === 'register' ? '/auth/jobseeker?mode=register' : '/auth/jobseeker'}
@@ -512,7 +440,7 @@ export default function AuthPage() {
                     )}
                   </div>
                 )}
-                {!isAdmin && codeStep === 'email' && (
+                {codeStep === 'email' && (
                   <button
                     onClick={switchMode}
                     className="mt-3 min-h-11 w-full text-sm font-semibold text-violet-200 hover:text-white"

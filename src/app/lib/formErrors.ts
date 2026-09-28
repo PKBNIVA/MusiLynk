@@ -15,6 +15,8 @@ export interface FormErrorsOptions<K extends string> {
    * control, when they differ. Defaults to the field name itself.
    */
   ids?: Partial<Record<K, string>>;
+  /** Derives a control id from a field name (e.g. a shared prefix); `ids` entries win over it. */
+  idFor?: (name: K) => string;
   /** Maps API field names (camelCase request params) to this form's field names, when they differ. */
   apiFields?: Record<string, K>;
 }
@@ -80,7 +82,10 @@ export function useFormErrors<K extends string = string>(options: FormErrorsOpti
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  const idFor = useCallback((name: string) => optionsRef.current.ids?.[name as K] ?? name, []);
+  const idFor = useCallback(
+    (name: string) => optionsRef.current.ids?.[name as K] ?? optionsRef.current.idFor?.(name as K) ?? name,
+    [],
+  );
 
   const setErrors = useCallback((next: FieldErrorMap<K>) => {
     latest.current = next;

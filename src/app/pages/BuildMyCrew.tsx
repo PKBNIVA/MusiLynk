@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Checkbox } from '../components/ui/checkbox';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
+import { Field } from '../components/form/Field';
 import { WandSparkles, Users, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../lib/authContext';
@@ -42,6 +43,7 @@ export default function BuildMyCrew() {
     { user } = useAuth(),
     bandBuilder = user?.role === 'jobseeker' ? '/jobseeker/band-builder' : '/employer/band-builder';
   const [loading, setLoading] = useState(true),
+    [createError, setCreateError] = useState(''),
     [loadError, setLoadError] = useState(''),
     [busy, setBusy] = useState(''),
     [converted, setConverted] = useState<Record<string, boolean>>({});
@@ -61,7 +63,7 @@ export default function BuildMyCrew() {
   async function create() {
     if (busy) return;
     if (!f.title.trim() || !f.city.trim()) {
-      toast.error('Add an event name and city');
+      setCreateError('Add an event name and city.');
       return;
     }
     setBusy('create');
@@ -75,11 +77,12 @@ export default function BuildMyCrew() {
           .map((x: string) => x.trim())
           .filter(Boolean),
       });
+      setCreateError('');
       toast.success('Crew plan created');
       setF({ ...f, title: '' });
       await load();
     } catch (e: unknown) {
-      toast.error(errorMessage(e));
+      setCreateError(errorMessage(e, 'The crew plan could not be created. Try again.'));
     } finally {
       setBusy('');
     }
@@ -116,14 +119,15 @@ export default function BuildMyCrew() {
         <div className="grid lg:grid-cols-[.8fr_1.2fr] gap-6 mt-8">
           <Card className="bg-white/[.055] border-white/10">
             <CardContent className="p-6 space-y-4">
-              <Input
-                aria-label="Project / event name"
-                required
-                maxLength={160}
-                placeholder="Project / event name"
-                value={f.title}
-                onChange={(e) => setF({ ...f, title: e.target.value })}
-              />
+              <Field id="crew-title" label="Project / event name" required>
+                <Input
+                  placeholder="e.g. Annual sales conference gala"
+                  required
+                  maxLength={160}
+                  value={f.title}
+                  onChange={(e) => setF({ ...f, title: e.target.value })}
+                />
+              </Field>
               <div className="grid grid-cols-2 gap-3">
                 <select
                   aria-label="Event type"
@@ -144,13 +148,14 @@ export default function BuildMyCrew() {
                     <option key={x}>{x}</option>
                   ))}
                 </select>
-                <Input
-                  aria-label="City"
-                  required
-                  placeholder="City"
-                  value={f.city}
-                  onChange={(e) => setF({ ...f, city: e.target.value })}
-                />
+                <Field id="crew-city" label="City" required>
+                  <Input
+                    placeholder="e.g. Goa"
+                    required
+                    value={f.city}
+                    onChange={(e) => setF({ ...f, city: e.target.value })}
+                  />
+                </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input
@@ -159,14 +164,15 @@ export default function BuildMyCrew() {
                   value={f.eventDate}
                   onChange={(e) => setF({ ...f, eventDate: e.target.value })}
                 />
-                <Input
-                  aria-label="Audience size"
-                  type="number"
-                  min="0"
-                  placeholder="Audience size"
-                  value={f.audienceSize}
-                  onChange={(e) => setF({ ...f, audienceSize: e.target.value })}
-                />
+                <Field id="crew-audience" label="Audience size">
+                  <Input
+                    placeholder="e.g. 300"
+                    type="number"
+                    min="0"
+                    value={f.audienceSize}
+                    onChange={(e) => setF({ ...f, audienceSize: e.target.value })}
+                  />
+                </Field>
               </div>
               <Input
                 aria-label="Genres"
@@ -209,6 +215,11 @@ export default function BuildMyCrew() {
                 <WandSparkles size={16} className="mr-2" />
                 {busy === 'create' ? 'Building…' : 'Build my crew'}
               </Button>
+              {createError && (
+                <p role="alert" className="text-sm text-rose-300">
+                  {createError}
+                </p>
+              )}
               {(!f.title.trim() || !f.city.trim()) && (
                 <p className="text-xs text-slate-500 text-center">Add an event name and city to build a crew.</p>
               )}

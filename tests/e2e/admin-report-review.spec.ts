@@ -150,7 +150,7 @@ test('admin reviews a conversation report with context and warns the user', asyn
   await expect(page.getByText('Warning sent and report resolved')).toBeVisible();
   await expect(review).toBeHidden();
   expect(state.moderated).toEqual([{ decision: 'warn', note: 'Do not ask artists for fees.' }]);
-  await expect(page.getByText('No open safety reports.')).toBeVisible();
+  await expect(page.getByText('No reports match these filters.')).toBeVisible();
   expect(errors).toEqual([]);
 });
 

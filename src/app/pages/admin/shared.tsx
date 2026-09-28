@@ -94,6 +94,27 @@ export const EMPTY: Data = {
   billingEvents: [],
 };
 
+// D3: status/entityType/reason filters for the reports tab, applied on top of the shared
+// page/perPage paging above (Admin::ReportsController#index).
+export type ReportFilters = { status: string; entityType: string; reason: string };
+export const DEFAULT_REPORT_FILTERS: ReportFilters = { status: 'open', entityType: '', reason: '' };
+export const REPORT_ENTITY_TYPES = ['user', 'job', 'act', 'review'] as const;
+export const REPORT_REASONS = [
+  'Harassment',
+  'Asks for payment',
+  'Spam or scam',
+  'Unsafe contact request',
+  'Misleading listing',
+  'Other',
+] as const;
+export const reportsQuery = (filters: ReportFilters, page: number, perPage = 100) => {
+  const qs = new URLSearchParams({ page: String(page), perPage: String(perPage) });
+  if (filters.status) qs.set('status', filters.status);
+  if (filters.entityType) qs.set('entityType', filters.entityType);
+  if (filters.reason) qs.set('reason', filters.reason);
+  return `${SOURCES.reports[0]}?${qs.toString()}`;
+};
+
 // Pagination envelope every paged admin list answers with (page/perPage/total).
 export type PageMeta = { page: number; perPage: number; total: number };
 export const readMeta = (d: Payload | null): PageMeta | null =>

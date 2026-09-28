@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { apiGet, apiPost } from '../lib/api';
@@ -7,12 +7,23 @@ import { useLatestCallback } from '../lib/useLatestCallback';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { ActSearchForm } from '../components/ActSearchForm';
+import { LoadMore } from '../components/LoadMore';
+import { NoResults, SearchNotice } from '../components/SearchFeedback';
+import { usePagedList, type PageMeta } from '../lib/usePagedList';
+import { useUrlFilters } from '../lib/useUrlFilters';
 import { Badge } from '../components/ui/badge';
 import { Field, FormDialog, selectClass, textareaClass } from '../components/booking/BookingDialogs';
 import { Calendar, MapPin, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage, errorStatus } from '../lib/errors';
 import type { Act } from '../lib/apiTypes';
+
+type ActPage = PageMeta & { acts?: Act[] };
+const pickActs = (page: ActPage) => page.acts;
+const FILTERS = ['q', 'city', 'type'] as const;
+const NOUN = ['act', 'acts'] as const;
+const ACT_SUGGESTIONS = ['wedding band', 'sufi', 'jazz', 'DJ', 'singer'] as const;
 
 const EVENT_TYPES = [
   'wedding',
@@ -59,33 +70,20 @@ export default function BookTalent() {
   const base = `/${useLocation().pathname.split('/')[1] || 'employer'}`;
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const [acts, setActs] = useState<Act[]>([]),
-    [loading, setLoading] = useState(true),
-    [loadError, setLoadError] = useState(''),
-    [q, setQ] = useState(''),
-    [city, setCity] = useState(''),
-    [booking, setBooking] = useState<Enquiry | null>(null),
+  // Search, city and type live in the URL (Back undoes a filter); results are paged.
+  const { values: filters, query, update, clear } = useUrlFilters(FILTERS);
+  const list = usePagedList<Act, ActPage>({ path: '/acts', pick: pickActs, noun: 'acts' });
+  const { items: acts, loading, error: loadError } = list;
+  const city = filters.city;
+  const [booking, setBooking] = useState<Enquiry | null>(null),
     [formError, setFormError] = useState(''),
     [sending, setSending] = useState(false);
   const preselected = useRef<string | null>(null);
 
-  const load = useLatestCallback(async () => {
-    setLoading(true);
-    try {
-      const d = await apiGet<{ acts?: Act[] }>(
-        `/acts?q=${encodeURIComponent(q.trim())}&city=${encodeURIComponent(city.trim())}`,
-      );
-      setActs(d.acts || []);
-      setLoadError('');
-    } catch (e: unknown) {
-      setLoadError(errorMessage(e, 'Unable to load acts.'));
-    } finally {
-      setLoading(false);
-    }
-  });
+  const load = useLatestCallback(() => list.search(query));
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [query, load]);
 
   const openEnquiry = useCallback(
     (a: Act) => {
@@ -165,10 +163,6 @@ export default function BookTalent() {
   }
   const setB = (key: keyof Enquiry, value: string) =>
     setBooking((current) => (current ? { ...current, [key]: value } : current));
-  const search = (e: FormEvent) => {
-    e.preventDefault();
-    void load();
-  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -182,18 +176,21 @@ export default function BookTalent() {
             Quotes stay comparable instead of disappearing into WhatsApp threads.
           </p>
         </div>
-        <form role="search" onSubmit={search} className="grid md:grid-cols-[1fr_1fr_auto] gap-3 mt-7">
-          <Input
-            aria-label="Search acts"
-            placeholder="Singer, jazz trio, wedding band…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <Input aria-label="City" placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} />
-          <Button type="submit" disabled={loading}>
-            Search
-          </Button>
-        </form>
+        <ActSearchForm
+          idPrefix="book-acts"
+          values={filters}
+          busy={loading}
+          onSearch={(changes) => {
+            if (!update(changes)) void load();
+          }}
+          onType={(type) => update({ type })}
+        />
+        {!loading && !loadError && acts.length > 0 && (
+          <p className="text-sm text-slate-400 mt-5" data-testid="result-count">
+            {list.total} {list.total === 1 ? 'act' : 'acts'}
+          </p>
+        )}
+        {!loading && <SearchNotice meta={list.meta} query={filters.q} />}
         {loading ? (
           <p className="text-slate-400 text-center py-16" role="status">
             Loading acts…
@@ -206,72 +203,73 @@ export default function BookTalent() {
             </Button>
           </div>
         ) : acts.length === 0 ? (
-          <div className="mt-7 rounded-xl border border-dashed border-white/15 p-10 text-center">
-            <p className="text-slate-300 font-medium">No acts match this search</p>
-            <p className="text-sm text-slate-500 mt-1">Try a broader style, another city, or clear the filters.</p>
-            {(q || city) && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => {
-                  setQ('');
-                  setCity('');
-                  setLoading(true);
-                  apiGet<{ acts?: Act[] }>('/acts?q=&city=')
-                    .then((d) => setActs(d.acts || []))
-                    .catch((e: unknown) => setLoadError(errorMessage(e, 'Unable to load acts.')))
-                    .finally(() => setLoading(false));
-                }}
-              >
-                Clear filters
-              </Button>
-            )}
+          <div className="mt-7 rounded-xl border border-dashed border-white/15">
+            <NoResults
+              title="No acts match this search"
+              noun="acts"
+              query={filters.q}
+              meta={list.meta}
+              onSearch={(term) => update({ q: term })}
+              suggestions={ACT_SUGGESTIONS}
+              onClear={query ? clear : undefined}
+            />
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-7">
-            {acts.map((a) => {
-              const own = Boolean(user && a.owner_id && a.owner_id === user.id);
-              return (
-                <Card key={a.id} className="bg-white/[.055] border-white/10">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <Badge variant="secondary">{a.act_type}</Badge>
-                        <h3 className="text-xl font-semibold mt-2 break-words">{a.name}</h3>
+          <>
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-7">
+              {acts.map((a, index) => {
+                const own = Boolean(user && a.owner_id && a.owner_id === user.id);
+                return (
+                  <Card key={a.id} className="bg-white/[.055] border-white/10" data-list-item={index} tabIndex={-1}>
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <Badge variant="secondary">{a.act_type}</Badge>
+                          <h3 className="text-xl font-semibold mt-2 break-words">{a.name}</h3>
+                        </div>
+                        {(a.verified || a.ownerVerified) && (
+                          <ShieldCheck aria-label="Verified" className="text-emerald-300 shrink-0" size={18} />
+                        )}
                       </div>
-                      {(a.verified || a.ownerVerified) && (
-                        <ShieldCheck aria-label="Verified" className="text-emerald-300 shrink-0" size={18} />
-                      )}
-                    </div>
-                    <div className="text-sm text-slate-400 mt-3 flex gap-2 items-center">
-                      <MapPin size={14} />
-                      {a.city || 'Flexible location'}
-                    </div>
-                    <div className="text-sm mt-3">
-                      {(Array.isArray(a.genres) && a.genres.slice(0, 5).join(' · ')) || 'Multi-genre'}
-                    </div>
-                    <div className="text-sm text-emerald-300 mt-4">
-                      {a.min_fee
-                        ? `From ${a.currency || 'INR'} ${Number(a.min_fee).toLocaleString('en-IN')}`
-                        : 'Ask for quote'}
-                    </div>
-                    <div className="flex gap-2 mt-5">
-                      <Button className="flex-1" onClick={() => openEnquiry(a)}>
-                        <Calendar size={16} className="mr-2" />
-                        Request availability
-                      </Button>
-                      <Button asChild variant="outline">
-                        <Link to={`/acts/${a.id}`} aria-label={`View ${a.name}`}>
-                          View
-                        </Link>
-                      </Button>
-                    </div>
-                    {own && <p className="text-xs text-slate-500 mt-2">This is one of your acts.</p>}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                      <div className="text-sm text-slate-400 mt-3 flex gap-2 items-center">
+                        <MapPin size={14} />
+                        {a.city || 'Flexible location'}
+                      </div>
+                      <div className="text-sm mt-3">
+                        {(Array.isArray(a.genres) && a.genres.slice(0, 5).join(' · ')) || 'Multi-genre'}
+                      </div>
+                      <div className="text-sm text-emerald-300 mt-4">
+                        {a.min_fee
+                          ? `From ${a.currency || 'INR'} ${Number(a.min_fee).toLocaleString('en-IN')}`
+                          : 'Ask for quote'}
+                      </div>
+                      <div className="flex gap-2 mt-5">
+                        <Button className="flex-1" onClick={() => openEnquiry(a)}>
+                          <Calendar size={16} className="mr-2" />
+                          Request availability
+                        </Button>
+                        <Button asChild variant="outline">
+                          <Link to={`/acts/${a.id}`} aria-label={`View ${a.name}`}>
+                            View
+                          </Link>
+                        </Button>
+                      </div>
+                      {own && <p className="text-xs text-slate-500 mt-2">This is one of your acts.</p>}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+            <LoadMore
+              shown={acts.length}
+              total={list.total}
+              hasMore={list.hasMore}
+              loading={list.loadingMore}
+              error={list.moreError}
+              onLoadMore={list.loadMore}
+              noun={NOUN}
+            />
+          </>
         )}
         <FormDialog
           open={Boolean(booking)}

@@ -493,6 +493,10 @@ export interface Taxonomy {
   engagementTypes: string[];
   roleCategories: Record<string, string[]>;
   instruments: string[];
+  /** Older function names still accepted by filters, mapped to their current name. */
+  legacyFunctionAreas?: Record<string, string>;
+  /** Directory role groups (the landing-page tiles): /music-professionals?role=<key>. */
+  talentRoles?: { key: string; label: string }[];
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -583,12 +587,29 @@ export interface SearchResult {
   tags: string[];
 }
 
-/** GET /search. */
-export interface SearchResponse {
+/**
+ * How a search read the query (GET /search and every list endpoint given `q`): the words and
+ * synonyms searched, and whether a misspelling was corrected or only some words matched.
+ */
+export interface SearchMeta {
+  interpretedAs?: string[];
+  /** all: every word matched · corrected: after fixing a misspelling · partial: only some words matched. */
+  matchMode?: 'all' | 'corrected' | 'partial';
+  /** The corrected query ("guitarist" for "guitarst"). */
+  didYouMean?: string;
+}
+
+/** GET /search. Without `type`: per-type totals and whether each type has more than it shows. */
+export interface SearchResponse extends SearchMeta {
   results: SearchResult[];
   interpretedAs: string[];
   provider: string;
   status: { provider: string; healthy: boolean; fallback: boolean };
+  totals?: Partial<Record<SearchResult['type'], number>>;
+  moreOf?: Partial<Record<SearchResult['type'], boolean>>;
+  /** With `type`: the cursor for the next page, and the match count. */
+  nextCursor?: string | null;
+  total?: number;
 }
 
 /** JobAlertsController#index: a job_alerts row. */
@@ -872,6 +893,16 @@ export interface AdminReport {
   created_at: string;
   updated_at?: string;
   reporterName?: string | null;
+  /** A short label for what was reported (job title, act/person name, "Review"), when it still exists. */
+  entityTitle?: string | null;
+}
+
+/** Admin::ReportsController#index response shape (filters: status/entityType/reason; paged). */
+export interface AdminReportsPage {
+  reports: AdminReport[];
+  total: number;
+  page: number;
+  perPage: number;
 }
 
 /** Admin::OperationsController#audit: an audit_logs row plus the actor's name. */

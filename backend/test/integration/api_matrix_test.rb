@@ -131,7 +131,10 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/notifications", :any, { keys: %w[notifications unread] }],
     [:patch, "/api/notifications/{notification}", :any, { idor: true, missing: :notification }],
     [:put, "/api/notifications/{notification}", :any, { idor: true }],
-    [:post, "/api/reports", :any, { ok: [201], params: ->(w, _a) { { entityType: "job", entityId: w.refs[:shared][:job], reason: "spam" } }, bad: {}, bad_status: [422], keys: %w[id] }],
+    # Uses draft_job (not :shared[:job]) because the world already seeds an open report by `js`
+    # on :shared[:job] (see api_matrix_world.rb `report:`), which would otherwise trip the new
+    # duplicate-report rejection (see reports_test.rb) when `js`'s turn comes up below.
+    [:post, "/api/reports", :any, { ok: [201], params: ->(w, _a) { { entityType: "job", entityId: w.refs[:shared][:draft_job], reason: "Spam or scam" } }, bad: {}, bad_status: [422], keys: %w[id] }],
     [:post, "/api/verification-requests", :any, { ok: { default: [201], admin: [400] }, params: verification_kind, bad: { kind: "celebrity" }, bad_status: [400] }],
     [:get, "/api/reviews", :public, { keys: %w[reviews] }],
     [:post, "/api/reviews", :jobseeker, { ok: [201, 403, 409], params: ->(w, _a) { { employerId: w.user(:emp).id, rating: 5, body: "Great" } }, bad: { employerId: ApiMatrixWorld::MISSING_ID }, bad_status: [404, 422] }],

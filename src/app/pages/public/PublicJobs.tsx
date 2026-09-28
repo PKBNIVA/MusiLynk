@@ -1,54 +1,54 @@
-import { DemoBadge } from '../../components/DemoBadge';
 import { usePageMeta } from '../../components/PageMeta';
 import { FormEvent, useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
-import { Briefcase, CalendarDays, MapPin, Search, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router';
+import { Search } from 'lucide-react';
 import { PublicNav } from '../../components/PublicNav';
-import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { LoadMoreJobs } from '../../components/LoadMoreJobs';
+import { JobCard } from '../../components/JobCard';
+import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../../components/SearchFeedback';
 import { usePagedJobs } from '../../lib/usePagedJobs';
+import { useUrlFilters } from '../../lib/useUrlFilters';
 import { useLatestCallback } from '../../lib/useLatestCallback';
 import type { Job } from '../../lib/apiTypes';
-import { formatDeadline, formatPay } from '../../lib/format';
 
-const kinds = ['jobs', 'gigs', 'auditions', 'sessions', 'tours'] as const;
+const kinds = ['job', 'gig', 'audition', 'session', 'tour'] as const;
+const FILTERS = ['q', 'location', 'kind'] as const;
+// Older links used plural kinds (?kind=gigs).
+const singularKind = (kind: string) => (kind.endsWith('s') ? kind.slice(0, -1) : kind);
 
 export default function PublicJobs() {
   usePageMeta(
     'Music jobs, gigs, sessions & auditions',
     'Browse open music jobs, gigs, studio sessions, auditions and tours across performance, production and live events.',
   );
-  const [sp, setSp] = useSearchParams();
+  // Filters live in the URL and every change is a history entry, so Back undoes one (SRCH-09).
+  const { values, query, update, clear } = useUrlFilters(FILTERS);
   const list = usePagedJobs<Job>();
-  const { jobs, loading, error } = list;
-  const [q, setQ] = useState(sp.get('q') || ''),
-    [location, setLocation] = useState(sp.get('location') || ''),
-    [kind, setKind] = useState(() => {
-      const k = sp.get('kind') || '';
-      return k && !k.endsWith('s') ? `${k}s` : k;
-    });
-  const load = useLatestCallback(async (nextKind: string = kind) => {
-    const p = new URLSearchParams();
-    if (q) p.set('q', q);
-    if (location) p.set('location', location);
-    if (nextKind) p.set('kind', nextKind.replace(/s$/, ''));
-    setSp(p, { replace: true });
-    await list.search(p.toString());
+  const { jobs, loading, error, total, meta } = list;
+  const kind = singularKind(values.kind);
+  // The text boxes follow the URL (so Back restores them) but only search on submit.
+  const [q, setQ] = useState(values.q),
+    [location, setLocation] = useState(values.location);
+  useEffect(() => {
+    setQ(values.q);
+    setLocation(values.location);
+  }, [values.q, values.location]);
+  const run = useLatestCallback(() => {
+    const params = new URLSearchParams(query);
+    if (kind) params.set('kind', kind);
+    return list.search(params.toString());
   });
   useEffect(() => {
-    void load();
-  }, [load]);
-  const chooseKind = (next: string) => {
-    setKind(next);
-    void load(next);
-  };
+    void run();
+  }, [query, run]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    void load();
+    // Searching again for the same thing refreshes the results.
+    if (!update({ q, location })) void run();
   };
+  const searchFor = (term: string) => update({ q: term });
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
@@ -64,7 +64,7 @@ export default function PublicJobs() {
             size="sm"
             aria-pressed={!kind}
             variant={!kind ? 'secondary' : 'outline'}
-            onClick={() => chooseKind('')}
+            onClick={() => update({ kind: '' })}
           >
             All
           </Button>
@@ -74,14 +74,14 @@ export default function PublicJobs() {
               size="sm"
               aria-pressed={kind === x}
               variant={kind === x ? 'secondary' : 'outline'}
-              onClick={() => chooseKind(x)}
+              onClick={() => update({ kind: x })}
               className="capitalize"
             >
-              {x}
+              {x}s
             </Button>
           ))}
         </div>
-        <form onSubmit={submit} className="grid md:grid-cols-[1.3fr_1fr_auto] gap-3 mt-5">
+        <form onSubmit={submit} className="grid md:grid-cols-[1.3fr_1fr_auto] gap-3 mt-5" role="search">
           <label htmlFor="public-job-query" className="sr-only">
             Search opportunities
           </label>
@@ -107,6 +107,12 @@ export default function PublicJobs() {
             Search
           </Button>
         </form>
+        {!loading && !error && jobs.length > 0 && (
+          <p className="text-sm text-slate-400 mt-5" data-testid="result-count">
+            {total} {total === 1 ? 'opportunity' : 'opportunities'}
+          </p>
+        )}
+        {!loading && <SearchNotice meta={meta} query={values.q} />}
         {loading ? (
           <p className="text-slate-400 text-center py-16" role="status">
             Loading opportunities…
@@ -114,58 +120,15 @@ export default function PublicJobs() {
         ) : error ? (
           <div className="text-center py-16" role="alert">
             <p className="text-rose-300">{error}</p>
-            <Button variant="outline" className="mt-4" onClick={() => load()}>
+            <Button variant="outline" className="mt-4" onClick={() => run()}>
               Try again
             </Button>
           </div>
-        ) : (
+        ) : jobs.length ? (
           <>
-            <div className="grid gap-4 mt-8">
+            <div className="grid gap-4 mt-6">
               {jobs.map((j, index) => (
-                <Link
-                  key={j.id}
-                  to={`/opportunities/${j.id}`}
-                  data-job-item={index}
-                  className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-                >
-                  <Card className="bg-white/[.05] border-white/10 hover:bg-white/[.075]">
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="flex gap-2 flex-wrap">
-                            <Badge variant="secondary">{j.opportunity_kind || 'job'}</Badge>
-                            <DemoBadge show={j.demo} />
-                            {j.employerVerified && (
-                              <Badge className="bg-emerald-500/10 text-emerald-300">
-                                <ShieldCheck size={12} className="mr-1" />
-                                Verified
-                              </Badge>
-                            )}
-                          </div>
-                          <h2 className="text-xl font-semibold mt-3">{j.title}</h2>
-                          <p className="text-violet-300">{j.company}</p>
-                          <div className="flex flex-wrap gap-4 text-sm text-slate-400 mt-3">
-                            <span className="flex items-center">
-                              <MapPin size={15} className="mr-1" />
-                              {j.location}
-                            </span>
-                            <span className="flex items-center">
-                              <Briefcase size={15} className="mr-1" />
-                              {j.function_area || j.type}
-                            </span>
-                            <span className="flex items-center" data-job-deadline>
-                              <CalendarDays size={15} className="mr-1" />
-                              {formatDeadline(j.application_deadline)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-sm text-right text-slate-300">
-                          {formatPay(j, 'Terms disclosed in listing')}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <JobCard key={j.id} job={j} index={index} to={`/opportunities/${j.id}`} />
               ))}
             </div>
             <LoadMoreJobs
@@ -176,20 +139,23 @@ export default function PublicJobs() {
               error={list.moreError}
               onLoadMore={list.loadMore}
             />
-            {!jobs.length && (
-              <div className="text-center py-16">
-                <p className="text-slate-500">No matching public opportunities yet.</p>
-                <div className="flex flex-wrap justify-center gap-3 mt-5">
-                  <Button asChild>
-                    <Link to="/auth/jobseeker">Create professional account</Link>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link to="/auth/employer">Post an opportunity</Link>
-                  </Button>
-                </div>
-              </div>
-            )}
           </>
+        ) : (
+          <NoResults
+            noun="opportunities"
+            query={values.q}
+            meta={meta}
+            onSearch={searchFor}
+            suggestions={POPULAR_SEARCHES}
+            onClear={query ? clear : undefined}
+          >
+            <Button variant="outline" asChild>
+              <Link to="/auth/jobseeker">Create professional account</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/auth/employer">Post an opportunity</Link>
+            </Button>
+          </NoResults>
         )}
       </main>
     </div>

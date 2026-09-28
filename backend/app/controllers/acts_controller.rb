@@ -1,17 +1,17 @@
 class ActsController < ApplicationController
+  include ListPaging
+  LIST_PARAMS = %i[q city type genre eventType limit cursor].freeze
+  LIST_ORDER = ["acts.verified DESC", "acts.updated_at DESC", "acts.id ASC"].freeze
+  CITY_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["acts.city"])
   # Only "confirmed" exists today: public lineups show confirmed members and no flow sets another status.
   MEMBER_STATUSES = %w[confirmed].freeze
 
-  def public_index
-    scope = filtered_scope
-    render(json: { acts: scope.map(&:public_json) }) if scope
-  end
+  def public_index = render_listing
   def public_show = render(json: { act: public_visible(Act.includes(:act_members, owner: :profile).where(status: "active")).find(params[:id]).public_json })
 
   def index
     return unless authenticate!
-    scope = filtered_scope
-    render json: { acts: scope.map(&:public_json) } if scope
+    render_listing
   end
 
   def show
@@ -78,22 +78,22 @@ class ActsController < ApplicationController
 
   private
 
-  def filtered_scope
-    unless [params[:q], params[:city]].all? { _1.nil? || _1.is_a?(String) }
-      render_error("Search filters must be plain text.", :bad_request, "INVALID_PARAMETER")
-      return nil
+  # One ranked page of active acts. Filters: q (name, type, genres, events, lineup roles and
+  # instruments), city, type (act type), genre and eventType; paged like the talent directory.
+  def render_listing
+    unless LIST_PARAMS.all? { params[_1].nil? || params[_1].is_a?(String) }
+      return render_error("Search filters must be plain text.", :bad_request, "INVALID_PARAMETER")
     end
-    scope = public_visible(Act.includes(:act_members, owner: :profile).where(status: "active")).order(verified: :desc, updated_at: :desc)
-    if params[:q].present?
-      q = "%#{ActiveRecord::Base.sanitize_sql_like(params[:q])}%"
-      scope = scope.left_outer_joins(:act_members).where(<<~SQL.squish, q:).distinct
-        acts.name ILIKE :q OR acts.tagline ILIKE :q OR acts.bio ILIKE :q OR
-        acts.act_type ILIKE :q OR acts.genres::text ILIKE :q OR acts.event_types::text ILIKE :q OR
-        act_members.role_name ILIKE :q OR act_members.instrument ILIKE :q
-      SQL
-    end
-    scope = scope.where("acts.city ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:city])}%") if params[:city].present?
-    scope.limit(100)
+    offset = list_offset
+    return render_invalid_cursor if offset.nil?
+    scope = public_visible(Act.includes(:act_members, owner: :profile).where(status: "active"))
+    scope = Search::Query.new(params[:city]).filter(scope, CITY_FIELDS)
+    scope = scope.where("acts.act_type ILIKE ?", ActiveRecord::Base.sanitize_sql_like(params[:type].to_s.strip)) if params[:type].present?
+    scope = scope.where("acts.genres::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:genre].to_s.strip)}%") if params[:genre].present?
+    scope = scope.where("acts.event_types::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:eventType].to_s.strip)}%") if params[:eventType].present?
+    limit = list_limit
+    search = Search::Runner.call(scope, params[:q], Search::Targets::ACTS, order: LIST_ORDER, offset:, limit:)
+    render json: { acts: search.rows.map(&:public_json), nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta)
   end
 
   # Same rule as talent: non-demo synthetic QA batches are only visible to synthetic viewers.

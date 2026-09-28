@@ -1,33 +1,43 @@
 import { usePageMeta } from '../components/PageMeta';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { AudioLines, Briefcase, Music, PlayCircle, Search, Sparkles, Users } from 'lucide-react';
+import { Briefcase, Music, PlayCircle, Search, Sparkles, Users } from 'lucide-react';
 import { PublicNav } from '../components/PublicNav';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { apiGet } from '../lib/api';
 import { DemoBadge } from '../components/DemoBadge';
+import { LoadMore } from '../components/LoadMore';
+import { NoResults, SearchNotice } from '../components/SearchFeedback';
+import { useLatestCallback } from '../lib/useLatestCallback';
+import { usePagedList } from '../lib/usePagedList';
 import type { SearchResponse, SearchResult } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
 
+type ResultType = SearchResult['type'];
 const icons: Record<string, LucideIcon> = { jobs: Briefcase, talent: Users, acts: Music, samples: PlayCircle };
+const TYPE_LABELS: Record<ResultType, [string, string]> = {
+  jobs: ['Opportunities', 'opportunities'],
+  talent: ['Professionals', 'professionals'],
+  acts: ['Acts', 'acts'],
+  samples: ['Work samples', 'work samples'],
+};
+const TYPES = Object.keys(TYPE_LABELS) as ResultType[];
 const suggestions = ['Playback singer', 'FOH engineer', 'Session guitarist', 'Wedding band', 'Music producer'];
+const pickResults = (page: SearchResponse) => page.results;
+const isType = (value: string): value is ResultType => (TYPES as string[]).includes(value);
 
 export default function GlobalSearch() {
   const [sp, setSp] = useSearchParams();
-  const metaQuery = (sp.get('q') || '').trim();
+  const query = sp.get('q') || '';
+  const rawType = sp.get('type') || 'all';
+  const selectedType = isType(rawType) ? rawType : 'all';
   usePageMeta(
-    metaQuery ? `Search: ${metaQuery.slice(0, 60)}` : 'Search Verse',
+    query.trim() ? `Search: ${query.trim().slice(0, 60)}` : 'Search Verse',
     'Search music jobs, professionals, bookable acts and work samples across the Verse network.',
   );
-  const [q, setQ] = useState(sp.get('q') || '');
-  const [type, setType] = useState(sp.get('type') || 'all');
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [interpreted, setInterpreted] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [q, setQ] = useState(query);
   const [recent, setRecent] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('verse_recent_searches') || '[]');
@@ -35,53 +45,45 @@ export default function GlobalSearch() {
       return [];
     }
   });
+  // "Everything" is one page of each type; a single type is paged like the lists.
+  const list = usePagedList<SearchResult & { id: string }, SearchResponse>({
+    path: '/search',
+    pick: pickResults,
+    noun: 'results',
+  });
+  const { items: results, loading, error, meta, first } = list;
 
-  const query = sp.get('q') || '';
-  const selectedType = sp.get('type') || 'all';
+  const run = useLatestCallback(async () => {
+    const text = query.trim();
+    if (!text) return;
+    const params = new URLSearchParams({ q: text });
+    if (selectedType !== 'all') params.set('type', selectedType);
+    const failed = await list.search(params.toString());
+    if (failed) return;
+    setRecent((previous) => {
+      const next = [text, ...previous.filter((x) => x !== text)].slice(0, 6);
+      try {
+        localStorage.setItem('verse_recent_searches', JSON.stringify(next));
+      } catch {
+        /* storage blocked: keep in memory */
+      }
+      return next;
+    });
+  });
   useEffect(() => {
     setQ(query);
-    setType(selectedType);
-    if (!query.trim()) {
-      setResults([]);
-      setInterpreted([]);
-      setError('');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    // Ignore a response that arrives after a newer search started, so older results never replace newer ones.
-    let current = true;
-    apiGet<SearchResponse>(`/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(selectedType)}`)
-      .then((d) => {
-        if (!current) return;
-        setResults(d.results || []);
-        setInterpreted(d.interpretedAs || []);
-        setRecent((previous) => {
-          const next = [query.trim(), ...previous.filter((x) => x !== query.trim())].slice(0, 6);
-          try {
-            localStorage.setItem('verse_recent_searches', JSON.stringify(next));
-          } catch {
-            /* storage blocked: keep in memory */
-          }
-          return next;
-        });
-      })
-      .catch(() => {
-        if (current) setError('Search is taking a breather. Please try again in a moment.');
-      })
-      .finally(() => {
-        if (current) setLoading(false);
-      });
-    return () => {
-      current = false;
-    };
-  }, [query, selectedType]);
+    void run();
+  }, [query, selectedType, run]);
 
-  const searchFor = (value: string) => setSp({ q: value, ...(type !== 'all' ? { type } : {}) });
+  // Every search and type change is a history entry, so Back returns to the previous one.
+  const searchFor = (value: string, type: string = selectedType) =>
+    setSp({ q: value, ...(type !== 'all' ? { type } : {}) });
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (q.trim()) searchFor(q.trim());
   };
+  const searched = Boolean(query.trim());
+  const interpreted = meta.interpretedAs || [];
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -122,21 +124,22 @@ export default function GlobalSearch() {
           </label>
           <select
             id="search-type"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
+            value={selectedType}
+            onChange={(e) => (q.trim() ? searchFor(q.trim(), e.target.value) : setSp({ type: e.target.value }))}
             className="h-12 rounded-xl border border-white/15 bg-[#101323] px-4"
           >
             <option value="all">Everything</option>
-            <option value="jobs">Opportunities</option>
-            <option value="talent">Professionals</option>
-            <option value="acts">Acts</option>
-            <option value="samples">Work samples</option>
+            {TYPES.map((type) => (
+              <option key={type} value={type}>
+                {TYPE_LABELS[type][0]}
+              </option>
+            ))}
           </select>
-          <Button className="h-12 px-6" disabled={!q.trim() || loading}>
-            {loading ? 'Searching…' : 'Search'}
+          <Button className="h-12 px-6" disabled={!q.trim() || (searched && loading)}>
+            {searched && loading ? 'Searching…' : 'Search'}
           </Button>
         </form>
-        {!sp.get('q') && (
+        {!searched && (
           <div className="mt-5">
             <div className="text-xs font-bold uppercase tracking-[.16em] text-slate-400">Popular right now</div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -152,7 +155,8 @@ export default function GlobalSearch() {
             </div>
           </div>
         )}
-        {interpreted.length > 1 && (
+        {searched && !loading && <SearchNotice meta={meta} query={query.trim()} />}
+        {searched && !loading && interpreted.length > 1 && (
           <div className="mt-4 text-sm text-violet-200">Related terms included: {interpreted.slice(1).join(' · ')}</div>
         )}
         {recent.length > 0 && (
@@ -169,51 +173,98 @@ export default function GlobalSearch() {
             ))}
           </div>
         )}
-        {error && (
+        {searched && error && (
           <div className="mt-8 rounded-2xl border border-rose-300/25 bg-rose-400/10 p-5 text-rose-100" role="alert">
-            {error}
+            Search is taking a breather. Please try again in a moment.
           </div>
         )}
         <div className="mt-8 grid gap-3" aria-live="polite">
-          {!loading && !error && sp.get('q') && results.length === 0 ? (
-            <div className="verse-surface rounded-2xl p-10 text-center">
-              <AudioLines className="mx-auto text-violet-300" size={30} />
-              <h2 className="mt-4 text-xl font-bold">No exact match yet</h2>
-              <p className="mt-2 text-slate-300">Try a broader role, instrument, genre or city.</p>
+          {!searched || loading || error ? null : results.length === 0 ? (
+            <div className="verse-surface rounded-2xl">
+              <NoResults
+                noun="results"
+                query={query.trim()}
+                meta={meta}
+                onSearch={(term) => searchFor(term)}
+                suggestions={suggestions}
+                onClear={selectedType !== 'all' ? () => searchFor(query.trim(), 'all') : undefined}
+              />
             </div>
           ) : (
-            results.map((r) => {
+            results.map((r, index) => {
               const Icon = icons[r.type] || Search;
+              const startsGroup = selectedType === 'all' && (index === 0 || results[index - 1].type !== r.type);
+              const total = first?.totals?.[r.type];
               return (
-                <Link key={`${r.type}-${r.id}`} to={r.url} className="group">
-                  <Card className="verse-card-lift border-white/15 bg-white/[.045]">
-                    <CardContent className="flex gap-4 p-5">
-                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-500/25 to-cyan-400/10">
-                        <Icon size={19} className="text-violet-200" />
+                <div key={`${r.type}-${r.id}`} className="grid gap-3">
+                  {startsGroup && (
+                    <div
+                      className="mt-3 flex flex-wrap items-baseline justify-between gap-2"
+                      data-testid={`group-${r.type}`}
+                    >
+                      <div className="text-sm font-bold uppercase tracking-[.14em] text-slate-300">
+                        {TYPE_LABELS[r.type][0]}
+                        {typeof total === 'number' && <span className="ml-2 text-slate-500">{total}</span>}
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.14em] text-slate-400">
-                          {r.type}
-                          <DemoBadge show={r.demo} />
+                      {first?.moreOf?.[r.type] && (
+                        <button
+                          type="button"
+                          onClick={() => searchFor(query.trim(), r.type)}
+                          className="text-sm text-violet-300 hover:text-violet-200 hover:underline"
+                        >
+                          See all {total} {TYPE_LABELS[r.type][1]}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <Link to={r.url} className="group" data-list-item={index}>
+                    <Card className="verse-card-lift border-white/15 bg-white/[.045]">
+                      <CardContent className="flex gap-4 p-5">
+                        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-500/25 to-cyan-400/10">
+                          <Icon size={19} className="text-violet-200" />
                         </div>
-                        <h2 className="mt-1 text-lg font-bold group-hover:text-violet-200">{r.title}</h2>
-                        {r.subtitle && <div className="mt-0.5 text-sm text-violet-200">{r.subtitle}</div>}
-                        {r.description && <p className="mt-2 line-clamp-2 text-sm text-slate-300">{r.description}</p>}
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {(r.tags || []).slice(0, 6).map((x: string) => (
-                            <Badge key={x} variant="secondary">
-                              {x}
-                            </Badge>
-                          ))}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.14em] text-slate-400">
+                            {r.type}
+                            <DemoBadge show={r.demo} />
+                          </div>
+                          <h2 className="mt-1 text-lg font-bold group-hover:text-violet-200">{r.title}</h2>
+                          {r.subtitle && <div className="mt-0.5 text-sm text-violet-200">{r.subtitle}</div>}
+                          {r.description && <p className="mt-2 line-clamp-2 text-sm text-slate-300">{r.description}</p>}
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {(r.tags || []).slice(0, 6).map((x: string) => (
+                              <Badge key={x} variant="secondary">
+                                {x}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
               );
             })
           )}
         </div>
+        {searched && !loading && !error && selectedType !== 'all' && (
+          <LoadMore
+            shown={results.length}
+            total={list.total}
+            hasMore={list.hasMore}
+            loading={list.loadingMore}
+            error={list.moreError}
+            onLoadMore={list.loadMore}
+            noun={[TYPE_LABELS[selectedType][1].replace(/s$/, ''), TYPE_LABELS[selectedType][1]]}
+          />
+        )}
+        {searched && selectedType !== 'all' && (
+          <p className="mt-6 text-sm">
+            <Link to={`/search?q=${encodeURIComponent(query.trim())}`} className="text-violet-300 hover:underline">
+              Search everything for “{query.trim()}”
+            </Link>
+          </p>
+        )}
       </main>
     </div>
   );

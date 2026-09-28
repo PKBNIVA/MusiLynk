@@ -6,7 +6,9 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { Field, FormDialog, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
+import { FormDialog, selectClass, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
+import { Field, RequiredNote } from '../components/form/Field';
+import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { toast } from 'sonner';
 import { BookingDepositPanel } from '../components/BookingDepositPanel';
 import { errorMessage } from '../lib/errors';
@@ -94,23 +96,45 @@ type QuoteForm = {
   cancellationTerms: string;
 };
 const wholeNumber = (value: string) => /^\d+$/.test(value.trim());
-function quoteProblem(q: QuoteForm): string {
+type QuoteField =
+  | 'performanceFee'
+  | 'travelFee'
+  | 'productionFee'
+  | 'otherFee'
+  | 'currency'
+  | 'depositPercent'
+  | 'validUntil'
+  | 'cancellationTerms';
+const QUOTE_IDS: Record<QuoteField, string> = {
+  performanceFee: 'quote-performance',
+  travelFee: 'quote-travel',
+  productionFee: 'quote-production',
+  otherFee: 'quote-other',
+  currency: 'quote-currency',
+  depositPercent: 'quote-deposit',
+  validUntil: 'quote-valid',
+  cancellationTerms: 'quote-cancellation',
+};
+const QUOTE_CURRENCIES = ['INR', 'USD', 'EUR', 'GBP'];
+/** Every problem with the quote at once, per field. */
+function quoteProblems(q: QuoteForm) {
+  const errors: Partial<Record<QuoteField, string>> = {};
   if (!wholeNumber(q.performanceFee) || Number(q.performanceFee) <= 0)
-    return 'Enter a performance fee as a whole number above zero.';
-  for (const [label, value] of [
-    ['Travel', q.travelFee],
-    ['Production', q.productionFee],
-    ['Other', q.otherFee],
+    errors.performanceFee = 'Enter a performance fee as a whole number above zero.';
+  for (const [key, label] of [
+    ['travelFee', 'Travel'],
+    ['productionFee', 'Production'],
+    ['otherFee', 'Other'],
   ] as const) {
-    if (value.trim() && !wholeNumber(value)) return `${label} fee must be a whole number of 0 or more.`;
+    if (q[key].trim() && !wholeNumber(q[key])) errors[key] = `${label} fee must be a whole number of 0 or more.`;
   }
-  if (!/^[A-Z]{3}$/.test(q.currency.trim())) return 'Currency must be a 3-letter code such as INR.';
+  if (!/^[A-Z]{3}$/.test(q.currency.trim())) errors.currency = 'Choose a currency.';
   if (!wholeNumber(q.depositPercent) || Number(q.depositPercent) < 1 || Number(q.depositPercent) > 100)
-    return 'Deposit must be between 1% and 100%.';
+    errors.depositPercent = 'Deposit must be between 1% and 100%.';
   if (q.validUntil && new Date(`${q.validUntil}T23:59:59`).getTime() <= Date.now())
-    return 'The quote must stay valid until a future date.';
-  if (!q.cancellationTerms.trim()) return 'Add cancellation and refund terms.';
-  return '';
+    errors.validUntil = 'The quote must stay valid until a future date.';
+  if (!q.cancellationTerms.trim()) errors.cancellationTerms = 'Add cancellation and refund terms.';
+  return errors;
 }
 
 export default function Bookings() {
@@ -119,11 +143,12 @@ export default function Bookings() {
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
     [quote, setQuote] = useState<QuoteForm | null>(null),
-    [quoteError, setQuoteError] = useState(''),
-    [sendingQuote, setSendingQuote] = useState(false),
     [payments, setPayments] = useState<Record<string, BookingPayment[]>>({}),
     [paymentOpen, setPaymentOpen] = useState<Record<string, boolean>>({});
   const { ask, element: confirmDialog } = useConfirm();
+  const quoteErrors = useFormErrors<QuoteField>({ ids: QUOTE_IDS });
+  const quoteSubmit = useSubmitOnce();
+  const sendingQuote = quoteSubmit.busy;
   async function load() {
     try {
       const d = await apiGet<{ bookings?: Booking[] }>('/bookings');
@@ -143,33 +168,34 @@ export default function Bookings() {
     toast.success(success);
     await load();
   }
-  async function sendQuote() {
-    if (!quote || sendingQuote) return;
-    const problem = quoteProblem(quote);
-    if (problem) return setQuoteError(problem);
-    setSendingQuote(true);
-    setQuoteError('');
-    try {
-      await apiPost(`/bookings/${quote.id}/quote`, {
-        performanceFee: Number(quote.performanceFee),
-        travelFee: Number(quote.travelFee) || 0,
-        productionFee: Number(quote.productionFee) || 0,
-        otherFee: Number(quote.otherFee) || 0,
-        currency: quote.currency.trim() || 'INR',
-        depositPercent: Number(quote.depositPercent) || 50,
-        validUntil: quote.validUntil || null,
-        inclusions: quote.inclusions,
-        exclusions: quote.exclusions,
-        cancellationTerms: quote.cancellationTerms,
-      });
-      toast.success('Quote sent');
-      setQuote(null);
-      await load();
-    } catch (e: unknown) {
-      setQuoteError(errorMessage(e, 'Unable to send the quote.'));
-    } finally {
-      setSendingQuote(false);
-    }
+  function sendQuote() {
+    if (!quote) return;
+    return quoteSubmit.run(async () => {
+      quoteErrors.setFormError('');
+      if (quoteErrors.setErrors(quoteProblems(quote))) {
+        quoteErrors.focusFirst();
+        return;
+      }
+      try {
+        await apiPost(`/bookings/${quote.id}/quote`, {
+          performanceFee: Number(quote.performanceFee),
+          travelFee: Number(quote.travelFee) || 0,
+          productionFee: Number(quote.productionFee) || 0,
+          otherFee: Number(quote.otherFee) || 0,
+          currency: quote.currency.trim() || 'INR',
+          depositPercent: Number(quote.depositPercent) || 50,
+          validUntil: quote.validUntil || null,
+          inclusions: quote.inclusions,
+          exclusions: quote.exclusions,
+          cancellationTerms: quote.cancellationTerms,
+        });
+        toast.success('Quote sent');
+        setQuote(null);
+        await load();
+      } catch (e: unknown) {
+        if (quoteErrors.setFromApi(e, 'Unable to send the quote.')) quoteErrors.focusFirst();
+      }
+    });
   }
   async function togglePayments(id: string) {
     if (paymentOpen[id]) {
@@ -202,7 +228,7 @@ export default function Bookings() {
   }
   const beginQuote = (b: Booking) => {
     const last = b.latestQuote;
-    setQuoteError('');
+    quoteErrors.clear();
     setQuote({
       id: b.id,
       requesterName: b.requesterName,
@@ -275,8 +301,10 @@ export default function Bookings() {
     };
     ask({ title, description, confirmLabel, destructive, action: () => changeStatus(b.id, s, success[s]) });
   };
-  const setQ = (key: keyof QuoteForm, value: string) =>
+  const setQ = (key: keyof QuoteForm, value: string) => {
     setQuote((current) => (current ? { ...current, [key]: value } : current));
+    quoteErrors.clear(key as QuoteField);
+  };
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -466,16 +494,21 @@ export default function Bookings() {
           submitLabel="Send quote"
           busyLabel="Sending…"
           busy={sendingQuote}
-          error={quoteError}
+          error={quoteErrors.formError}
           wide
           onSubmit={sendQuote}
         >
           {quote && (
             <>
+              <RequiredNote />
               <div className="grid sm:grid-cols-2 gap-3">
-                <Field label="Performance fee" htmlFor="quote-performance">
+                <Field
+                  id={QUOTE_IDS.performanceFee}
+                  label="Performance fee"
+                  required
+                  error={quoteErrors.errors.performanceFee}
+                >
                   <Input
-                    id="quote-performance"
                     inputMode="numeric"
                     type="number"
                     min="1"
@@ -483,17 +516,22 @@ export default function Bookings() {
                     onChange={(e) => setQ('performanceFee', e.target.value)}
                   />
                 </Field>
-                <Field label="Currency" htmlFor="quote-currency">
-                  <Input
-                    id="quote-currency"
-                    maxLength={3}
+                <Field id={QUOTE_IDS.currency} label="Currency" required error={quoteErrors.errors.currency}>
+                  <select
+                    className={selectClass}
                     value={quote.currency}
-                    onChange={(e) => setQ('currency', e.target.value.toUpperCase())}
-                  />
+                    onChange={(e) => setQ('currency', e.target.value)}
+                  >
+                    {(QUOTE_CURRENCIES.includes(quote.currency)
+                      ? QUOTE_CURRENCIES
+                      : [quote.currency, ...QUOTE_CURRENCIES]
+                    ).map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </select>
                 </Field>
-                <Field label="Travel fee" htmlFor="quote-travel">
+                <Field id={QUOTE_IDS.travelFee} label="Travel fee" optional error={quoteErrors.errors.travelFee}>
                   <Input
-                    id="quote-travel"
                     inputMode="numeric"
                     type="number"
                     min="0"
@@ -501,9 +539,13 @@ export default function Bookings() {
                     onChange={(e) => setQ('travelFee', e.target.value)}
                   />
                 </Field>
-                <Field label="Production fee" htmlFor="quote-production">
+                <Field
+                  id={QUOTE_IDS.productionFee}
+                  label="Production fee"
+                  optional
+                  error={quoteErrors.errors.productionFee}
+                >
                   <Input
-                    id="quote-production"
                     inputMode="numeric"
                     type="number"
                     min="0"
@@ -511,9 +553,8 @@ export default function Bookings() {
                     onChange={(e) => setQ('productionFee', e.target.value)}
                   />
                 </Field>
-                <Field label="Other fee" htmlFor="quote-other">
+                <Field id={QUOTE_IDS.otherFee} label="Other fee" optional error={quoteErrors.errors.otherFee}>
                   <Input
-                    id="quote-other"
                     inputMode="numeric"
                     type="number"
                     min="0"
@@ -521,9 +562,13 @@ export default function Bookings() {
                     onChange={(e) => setQ('otherFee', e.target.value)}
                   />
                 </Field>
-                <Field label="Deposit %" htmlFor="quote-deposit">
+                <Field
+                  id={QUOTE_IDS.depositPercent}
+                  label="Deposit %"
+                  required
+                  error={quoteErrors.errors.depositPercent}
+                >
                   <Input
-                    id="quote-deposit"
                     inputMode="numeric"
                     type="number"
                     min="1"
@@ -532,34 +577,36 @@ export default function Bookings() {
                     onChange={(e) => setQ('depositPercent', e.target.value)}
                   />
                 </Field>
-                <Field label="Valid until (optional)" htmlFor="quote-valid">
+                <Field id={QUOTE_IDS.validUntil} label="Valid until" optional error={quoteErrors.errors.validUntil}>
                   <Input
-                    id="quote-valid"
                     type="date"
+                    min={new Date().toISOString().slice(0, 10)}
                     value={quote.validUntil}
                     onChange={(e) => setQ('validUntil', e.target.value)}
                   />
                 </Field>
               </div>
-              <Field label="What the quote includes" htmlFor="quote-inclusions">
+              <Field id="quote-inclusions" label="What the quote includes" optional>
                 <textarea
-                  id="quote-inclusions"
                   className={textareaClass}
                   value={quote.inclusions}
                   onChange={(e) => setQ('inclusions', e.target.value)}
                 />
               </Field>
-              <Field label="What is excluded" htmlFor="quote-exclusions">
+              <Field id="quote-exclusions" label="What is excluded" optional>
                 <textarea
-                  id="quote-exclusions"
                   className={textareaClass}
                   value={quote.exclusions}
                   onChange={(e) => setQ('exclusions', e.target.value)}
                 />
               </Field>
-              <Field label="Cancellation and refund terms" htmlFor="quote-cancellation">
+              <Field
+                id={QUOTE_IDS.cancellationTerms}
+                label="Cancellation and refund terms"
+                required
+                error={quoteErrors.errors.cancellationTerms}
+              >
                 <textarea
-                  id="quote-cancellation"
                   className={textareaClass}
                   value={quote.cancellationTerms}
                   onChange={(e) => setQ('cancellationTerms', e.target.value)}

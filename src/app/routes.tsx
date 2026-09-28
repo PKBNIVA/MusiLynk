@@ -54,6 +54,7 @@ const Bookings = L(() => import('./pages/Bookings'));
 const BandBuilder = L(() => import('./pages/BandBuilder'));
 const Billing = L(() => import('./pages/Billing'));
 const AccountData = L(() => import('./pages/AccountData'));
+const AccountSettings = L(() => import('./pages/AccountSettings'));
 const S = ({ children }: { children: React.ReactNode }) => (
   <React.Suspense fallback={<PageLoading />}>{children}</React.Suspense>
 );
@@ -480,6 +481,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: 'settings',
+            element: (
+              <P roles={['jobseeker']}>
+                <AccountSettings />
+              </P>
+            ),
+          },
+          {
             path: 'workspace',
             element: (
               <P roles={['jobseeker']}>
@@ -633,6 +642,14 @@ export const router = createBrowserRouter([
             element: (
               <P roles={['employer']}>
                 <AccountData />
+              </P>
+            ),
+          },
+          {
+            path: 'settings',
+            element: (
+              <P roles={['employer']}>
+                <AccountSettings />
               </P>
             ),
           },

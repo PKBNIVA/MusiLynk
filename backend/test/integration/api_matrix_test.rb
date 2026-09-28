@@ -46,10 +46,16 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/auth/verify-email", :public, { ok: [400], params: { token: "not-a-token" } }],
     [:post, "/api/auth/forgot-password", :public, { params: { email: "nobody@example.com" }, keys: %w[ok] }],
     [:post, "/api/auth/reset-password", :public, { ok: [400], params: { token: "not-a-token", password: "LongEnough123!" } }],
+    [:get, "/api/auth/reset-password/check", :public, { params: { token: "not-a-token" }, keys: %w[valid] }],
     [:get, "/api/me", :any, { keys: %w[user] }],
     [:get, "/api/account/export", :any, { keys: %w[format version account profile conversations] }],
     # Without the typed email the request is refused, so the matrix never erases its own users.
     [:delete, "/api/account", :any, { ok: [422], params: { confirmEmail: "someone-else@example.com" } }],
+    [:patch, "/api/account/name", :any, { params: ->(_w, _a) { { name: "Matrix Renamed #{SecureRandom.hex(3)}" } }, bad: { name: "a" }, bad_status: [422], keys: %w[user] }],
+    # An unchanged/bogus request never starts a real change, so the matrix never erases its own users' sign-in.
+    [:post, "/api/account/email/request", :any, { ok: [422], params: ->(w, a) { { email: w.user(a).email } } }],
+    [:post, "/api/account/email/confirm", :any, { ok: [422], params: { changeToken: "not-a-token", code: "000000" } }],
+    [:post, "/api/account/password", :any, { ok: [403], params: { currentPassword: "wrong-current-password", newPassword: "BrandNewPass456!" } }],
     [:put, "/api/profile", :talent, { params: { headline: "Updated headline" }, bad: { website: "javascript:alert(1)" }, bad_status: [422], keys: %w[user] }],
 
     [:get, "/api/jobs", :public, { keys: %w[jobs nextCursor total] }],

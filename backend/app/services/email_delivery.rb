@@ -36,6 +36,23 @@ class EmailDelivery
       action: nil,
       notice: true,
       footer: "If you made this change, nothing else is needed. If you did not, sign in at the admin site right away and change your password, or contact the site owner."
+    },
+    # data: { code: }. Sent to the address an account holder wants to switch their account to.
+    "account_email_change" => {
+      subject: "Confirm your new Verse email",
+      heading: "Confirm your new email",
+      copy: "Enter this code on Verse to move your account to this address. It expires in 10 minutes and can be used once.",
+      action: nil,
+      footer: "If you didn't request this, ignore this email: nothing changes without the code. If you did not start this, change your Verse password now."
+    },
+    # data: { detail: new address }. Sent to the previous address once the change is done.
+    "account_email_changed" => {
+      subject: "Your Verse email was changed",
+      heading: "Email changed",
+      copy: "The email address for your Verse account was just changed to:",
+      action: nil,
+      notice: true,
+      footer: "If you made this change, nothing else is needed. If you did not, sign in right away and change your password, or contact support."
     }
   }.freeze
   DEFAULT_FOOTER = "If you did not request this, you can safely ignore this email.".freeze

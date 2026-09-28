@@ -4,7 +4,9 @@
 # non-admin user a complete, symmetric set of owned resources so that a request can be replayed
 # as the owner (allowed), as a different user of the same role (IDOR) and as the wrong role.
 module ApiMatrixWorld
-  PASSWORD = "MatrixPass123!".freeze
+  # Not "Matrix..." — every fixture user's name/email starts with "Matrix", and the
+  # password strength rule (PasswordStrength) rejects a password containing them.
+  PASSWORD = "VerseQaFixture123!".freeze
   MISSING_ID = "none_00000000-0000-4000-8000-000000000000".freeze
   ACTORS = %i[js js2 emp emp2 admin].freeze
   # The user of the same role whose resources an actor must never reach.

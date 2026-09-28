@@ -536,6 +536,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_120000) do
     t.index ["title"], name: "index_jobs_on_title", opclass: :gin_trgm_ops, using: :gin
   end
 
+  create_table "legacy_function_area_backups", force: :cascade do |t|
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.string "function_area", null: false
+    t.string "record_id", null: false
+    t.datetime "record_updated_at"
+    t.string "source_table", null: false
+    t.index ["source_table", "record_id"], name: "index_legacy_function_area_backups_on_record", unique: true
+  end
+
   create_table "messages", id: :string, force: :cascade do |t|
     t.string "conversation_id", null: false
     t.string "sender_id", null: false

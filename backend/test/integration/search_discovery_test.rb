@@ -137,8 +137,12 @@ class SearchDiscoveryTest < ActionDispatch::IntegrationTest
     assert_equal "Performance", kept.reload.function_area
     assert_equal "Something custom", other.reload.function_area
     assert_equal "Live Sound & Audio", alert.reload.function_area
+    assert_equal 2, ActiveRecord::Base.lease_connection.select_value("SELECT COUNT(*) FROM legacy_function_area_backups").to_i, "each rewritten row is backed up once"
     migration.down
-    assert_equal "Tour & Production Management", old.reload.function_area, "rollback keeps the current names"
+    assert_equal "Touring", old.reload.function_area, "rollback restores the original name"
+    assert_equal "Live Sound", alert.reload.function_area
+    assert_equal "Performance", kept.reload.function_area
+    assert_not ActiveRecord::Base.lease_connection.table_exists?(:legacy_function_area_backups)
   end
 
   test "global search results are cached briefly per query, type and viewer kind" do

@@ -14,9 +14,9 @@ class EmailDeliveryJob < ApplicationJob
 
   LINK_PURPOSE = :email_delivery_link
   RECIPIENT_PURPOSE = :email_delivery_recipient
-  CODE_TEMPLATES = %w[sign_in_code admin_email_change].freeze
+  CODE_TEMPLATES = %w[sign_in_code admin_email_change account_email_change].freeze
   # Security notices carry a detail (e.g. the new address) instead of a secret.
-  NOTICE_TEMPLATES = %w[admin_email_changed].freeze
+  NOTICE_TEMPLATES = %w[admin_email_changed account_email_changed].freeze
 
   queue_as :mailers
 

@@ -261,21 +261,42 @@ class AuthController < ApplicationController
     render json: { ok: true, message: "If an account exists, password reset instructions have been sent." }
   end
 
+  RESET_TOKEN_INVALID_MESSAGE = "This link has expired or was already used. Request a new one.".freeze
+
+  # GET /auth/reset-password/check?token= -> {valid, role?}
+  # Lets the reset-password page tell an expired or already-used link apart from a bad
+  # password *before* the person types a new one, and route "Sign in" to the right role.
+  def check_reset_password_token
+    token = find_usable_reset_token(params[:token])
+    return render json: { valid: false } unless token
+    render json: { valid: true, role: token.user.role }
+  end
+
   def reset_password
-    return render_error("Password must be at least 10 characters.", :bad_request) if params[:password].to_s.length < 10
-    token = EmailToken.usable("reset_password").find_by(token_digest: digest(params[:token]))
-    return render_error("Reset link is invalid or expired.", :bad_request, "TOKEN_INVALID") unless token
+    token = find_usable_reset_token(params[:token])
+    return render_error(RESET_TOKEN_INVALID_MESSAGE, :bad_request, "TOKEN_INVALID") unless token
+    user = token.user
+    violation = PasswordStrength.violation(params[:password], email: user.email, name: user.name)
+    return render_error("Password #{violation}", :bad_request, "PASSWORD_WEAK") if violation
+
     token.with_lock do
-      return render_error("Reset link is invalid or expired.", :bad_request, "TOKEN_INVALID") if token.used_at? || token.expires_at <= Time.current
-      token.user.update!(password: params[:password])
+      return render_error(RESET_TOKEN_INVALID_MESSAGE, :bad_request, "TOKEN_INVALID") if token.used_at? || token.expires_at <= Time.current
+      user.update!(password: params[:password])
       token.update!(used_at: Time.current)
-      token.user.sessions.delete_all
-      token.user.email_tokens.usable("reset_password").update_all(used_at: Time.current)
+      user.sessions.delete_all
+      user.email_tokens.usable("reset_password").update_all(used_at: Time.current)
     end
-    render json: { ok: true }
+    accessToken = sign_in(user)
+    AuditLog.create!(actor: user, action: "auth.password_reset", entity_type: "User", entity_id: user.id)
+    render json: { ok: true, user: public_user(user), accessToken: }
   end
 
   private
+
+  def find_usable_reset_token(raw)
+    return nil unless raw.is_a?(String) && raw.present?
+    EmailToken.usable("reset_password").find_by(token_digest: digest(raw))
+  end
 
   def sign_in(user)
     raw = SecureRandom.urlsafe_base64(48)

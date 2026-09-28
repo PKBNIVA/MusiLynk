@@ -2,8 +2,22 @@ import { usePageMeta } from '../components/PageMeta';
 import { Link } from 'react-router';
 import { PublicNav } from '../components/PublicNav';
 import { Card, CardContent } from '../components/ui/card';
-import { Briefcase, Users, Music, Zap, Search, ArrowRight } from 'lucide-react';
+import { Briefcase, Building2, Music, Search, UserPlus, Users, Zap, ArrowRight } from 'lucide-react';
 const intents = [
+  [
+    'Create a professional account',
+    'Showcase your work, apply to jobs and get discovered by employers.',
+    '/auth/jobseeker?mode=register',
+    UserPlus,
+    null,
+  ],
+  [
+    'Create an employer account',
+    'Post jobs, search talent and book acts for your next show.',
+    '/auth/employer?mode=register',
+    Building2,
+    null,
+  ],
   ['Find music work', 'Jobs, gigs, auditions, sessions, tours and collaborations.', '/music-jobs', Briefcase, null],
   [
     'Hire a person or build a team',

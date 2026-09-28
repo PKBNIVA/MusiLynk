@@ -129,6 +129,15 @@ describe('useFormErrors', () => {
     expect(none).toBe(false);
   });
 
+  it('derives control ids with idFor', () => {
+    const form = renderHook({ idFor: (name) => (name === 'name' ? 'org-name' : name) });
+    act(() => {
+      form().setErrors({ name: 'Required' });
+      form().focusFirst();
+    });
+    expect(document.activeElement?.id).toBe('org-name');
+  });
+
   it('places API field errors on the form fields and leaves the form error empty', () => {
     const form = renderHook({ apiFields: { companyName: 'name' } });
     let placed = false;

@@ -46,10 +46,16 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/auth/verify-email", :public, { ok: [400], params: { token: "not-a-token" } }],
     [:post, "/api/auth/forgot-password", :public, { params: { email: "nobody@example.com" }, keys: %w[ok] }],
     [:post, "/api/auth/reset-password", :public, { ok: [400], params: { token: "not-a-token", password: "LongEnough123!" } }],
+    [:get, "/api/auth/reset-password/check", :public, { params: { token: "not-a-token" }, keys: %w[valid] }],
     [:get, "/api/me", :any, { keys: %w[user] }],
     [:get, "/api/account/export", :any, { keys: %w[format version account profile conversations] }],
     # Without the typed email the request is refused, so the matrix never erases its own users.
     [:delete, "/api/account", :any, { ok: [422], params: { confirmEmail: "someone-else@example.com" } }],
+    [:patch, "/api/account/name", :any, { params: ->(_w, _a) { { name: "Matrix Renamed #{SecureRandom.hex(3)}" } }, bad: { name: "a" }, bad_status: [422], keys: %w[user] }],
+    # An unchanged/bogus request never starts a real change, so the matrix never erases its own users' sign-in.
+    [:post, "/api/account/email/request", :any, { ok: [422], params: ->(w, a) { { email: w.user(a).email } } }],
+    [:post, "/api/account/email/confirm", :any, { ok: [422], params: { changeToken: "not-a-token", code: "000000" } }],
+    [:post, "/api/account/password", :any, { ok: [403], params: { currentPassword: "wrong-current-password", newPassword: "BrandNewPass456!" } }],
     [:put, "/api/profile", :talent, { params: { headline: "Updated headline" }, bad: { website: "javascript:alert(1)" }, bad_status: [422], keys: %w[user] }],
 
     [:get, "/api/jobs", :public, { keys: %w[jobs nextCursor total] }],
@@ -125,7 +131,10 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/notifications", :any, { keys: %w[notifications unread] }],
     [:patch, "/api/notifications/{notification}", :any, { idor: true, missing: :notification }],
     [:put, "/api/notifications/{notification}", :any, { idor: true }],
-    [:post, "/api/reports", :any, { ok: [201], params: ->(w, _a) { { entityType: "job", entityId: w.refs[:shared][:job], reason: "spam" } }, bad: {}, bad_status: [422], keys: %w[id] }],
+    # Uses draft_job (not :shared[:job]) because the world already seeds an open report by `js`
+    # on :shared[:job] (see api_matrix_world.rb `report:`), which would otherwise trip the new
+    # duplicate-report rejection (see reports_test.rb) when `js`'s turn comes up below.
+    [:post, "/api/reports", :any, { ok: [201], params: ->(w, _a) { { entityType: "job", entityId: w.refs[:shared][:draft_job], reason: "Spam or scam" } }, bad: {}, bad_status: [422], keys: %w[id] }],
     [:post, "/api/verification-requests", :any, { ok: { default: [201], admin: [400] }, params: verification_kind, bad: { kind: "celebrity" }, bad_status: [400] }],
     [:get, "/api/reviews", :public, { keys: %w[reviews] }],
     [:post, "/api/reviews", :jobseeker, { ok: [201, 403, 409], params: ->(w, _a) { { employerId: w.user(:emp).id, rating: 5, body: "Great" } }, bad: { employerId: ApiMatrixWorld::MISSING_ID }, bad_status: [404, 422] }],

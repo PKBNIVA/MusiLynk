@@ -10,7 +10,7 @@ test.describe('real frontend and Rails journeys', () => {
   for (const role of ['jobseeker', 'employer'] as const) {
     test(`${role} registers, signs out, signs back in, and keeps profile data`, async ({ page, request }) => {
       const email = `qa-${randomUUID()}@example.invalid`;
-      const password = 'IntegrationPass123!';
+      const password = 'Harbor-Lantern-4827!';
       const name = role === 'jobseeker' ? 'Integration Artist' : 'Integration Studio';
       const profilePath = `/${role}/profile`;
 
@@ -32,9 +32,8 @@ test.describe('real frontend and Rails journeys', () => {
       const forbidden = await request.get(`${apiBase}/admin/stats`, { headers: { Authorization: `Bearer ${token}` } });
       expect(forbidden.status()).toBe(403);
 
-      const tour = page.getByRole('dialog', { name: 'Verse product tour' });
-      await expect(tour).toBeVisible();
-      await tour.getByRole('button', { name: 'Close tour' }).click();
+      // C5/CRAWL-03: the tour never auto-starts on the profile-setup page itself.
+      const tour = page.getByRole('dialog').filter({ hasText: /Step \d+ of \d+/ });
       await expect(tour).toBeHidden();
 
       if (role === 'jobseeker') {
@@ -50,6 +49,13 @@ test.describe('real frontend and Rails journeys', () => {
           return (await response.json()).user.profileComplete;
         })
         .toBe(true);
+
+      // The tour starts on the first dashboard visit after the profile is complete, and
+      // Escape closes it (CRAWL-03).
+      await page.goto(`/${role}`);
+      await expect(tour).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(tour).toBeHidden();
 
       await page.getByRole('button', { name: 'Open account menu' }).click();
       await page.getByRole('menuitem', { name: 'Sign out' }).click();
@@ -76,4 +82,44 @@ test.describe('real frontend and Rails journeys', () => {
       }
     });
   }
+
+  test('a misspelt search is corrected and the directory pages with a cursor', async ({ page, request }) => {
+    const apiBase = process.env.QA_API_BASE_URL!;
+    const tag = randomUUID().slice(0, 8);
+    // Two professionals whose headline says violinist; profiles are listed once saved.
+    for (const n of [1, 2]) {
+      const registered = await request.post(`${apiBase}/auth/register`, {
+        data: {
+          name: `Violin ${tag} ${n}`,
+          email: `qa-violin-${tag}-${n}@example.invalid`,
+          password: 'IntegrationPass123!',
+          role: 'jobseeker',
+        },
+      });
+      expect(registered.status()).toBe(201);
+      const { accessToken } = await registered.json();
+      const saved = await request.put(`${apiBase}/profile`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        data: { headline: `Violinist ${tag}`, location: 'Pune', roles: ['Violinist'] },
+      });
+      expect(saved.status()).toBe(200);
+    }
+
+    // The API pages the match with an opaque cursor, and every row is reached once.
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const url: string = `${apiBase}/public/talent?q=${encodeURIComponent(`violinist ${tag}`)}&limit=1${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+      const page1 = await (await request.get(url)).json();
+      expect(page1.total).toBe(2);
+      seen.push(...page1.talent.map((t: { name: string }) => t.name));
+      cursor = page1.nextCursor;
+    } while (cursor);
+    expect(seen.sort()).toEqual([`Violin ${tag} 1`, `Violin ${tag} 2`]);
+
+    // The page shows what the misspelling was read as.
+    await page.goto(`/music-professionals?q=${encodeURIComponent(`voilinist ${tag}`)}`);
+    await expect(page.getByTestId('search-notice')).toContainText(`Showing results for violinist ${tag}`);
+    await expect(page.getByRole('heading', { name: `Violin ${tag} 1` })).toBeVisible();
+  });
 });

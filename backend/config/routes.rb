@@ -9,6 +9,7 @@ Rails.application.routes.draw do
     post "auth/request-email-verification", to: "auth#request_verification"
     post "auth/verify-email", to: "auth#verify_email"
     post "auth/forgot-password", to: "auth#forgot_password"
+    get "auth/reset-password/check", to: "auth#check_reset_password_token"
     post "auth/reset-password", to: "auth#reset_password"
     post "auth/otp/request", to: "auth#otp_request"
     post "auth/otp/verify", to: "auth#otp_verify"
@@ -17,6 +18,10 @@ Rails.application.routes.draw do
     get "me", to: "auth#me"
     get "account/export", to: "account#export"
     delete "account", to: "account#destroy"
+    patch "account/name", to: "account#update_name"
+    post "account/email/request", to: "account#request_email_change"
+    post "account/email/confirm", to: "account#confirm_email_change"
+    post "account/password", to: "account#change_password"
     put "profile", to: "profiles#update"
 
     resources :jobs, only: %i[index show create] do

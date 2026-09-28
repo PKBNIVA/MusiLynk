@@ -77,10 +77,15 @@ class AdminReviewVerificationContractTest < ActionDispatch::IntegrationTest
   test "admin resolves and dismisses reports and records the resolver" do
     admin = create_user("Report Admin", "report-admin-contract@example.com", "admin")
     reporter = create_user("Reporting Artist", "reporting-artist-contract@example.com", "jobseeker")
+    employer = create_user("Reported Studio Contract", "reported-studio-contract@example.com", "employer")
     token = session_for(reporter)
 
-    reports = 2.times.map do |index|
-      post "/api/reports", params: { entityType: "job", entityId: "job-#{index}", reason: "Suspicious listing" }, headers: auth(token), as: :json
+    jobs = 2.times.map do |index|
+      Job.create!(employer:, title: "Reportable Contract Job #{index}", company: employer.name, location: "Mumbai", kind: "Contract", genre: "Studio",
+        description: "A properly documented professional opportunity with clear responsibilities and written terms.", status: "published")
+    end
+    reports = jobs.map do |job|
+      post "/api/reports", params: { entityType: "job", entityId: job.id, reason: "Spam or scam" }, headers: auth(token), as: :json
       assert_response :created
       Report.find(response.parsed_body.fetch("id"))
     end

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router';
+import { useParams, useNavigate, useLocation, useSearchParams, Link } from 'react-router';
 import { ArrowLeft, Briefcase, Eye, EyeOff, Mail, ShieldCheck, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -9,7 +9,9 @@ import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User
 import { consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
 import { toast } from 'sonner';
 import { BrandMark } from '../components/BrandMark';
-import { errorCode, errorMessage } from '../lib/errors';
+import { PasswordChecklist } from '../components/PasswordChecklist';
+import { errorCode, errorMessage, errorStatus } from '../lib/errors';
+import { useSubmitOnce } from '../lib/formErrors';
 import { CODE_LENGTH, CodeStep, FormError, focusField, useResendCooldown } from '../components/auth/CodeStep';
 
 /* Admins use the separate admin site; its address is deliberately not part of this bundle. */
@@ -20,8 +22,13 @@ export default function AuthPage() {
   const role = userType === 'employer' ? 'employer' : 'jobseeker';
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { login, register, verifyCode, completeSecondFactor, logout } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  // C4/FORM-11: "Join Verse" and /start link straight to `?mode=register` so a new
+  // visitor lands on the sign-up form instead of the sign-in form.
+  const [mode, setMode] = useState<'login' | 'register'>(
+    searchParams.get('mode') === 'register' ? 'register' : 'login',
+  );
   /* Email codes are the primary path; passwords remain a fallback until email delivery is proven in production. */
   const [method, setMethod] = useState<'code' | 'password'>('code');
   const [codeStep, setCodeStep] = useState<'email' | 'code'>('email');
@@ -90,7 +97,7 @@ export default function AuthPage() {
     toast.success(welcome);
     go(u.role, u.profileComplete);
   };
-  /* Code-flow errors are shown inline (role=alert) next to the field; password errors keep the existing toast. */
+  /* Errors are shown inline (role=alert) next to the fields, for both the code and password flows. */
   const fail = (e: unknown, fallback: string) => setError(errorMessage(e, fallback));
   const switchMethod = (next: 'code' | 'password') => {
     touched.current = true;
@@ -123,8 +130,13 @@ export default function AuthPage() {
     setError('');
   };
 
-  async function submit(e: React.FormEvent) {
+  /* Ref-based guard: rapid clicks on Sign in / Create account send one request (FORM-22). */
+  const passwordSubmit = useSubmitOnce();
+  function submit(e: React.FormEvent) {
     e.preventDefault();
+    void passwordSubmit.run(submitPassword);
+  }
+  async function submitPassword() {
     setLoading(true);
     setError('');
     try {
@@ -133,11 +145,15 @@ export default function AuthPage() {
         startChallenge(result);
         return;
       }
-      await finish(result, mode === 'login' ? 'Welcome back' : 'Your Verse profile is ready');
+      await finish(result, mode === 'login' ? 'Welcome back' : 'Account created. Next: set up your profile.');
     } catch (e: unknown) {
       /* The API refuses admin passwords from this site once the admin site is live. */
       if (errorCode(e) === 'ADMIN_USE_ADMIN_SITE') setError(errorMessage(e, ADMIN_SITE_MESSAGE));
-      else toast.error(errorMessage(e, 'Unable to continue'));
+      else {
+        /* Inline, announced, next to the fields; focus goes to the field to fix (FORM-08). */
+        setError(errorMessage(e, 'Unable to continue'));
+        focusField(mode === 'login' || errorStatus(e) !== 409 ? 'auth-password' : 'auth-email');
+      }
     } finally {
       setLoading(false);
     }
@@ -195,7 +211,7 @@ export default function AuthPage() {
       const u = challenge
         ? await completeSecondFactor(challenge.challengeToken, value)
         : await verifyCode(email, value);
-      await finish(u, mode === 'register' ? 'Your Verse profile is ready' : 'Welcome back');
+      await finish(u, mode === 'register' ? 'Account created. Next: set up your profile.' : 'Welcome back');
     } catch (e: unknown) {
       /* An expired or unusable challenge cannot be retried; start again from the password. */
       if (challenge && errorCode(e) === 'SECOND_FACTOR_EXPIRED') {
@@ -323,7 +339,12 @@ export default function AuthPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={mode === 'register' ? 10 : undefined}
-            aria-describedby={mode === 'register' ? 'password-help' : undefined}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={
+              [mode === 'register' ? 'password-help' : '', error ? 'auth-password-error' : '']
+                .filter(Boolean)
+                .join(' ') || undefined
+            }
             className="border-white/15 pr-12"
           />
           <button
@@ -336,12 +357,16 @@ export default function AuthPage() {
           </button>
         </div>
         {mode === 'register' && (
-          <p id="password-help" className="mt-1.5 text-xs text-slate-400">
-            Use at least 10 characters. A longer passphrase is easiest to remember.
-          </p>
+          <div id="password-help">
+            <PasswordChecklist password={password} email={email} name={name} />
+          </div>
         )}
       </div>
-      {errorBox}
+      {error && (
+        <div id="auth-password-error">
+          <FormError>{error}</FormError>
+        </div>
+      )}
       <Button disabled={loading} className="w-full border-0 bg-gradient-to-r from-fuchsia-600 to-violet-600">
         {loading ? 'Tuning your workspace…' : mode === 'login' ? 'Sign in' : 'Create account'}
       </Button>
@@ -400,14 +425,14 @@ export default function AuthPage() {
                 {codeStep === 'email' && (
                   <div className="mb-5 grid grid-cols-2 rounded-xl border border-white/10 bg-black/15 p-1">
                     <Link
-                      to="/auth/jobseeker"
+                      to={mode === 'register' ? '/auth/jobseeker?mode=register' : '/auth/jobseeker'}
                       className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role === 'jobseeker' ? 'bg-white/10 text-white' : 'text-slate-400'}`}
                     >
                       <Users size={15} />
                       Professional
                     </Link>
                     <Link
-                      to="/auth/employer"
+                      to={mode === 'register' ? '/auth/employer?mode=register' : '/auth/employer'}
                       className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role === 'employer' ? 'bg-white/10 text-white' : 'text-slate-400'}`}
                     >
                       <Briefcase size={15} />

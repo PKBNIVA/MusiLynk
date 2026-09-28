@@ -131,7 +131,7 @@ export function PublicNav() {
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" asChild className="border-0 bg-gradient-to-r from-fuchsia-500 to-violet-500">
-            <Link to="/start">Join Verse</Link>
+            <Link to="/auth/jobseeker?mode=register">Join Verse</Link>
           </Button>
         </div>
       </nav>

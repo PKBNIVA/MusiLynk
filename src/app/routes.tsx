@@ -63,6 +63,7 @@ function publicRoutes(): RouteObject[] {
   const BandBuilder = L(() => import('./pages/BandBuilder'));
   const Billing = L(() => import('./pages/Billing'));
   const AccountData = L(() => import('./pages/AccountData'));
+  const AccountSettings = L(() => import('./pages/AccountSettings'));
   return [
     {
       path: '/',
@@ -476,6 +477,14 @@ function publicRoutes(): RouteObject[] {
           ),
         },
         {
+          path: 'settings',
+          element: (
+            <P roles={['jobseeker']}>
+              <AccountSettings />
+            </P>
+          ),
+        },
+        {
           path: 'workspace',
           element: (
             <P roles={['jobseeker']}>
@@ -629,6 +638,14 @@ function publicRoutes(): RouteObject[] {
           element: (
             <P roles={['employer']}>
               <AccountData />
+            </P>
+          ),
+        },
+        {
+          path: 'settings',
+          element: (
+            <P roles={['employer']}>
+              <AccountSettings />
             </P>
           ),
         },

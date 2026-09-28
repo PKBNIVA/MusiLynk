@@ -3,6 +3,9 @@ class ReportsController < ApplicationController
 
   CREATE_LIMIT_PER_HOUR = 30
   FIELD_LIMITS = { entityType: 40, entityId: 120, reason: 200, details: 5_000 }.freeze
+  # Kept in step with src/app/components/ReportDialog.tsx REPORT_REASONS.
+  REASONS = ["Harassment", "Asks for payment", "Spam or scam", "Unsafe contact request", "Misleading listing", "Other"].freeze
+  ENTITY_TYPES = %w[user job act review].freeze
 
   def create
     return unless authenticate!
@@ -12,10 +15,31 @@ class ReportsController < ApplicationController
     return render_error("#{missing} is required.", :unprocessable_content, "INVALID_REPORT") if missing
     too_long = FIELD_LIMITS.find { |key, limit| params[key].to_s.length > limit }&.first
     return render_error("#{too_long} is too long.", :unprocessable_content, "INVALID_REPORT") if too_long
+
+    entity_type = params[:entityType].to_s.downcase
+    return render_error("This kind of item cannot be reported.", :unprocessable_content, "INVALID_ENTITY_TYPE") unless ENTITY_TYPES.include?(entity_type)
+    return render_error("Choose a reason from the list.", :unprocessable_content, "INVALID_REASON") unless REASONS.include?(params[:reason])
+    return render_error("This item could not be found.", :not_found, "ENTITY_NOT_FOUND") unless entity_exists?(entity_type, params[:entityId])
     return unless within_user_rate_limit?("report", limit: CREATE_LIMIT_PER_HOUR, period: 1.hour)
 
-    report = Report.create!(reporter: current_user, entity_type: params[:entityType], entity_id: params[:entityId], reason: params[:reason], details: params[:details], status: "open")
+    if Report.where(reporter_id: current_user.id, entity_type: entity_type, entity_id: params[:entityId], status: "open").exists?
+      return render_error("You already have an open report on this. Our moderators will review it.", :conflict, "ALREADY_REPORTED")
+    end
+
+    report = Report.create!(reporter: current_user, entity_type: entity_type, entity_id: params[:entityId], reason: params[:reason], details: params[:details], status: "open")
     audit!("report.create", report)
     render json: { id: report.id }, status: :created
+  end
+
+  private
+
+  def entity_exists?(entity_type, entity_id)
+    case entity_type
+    when "user" then User.exists?(id: entity_id)
+    when "job" then Job.exists?(id: entity_id)
+    when "act" then Act.exists?(id: entity_id)
+    when "review" then Review.exists?(id: entity_id)
+    else false
+    end
   end
 end

@@ -9,7 +9,14 @@ import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { errorMessage } from '../../lib/errors';
 
-export type Decision = 'warn' | 'suspend' | 'dismiss';
+export type Decision = 'warn' | 'suspend' | 'dismiss' | 'unpublish_job' | 'hide_review' | 'hide_act';
+
+// Which content decision applies to which reported entity type (Admin::ReportsController::CONTENT_ENTITY_TYPE).
+const CONTENT_DECISION_FOR_ENTITY: Record<string, Extract<Decision, 'unpublish_job' | 'hide_review' | 'hide_act'>> = {
+  job: 'unpublish_job',
+  review: 'hide_review',
+  act: 'hide_act',
+};
 
 type ExcerptMessage = {
   id: string;
@@ -83,6 +90,24 @@ const DECISIONS: Record<Decision, { label: string; busy: string; done: string; h
     done: 'Report dismissed',
     hint: 'Closes the report with no action against anyone. Your note is kept with the report.',
   },
+  unpublish_job: {
+    label: 'Unpublish job',
+    busy: 'Unpublishing…',
+    done: 'Job unpublished and reports resolved',
+    hint: 'Removes the listing from search and takes it off the employer’s live jobs. Every other open report on this listing is closed too.',
+  },
+  hide_review: {
+    label: 'Hide review',
+    busy: 'Hiding…',
+    done: 'Review hidden and reports resolved',
+    hint: 'Removes the review from the public reviews page. Every other open report on this review is closed too.',
+  },
+  hide_act: {
+    label: 'Hide act',
+    busy: 'Hiding…',
+    done: 'Act hidden and reports resolved',
+    hint: 'Removes the act from search and booking. Every other open report on this act is closed too.',
+  },
 };
 
 /**
@@ -142,6 +167,7 @@ export function ReportReview({
   const target = context?.reportedUser;
   const history = context?.history;
   const canAct = !!target && target.role !== 'admin' && target.status !== 'deleted';
+  const contentDecision = context ? CONTENT_DECISION_FOR_ENTITY[context.report.entityType.toLowerCase()] : undefined;
   const reporterId = context?.report.reporterId;
 
   return (
@@ -307,7 +333,12 @@ export function ReportReview({
               </Button>
               <Button
                 type="button"
-                variant={choice === 'suspend' ? 'destructive' : 'default'}
+                variant={
+                  choice === 'suspend' ||
+                  CONTENT_DECISION_FOR_ENTITY[context?.report.entityType.toLowerCase() ?? ''] === choice
+                    ? 'destructive'
+                    : 'default'
+                }
                 disabled={pending}
                 aria-busy={pending}
                 onClick={() => void decide(choice)}
@@ -338,6 +369,18 @@ export function ReportReview({
                 <Ban size={14} aria-hidden="true" className="mr-1" />
                 Suspend
               </Button>
+              {contentDecision && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={!context}
+                  onClick={() => setChoice(contentDecision)}
+                  data-testid={`choose-${contentDecision}`}
+                >
+                  <AlertTriangle size={14} aria-hidden="true" className="mr-1" />
+                  {DECISIONS[contentDecision].label}
+                </Button>
+              )}
             </>
           )}
         </DialogFooter>

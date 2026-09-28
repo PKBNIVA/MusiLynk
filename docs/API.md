@@ -73,9 +73,9 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 | --- | --- | --- | --- |
 | GET | `/health`, `/live` | `{ok, service, release, time}` | Liveness, always 200 |
 | GET | `/readiness` | same; 503 adds `{error, code: NOT_READY}` | No diagnostics |
-| GET | `/taxonomy` | `{opportunityKinds, functionAreas, workplaces, currencies, actTypes, eventTypes, engagementTypes, roleCategories, instruments}` | Static |
+| GET | `/taxonomy` | `{opportunityKinds, functionAreas, legacyFunctionAreas, talentRoles: [{key, label}], workplaces, currencies, actTypes, eventTypes, engagementTypes, roleCategories, instruments}` | Static; `functionAreas`/`talentRoles` come from `config/search_taxonomy.yml` (one list for posting, filters, alerts and the landing tiles) |
 | GET | `/resources` | `{resources: [{id, title, category, description, url}]}` | **Unbounded** |
-| GET | `/search?q=&type=jobs\|talent\|acts\|samples` | `{results: [{type, id, url, title, subtitle, description, tags}], interpretedAs, provider, status}` | ≤ 60 results; synonyms expand `q` |
+| GET | `/search?q=&type=jobs\|talent\|acts\|samples&limit=&cursor=` | `{results: [{type, id, url, title, subtitle, description, tags}], interpretedAs, matchMode, didYouMean?, totals, provider, status}`; without `type` also `moreOf: {jobs: bool…}`; with `type` also `nextCursor, total` | Without `type`: ≤ 30 per type fair-shared into 60. See **Search queries** below |
 | GET | `/search/status` | `{provider, healthy, fallback}` | |
 | GET | `/billing/plans` | `{plans: [{code, name, monthly, trialDays, activePosts, seats, shortlist, bookings}]}` | |
 
@@ -97,7 +97,7 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 
 | Method | Path | Auth | Params | Response / notes |
 | --- | --- | --- | --- | --- |
-| GET | `/jobs` | public | `q, location, kind, function, workplace, experience, paid=true, verified=true` | `{jobs: [job + saved]}`; ≤ 250 |
+| GET | `/jobs` | public | `q, location, kind, function, workplace, experience, paid=true, verified=true, limit, cursor` | `{jobs: [job + saved], nextCursor, total}`; with `q` also `interpretedAs, matchMode, didYouMean?` and ranked by relevance. `function` accepts current and legacy names |
 | GET | `/jobs/:id` | public | — | `{job: job + applied, saved}`; drafts/pending only to owner and admin (else 404) |
 | POST | `/jobs` | talent | `title, location, description (≥60), type, status: draft\|(pending)…` | 201 `{id, status, moderationFlags}`; 402 `PLAN_LIMIT` unless draft |
 | POST | `/jobs/:id/apply` | jobseeker | `coverLetter, screeningAnswers[]` | 201 `{id, status: Applied}`; 409 own/duplicate/deadline/portfolio |
@@ -131,13 +131,30 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 | GET | `/reviews` | public | `employerId` | `{reviews, eligibleEmployers (jobseekers only)}` **unbounded** |
 | POST | `/reviews` | jobseeker | `employerId, rating 1-5, title, body` | 201; 403 `REVIEW_NOT_ELIGIBLE` (needs a Hired application); 409 `REVIEW_EXISTS` |
 
+### Search queries
+
+Every `q` (global search, jobs, talent, candidates, acts) goes through `Search::Query`
+(`backend/app/services/search/`):
+
+- Lower-cased, punctuation stripped, plural folded (`singers` → `singer`); stop words dropped (`vocalist for a wedding`).
+- Known phrases from `backend/config/search_synonyms.yml` become one token with all their alternatives
+  (`guitar player` → guitarist…); city names and aliases (`Bombay`) match location fields only.
+- **AND across tokens, OR within a token's alternatives.** Ranked: title/headline 100, skills/roles 60,
+  description/bio 30, location 50, + up to 20 trigram similarity; ties by the list's usual order.
+- Nothing matched → misspelt words are replaced by the nearest known term (pg_trgm similarity, fewest
+  edits): `matchMode: "corrected"`, `didYouMean: "guitarist"`. Still nothing for a multi-word query →
+  rows matching some words, most words first: `matchMode: "partial"`.
+- Code-like input (`; = < > { } $ % _ …`) is matched exactly (no correction, no partial); input with
+  nothing searchable left (`%`, `' OR '1'='1`) matches no rows.
+- Paging: `limit` (1–100, default 30) and the opaque `cursor` from `nextCursor`; a bad cursor is 400 `INVALID_CURSOR`.
+
 ### Talent discovery
 
 | Method | Path | Auth | Params | Response / notes |
 | --- | --- | --- | --- | --- |
-| GET | `/public/talent` | public | `q, location, role, instrument, verified, remoteRecording` | `{talent}` ≤ 100; no email/phone/status |
+| GET | `/public/talent` | public | `q, location, role, instrument, verified, remoteRecording, limit, cursor` | `{talent, nextCursor, total, role?: {key, label}}` (+ search fields with `q`); no email/phone/status. `role` is a taxonomy role key (`performer`, `A&R`, …) or free text |
 | GET | `/public/talent/:id` | public | — | `{professional, portfolio (public items)}`; incomplete/suspended → 404 |
-| GET | `/candidates` | talent | as above | `{candidates: [… shortlisted]}` ≤ 100 |
+| GET | `/candidates` | talent | as above | `{candidates: [… shortlisted], nextCursor, total}` (+ search fields with `q`) |
 | GET | `/candidates/:id` | talent | — | `{candidate, portfolio}`; records a recent-activity row |
 | GET | `/candidates/compare/list` | talent | `ids=a,b[,c,d]` (2-4) | `{professionals: [… portfolio ≤8, availability ≤5]}`; 400 fewer than 2 |
 | POST / DELETE | `/shortlists/:id` | talent | `note` | `{ok}`; 402 plan limit |
@@ -163,7 +180,7 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 
 | Method | Path | Auth | Params | Response / notes |
 | --- | --- | --- | --- | --- |
-| GET | `/public/acts`, `/acts` | public / any | `q, city` | `{acts}` ≤ 100 (active; no owner id or riders) |
+| GET | `/public/acts`, `/acts` | public / any | `q, city, type, genre, eventType, limit, cursor` | `{acts, nextCursor, total}` (+ search fields with `q`; active; no owner id or riders). `q` also matches lineup roles and instruments |
 | GET | `/public/acts/:id` | public | — | `{act}`; inactive → 404 |
 | GET | `/acts/:id` | any | — | owner/admin: full `api_json`; others: public view of active acts; foreign inactive → 404 |
 | GET | `/acts/me` | talent | — | `{acts}` **unbounded** |

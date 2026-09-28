@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Music,
   Search,
+  Settings,
   ShieldCheck,
   Star,
   User,
@@ -165,7 +166,12 @@ export function Navigation() {
   return (
     <>
       <SkipLink />
-      <ProductTour role={isJobSeeker ? 'jobseeker' : 'employer'} />
+      {/* C5/CRAWL-03: only the dashboard home (never a profile-setup page) may auto-start the
+          tour, and only once the profile is complete, so it never covers the form itself. */}
+      <ProductTour
+        role={isJobSeeker ? 'jobseeker' : 'employer'}
+        autoStart={location.pathname === baseUrl && Boolean(user?.profileComplete)}
+      />
       <nav
         className="fixed top-0 z-50 w-full border-b border-white/10 bg-[#070813]/88 backdrop-blur-2xl"
         aria-label="Workspace navigation"
@@ -274,6 +280,12 @@ export function Navigation() {
                   <Link to={`${baseUrl}/profile`}>
                     <User className="mr-2 h-4 w-4" />
                     Profile & verification
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to={`${baseUrl}/settings`}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Account settings
                   </Link>
                 </DropdownMenuItem>
                 {isJobSeeker && (

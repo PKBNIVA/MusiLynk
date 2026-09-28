@@ -17,7 +17,7 @@ module SyntheticQa
       "Violinist" => "Violin", "Tabla Player" => "Tabla" }.freeze
     GENRES = ["Bollywood", "Indie Pop", "Rock", "Jazz", "Hip-Hop", "Classical", "EDM", "Folk", "Sufi", "Fusion"].freeze
     OPPORTUNITY_KINDS = %w[job gig audition session tour internship collaboration].freeze
-    FUNCTION_AREAS = ["Performance", "Production", "Live Sound", "Composition", "Touring", "Management"].freeze
+    FUNCTION_AREAS = ["Performance", "Music Production", "Live Sound & Audio", "Composition & Songwriting", "Tour & Production Management", "Artist Management"].freeze
     WORKPLACES = %w[onsite hybrid remote travel].freeze
     APPLICATION_STATUSES = ["Applied", "Under Review", "Shortlisted", "Interview Scheduled", "Offer", "Hired", "Rejected"].freeze
     # Every employer gets one "quoted" booking (QA journeys rely on it) plus one in each other state in rotation.

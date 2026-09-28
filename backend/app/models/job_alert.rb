@@ -19,7 +19,7 @@ class JobAlert < ApplicationRecord
     end
     relation = relation.where("jobs.location ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(location)}%") if location.present?
     relation = relation.where(opportunity_kind:) if opportunity_kind.present?
-    relation = relation.where(function_area:) if function_area.present?
+    relation = relation.where(function_area: Search::Taxonomy.function_spellings(function_area)) if function_area.present?
     relation = relation.where(workplace: "remote") if remote_only?
     relation.order(published_at: :asc, id: :asc)
   end

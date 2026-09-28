@@ -7,8 +7,9 @@ import { usePageMeta } from '../../components/PageMeta';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { apiGet } from '../../lib/api';
-import { ShieldCheck } from 'lucide-react';
+import { apiGet, apiPost } from '../../lib/api';
+import { ShieldCheck, Flag } from 'lucide-react';
+import { ReportDialog } from '../../components/ReportDialog';
 import { useAuth } from '../../lib/authContext';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { Act } from '../../lib/apiTypes';
@@ -18,6 +19,7 @@ export default function PublicAct() {
     { user } = useAuth();
   const [a, setA] = useState<Act>(),
     [loading, setLoading] = useState(true),
+    [reporting, setReporting] = useState(false),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,18 +104,41 @@ export default function PublicAct() {
                 </div>
               </div>
             </div>
-            <Button className="mt-8" asChild>
-              {user && user.role !== 'admin' ? (
-                <Link to={bookingPath}>Request a quote</Link>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild>
+                {user && user.role !== 'admin' ? (
+                  <Link to={bookingPath}>Request a quote</Link>
+                ) : (
+                  <Link to="/auth/employer" state={{ from: `/employer/book-talent${actQuery}` }}>
+                    Sign in to request a quote
+                  </Link>
+                )}
+              </Button>
+              {user ? (
+                <Button variant="outline" onClick={() => setReporting(true)}>
+                  <Flag size={15} aria-hidden="true" className="mr-2" />
+                  Report act
+                </Button>
               ) : (
-                <Link to="/auth/employer" state={{ from: `/employer/book-talent${actQuery}` }}>
-                  Sign in to request a quote
-                </Link>
+                <Button variant="outline" asChild>
+                  <Link to="/auth/employer" state={{ from: `/acts/${id}` }}>
+                    Sign in to report this act
+                  </Link>
+                </Button>
               )}
-            </Button>
+            </div>
           </CardContent>
         </Card>
       </main>
+      <ReportDialog
+        open={reporting}
+        onOpenChange={setReporting}
+        title="Report this act"
+        description="Tell our moderators what is wrong with this act."
+        onSubmit={({ reason, details }) =>
+          apiPost('/reports', { entityType: 'act', entityId: a.id, reason, ...(details ? { details } : {}) })
+        }
+      />
     </div>
   );
 }

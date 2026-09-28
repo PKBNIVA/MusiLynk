@@ -60,6 +60,49 @@ class FormValidationTest < ActionDispatch::IntegrationTest
     assert_equal "Goa", @seeker.reload.profile.location
   end
 
+  test "availability rejects past slots and end-before-start, per field" do
+    post "/api/availability", params: { startAt: 2.days.ago.iso8601, endAt: 3.days.ago.iso8601 }, headers: auth(@seeker), as: :json
+    assert_response :unprocessable_content
+    fields = response.parsed_body["fields"]
+    assert_equal ["Start at must be in the future"], fields["startAt"]
+    assert_equal ["End at must be after the start"], fields["endAt"]
+
+    post "/api/availability", params: { startAt: 1.minute.ago.iso8601, endAt: 2.hours.from_now.iso8601, city: "c" * 121 }, headers: auth(@seeker), as: :json
+    assert_response :unprocessable_content
+    assert_equal ["City is too long (maximum is 120 characters)"], response.parsed_body["fields"]["city"]
+
+    post "/api/availability", params: { startAt: 1.minute.ago.iso8601, endAt: 2.hours.from_now.iso8601 }, headers: auth(@seeker), as: :json
+    assert_response :created, "a minute of clock skew is tolerated"
+    window = AvailabilityWindow.find(response.parsed_body["id"])
+    window.update_columns(start_at: 1.week.ago, end_at: 6.days.ago)
+    assert window.reload.valid?, "time passing never invalidates an existing window"
+  end
+
+  test "apply requires an answer to every screening question and stores question/answer pairs" do
+    job = Job.create!(employer: @employer, title: "Session bassist", company: "Blue Room", location: "Pune", kind: "Contract", genre: "Jazz",
+      description: "A professional session opportunity with written terms, rehearsals and a clear schedule for the band.",
+      status: "published", screening_questions: ["Do you read charts?", "Which rig do you own?"])
+    post "/api/jobs/#{job.id}/apply", params: { screeningAnswers: ["Yes", " "] }, headers: auth(@seeker), as: :json
+    assert_response :unprocessable_content
+    assert_equal "SCREENING_ANSWERS_REQUIRED", response.parsed_body["code"]
+    assert_equal({ "screeningAnswer1" => ["Answer this question: Which rig do you own?"] }, response.parsed_body["fields"])
+    assert_equal 0, job.applications.count
+
+    post "/api/jobs/#{job.id}/apply", params: { screeningAnswers: ["Yes", "Do you read charts? :: wrong prefix is kept as text"] }, headers: auth(@seeker), as: :json
+    assert_response :created
+    assert_equal ["Do you read charts? :: Yes", "Which rig do you own? :: Do you read charts? :: wrong prefix is kept as text"],
+      job.applications.last.screening_answers
+  end
+
+  test "apply accepts older clients that send 'Question :: answer'" do
+    job = Job.create!(employer: @employer, title: "Tour drummer", company: "Blue Room", location: "Pune", kind: "Contract", genre: "Jazz",
+      description: "A professional touring opportunity with written terms, rehearsals and a clear schedule for the band.",
+      status: "published", screening_questions: ["Passport ready?"])
+    post "/api/jobs/#{job.id}/apply", params: { screeningAnswers: ["Passport ready? :: Yes"] }, headers: auth(@seeker), as: :json
+    assert_response :created
+    assert_equal ["Passport ready? :: Yes"], job.applications.last.screening_answers
+  end
+
   private
 
   def auth(user)

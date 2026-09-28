@@ -16,6 +16,7 @@ Rails.application.routes.draw do
     post "auth/second-factor", to: "auth#second_factor"
     get "auth/methods", to: "auth#sign_in_methods"
     get "me", to: "auth#me"
+    get "me/identities", to: "identities#index"
     get "account/export", to: "account#export"
     delete "account", to: "account#destroy"
     patch "account/name", to: "account#update_name"

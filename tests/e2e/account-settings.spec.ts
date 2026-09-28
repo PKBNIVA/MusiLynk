@@ -77,7 +77,7 @@ test('changing the email requests a code, then confirms it and signs out other s
   await page.goto('/jobseeker/settings');
   await page.getByLabel('New email address').fill('new@example.invalid');
   await page.getByRole('button', { name: 'Send code to new address' }).click();
-  expect(requested).toEqual({ email: 'new@example.invalid' });
+  await expect.poll(() => requested).toEqual({ email: 'new@example.invalid' });
   await expect(page.getByTestId('debug-code')).toHaveText('042917');
 
   await page.getByLabel('6-digit code').fill('042917');

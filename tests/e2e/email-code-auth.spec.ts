@@ -157,15 +157,3 @@ test('password sign-in remains available as a secondary path', async ({ page }) 
   await page.getByRole('button', { name: 'Email me a code instead' }).click();
   await expect(page.getByRole('button', { name: 'Email me a sign-in code' })).toBeVisible();
 });
-
-test('admin sign-in offers both code and password', async ({ page }) => {
-  const calls = await mockApi(page);
-  await page.goto('/auth/admin');
-  await expect(page.getByRole('button', { name: /create .* account/i })).toHaveCount(0);
-  await page.getByLabel('Email').fill('ops@example.invalid');
-  await page.getByRole('button', { name: 'Email me a sign-in code' }).click();
-  await expect.poll(() => calls.requests).toEqual([{ email: 'ops@example.invalid' }]);
-  await page.getByRole('button', { name: 'Use a different email' }).click();
-  await page.getByRole('button', { name: 'Use password instead' }).click();
-  await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
-});

@@ -10,13 +10,32 @@ const release = (process.env.VITE_RELEASE || process.env.VERCEL_GIT_COMMIT_SHA |
 // Exposed to the app as import.meta.env.VITE_RELEASE (Vite reads VITE_* from process.env).
 process.env.VITE_RELEASE = release;
 
+// Which site this build is: `public` (default, the marketplace) or `admin` (the separate admin
+// site). routes.tsx branches on import.meta.env.VITE_APP_TARGET, which Vite replaces with this
+// literal, so the other site's route table and lazy chunks are never emitted.
+const appTarget = process.env.VITE_APP_TARGET === 'admin' ? 'admin' : 'public';
+process.env.VITE_APP_TARGET = appTarget;
+
 // <meta name="verse-release"> lets the live QA run confirm which commit Vercel is serving.
+// The admin build also gets its own title and is kept out of search engines.
 function releaseMeta(): Plugin {
+  const releaseTag = {
+    tag: 'meta',
+    attrs: { name: 'verse-release', content: release || 'unknown' },
+    injectTo: 'head' as const,
+  };
   return {
     name: 'verse-release-meta',
-    transformIndexHtml: () => [
-      { tag: 'meta', attrs: { name: 'verse-release', content: release || 'unknown' }, injectTo: 'head' },
-    ],
+    transformIndexHtml: (html) =>
+      appTarget === 'admin'
+        ? {
+            html: html
+              .replace(/<title>[^<]*<\/title>/, '<title>Verse Admin</title>')
+              .replace(/\s*<meta name="description"[^>]*>/, '')
+              .replace(/<meta name="robots"[^>]*>/, '<meta name="robots" content="noindex, nofollow" />'),
+            tags: [releaseTag],
+          }
+        : [releaseTag],
   };
 }
 

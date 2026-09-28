@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
+import { IS_ADMIN_SITE } from '../lib/appTarget';
 
-const SITE = 'Verse';
+const SITE = IS_ADMIN_SITE ? 'Verse Admin' : 'Verse';
 
 function metaDescription() {
   let tag = document.querySelector<HTMLMetaElement>('meta[name="description"]');

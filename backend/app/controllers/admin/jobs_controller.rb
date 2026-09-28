@@ -3,7 +3,7 @@ module Admin
     include AdminPagination
 
     def index
-      rows, meta = admin_paginate(Job.with_applications_count.includes(employer: :profile).order(created_at: :desc), default_per: 100)
+      rows, meta = admin_paginate(Job.with_applications_count.with_posted_as.includes(employer: :profile).order(created_at: :desc), default_per: 100)
       render json: { jobs: rows.map { _1.api_json(current_user) } }.merge(meta)
     end
 

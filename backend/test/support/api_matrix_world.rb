@@ -87,6 +87,16 @@ module ApiMatrixWorld
       org = Organization.create!(owner:, name: "Org #{actor}", status: "active")
       org.organization_members.create!(user: owner, role: "owner")
       refs[:org] = org.id
+      folio = Portfolio.create!(owner_type: "user", owner_id: owner.id, title: "Session work #{actor}", visibility: "public", is_default: true,
+        rules: { "any" => { "genres" => ["Jazz"] } }, pinned_item_ids: [refs[:portfolio]])
+      refs[:folio] = folio.id
+      refs[:folio_slug] = folio.slug
+      refs[:private_folio_slug] = Portfolio.create!(owner_type: "user", owner_id: owner.id, title: "Private #{actor}", visibility: "private").slug
+      entry = CareerEntry.create!(user: owner, kind: "skill", fields: { "name" => "Mixing" })
+      refs[:career_entry] = entry.id
+      refs[:resume] = Resume.create!(user: owner, title: "Resume #{actor}", is_default: true).id
+      refs[:suggestion] = ShowcaseSuggestion.create!(owner_type: "user", owner_id: owner.id, target_type: "portfolio", target_id: folio.id,
+        subject_type: "portfolio_item", subject_id: refs[:portfolio], kind: "include", reason: "Mentions jazz").id
     end
 
     # Cross-role relationships: js <-> emp and js2 <-> emp2 (peer pairs never touch each other).
@@ -140,7 +150,9 @@ module ApiMatrixWorld
       org: world.refs[:js][:org], org_member: world.refs[:js][:org_member], folder: world.refs[:emp][:folder],
       project: world.refs[:emp][:project], project_role: world.refs[:emp][:project_role], plan: world.refs[:emp][:plan],
       urgent: world.refs[:emp][:urgent], others_urgent: world.refs[:emp][:urgent], alert: world.refs[:js][:alert],
-      portfolio: world.refs[:js][:portfolio], notification: world.refs[:js][:notification],
+      portfolio: world.refs[:js][:portfolio], folio: world.refs[:js][:folio], folio_slug: world.refs[:js][:folio_slug],
+      private_folio_slug: world.refs[:js][:private_folio_slug], resume: world.refs[:js][:resume],
+      career_entry: world.refs[:js][:career_entry], suggestion: world.refs[:js][:suggestion], notification: world.refs[:js][:notification],
       availability: world.refs[:js][:availability], act_member: world.refs[:js][:act_member],
       my_application: world.refs[:js][:my_application], received_application: world.refs[:emp][:received_application],
       other_job: world.refs[:emp][:job], self: admin.id,

@@ -7,6 +7,9 @@ class User < ApplicationRecord
   has_many :saved_jobs, dependent: :destroy
   has_many :job_alerts, dependent: :destroy
   has_many :portfolio_items, dependent: :destroy
+  has_many :portfolios, -> { where(owner_type: "user") }, foreign_key: :owner_id, dependent: :destroy, inverse_of: false
+  has_many :resumes, dependent: :destroy
+  has_many :career_entries, dependent: :delete_all
   has_many :notifications, dependent: :destroy
   has_many :email_tokens, dependent: :destroy
   has_many :availability_windows, dependent: :destroy

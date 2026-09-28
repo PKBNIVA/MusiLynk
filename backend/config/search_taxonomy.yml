@@ -63,6 +63,12 @@ talent_roles:
     terms: [music tech, music technologist, audio developer, audio programmer, plugin developer, sound designer,
       dolby atmos, immersive audio, playback engineer, livestream engineer, electronic producer, music producer, mixing engineer]
 
+# Genres the portfolio classifier (PortfolioItemClassifier::Keyword) recognises in work sample
+# titles and descriptions, and that portfolio rules and filters suggest.
+genres: [Bollywood, Indie, Indie Pop, Pop, Rock, Metal, Jazz, Blues, Funk, Soul, R&B, Hip-Hop, Rap, EDM, Electronic,
+  House, Techno, Ambient, Lo-fi, Classical, Western Classical, Hindustani, Carnatic, Folk, Sufi, Qawwali, Ghazal,
+  Devotional, Bhajan, Fusion, Reggae, Country, Punjabi, Bhangra, Tamil, Telugu, Malayalam, Kannada, Marathi, Bengali,
+  Film Score, Background Score, Jingle, Acoustic, Orchestral, World]
 # Flat value lists behind GET /api/ai/autocomplete (AutocompleteTaxonomy), prefix- and
 # fuzzy-matched with no AI required. The "roles" field reuses talent_roles above instead of
 # repeating it; instruments reuses CatalogController::INSTRUMENTS.

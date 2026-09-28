@@ -1,8 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import { ApiError } from '../../lib/api';
 import {
   isAiPaywallError,
+  purchaseAiTopup,
+  subscribeAiPlus,
   suggestAi,
   useAiTaskEnabled,
   type AiContext,
@@ -12,6 +15,25 @@ import {
 import { Button } from '../ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { AiPaywallDialog } from './AiPaywallDialog';
+
+// The purchase endpoints answer 503 AI_BILLING_DISABLED until AI_BILLING_ENABLED is set on the
+// server; there is no public flag to check ahead of time, so the offer is always shown here and
+// a disabled backend is reported as a friendly toast instead of a broken button.
+function billingDisabledMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError && error.code === 'AI_BILLING_DISABLED')
+    return 'AI credit purchases are not enabled yet.';
+  return error instanceof Error ? error.message : fallback;
+}
+function buyTopup(pack: string) {
+  purchaseAiTopup(pack)
+    .then(() => toast.success('Credits added to your account.'))
+    .catch((error: unknown) => toast.error(billingDisabledMessage(error, 'The top-up could not be completed.')));
+}
+function subscribePlus() {
+  subscribeAiPlus()
+    .then(() => toast.success('Verse AI Plus is active.'))
+    .catch((error: unknown) => toast.error(billingDisabledMessage(error, 'The subscription could not be started.')));
+}
 
 export interface AiSuggestButtonProps {
   /** Which AiAssist task to call (job_description, cover_letter, improve_text, ...). */
@@ -88,7 +110,8 @@ export function AiSuggestButton({ task, getContext, onAccept, value, label, clas
     return (
       <AiPaywallDialog
         error={state.error}
-        billingEnabled={false}
+        onSubscribePlus={subscribePlus}
+        onBuyTopup={buyTopup}
         onClose={() => {
           setState({ kind: 'idle' });
           setOpen(false);

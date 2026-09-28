@@ -26,7 +26,8 @@ import type {
   Job,
   Review,
 } from '../../lib/apiTypes';
-import type { LucideIcon } from 'lucide-react';
+import { Inbox, type LucideIcon } from 'lucide-react';
+import { AdminSelect, InfoTip } from './ui';
 
 // Shared state, helpers and small dialogs used by every admin tab. Kept in one
 // file (rather than one file per helper) so the tabs stay easy to scan.
@@ -261,10 +262,14 @@ export function PanelError({ message, onRetry, loading }: { message: string; onR
     </Card>
   );
 }
-export function Empty({ text }: { text: string }) {
+export function Empty({ text, hint, icon: Icon = Inbox }: { text: string; hint?: string; icon?: LucideIcon }) {
   return (
     <Card className="bg-white/[.03] border-white/10">
-      <CardContent className="p-10 text-center text-slate-400">{text}</CardContent>
+      <CardContent className="p-10 text-center flex flex-col items-center gap-2">
+        <Icon aria-hidden="true" size={24} className="text-slate-500" />
+        <p className="text-slate-300">{text}</p>
+        {hint && <p className="text-sm text-slate-500">{hint}</p>}
+      </CardContent>
     </Card>
   );
 }
@@ -392,22 +397,25 @@ export function GrantPlanDialog({
           </DialogHeader>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="admin-grant-plan">Plan</Label>
-              <select
+              <span className="flex items-center gap-1.5">
+                <Label htmlFor="admin-grant-plan">Plan</Label>
+                <InfoTip label="Plan" text="The tier this account is switched to immediately, at no charge." />
+              </span>
+              <AdminSelect
                 id="admin-grant-plan"
                 value={plan}
-                onChange={(e) => setPlan(e.target.value)}
-                className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-              >
-                {GRANTABLE_PLANS.map(([code, name]) => (
-                  <option key={code} value={code}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+                onChange={setPlan}
+                options={GRANTABLE_PLANS.map(([code, name]) => ({ value: code, label: name }))}
+              />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="admin-grant-days">Days</Label>
+              <span className="flex items-center gap-1.5">
+                <Label htmlFor="admin-grant-days">Days</Label>
+                <InfoTip
+                  label="Days"
+                  text="How many days the granted plan stays active before it expires on its own."
+                />
+              </span>
               <Input
                 id="admin-grant-days"
                 type="number"

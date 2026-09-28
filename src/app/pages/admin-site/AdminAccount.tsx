@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { ArrowLeft, CheckCircle2, LogOut, Mail, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, LogOut, Mail, UserCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -256,7 +256,7 @@ export default function AdminAccount() {
   const gap = account && secondFactorGap(account);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-slate-950/95 text-white">
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 md:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link to="/admin" className="inline-flex min-h-11 items-center text-sm text-slate-300 hover:text-white">
@@ -275,7 +275,10 @@ export default function AdminAccount() {
             Sign out
           </Button>
         </div>
-        <h1 className="text-3xl font-bold">Your admin account</h1>
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <UserCircle2 aria-hidden="true" className="text-violet-300" />
+          Your admin account
+        </h1>
 
         <section aria-labelledby="admin-email-title" className={section}>
           <h2 id="admin-email-title" className="text-lg font-bold">

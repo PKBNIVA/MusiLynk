@@ -10,6 +10,12 @@ import {
   AlertTriangle,
   UserCheck,
   Flag,
+  Star,
+  Stethoscope,
+  CreditCard,
+  Settings2,
+  History,
+  Database,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -162,7 +168,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-slate-950/95 text-white">
       <header className="border-b border-white/10 sticky top-0 bg-slate-950/95 backdrop-blur z-20">
         <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-3 md:py-4 flex flex-wrap gap-3 justify-between items-center">
           <div className="flex items-center gap-3 min-w-0">
@@ -214,12 +220,17 @@ export default function AdminDashboard() {
         </div>
       </header>
       <main className="max-w-[1500px] mx-auto px-4 md:px-6 py-8">
-        <div className="mb-7">
-          <h1 className="text-3xl font-bold">Marketplace health</h1>
-          <p className="text-slate-400 mt-1">
-            The admin job is not content approval alone. It is trust, quality, fraud prevention and marketplace
-            liquidity.
-          </p>
+        <div className="mb-7 flex items-start gap-3">
+          <div className="p-2.5 rounded-xl bg-violet-500/10 shrink-0">
+            <Activity aria-hidden="true" size={22} className="text-violet-300" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">Marketplace health</h1>
+            <p className="text-slate-400 mt-1">
+              One place for trust, quality, fraud prevention and marketplace liquidity — pick a tab below for the one
+              thing that needs your attention.
+            </p>
+          </div>
         </div>
         {failedCount > 0 && !loading && (
           <div
@@ -247,34 +258,44 @@ export default function AdminDashboard() {
         </div>
         <Tabs defaultValue="queue">
           <TabsList className="bg-white/5 border border-white/10 flex flex-wrap justify-start h-auto w-full md:w-auto gap-1 p-1">
-            <TabsTrigger value="queue" className="flex-none">
+            <TabsTrigger value="queue" className="flex-none gap-1.5">
+              <Briefcase aria-hidden="true" size={14} />
               Opportunity queue ({errors.jobs ? '!' : pendingJobs.length})
             </TabsTrigger>
-            <TabsTrigger value="verification" className="flex-none">
+            <TabsTrigger value="verification" className="flex-none gap-1.5">
+              <UserCheck aria-hidden="true" size={14} />
               Verification ({errors.verifications ? '!' : pendingVerifications.length})
             </TabsTrigger>
-            <TabsTrigger value="reports" className="flex-none">
+            <TabsTrigger value="reports" className="flex-none gap-1.5">
+              <Flag aria-hidden="true" size={14} />
               Reports ({errors.stats ? '!' : (stats.openReports ?? 0)})
             </TabsTrigger>
-            <TabsTrigger value="users" className="flex-none">
+            <TabsTrigger value="users" className="flex-none gap-1.5">
+              <Users aria-hidden="true" size={14} />
               Users
             </TabsTrigger>
-            <TabsTrigger value="reviews" className="flex-none">
+            <TabsTrigger value="reviews" className="flex-none gap-1.5">
+              <Star aria-hidden="true" size={14} />
               Reviews ({errors.reviews ? '!' : reviews.filter((r) => r.status === 'pending').length})
             </TabsTrigger>
-            <TabsTrigger value="signin" className="flex-none">
+            <TabsTrigger value="signin" className="flex-none gap-1.5">
+              <Stethoscope aria-hidden="true" size={14} />
               Sign-in doctor
             </TabsTrigger>
-            <TabsTrigger value="commerce" className="flex-none">
+            <TabsTrigger value="commerce" className="flex-none gap-1.5">
+              <CreditCard aria-hidden="true" size={14} />
               Commerce
             </TabsTrigger>
-            <TabsTrigger value="operations" className="flex-none">
+            <TabsTrigger value="operations" className="flex-none gap-1.5">
+              <Settings2 aria-hidden="true" size={14} />
               Operations
             </TabsTrigger>
-            <TabsTrigger value="audit" className="flex-none">
+            <TabsTrigger value="audit" className="flex-none gap-1.5">
+              <History aria-hidden="true" size={14} />
               Audit
             </TabsTrigger>
-            <TabsTrigger value="demo" className="flex-none">
+            <TabsTrigger value="demo" className="flex-none gap-1.5">
+              <Database aria-hidden="true" size={14} />
               Demo data
             </TabsTrigger>
           </TabsList>

@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Flag } from 'lucide-react';
 import { Link } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
@@ -16,6 +16,15 @@ import {
   REPORT_ENTITY_TYPES,
   REPORT_REASONS,
 } from './shared';
+import { AdminSelect, AdminPageHeader, HowToCallout, InfoTip } from './ui';
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All statuses' },
+  { value: 'open', label: 'Open' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'dismissed', label: 'Dismissed' },
+] as const;
+const ENTITY_LABEL: Record<string, string> = { user: 'Person', job: 'Opportunity', act: 'Act', review: 'Review' };
 
 export default function ReportsTab({
   reports,
@@ -45,8 +54,22 @@ export default function ReportsTab({
   onFilter: (changes: Partial<ReportFilters>) => void;
 }) {
   const { busy } = actions;
+  const entityOptions = [
+    { value: '', label: 'All items' },
+    ...REPORT_ENTITY_TYPES.map((t) => ({ value: t, label: ENTITY_LABEL[t] ?? t })),
+  ];
+  const reasonOptions = [{ value: '', label: 'All reasons' }, ...REPORT_REASONS.map((r) => ({ value: r, label: r }))];
   return (
     <Panel error={error} onRetry={retry} loading={loading}>
+      <AdminPageHeader
+        icon={Flag}
+        title="Reports"
+        description="User-submitted reports on people, opportunities, acts and reviews, waiting for a moderation decision."
+      />
+      <HowToCallout storageKey="reports">
+        Filter by status, item type or reason, then open <b>Review</b> on a report to see the full context and act on
+        it. Reports left <b>Open</b> stay visible to their reporter until you resolve or dismiss them.
+      </HowToCallout>
       {flaggedMessagesAvailable && (
         <p className="text-sm text-slate-400 flex items-center gap-2" data-testid="flagged-messages">
           <AlertTriangle
@@ -61,52 +84,44 @@ export default function ReportsTab({
       <div className="flex flex-wrap items-end gap-3" data-testid="reports-filters">
         <div>
           <Label htmlFor="report-filter-status">Status</Label>
-          <select
-            id="report-filter-status"
-            value={filters.status}
-            onChange={(e) => onFilter({ status: e.target.value })}
-            className="mt-1 h-9 rounded-md bg-slate-900 border border-white/15 px-2 text-sm"
-          >
-            <option value="">All</option>
-            <option value="open">Open</option>
-            <option value="resolved">Resolved</option>
-            <option value="dismissed">Dismissed</option>
-          </select>
+          <div className="mt-1">
+            <AdminSelect
+              id="report-filter-status"
+              value={filters.status}
+              onChange={(v) => onFilter({ status: v })}
+              options={STATUS_OPTIONS}
+            />
+          </div>
         </div>
         <div>
-          <Label htmlFor="report-filter-entity">Reported item</Label>
-          <select
-            id="report-filter-entity"
-            value={filters.entityType}
-            onChange={(e) => onFilter({ entityType: e.target.value })}
-            className="mt-1 h-9 rounded-md bg-slate-900 border border-white/15 px-2 text-sm"
-          >
-            <option value="">All</option>
-            {REPORT_ENTITY_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t === 'user' ? 'Person' : t === 'job' ? 'Opportunity' : t === 'act' ? 'Act' : 'Review'}
-              </option>
-            ))}
-          </select>
+          <span className="flex items-center gap-1.5">
+            <Label htmlFor="report-filter-entity">Reported item</Label>
+            <InfoTip label="Reported item" text="Limit the list to reports about one kind of thing." />
+          </span>
+          <div className="mt-1">
+            <AdminSelect
+              id="report-filter-entity"
+              value={filters.entityType}
+              onChange={(v) => onFilter({ entityType: v })}
+              options={entityOptions}
+            />
+          </div>
         </div>
         <div>
           <Label htmlFor="report-filter-reason">Reason</Label>
-          <select
-            id="report-filter-reason"
-            value={filters.reason}
-            onChange={(e) => onFilter({ reason: e.target.value })}
-            className="mt-1 h-9 rounded-md bg-slate-900 border border-white/15 px-2 text-sm"
-          >
-            <option value="">All</option>
-            {REPORT_REASONS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+          <div className="mt-1">
+            <AdminSelect
+              id="report-filter-reason"
+              value={filters.reason}
+              onChange={(v) => onFilter({ reason: v })}
+              options={reasonOptions}
+            />
+          </div>
         </div>
       </div>
-      {reports.length === 0 && <Empty text="No reports match these filters." />}
+      {reports.length === 0 && (
+        <Empty icon={Flag} text="No reports match these filters." hint="Try clearing a filter above." />
+      )}
       {reports.map((r) => {
         const href = entityLink(r.entity_type, r.entity_id);
         return (

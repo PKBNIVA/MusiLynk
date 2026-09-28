@@ -142,3 +142,32 @@ test('hide review is only offered for a review report', async ({ page }) => {
   await expect(page.getByText('Review hidden and reports resolved')).toBeVisible();
   expect(state.moderated).toEqual([{ decision: 'hide_review' }]);
 });
+
+test('report filters show "All" until a value is chosen, and can go back to All', async ({ page }) => {
+  const report = {
+    id: 'rep-1',
+    status: 'open',
+    entity_type: 'job',
+    entity_id: 'job-1',
+    reason: 'Spam',
+    created_at: '2026-09-01T00:00:00Z',
+    reporterName: 'Loud Studio',
+  };
+  const requested: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === '/api/admin/reports') requested.push(url.searchParams.get('entityType') ?? '');
+  });
+  await openAdminReports(page, report, { report: { id: 'rep-1' } });
+  const entity = page.locator('#report-filter-entity');
+  await expect(entity).toHaveText(/All items/);
+  await expect(page.locator('#report-filter-reason')).toHaveText(/All reasons/);
+  await entity.click();
+  await page.getByRole('option', { name: 'Opportunity' }).click();
+  await expect(entity).toHaveText(/Opportunity/);
+  await entity.click();
+  await page.getByRole('option', { name: 'All items' }).click();
+  await expect(entity).toHaveText(/All items/);
+  await expect.poll(() => requested.at(-1)).toBe('');
+  expect(requested).toContain('job');
+});

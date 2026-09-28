@@ -872,6 +872,16 @@ export interface AdminReport {
   created_at: string;
   updated_at?: string;
   reporterName?: string | null;
+  /** A short label for what was reported (job title, act/person name, "Review"), when it still exists. */
+  entityTitle?: string | null;
+}
+
+/** Admin::ReportsController#index response shape (filters: status/entityType/reason; paged). */
+export interface AdminReportsPage {
+  reports: AdminReport[];
+  total: number;
+  page: number;
+  perPage: number;
 }
 
 /** Admin::OperationsController#audit: an audit_logs row plus the actor's name. */

@@ -64,7 +64,6 @@ type Data = {
   jobs: Job[];
   reviews: Review[];
   verifications: AdminVerification[];
-  reports: AdminReport[];
   logs: AuditLogEntry[];
   subscriptions: AdminSubscription[];
   bookings: AdminBooking[];
@@ -79,7 +78,6 @@ type Payload = Partial<{
   jobs: Job[];
   reviews: Review[];
   requests: AdminVerification[];
-  reports: AdminReport[];
   logs: AuditLogEntry[];
   subscriptions: AdminSubscription[];
   bookings: AdminBooking[];
@@ -92,7 +90,6 @@ const SOURCES: { [K in Source]: readonly [path: string, read: (d: Payload | null
   jobs: ['/admin/jobs', (d) => d?.jobs || []],
   reviews: ['/admin/reviews', (d) => d?.reviews || []],
   verifications: ['/admin/verifications', (d) => d?.requests || []],
-  reports: ['/admin/reports', (d) => d?.reports || []],
   logs: ['/admin/audit', (d) => d?.logs || []],
   subscriptions: ['/admin/subscriptions', (d) => d?.subscriptions || []],
   bookings: ['/admin/bookings', (d) => d?.bookings || []],
@@ -108,7 +105,6 @@ const EMPTY: Data = {
   jobs: [],
   reviews: [],
   verifications: [],
-  reports: [],
   logs: [],
   subscriptions: [],
   bookings: [],
@@ -161,6 +157,42 @@ export default function AdminDashboard() {
   const [userQuery, setUserQuery] = useState('');
   const [reviewing, setReviewing] = useState<string | null>(null);
 
+  // Reports get their own filtered/paged fetch (status, entityType, reason + page) rather than
+  // the one-shot parallel load the other panels share.
+  const [reportRows, setReportRows] = useState<AdminReport[]>([]);
+  const [reportsMeta, setReportsMeta] = useState({ total: 0, page: 1, perPage: 50 });
+  const [reportsError, setReportsError] = useState('');
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportFilters, setReportFilters] = useState({ status: 'open', entityType: '', reason: '' });
+  const [reportsPage, setReportsPage] = useState(1);
+
+  const loadReports = useCallback(async () => {
+    setReportsLoading(true);
+    const qs = new URLSearchParams({ page: String(reportsPage), perPage: '50' });
+    if (reportFilters.status) qs.set('status', reportFilters.status);
+    if (reportFilters.entityType) qs.set('entityType', reportFilters.entityType);
+    if (reportFilters.reason) qs.set('reason', reportFilters.reason);
+    try {
+      const d = await apiGet<{ reports?: AdminReport[]; total?: number; page?: number; perPage?: number }>(
+        `/admin/reports?${qs.toString()}`,
+      );
+      setReportRows(d.reports || []);
+      setReportsMeta({ total: d.total ?? 0, page: d.page ?? reportsPage, perPage: d.perPage ?? 50 });
+      setReportsError('');
+    } catch (e: unknown) {
+      setReportsError(errorMessage(e, 'Unable to load reports.'));
+    } finally {
+      setReportsLoading(false);
+    }
+  }, [reportFilters, reportsPage]);
+  useEffect(() => {
+    void loadReports();
+  }, [loadReports]);
+  const setReportFilter = (changes: Partial<typeof reportFilters>) => {
+    setReportFilters((prev) => ({ ...prev, ...changes }));
+    setReportsPage(1);
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     const keys = Object.keys(SOURCES) as Source[];
@@ -198,27 +230,15 @@ export default function AdminDashboard() {
   const patch = (key: string, path: string, body: Record<string, unknown>, message: string) =>
     act(key, () => apiPatch(path, body), message).catch(() => {});
 
-  const {
-    stats,
-    users,
-    jobs,
-    reviews,
-    verifications,
-    reports,
-    logs,
-    subscriptions,
-    bookings,
-    attempts,
-    billingEvents,
-  } = data;
+  const { stats, users, jobs, reviews, verifications, logs, subscriptions, bookings, attempts, billingEvents } = data;
   const pendingJobs = useMemo(() => jobs.filter((j) => j.status === 'pending'), [jobs]);
   const pendingVerifications = useMemo(() => verifications.filter((v) => v.status === 'pending'), [verifications]);
-  const openReports = useMemo(() => reports.filter((r) => r.status === 'open'), [reports]);
   const filteredUsers = useMemo(() => {
     const q = userQuery.trim().toLowerCase();
     return q ? users.filter((u) => `${u.name} ${u.email} ${u.role} ${u.status}`.toLowerCase().includes(q)) : users;
   }, [users, userQuery]);
-  const failedCount = Object.keys(errors).length;
+  const failedCount = Object.keys(errors).length + (reportsError ? 1 : 0);
+  const panelCount = Object.keys(SOURCES).length + 1; // + reports, which loads separately (filters/paging)
 
   const Stat = ({ label, value, icon: I }: { label: string; value?: number; icon: LucideIcon }) => (
     <Card className="bg-white/[.055] border-white/10">
@@ -302,10 +322,16 @@ export default function AdminDashboard() {
           >
             <span className="flex items-center gap-2">
               <AlertTriangle aria-hidden="true" size={16} />
-              {failedCount} of {Object.keys(SOURCES).length} panels could not load. The rest of the console is up to
-              date.
+              {failedCount} of {panelCount} panels could not load. The rest of the console is up to date.
             </span>
-            <Button size="sm" variant="outline" onClick={() => void load()}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                void load();
+                void loadReports();
+              }}
+            >
               Retry
             </Button>
           </div>
@@ -328,7 +354,7 @@ export default function AdminDashboard() {
               Verification ({errors.verifications ? '!' : pendingVerifications.length})
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex-none">
-              Reports ({errors.reports ? '!' : openReports.length})
+              Reports ({errors.stats ? '!' : (stats.openReports ?? 0)})
             </TabsTrigger>
             <TabsTrigger value="users" className="flex-none">
               Users
@@ -493,7 +519,11 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-3 mt-5">
-            <Panel error={errors.reports} onRetry={retry} loading={loading}>
+            <Panel
+              error={reportsError}
+              onRetry={() => void loadReports()}
+              loading={reportsLoading && !reportRows.length}
+            >
               {!errors.stats && (
                 <p className="text-sm text-slate-400 flex items-center gap-2" data-testid="flagged-messages">
                   <AlertTriangle
@@ -505,15 +535,74 @@ export default function AdminDashboard() {
                   in the last 30 days. Recipients see a safety notice; open a report to see flags in context.
                 </p>
               )}
-              {openReports.length === 0 && <Empty text="No open safety reports." />}
-              {openReports.map((r) => {
+              <div className="flex flex-wrap items-end gap-3" data-testid="reports-filters">
+                <div>
+                  <Label htmlFor="report-filter-status">Status</Label>
+                  <select
+                    id="report-filter-status"
+                    value={reportFilters.status}
+                    onChange={(e) => setReportFilter({ status: e.target.value })}
+                    className="mt-1 h-9 rounded-md bg-slate-900 border border-white/15 px-2 text-sm"
+                  >
+                    <option value="">All</option>
+                    <option value="open">Open</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="dismissed">Dismissed</option>
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="report-filter-entity">Reported item</Label>
+                  <select
+                    id="report-filter-entity"
+                    value={reportFilters.entityType}
+                    onChange={(e) => setReportFilter({ entityType: e.target.value })}
+                    className="mt-1 h-9 rounded-md bg-slate-900 border border-white/15 px-2 text-sm"
+                  >
+                    <option value="">All</option>
+                    <option value="user">Person</option>
+                    <option value="job">Opportunity</option>
+                    <option value="act">Act</option>
+                    <option value="review">Review</option>
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="report-filter-reason">Reason</Label>
+                  <select
+                    id="report-filter-reason"
+                    value={reportFilters.reason}
+                    onChange={(e) => setReportFilter({ reason: e.target.value })}
+                    className="mt-1 h-9 rounded-md bg-slate-900 border border-white/15 px-2 text-sm"
+                  >
+                    <option value="">All</option>
+                    {[
+                      'Harassment',
+                      'Asks for payment',
+                      'Spam or scam',
+                      'Unsafe contact request',
+                      'Misleading listing',
+                      'Other',
+                    ].map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-sm text-slate-400 ml-auto" aria-live="polite">
+                  {reportsMeta.total === 0 ? 0 : (reportsMeta.page - 1) * reportsMeta.perPage + 1}–
+                  {Math.min(reportsMeta.page * reportsMeta.perPage, reportsMeta.total)} of {reportsMeta.total}
+                </p>
+              </div>
+              {reportRows.length === 0 && <Empty text="No reports match these filters." />}
+              {reportRows.map((r) => {
                 const href = entityLink(r.entity_type, r.entity_id);
                 return (
                   <Card key={r.id} className="bg-white/[.05] border-white/10">
                     <CardContent className="p-5 flex flex-col md:flex-row justify-between gap-4">
                       <div className="min-w-0">
                         <h2 className="font-semibold break-all">
-                          {r.entity_type} ·{' '}
+                          {r.entity_type}
+                          {r.entityTitle ? ` · ${r.entityTitle}` : ''} ·{' '}
                           {href ? (
                             <Link className="text-sky-300 underline underline-offset-4" to={href} target="_blank">
                               {r.entity_id}
@@ -526,6 +615,7 @@ export default function AdminDashboard() {
                         {r.details && <p className="text-sm text-slate-300 mt-2">{r.details}</p>}
                         <p className="text-xs text-slate-400 mt-2">
                           Reported by {r.reporterName || 'Unknown'} · {date(r.created_at, true)}
+                          {r.status !== 'open' && ` · ${r.status}${r.action_taken ? ` (${r.action_taken})` : ''}`}
                         </p>
                       </div>
                       <div className="flex gap-2 shrink-0">
@@ -542,6 +632,29 @@ export default function AdminDashboard() {
                   </Card>
                 );
               })}
+              {reportsMeta.total > reportsMeta.perPage && (
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={reportsPage <= 1 || reportsLoading}
+                    onClick={() => setReportsPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-slate-400">
+                    Page {reportsMeta.page} of {Math.max(1, Math.ceil(reportsMeta.total / reportsMeta.perPage))}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={reportsPage * reportsMeta.perPage >= reportsMeta.total || reportsLoading}
+                    onClick={() => setReportsPage((p) => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </Panel>
           </TabsContent>
 
@@ -939,7 +1052,7 @@ export default function AdminDashboard() {
         onClose={() => setReviewing(null)}
         onDecided={async (message) => {
           toast.success(message);
-          await load();
+          await Promise.all([load(), loadReports()]);
         }}
       />
       <GrantPlanDialog

@@ -7,7 +7,9 @@ class Act < ApplicationRecord
   attribute :event_types, :json, default: -> { [] }
   validates :tech_rider_url, :hospitality_rider_url, :promo_url, safe_http_url: true, allow_blank: true
   validates :name, :act_type, presence: true
-  validates :status, inclusion: { in: %w[active inactive draft] }
+  # "hidden" is an admin-only moderation state (see Admin::ReportsController#moderate): it is
+  # never set by the owner and is excluded from every public/search/booking query below.
+  validates :status, inclusion: { in: %w[active inactive draft hidden] }
   validates :lineup_size, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :min_fee, :max_fee, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validate :fee_range_is_valid

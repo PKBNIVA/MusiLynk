@@ -6,7 +6,8 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { apiGet, apiPost } from '../lib/api';
 import { toast } from 'sonner';
-import { Star } from 'lucide-react';
+import { Star, Flag } from 'lucide-react';
+import { ReportDialog } from '../components/ReportDialog';
 import { errorMessage } from '../lib/errors';
 import type { PublicEmployer, Review } from '../lib/apiTypes';
 export default function Reviews() {
@@ -18,6 +19,7 @@ export default function Reviews() {
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [reportingReview, setReportingReview] = useState<Review | null>(null);
   const load = () =>
     apiGet<{ reviews?: Review[]; eligibleEmployers?: PublicEmployer[] }>('/reviews')
       .then((d) => {
@@ -132,11 +134,21 @@ export default function Reviews() {
               reviews.map((r) => (
                 <Card key={r.id} className="bg-white/[.06] border-white/10">
                   <CardContent className="p-5">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-3">
                       <div className="font-semibold">{r.employerName}</div>
-                      <div className="flex items-center text-amber-300">
-                        <Star size={15} className="mr-1 fill-current" />
-                        {r.rating}/5
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center text-amber-300">
+                          <Star size={15} className="mr-1 fill-current" />
+                          {r.rating}/5
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Report review by ${r.authorName}`}
+                          onClick={() => setReportingReview(r)}
+                        >
+                          <Flag size={14} aria-hidden="true" />
+                        </Button>
                       </div>
                     </div>
                     <div className="text-sm text-slate-500 mt-1">by {r.authorName}</div>
@@ -149,6 +161,22 @@ export default function Reviews() {
           </div>
         </div>
       </main>
+      <ReportDialog
+        open={!!reportingReview}
+        onOpenChange={(open) => {
+          if (!open) setReportingReview(null);
+        }}
+        title="Report this review"
+        description="Tell our moderators what is wrong with this review."
+        onSubmit={({ reason, details }) =>
+          apiPost('/reports', {
+            entityType: 'review',
+            entityId: reportingReview?.id,
+            reason,
+            ...(details ? { details } : {}),
+          })
+        }
+      />
     </div>
   );
 }

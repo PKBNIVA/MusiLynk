@@ -142,6 +142,29 @@ test.describe('in-app dialogs', () => {
     await expect(dialog.getByRole('radio', { name: 'Spam or scam' })).toBeChecked();
   });
 
+  test('a duplicate report on the same listing keeps the dialog open with a friendly message', async ({ page }) => {
+    await signInWithDialogFixtures(page);
+    await page.route('**/api/reports', (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: 'You already have an open report on this. Our moderators will review it.',
+          code: 'ALREADY_REPORTED',
+        }),
+      }),
+    );
+    await page.goto(`/jobseeker/jobs/${REPORT_JOB_ID}`);
+    await page.getByRole('button', { name: 'Report listing' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Report this listing' });
+    await dialog.getByRole('radio', { name: 'Spam or scam' }).check();
+    await dialog.getByRole('button', { name: 'Send report' }).click();
+    await expect(dialog.getByRole('alert')).toHaveText(
+      'You already have an open report on this. Our moderators will review it.',
+    );
+    await expect(dialog).toBeVisible();
+  });
+
   test('professional verification takes a validated proof URL, keyboard only', async ({ page }) => {
     const state = await signInWithDialogFixtures(page);
     await page.goto('/jobseeker/profile');

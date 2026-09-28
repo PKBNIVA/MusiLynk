@@ -227,12 +227,7 @@ export default function BookTalent() {
                   const ambiguous = (nameCounts.get(a.name) || 0) > 1 && Boolean(a.ownerName);
                   const memberCount = a.members?.length || 0;
                   return (
-                    <Card
-                      key={a.id}
-                      className="bg-white/[.055] border-white/10"
-                      data-list-item={index}
-                      tabIndex={-1}
-                    >
+                    <Card key={a.id} className="bg-white/[.055] border-white/10" data-list-item={index} tabIndex={-1}>
                       <CardContent className="p-5">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">

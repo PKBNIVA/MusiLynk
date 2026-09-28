@@ -31,6 +31,8 @@ module Admin
       second_factor_detail = { enforced: "Emailed code required after an admin password", unavailable: "Required, but the code cannot be emailed: admin password sign-in is refused",
         skipped: AuthController.admin_second_factor_warning(weakest_email), off: AuthController::SECOND_FACTOR_DISABLED_WARNING }.fetch(second_factor)
       check.call("Admin 2-step sign-in", second_factor == :enforced, second_factor_detail, "high")
+      check.call("Admin site origin", !Rails.env.production? || AdminOrigin.locked?,
+        AdminOrigin.locked? ? "Admin API and admin sign-in answer the admin site only" : "ADMIN_ORIGIN not set: the admin API answers every allowed origin", "medium")
       suppressions = EmailSuppression.summary
       webhook_ready = !Rails.env.production? || !EmailDelivery.brevo_configured? || ENV["BREVO_WEBHOOK_SECRET"].present?
       reasons = suppressions[:byReason].map { |reason, count| "#{count} #{reason.tr('_', ' ')}" }.join(", ")

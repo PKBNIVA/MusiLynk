@@ -191,6 +191,52 @@ receives the code, then set `ADMIN_SECOND_FACTOR=required` so a later email outa
 closed instead of silently skipping the step. Use `off` only in an emergency and remove it
 afterwards.
 
+### Admin site and `ADMIN_ORIGIN`
+
+The admin panel is meant to run as its own Vercel project (a second build of this repo with
+`VITE_APP_TARGET=admin`) at an unpublished URL. `ADMIN_ORIGIN` is that site's exact origin
+(scheme + host, no path, e.g. `https://verse-admin-xxxx.vercel.app`). While it is **unset**,
+the API behaves as it always has: nothing below applies, and the public site's `/admin` keeps
+working. Set it only after the admin site is deployed and reachable.
+
+When set, per request (no restart beyond the redeploy Railway does for a variable change):
+
+- Every `/api/admin/*` request must carry `Origin: <ADMIN_ORIGIN>`, matched exactly; a
+  missing or different header answers 403 `ADMIN_ORIGIN_REQUIRED` before the token is checked.
+  Scripts and monitors that call the admin API must therefore send that header.
+- An admin's password sign-in (`POST /api/auth/login`) and its second step
+  (`/api/auth/second-factor`) from any other origin answer 403 `ADMIN_USE_ADMIN_SITE`
+  ("Admins sign in at the admin site."), audited as `auth.admin_wrong_origin`. Everyone else
+  signs in exactly as before, from either site.
+- Admin accounts never get or accept email-only sign-in codes (`/api/auth/otp/*`): the
+  request answers like an unknown address and verify answers `OTP_INVALID`. Admins always use
+  password + emailed code, on the admin site.
+- CORS: the public origins (`ALLOWED_ORIGINS`) reach every route except `/api/admin/*`; the
+  admin origin reaches `/api/admin/*`, `/api/auth/login`, `/api/auth/second-factor`,
+  `/api/auth/logout`, `/api/auth/methods` and `/api/me` only.
+
+Health: `GET /api/readiness` and `/api/admin/health` carry `adminOrigin {ok, locked}` (not
+blocking, `ok` in production only when set); `/admin/tester` has an "Admin site origin" row.
+
+**Admin email and password.** The seeded admin address (`admin@verse.local`) cannot receive
+mail, so the second sign-in step is skipped for it (see above). The admin changes their own
+address from the admin site's Account page: `POST /api/admin/account/email/request {email}`
+sends a code to the **new** address; `POST /api/admin/account/email/confirm {changeToken,
+code}` moves the account, marks the address verified, signs out every other browser and emails
+a notice to the previous address (when it can receive mail). Reserved domains, suppressed
+addresses and addresses already in use are refused. `POST /api/admin/account/password` changes
+the password with the current one, signs out other browsers and voids outstanding reset links.
+`GET /api/admin/account` reports `emailDeliverable` and the `secondFactor` state so the admin
+site can show a banner until the second step is really on. Every change is in the audit log
+(`admin.account.email_requested`, `admin.account.email_changed`, `admin.account.password_changed`).
+Changing `ADMIN_EMAIL` in Railway does not change an existing account (seeds run once); set it
+to the new address afterwards so a fresh database would match.
+
+Rollout order: merge the API change with `ADMIN_ORIGIN` unset → deploy the admin site → set
+`ADMIN_ORIGIN` → the owner changes the admin email to a real mailbox and signs in again with
+the code. Rollback at any point: unset `ADMIN_ORIGIN` (the API is back to today's behaviour
+without a code change).
+
 ### Brevo bounce and complaint webhook
 
 Brevo reports hard bounces, soft bounces, spam complaints, blocks and unsubscribes to

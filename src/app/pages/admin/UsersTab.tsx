@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ShieldCheck, Ban, Undo2, Gift, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShieldCheck, Ban, Undo2, Gift, Search, ChevronLeft, ChevronRight, Users as UsersIcon } from 'lucide-react';
 import { apiGet, apiPatch } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { Button } from '../../components/ui/button';
@@ -9,10 +9,24 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import type { AdminUser } from '../../lib/apiTypes';
 import { Panel, Empty, date, type AdminActions } from './shared';
+import { AdminSelect, AdminPageHeader, HowToCallout } from './ui';
 
 const PER_PAGE = 50;
 const ROLES = ['jobseeker', 'employer', 'admin'] as const;
 const STATUSES = ['active', 'suspended', 'pending', 'deleted'] as const;
+const ROLE_LABEL: Record<string, string> = { jobseeker: 'Job seeker', employer: 'Employer', admin: 'Admin' };
+const STATUS_LABEL: Record<string, string> = {
+  active: 'Active',
+  suspended: 'Suspended',
+  pending: 'Pending',
+  deleted: 'Deleted',
+};
+const STATUS_BADGE: Record<string, string> = {
+  active: 'bg-emerald-500/15 text-emerald-300',
+  suspended: 'bg-rose-500/15 text-rose-300',
+  pending: 'bg-amber-500/15 text-amber-200',
+  deleted: 'bg-white/10 text-slate-300',
+};
 
 type UsersResponse = { users: AdminUser[]; page: number; perPage: number; total: number };
 
@@ -74,6 +88,16 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
 
   return (
     <Panel error={error} onRetry={() => load(page)} loading={loading}>
+      <AdminPageHeader
+        icon={UsersIcon}
+        title="Users"
+        description="Everyone with an account: search, filter, grant a free plan, or suspend an account that's misbehaving."
+      />
+      <HowToCallout storageKey="users">
+        Search matches name, email or user id. <b>Grant plan</b> switches an account to a paid tier for free, for a set
+        number of days — useful for support cases or trials. <b>Suspend</b> signs the person out everywhere and blocks
+        sign-in until you restore them.
+      </HowToCallout>
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <Label htmlFor="admin-user-filter" className="sr-only">
@@ -91,35 +115,26 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
         <Label htmlFor="admin-user-role" className="sr-only">
           Filter by role
         </Label>
-        <select
+        <AdminSelect
           id="admin-user-role"
           value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="h-10 rounded-md bg-slate-900 border border-white/15 px-3 text-sm"
-        >
-          <option value="">All roles</option>
-          {ROLES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+          onChange={setRole}
+          className="w-40"
+          options={[{ value: '', label: 'All roles' }, ...ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r] }))]}
+        />
         <Label htmlFor="admin-user-status" className="sr-only">
           Filter by status
         </Label>
-        <select
+        <AdminSelect
           id="admin-user-status"
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="h-10 rounded-md bg-slate-900 border border-white/15 px-3 text-sm"
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          onChange={setStatus}
+          className="w-40"
+          options={[
+            { value: '', label: 'All statuses' },
+            ...STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] })),
+          ]}
+        />
       </div>
       <p className="text-sm text-slate-400 mt-3" aria-live="polite">
         {total === 0
@@ -128,7 +143,11 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
       </p>
       <div className="space-y-3 mt-3">
         {!loading && users.length === 0 && (
-          <Empty text={query || role || status ? 'No users match this search.' : 'No users yet.'} />
+          <Empty
+            icon={UsersIcon}
+            text={query || role || status ? 'No users match this search.' : 'No users yet.'}
+            hint={query || role || status ? 'Try clearing the search or filters above.' : undefined}
+          />
         )}
         {users.map((u) => (
           <Card key={u.id} className="bg-white/[.05] border-white/10">
@@ -139,9 +158,11 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
                   {u.verified && <ShieldCheck size={15} className="text-emerald-300" aria-label="Verified" />}
                 </div>
                 <div className="text-sm text-slate-400 break-all">
-                  {u.email} · {u.role} · joined {date(u.createdAt)}
+                  {u.email} · {ROLE_LABEL[u.role] ?? u.role} · joined {date(u.createdAt)}
                 </div>
-                <Badge className="mt-2">{u.status}</Badge>
+                <Badge className={`mt-2 ${STATUS_BADGE[u.status] ?? 'bg-white/10 text-slate-300'}`}>
+                  {STATUS_LABEL[u.status] ?? u.status}
+                </Badge>
               </div>
               {u.role !== 'admin' && (
                 <div className="flex flex-wrap gap-2 shrink-0">
@@ -149,6 +170,7 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
                     size="sm"
                     variant="secondary"
                     disabled={!!busy}
+                    title="Switch this account to a paid plan for free, for a set number of days"
                     onClick={() => setGrant({ id: u.id, name: u.name, email: u.email })}
                   >
                     <Gift aria-hidden="true" size={15} className="mr-1" />

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useOutletContext } from 'react-router';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, UserCircle2 } from 'lucide-react';
 import { getAdminAccount, secondFactorGap } from '../../lib/adminAccount';
 import type { AdminAccountHealth } from '../../lib/apiTypes';
 import { errorMessage } from '../../lib/errors';
+import { AdminBackground } from '../admin/ui';
 
 export interface AdminSiteContext {
   account: AdminAccountHealth | null;
@@ -37,6 +38,7 @@ export default function AdminSiteLayout() {
 
   return (
     <>
+      <AdminBackground />
       {gap && (
         <aside
           aria-label="Sign-in security warning"
@@ -63,13 +65,17 @@ export default function AdminSiteLayout() {
         className="border-b border-white/10 bg-slate-950 px-4 text-xs text-slate-400 md:px-6"
       >
         <div className="mx-auto flex h-9 max-w-[1500px] items-center justify-between gap-3">
-          <span className="font-semibold uppercase tracking-wider">Verse Admin</span>
+          <span className="flex items-center gap-1.5 font-semibold uppercase tracking-wider">
+            <ShieldCheck aria-hidden="true" size={13} className="text-violet-300" />
+            Verse Admin
+          </span>
           <NavLink
             to="/account"
             className={({ isActive }) =>
-              `inline-flex min-h-9 items-center font-semibold hover:text-white ${isActive ? 'text-white' : 'text-violet-200'}`
+              `inline-flex min-h-9 items-center gap-1.5 font-semibold hover:text-white ${isActive ? 'text-white' : 'text-violet-200'}`
             }
           >
+            <UserCircle2 aria-hidden="true" size={14} />
             Your account
           </NavLink>
         </div>

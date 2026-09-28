@@ -78,7 +78,7 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 | Method | Path | Auth | Params | Response / errors |
 | --- | --- | --- | --- | --- |
 | POST | `/auth/register` | public | `name, email, password (≥10), role: jobseeker\|employer` | 201 `{user, accessToken, verificationRequired, verificationDelivery}`; 422 `INVALID_ROLE`/validation; 409 duplicate |
-| POST | `/auth/login` | public | `email, password` | `{user, accessToken}`; admins get 202 `{secondFactorRequired, method, challengeToken, message, expiresIn}` instead and a code by email (`debugCode` only outside production without email); without email delivery in production the admin gets `{user, accessToken}` under the default `ADMIN_SECOND_FACTOR=auto` (audited) or 503 `SECOND_FACTOR_UNAVAILABLE` under `required`; 401; 403 inactive; 429 |
+| POST | `/auth/login` | public | `email, password` | `{user, accessToken}`; admins get 202 `{secondFactorRequired, method, challengeToken, message, expiresIn}` instead and a code by email (`debugCode` only outside production without email); without email delivery in production the admin gets `{user, accessToken}` under the default `ADMIN_SECOND_FACTOR=auto` (audited) or 503 `SECOND_FACTOR_UNAVAILABLE` under `required`; with `ADMIN_ORIGIN` set an admin with the right password from any other `Origin` gets 403 `ADMIN_USE_ADMIN_SITE` (audited `auth.admin_wrong_origin`); 401; 403 inactive; 429 |
 | POST | `/auth/logout` | public | bearer token | `{ok}` |
 | POST | `/auth/request-email-verification` | any | — | `{ok, alreadyVerified?, debugLink?}` |
 | POST | `/auth/verify-email` | public | `token` | `{ok}`; 400 `TOKEN_INVALID` |
@@ -204,11 +204,21 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 
 ### Admin (role `admin`; everyone else 403, anonymous 401)
 
+With `ADMIN_ORIGIN` set (see DEPLOYMENT.md → Admin site), every `/admin/*` route first checks
+that the request's `Origin` header equals that value exactly (a missing header counts as wrong)
+and answers 403 `ADMIN_ORIGIN_REQUIRED` otherwise, before the token is looked at. CORS then
+lets only that origin reach `/admin/*`, and lets it reach only `/auth/login`,
+`/auth/second-factor`, `/auth/logout`, `/auth/methods` and `/me` besides. Unset, nothing changes.
+
 | Method | Path | Params | Response / notes |
 | --- | --- | --- | --- |
 | GET | `/admin/health` | — | `{ok, coreReady, optionalIntegrationsReady, checks, …}`; 503 not ready |
 | GET | `/admin/stats` | — | `{stats: {users, jobseekers, employers, …}}` |
 | GET | `/admin/tester` | — | `{summary, checks, generatedAt}` |
+| GET | `/admin/account` | — | `{email, emailDeliverable, secondFactor: enforced\|skipped\|off\|unavailable, adminOrigin}` for the signed-in admin: the signals behind the admin site's banner |
+| POST | `/admin/account/email/request` | `email` | 202 `{changeToken, expiresIn: 600, message}` and a code emailed to the **new** address (`debugCode` only outside production without email); 422 `INVALID_EMAIL`, `EMAIL_UNCHANGED`, `EMAIL_UNDELIVERABLE` (reserved domain such as `.local`), `EMAIL_SUPPRESSED`; 409 `EMAIL_TAKEN`; 503 `EMAIL_DELIVERY_NOT_CONFIGURED` in production without email; 429 (5/hour/admin). Audit `admin.account.email_requested` |
+| POST | `/admin/account/email/confirm` | `changeToken, code` | `{user}` with the new address (`emailVerified: true`); every **other** session of the admin is revoked and the previous address gets a notice; 422 `OTP_INVALID` (wrong code, 5 attempts per code) or `EMAIL_CHANGE_EXPIRED` (bad, expired, used or another admin's token); 409 `EMAIL_TAKEN`; 429 (10 failures / 15 min). Audit `admin.account.email_changed {from, to}`. Uses 422 rather than 401 so the web app does not treat a wrong code as a dead session |
+| POST | `/admin/account/password` | `currentPassword, newPassword (≥10)` | `{ok}`; other sessions revoked, outstanding reset links voided; 403 `PASSWORD_INCORRECT` (10 failures / 15 min → 429); 422 `PASSWORD_TOO_SHORT`, `PASSWORD_UNCHANGED`. Audit `admin.account.password_changed` |
 | GET | `/admin/operations` | — | `{generatedAt, requests: {lastHour, last24Hours, collectingSince}, jobs, payments, email}`; see DEPLOYMENT.md → Operations view |
 | GET | `/admin/users` | — | `{users}` ≤ 500 (≈560 KB with 500 users) |
 | PATCH/PUT | `/admin/users/:id` | `status: active\|suspended\|pending` | `{ok}`; suspending revokes sessions; 409 self |
@@ -236,9 +246,9 @@ plans. N+1: `/urgent-requests` (~2 queries per row; 205 queries for 100 rows) an
 | Method | Path | Auth | Params | Response / notes |
 | --- | --- | --- | --- | --- |
 | GET | `/auth/methods` | public | — | `{signInCodes, password, emailDelivery}`: what the sign-in page may offer. `signInCodes` is false only in production without an email provider |
-| POST | `/auth/otp/request` | public | `email` (+ `name, role` to sign up) | `{ok, message, expiresIn}`, identical for known and unknown emails (`debugCode` only outside production without email); 422 `INVALID_EMAIL`; 503 `OTP_UNAVAILABLE` in production without an email provider (same for every address, no code issued); 429 |
-| POST | `/auth/otp/verify` | public | `email, code` | `{user, accessToken}` like login; 401 `OTP_INVALID`; 429 |
-| POST | `/auth/second-factor` | public | `challengeToken, code` | completes an admin password sign-in: `{user, accessToken}`; 401 `OTP_INVALID` (wrong code) or `SECOND_FACTOR_EXPIRED` (bad, expired or replaced challenge); 403 inactive; 429 |
+| POST | `/auth/otp/request` | public | `email` (+ `name, role` to sign up) | `{ok, message, expiresIn}`, identical for known and unknown emails (`debugCode` only outside production without email); 422 `INVALID_EMAIL`; 503 `OTP_UNAVAILABLE` in production without an email provider (same for every address, no code issued); 429. With `ADMIN_ORIGIN` set an admin's address is treated like an unknown one (same body, no usable code) |
+| POST | `/auth/otp/verify` | public | `email, code` | `{user, accessToken}` like login; 401 `OTP_INVALID` (also for any admin account while `ADMIN_ORIGIN` is set); 429 |
+| POST | `/auth/second-factor` | public | `challengeToken, code` | completes an admin password sign-in: `{user, accessToken}`; 401 `OTP_INVALID` (wrong code) or `SECOND_FACTOR_EXPIRED` (bad, expired or replaced challenge); 403 inactive or `ADMIN_USE_ADMIN_SITE` (wrong `Origin` while `ADMIN_ORIGIN` is set; the code is not spent); 429 |
 | POST | `/notifications/read-all` | any | — | `{ok, updated}` |
 | GET | `/notifications/unread` | any | — | now also `unreadMessages` |
 | GET | `/conversations` | any | — | items add `counterpartName, unreadCount, lastMessageAt, lastMessageFromMe` |

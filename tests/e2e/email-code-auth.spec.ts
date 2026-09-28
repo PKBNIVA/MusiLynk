@@ -143,19 +143,22 @@ test('resend waits 60 seconds and sending shows a busy state', async ({ page }) 
   await expect(page.getByLabel('Email')).toHaveValue('qa@example.invalid');
 });
 
-test('registration by code sends name and role and lands on profile setup', async ({ page }) => {
+test('sign-up by code (on /join) sends name, role and consent and lands on the dashboard', async ({ page }) => {
   const calls = await mockApi(page, { user: employer });
   await page.goto('/auth/employer');
-  await page.getByRole('button', { name: /create .* account/i }).click();
-  await page.getByLabel('Your or company name').fill('QA Studio');
+  await page.getByRole('link', { name: 'New to Verse? Join in two minutes' }).click();
+  await expect(page).toHaveURL(/\/join\/hiring$/);
+  await page.getByRole('button', { name: 'Complete my profile later' }).click();
+  await page.getByLabel('Your name').fill('QA Studio');
   await page.getByLabel('Email').fill('studio@example.invalid');
-  await page.getByRole('button', { name: 'Email me a sign-in code' }).click();
+  await page.getByLabel(/I agree to the Terms/).check();
+  await page.getByRole('button', { name: 'Email me a code' }).click();
   await expect
     .poll(() => calls.requests)
-    .toEqual([{ email: 'studio@example.invalid', name: 'QA Studio', role: 'employer' }]);
+    .toEqual([{ email: 'studio@example.invalid', name: 'QA Studio', role: 'employer', consent: true }]);
 
   await page.getByLabel('Sign-in code').fill('482913');
-  await expect(page).toHaveURL(/\/employer\/profile$/);
+  await expect(page).toHaveURL(/\/employer\?welcome=1$/);
 });
 
 test('password sign-in remains available as a secondary path', async ({ page }) => {

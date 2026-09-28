@@ -973,6 +973,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_162100) do
     t.datetime "used_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "pending_consented_at"
     t.index ["email", "created_at"], name: "index_sign_in_codes_on_email_and_created_at"
     t.index ["expires_at"], name: "index_sign_in_codes_on_expires_at"
   end
@@ -1129,6 +1130,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_162100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "synthetic_batch"
+    t.datetime "consented_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["name"], name: "index_users_on_name", opclass: :gin_trgm_ops, using: :gin
     t.index ["synthetic_batch"], name: "index_users_on_synthetic_batch", where: "(synthetic_batch IS NOT NULL)"

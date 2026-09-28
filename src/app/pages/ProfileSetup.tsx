@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -19,6 +20,7 @@ import {
   ShieldCheck,
   UserRound,
   Wallet,
+  WandSparkles,
 } from 'lucide-react';
 import { flushSync } from 'react-dom';
 import { HelpCallout } from '../components/help/HelpCallout';
@@ -34,6 +36,7 @@ import { AppSelect } from '../components/ui/app-select';
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { AutocompleteInput } from '../components/ai/AutocompleteInput';
 import { AiCreditsBadge } from '../components/ai/AiCreditsBadge';
+import { buildBio, buildHeadline, type ProfileFacts } from '../lib/profileTemplates';
 // List fields arrive as arrays and are edited as text: comma-separated, credits one per line.
 type ListField =
   'skills' | 'genres' | 'instruments' | 'languages' | 'credits' | 'openTo' | 'roles' | 'gear' | 'software';
@@ -133,10 +136,12 @@ export default function ProfileSetup() {
   const form = useFormErrors<ProfileField>({ idFor: fieldId });
   const submit = useSubmitOnce();
   const saving = submit.busy;
+  const [searchParams] = useSearchParams();
   const [f, setF] = useState<ProfileForm>({}),
     [loaded, setLoaded] = useState(false),
     [loadError, setLoadError] = useState(''),
-    [verifying, setVerifying] = useState(false),
+    // The post-sign-up welcome card links here with ?verify=1 to open the verification request.
+    [verifying, setVerifying] = useState(() => searchParams.get('verify') === '1'),
     [emailError, setEmailError] = useState(''),
     [debugLink, setDebugLink] = useState<string | null>(null);
   const load = () => {
@@ -293,6 +298,39 @@ export default function ProfileSetup() {
       .map((x) => x.trim())
       .filter(Boolean),
   });
+  // No-AI drafts from the roles, city, years, genres and credits already on this form.
+  const profileFacts = (): ProfileFacts => ({
+    roles: list(f.roles),
+    city: String(f.location || ''),
+    years: f.yearsExperience,
+    genres: list(f.genres),
+    credits: String(f.credits || '')
+      .split('\n')
+      .map((x) => x.trim())
+      .filter(Boolean),
+  });
+  const templateButton = (field: 'headline' | 'bio') => (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-8 text-violet-200"
+      onClick={() => {
+        const draft = field === 'headline' ? buildHeadline(profileFacts()) : buildBio(profileFacts());
+        if (!draft) {
+          toast.info('Add your roles and city first (in Music skills and Base location), then try again.');
+          return;
+        }
+        set(field, draft);
+        toast.success(
+          field === 'headline' ? 'Headline filled in. Edit it as you like.' : 'Bio filled in. Edit it as you like.',
+        );
+      }}
+    >
+      <WandSparkles aria-hidden="true" size={14} />
+      Fill from my details
+    </Button>
+  );
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -376,12 +414,15 @@ export default function ProfileSetup() {
                       id={fieldId('headline')}
                       label="Professional headline"
                       labelExtra={
-                        <AiSuggestButton
-                          task="profile_headline"
-                          label="Write with AI"
-                          getContext={profileAiContext}
-                          onAccept={(text) => set('headline', text)}
-                        />
+                        <>
+                          {templateButton('headline')}
+                          <AiSuggestButton
+                            task="profile_headline"
+                            label="Write with AI"
+                            getContext={profileAiContext}
+                            onAccept={(text) => set('headline', text)}
+                          />
+                        </>
                       }
                       error={form.errors.headline}
                       count={
@@ -420,6 +461,7 @@ export default function ProfileSetup() {
                       label="Bio"
                       labelExtra={
                         <>
+                          {templateButton('bio')}
                           <AiSuggestButton
                             task="profile_bio"
                             label="Write with AI"

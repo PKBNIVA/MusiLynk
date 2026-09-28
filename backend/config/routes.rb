@@ -25,6 +25,9 @@ Rails.application.routes.draw do
     post "account/password", to: "account#change_password"
     put "profile", to: "profiles#update"
     post "profile/whatsapp-consent", to: "profiles#whatsapp_consent"
+    post "onboarding/starter", to: "onboarding#starter"
+    post "link-previews", to: "link_previews#create"
+    get "public/stats", to: "public_stats#show"
 
     resources :jobs, only: %i[index show create] do
       member { post :apply }

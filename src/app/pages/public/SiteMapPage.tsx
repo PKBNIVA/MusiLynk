@@ -17,7 +17,9 @@ const groups: [title: string, links: [label: string, path: string][]][] = [
       ['Choose your goal', '/start'],
       ['How to use Verse', '/guide'],
       ['Pricing', '/pricing'],
-      ['Sign in / join', '/auth/jobseeker'],
+      ['Join as a musician or crew', '/join/musician'],
+      ['Join to hire', '/join/hiring'],
+      ['Sign in', '/auth/jobseeker'],
     ],
   ],
   [

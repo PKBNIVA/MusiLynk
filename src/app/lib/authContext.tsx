@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, apiGet, apiPost, hasAccessToken, onAccessTokenChange, setAccessToken } from './api';
+import type { StarterPayload } from './onboarding';
 export type Role = 'jobseeker' | 'employer' | 'admin';
 export interface User {
   id: string;
@@ -32,11 +33,13 @@ export const isSecondFactorChallenge = (value: unknown): value is SecondFactorCh
   const candidate = value as Partial<SecondFactorChallenge> | null | undefined;
   return Boolean(candidate && candidate.secondFactorRequired === true && typeof candidate.challengeToken === 'string');
 };
-export interface RegisterPayload {
+export interface RegisterPayload extends StarterPayload {
   name: string;
   email: string;
   password: string;
   role: 'jobseeker' | 'employer';
+  /** The sign-up's "I agree to the Terms and Privacy Policy" box; recorded as consented_at. */
+  consent?: boolean;
 }
 interface AuthContextType {
   user: User | null;

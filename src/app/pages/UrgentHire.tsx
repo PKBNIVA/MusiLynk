@@ -74,11 +74,11 @@ export default function UrgentHire() {
     setError('');
     const draft = draftPayload();
     if (!user) {
-      // Sign-in gated at submit: the draft survives the hop through sign-up and is submitted
-      // for them the moment their account exists (see AuthPage's pendingUrgentDraft handling).
+      // Sign-in gated at submit: the draft survives the hop through the two-minute join flow (or
+      // sign-in for existing hirers) and is submitted the moment they're signed in.
       saveUrgentDraft(draft);
       toast.message("Create a free hirer account and we'll post this right away.");
-      navigate('/auth/employer?mode=register');
+      navigate('/join/hiring');
       return;
     }
     setSubmitting(true);

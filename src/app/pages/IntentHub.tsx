@@ -7,14 +7,14 @@ const intents = [
   [
     'Create a professional account',
     'Showcase your work, apply to jobs and get discovered by employers.',
-    '/auth/jobseeker?mode=register',
+    '/join/musician',
     UserPlus,
     null,
   ],
   [
     'Create an employer account',
     'Post jobs, search talent and book acts for your next show.',
-    '/auth/employer?mode=register',
+    '/join/hiring',
     Building2,
     null,
   ],

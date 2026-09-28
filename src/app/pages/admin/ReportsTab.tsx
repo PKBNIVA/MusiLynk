@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import type { AdminReport } from '../../lib/apiTypes';
-import { Panel, Empty, date, entityLink, type AdminActions } from './shared';
+import { Panel, Pager, Empty, date, entityLink, type AdminActions, type PageMeta } from './shared';
 
 export default function ReportsTab({
   reports,
@@ -14,6 +14,8 @@ export default function ReportsTab({
   flaggedMessagesAvailable,
   actions,
   onReview,
+  meta,
+  onPage,
 }: {
   reports: AdminReport[];
   error?: string;
@@ -23,6 +25,8 @@ export default function ReportsTab({
   flaggedMessagesAvailable: boolean;
   actions: AdminActions;
   onReview: (id: string) => void;
+  meta?: PageMeta;
+  onPage: (page: number) => void;
 }) {
   const { busy } = actions;
   return (
@@ -75,6 +79,7 @@ export default function ReportsTab({
           </Card>
         );
       })}
+      <Pager meta={meta} onPage={onPage} loading={loading} />
     </Panel>
   );
 }

@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import type { AdminBooking, AdminSubscription, BillingAttempt, BillingEventSummary } from '../../lib/apiTypes';
-import { Panel, Empty, date, RECONCILABLE, type AdminActions } from './shared';
+import { Panel, Pager, Empty, date, RECONCILABLE, type AdminActions, type PageMeta } from './shared';
 
 export default function CommerceTab({
   attempts,
@@ -15,6 +15,8 @@ export default function CommerceTab({
   loading,
   retry,
   actions,
+  metas,
+  onPage,
 }: {
   attempts: BillingAttempt[];
   billingEvents: BillingEventSummary[];
@@ -24,6 +26,8 @@ export default function CommerceTab({
   loading: boolean;
   retry: () => void;
   actions: AdminActions;
+  metas: { attempts?: PageMeta; billingEvents?: PageMeta; subscriptions?: PageMeta; bookings?: PageMeta };
+  onPage: (source: 'attempts' | 'billingEvents' | 'subscriptions' | 'bookings', page: number) => void;
 }) {
   const { busy, act } = actions;
   return (
@@ -99,6 +103,7 @@ export default function CommerceTab({
               );
             })}
             {!attempts.length && <Empty text="No billing attempts recorded." />}
+            <Pager meta={metas.attempts} onPage={(p) => onPage('attempts', p)} loading={loading} />
           </Panel>
         </CardContent>
       </Card>
@@ -148,6 +153,7 @@ export default function CommerceTab({
               </div>
             ))}
             {!billingEvents.length && <Empty text="No billing events received." />}
+            <Pager meta={metas.billingEvents} onPage={(p) => onPage('billingEvents', p)} loading={loading} />
           </Panel>
         </CardContent>
       </Card>
@@ -182,6 +188,7 @@ export default function CommerceTab({
               </div>
             ))}
             {!subscriptions.length && <Empty text="No paid subscription history." />}
+            <Pager meta={metas.subscriptions} onPage={(p) => onPage('subscriptions', p)} loading={loading} />
           </Panel>
         </CardContent>
       </Card>
@@ -218,6 +225,7 @@ export default function CommerceTab({
               </div>
             ))}
             {!bookings.length && <Empty text="No bookings yet." />}
+            <Pager meta={metas.bookings} onPage={(p) => onPage('bookings', p)} loading={loading} />
           </Panel>
         </CardContent>
       </Card>

@@ -24,11 +24,13 @@ import {
   type Data,
   type Source,
   type Payload,
+  type PageMeta,
   type Confirm,
   type Grant,
   type AdminActions,
   SOURCES,
   readSource,
+  readMeta,
   EMPTY,
   Stat,
   ConfirmDialog,
@@ -55,6 +57,7 @@ export default function AdminDashboard() {
   usePageMeta('Admin · Trust & Operations', 'Verse moderation, verification, marketplace health and audit.');
   const [data, setData] = useState<Data>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<Source, string>>>({});
+  const [meta, setMeta] = useState<Partial<Record<Source, PageMeta>>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
@@ -66,19 +69,46 @@ export default function AdminDashboard() {
     const keys = Object.keys(SOURCES) as Source[];
     const settled = await Promise.allSettled(keys.map((k) => apiGet<Payload | null>(SOURCES[k][0])));
     const next: Partial<Data> = {},
-      nextErrors: Partial<Record<Source, string>> = {};
+      nextErrors: Partial<Record<Source, string>> = {},
+      nextMeta: Partial<Record<Source, PageMeta>> = {};
     settled.forEach((result, i) => {
       const k = keys[i];
-      if (result.status === 'fulfilled') readSource(next, k, result.value);
-      else nextErrors[k] = errorMessage(result.reason, 'Unable to load.');
+      if (result.status === 'fulfilled') {
+        readSource(next, k, result.value);
+        const m = readMeta(result.value);
+        if (m) nextMeta[k] = m;
+      } else nextErrors[k] = errorMessage(result.reason, 'Unable to load.');
     });
     setData((prev) => ({ ...prev, ...next }));
     setErrors(nextErrors);
+    setMeta((prev) => ({ ...prev, ...nextMeta }));
     setLoading(false);
   }, []);
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Re-fetches one list at a different page without disturbing the rest of the
+  // console (E2): each paged tab calls this instead of the bulk `load()`.
+  const loadPage = useCallback(
+    (source: Source, page: number) => {
+      const perPage = meta[source]?.perPage ?? 100;
+      apiGet<Payload | null>(`${SOURCES[source][0]}?page=${page}&perPage=${perPage}`)
+        .then((res) => {
+          setData((prev) => ({ ...prev, [source]: SOURCES[source][1](res) }));
+          const m = readMeta(res);
+          if (m) setMeta((prev) => ({ ...prev, [source]: m }));
+          setErrors((prev) => {
+            if (!(source in prev)) return prev;
+            const next = { ...prev };
+            delete next[source];
+            return next;
+          });
+        })
+        .catch((e: unknown) => setErrors((prev) => ({ ...prev, [source]: errorMessage(e, 'Unable to load.') })));
+    },
+    [meta],
+  );
 
   // Every moderation action goes through here: one in flight at a time, toast on result, then refresh.
   const act = async (key: string, request: () => Promise<unknown>, message: string) => {
@@ -99,19 +129,7 @@ export default function AdminDashboard() {
     act(key, () => apiPatch(path, body), message).catch(() => {});
   const actions: AdminActions = { busy, act, patch, setConfirm, setGrant };
 
-  const {
-    stats,
-    users,
-    jobs,
-    reviews,
-    verifications,
-    reports,
-    logs,
-    subscriptions,
-    bookings,
-    attempts,
-    billingEvents,
-  } = data;
+  const { stats, jobs, reviews, verifications, reports, logs, subscriptions, bookings, attempts, billingEvents } = data;
   const pendingJobs = useMemo(() => jobs.filter((j) => j.status === 'pending'), [jobs]);
   const pendingVerifications = useMemo(() => verifications.filter((v) => v.status === 'pending'), [verifications]);
   const openReports = useMemo(() => reports.filter((r) => r.status === 'open'), [reports]);
@@ -238,7 +256,15 @@ export default function AdminDashboard() {
 
           <TabsContent value="queue" className="space-y-3 mt-5">
             <Suspense fallback={null}>
-              <QueueTab jobs={pendingJobs} error={errors.jobs} loading={loading} retry={retry} actions={actions} />
+              <QueueTab
+                jobs={pendingJobs}
+                error={errors.jobs}
+                loading={loading}
+                retry={retry}
+                actions={actions}
+                meta={meta.jobs}
+                onPage={(p) => loadPage('jobs', p)}
+              />
             </Suspense>
           </TabsContent>
 
@@ -250,6 +276,8 @@ export default function AdminDashboard() {
                 loading={loading}
                 retry={retry}
                 actions={actions}
+                meta={meta.verifications}
+                onPage={(p) => loadPage('verifications', p)}
               />
             </Suspense>
           </TabsContent>
@@ -265,19 +293,29 @@ export default function AdminDashboard() {
                 flaggedMessagesAvailable={!errors.stats}
                 actions={actions}
                 onReview={setReviewing}
+                meta={meta.reports}
+                onPage={(p) => loadPage('reports', p)}
               />
             </Suspense>
           </TabsContent>
 
           <TabsContent value="users" className="space-y-3 mt-5">
             <Suspense fallback={null}>
-              <UsersTab users={users} error={errors.users} loading={loading} retry={retry} actions={actions} />
+              <UsersTab actions={actions} />
             </Suspense>
           </TabsContent>
 
           <TabsContent value="reviews" className="space-y-3 mt-5">
             <Suspense fallback={null}>
-              <ReviewsTab reviews={reviews} error={errors.reviews} loading={loading} retry={retry} actions={actions} />
+              <ReviewsTab
+                reviews={reviews}
+                error={errors.reviews}
+                loading={loading}
+                retry={retry}
+                actions={actions}
+                meta={meta.reviews}
+                onPage={(p) => loadPage('reviews', p)}
+              />
             </Suspense>
           </TabsContent>
 
@@ -303,6 +341,13 @@ export default function AdminDashboard() {
                 loading={loading}
                 retry={retry}
                 actions={actions}
+                metas={{
+                  attempts: meta.attempts,
+                  billingEvents: meta.billingEvents,
+                  subscriptions: meta.subscriptions,
+                  bookings: meta.bookings,
+                }}
+                onPage={loadPage}
               />
             </Suspense>
           </TabsContent>
@@ -321,7 +366,14 @@ export default function AdminDashboard() {
 
           <TabsContent value="audit" className="mt-5">
             <Suspense fallback={null}>
-              <AuditTab logs={logs} error={errors.logs} loading={loading} retry={retry} />
+              <AuditTab
+                logs={logs}
+                error={errors.logs}
+                loading={loading}
+                retry={retry}
+                meta={meta.logs}
+                onPage={(p) => loadPage('logs', p)}
+              />
             </Suspense>
           </TabsContent>
         </Tabs>

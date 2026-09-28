@@ -1,6 +1,21 @@
 module Admin
   class UsersController < BaseController
-    def index = render(json: { users: User.includes(:profile).order(created_at: :desc).limit(500).map { public_user(_1).merge("createdAt" => _1.created_at) } })
+    include AdminPagination
+
+    # Server-side search across every user (not just the newest page): `q` matches
+    # name/email (ILIKE) or an exact id; `role`/`status` filter to a known enum value.
+    def index
+      scope = User.includes(:profile).order(created_at: :desc)
+      scope = scope.where(role: params[:role]) if params[:role].present? && User.roles.key?(params[:role].to_s)
+      scope = scope.where(status: params[:status]) if params[:status].present? && User.statuses.key?(params[:status].to_s)
+      if params[:q].present?
+        q = params[:q].to_s.strip.first(254)
+        like = "%#{q.gsub(/[\\%_]/) { "\\#{_1}" }}%"
+        scope = scope.where("users.name ILIKE :like OR users.email ILIKE :like OR users.id = :id", like: like, id: q)
+      end
+      rows, meta = admin_paginate(scope)
+      render json: { users: rows.map { public_user(_1).merge("createdAt" => _1.created_at) } }.merge(meta)
+    end
 
     def update
       return render_error("You cannot change your own admin status.", :conflict) if params[:id] == current_user.id

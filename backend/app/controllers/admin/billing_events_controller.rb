@@ -2,6 +2,8 @@ module Admin
   # Read-only ledger of processed Razorpay webhooks (for support and reconciliation).
   # The index omits raw payloads (they carry payer email/contact); `show` returns one in full.
   class BillingEventsController < BaseController
+    include AdminPagination
+
     LIMIT = 200
 
     def index
@@ -10,8 +12,10 @@ module Admin
       scope = scope.where(processing_result: params[:result]) if params[:result].present?
       scope = scope.where(user_id: params[:userId]) if params[:userId].present?
       scope = scope.where("billing_events.created_at < ?", Time.zone.parse(params[:before].to_s)) if params[:before].present? && Time.zone.parse(params[:before].to_s)
-      rows = scope.limit(LIMIT).to_a
-      render json: { events: rows.map { summary(_1) }, nextBefore: rows.size == LIMIT ? rows.last.created_at.iso8601(6) : nil }
+      total = scope.count
+      _, per_page = admin_page_params(default_per: LIMIT, max_per: LIMIT)
+      rows = scope.limit(per_page).to_a
+      render json: { events: rows.map { summary(_1) }, nextBefore: rows.size == per_page ? rows.last.created_at.iso8601(6) : nil, total: total, perPage: per_page }
     end
 
     def show

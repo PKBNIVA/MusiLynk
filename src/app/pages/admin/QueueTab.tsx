@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import type { Job } from '../../lib/apiTypes';
-import { Panel, Empty, type AdminActions } from './shared';
+import { Panel, Pager, Empty, type AdminActions, type PageMeta } from './shared';
 
 export default function QueueTab({
   jobs,
@@ -12,12 +12,16 @@ export default function QueueTab({
   loading,
   retry,
   actions,
+  meta,
+  onPage,
 }: {
   jobs: Job[];
   error?: string;
   loading: boolean;
   retry: () => void;
   actions: AdminActions;
+  meta?: PageMeta;
+  onPage: (page: number) => void;
 }) {
   const { busy, patch, act, setConfirm } = actions;
   return (
@@ -90,6 +94,7 @@ export default function QueueTab({
           </CardContent>
         </Card>
       ))}
+      <Pager meta={meta} onPage={onPage} loading={loading} />
     </Panel>
   );
 }

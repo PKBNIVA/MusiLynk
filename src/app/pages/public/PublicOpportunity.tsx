@@ -13,9 +13,12 @@ import { errorMessage, errorStatus } from '../../lib/errors';
 import type { Job } from '../../lib/apiTypes';
 import { formatDate, formatDeadline, formatPay } from '../../lib/format';
 import { PostedBy } from '../../components/showcase/PostedBy';
+import { useAuth } from '../../lib/authContext';
+import { ShareToStageButton } from '../../components/stage/ShareToStageButton';
 
 export default function PublicOpportunity() {
   const { id } = useParams();
+  const { isAuthenticated } = useAuth();
   const [j, setJ] = useState<Job>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
@@ -56,15 +59,18 @@ export default function PublicOpportunity() {
       <main className="max-w-5xl mx-auto px-5 py-12">
         <Card className="bg-white/[.055] border-white/10">
           <CardContent className="p-7 md:p-10">
-            <div className="flex flex-wrap gap-2">
-              <Badge>{j.opportunity_kind}</Badge>
-              <DemoBadge show={j.demo} />
-              {j.employerVerified && (
-                <Badge className="bg-emerald-500/10 text-emerald-300">
-                  <ShieldCheck size={13} className="mr-1" />
-                  Verified hiring party
-                </Badge>
-              )}
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Badge>{j.opportunity_kind}</Badge>
+                <DemoBadge show={j.demo} />
+                {j.employerVerified && (
+                  <Badge className="bg-emerald-500/10 text-emerald-300">
+                    <ShieldCheck size={13} className="mr-1" />
+                    Verified hiring party
+                  </Badge>
+                )}
+              </div>
+              {isAuthenticated && <ShareToStageButton kind="job_share" id={j.id} label={j.title} />}
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mt-4 break-words">{j.title}</h1>
             <p className="text-xl text-violet-300 mt-2">{j.company}</p>

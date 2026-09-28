@@ -101,6 +101,11 @@ function publicRoutes(): RouteObject[] {
     ),
   }));
   // ---- Showcase — end ----
+  // The Stage: the community feed. Owned by the fe-stage change; see src/app/pages/stage/.
+  const StageFeed = L(() => import('./pages/stage/StageFeed'));
+  const StageTag = L(() => import('./pages/stage/StageTag'));
+  const StageAuthor = L(() => import('./pages/stage/StageAuthor'));
+  const StagePost = L(() => import('./pages/stage/StagePost'));
   return [
     ...showcasePublic,
     {
@@ -699,6 +704,44 @@ function publicRoutes(): RouteObject[] {
         ...showcase('employer'), // Showcase
       ],
     },
+    // === The Stage (community feed) — begin ===
+    // Top-level, not role-prefixed: both jobseeker and employer accounts use the same identity
+    // (person or a Page they run) on the Stage. Author and tag pages are public-data reads but
+    // still sit behind sign-in here, matching the rest of the authenticated app; the composer
+    // and reactions always require it.
+    {
+      path: '/stage',
+      element: (
+        <P roles={['jobseeker', 'employer']}>
+          <StageFeed />
+        </P>
+      ),
+    },
+    {
+      path: '/stage/tags/:tag',
+      element: (
+        <P roles={['jobseeker', 'employer']}>
+          <StageTag />
+        </P>
+      ),
+    },
+    {
+      path: '/stage/authors/:type/:id',
+      element: (
+        <P roles={['jobseeker', 'employer']}>
+          <StageAuthor />
+        </P>
+      ),
+    },
+    {
+      path: '/stage/posts/:id',
+      element: (
+        <P roles={['jobseeker', 'employer']}>
+          <StagePost />
+        </P>
+      ),
+    },
+    // === The Stage (community feed) — end ===
     // Admin pages live on the separate admin site; the old sign-in link here is gone too.
     {
       path: '/auth/admin',

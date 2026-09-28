@@ -388,6 +388,8 @@ export interface SignInCodeRequest {
   email: string;
   name?: string;
   role?: 'jobseeker' | 'employer';
+  /** Sign-up only: the Terms and Privacy Policy box, carried to the account the code creates. */
+  consent?: boolean;
 }
 export interface SignInCodeResponse {
   ok: boolean;

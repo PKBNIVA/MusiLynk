@@ -58,6 +58,9 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/account/email/confirm", :any, { ok: [422], params: { changeToken: "not-a-token", code: "000000" } }],
     [:post, "/api/account/password", :any, { ok: [403], params: { currentPassword: "wrong-current-password", newPassword: "BrandNewPass456!" } }],
     [:put, "/api/profile", :talent, { params: { headline: "Updated headline" }, bad: { website: "javascript:alert(1)" }, bad_status: [422], keys: %w[user] }],
+    [:post, "/api/onboarding/starter", :talent, { params: { city: "Mumbai" }, bad: { yearsExperience: 500 }, bad_status: [422], keys: %w[user starter] }],
+    [:post, "/api/link-previews", :public, { params: { url: "https://myband.example/epk" }, bad: { url: "javascript:alert(1)" }, bad_status: [422], keys: %w[provider kind label url title author thumbnail] }],
+    [:get, "/api/public/stats", :public, { keys: %w[verifiedProfiles professionals cities openOpportunities urgentRequests generatedAt] }],
 
     [:get, "/api/jobs", :public, { keys: %w[jobs nextCursor total] }],
     [:get, "/api/jobs/{job}", :public, { keys: %w[job], missing: :job }],

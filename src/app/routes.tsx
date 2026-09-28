@@ -19,6 +19,7 @@ const P = ({ roles, children }: { roles: Role[]; children: React.ReactNode }) =>
 function publicRoutes(): RouteObject[] {
   const LandingPage = L(() => import('./pages/LandingPage'));
   const AuthPage = L(() => import('./pages/AuthPage'));
+  const Join = L(() => import('./pages/Join'));
   const JobSeekerDashboard = L(() => import('./pages/JobSeekerDashboard'));
   const EmployerDashboard = L(() => import('./pages/EmployerDashboard'));
   const JobSearch = L(() => import('./pages/JobSearch'));
@@ -315,6 +316,14 @@ function publicRoutes(): RouteObject[] {
       element: (
         <S>
           <AuthPage />
+        </S>
+      ),
+    },
+    {
+      path: '/join/:audience',
+      element: (
+        <S>
+          <Join />
         </S>
       ),
     },

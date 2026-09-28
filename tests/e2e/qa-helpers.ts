@@ -22,6 +22,8 @@ export const publicRoutes = [
   ['Forgot password', '/forgot-password'],
   ['Professional authentication', '/auth/jobseeker'],
   ['Employer authentication', '/auth/employer'],
+  ['Musician sign-up', '/join/musician'],
+  ['Hirer sign-up', '/join/hiring'],
 ] as const;
 
 export const accessibilityRoutes = [
@@ -45,6 +47,8 @@ export const accessibilityRoutes = [
   ['Not found', '/this-page-does-not-exist'],
   ['Professional authentication', '/auth/jobseeker'],
   ['Employer authentication', '/auth/employer'],
+  ['Musician sign-up', '/join/musician'],
+  ['Hirer sign-up', '/join/hiring'],
 ] as const;
 
 export function watchRuntimeFailures(page: Page) {

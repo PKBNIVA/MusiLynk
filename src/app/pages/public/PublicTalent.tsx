@@ -174,10 +174,10 @@ export default function PublicTalent() {
             onClear={query ? clear : undefined}
           >
             <Button variant="outline" asChild>
-              <Link to="/auth/jobseeker">List your profile</Link>
+              <Link to="/join/musician">List your profile</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link to="/auth/employer">Start hiring</Link>
+              <Link to="/join/hiring">Start hiring</Link>
             </Button>
           </NoResults>
         )}

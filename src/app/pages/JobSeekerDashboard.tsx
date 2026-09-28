@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { HelpCallout } from '../components/help/HelpCallout';
+import { WelcomeNextStep } from '../components/landing/WelcomeNextStep';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -8,7 +9,7 @@ import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 import { apiGet } from '../lib/api';
 import { useAuth } from '../lib/authContext';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import {
   Briefcase,
   Calendar,
@@ -27,6 +28,7 @@ import type { Job, JobSeekerDashboard } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
 export default function JobSeekerDashboard() {
   const { user } = useAuth();
+  const welcome = new URLSearchParams(useLocation().search).get('welcome') === '1';
   const [d, setD] = useState<Partial<JobSeekerDashboard> & { recommendedJobs: Job[] }>({ recommendedJobs: [] }),
     [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const load = () => {
@@ -59,7 +61,10 @@ export default function JobSeekerDashboard() {
         <div className="flex flex-col md:flex-row justify-between gap-5 mb-7">
           <div>
             <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Career workspace</div>
-            <h1 className="text-4xl md:text-5xl font-bold">Welcome back, {user?.name?.split(' ')[0]}</h1>
+            <h1 className="text-4xl md:text-5xl font-bold">
+              {/* Right after the two-minute sign-up (?welcome=1) it is a first visit, not a return. */}
+              {welcome ? 'Welcome' : 'Welcome back'}, {user?.name?.split(' ')[0]}
+            </h1>
             <p className="text-slate-400 mt-2">
               Focus on credible opportunities and proof of work, not application volume.
             </p>
@@ -71,6 +76,7 @@ export default function JobSeekerDashboard() {
             </Link>
           </Button>
         </div>
+        <WelcomeNextStep role="jobseeker" />
         <HelpCallout {...HELP.jobseekerDashboard} />
         {state === 'error' && (
           <div

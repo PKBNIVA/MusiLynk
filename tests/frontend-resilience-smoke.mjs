@@ -92,6 +92,6 @@ const catalogs = await Promise.all([
   read('../src/app/pages/public/PublicActs.tsx'),
 ]);
 for (const source of catalogs)
-  assert.match(source, /auth\//, 'empty public catalogs must offer a useful account action');
+  assert.match(source, /\/(auth|join)\//, 'empty public catalogs must offer a useful account action (sign in or join)');
 
 console.log('frontend resilience smoke: ok');

@@ -165,7 +165,6 @@ export function Navigation() {
 
   return (
     <>
-      <SkipLink />
       {/* C5/CRAWL-03: only the dashboard home (never a profile-setup page) may auto-start the
           tour, and only once the profile is complete, so it never covers the form itself. */}
       <ProductTour
@@ -176,6 +175,7 @@ export function Navigation() {
         className="fixed top-0 z-50 w-full border-b border-white/10 bg-[#070813]/88 backdrop-blur-2xl"
         aria-label="Workspace navigation"
       >
+        <SkipLink />
         <div className="mx-auto flex h-[72px] max-w-[1500px] items-center gap-4 px-4 md:px-6">
           <Link to={baseUrl} aria-label="Verse dashboard" className="shrink-0">
             <BrandMark />

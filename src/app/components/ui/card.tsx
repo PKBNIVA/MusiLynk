@@ -30,8 +30,18 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
-  return <h4 data-slot="card-title" className={cn('leading-none', className)} {...props} />;
+/**
+ * Renders h4 by default (most cards sit deep enough in the page's heading tree for that to be
+ * correct), but a card used higher up — e.g. the first heading after a page's own h1 — should
+ * pass `level` so the document doesn't skip a level.
+ */
+function CardTitle({
+  className,
+  level = 4,
+  ...props
+}: React.ComponentProps<'div'> & { level?: 1 | 2 | 3 | 4 | 5 | 6 }) {
+  const Comp = `h${level}` as const as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+  return <Comp data-slot="card-title" className={cn('leading-none', className)} {...props} />;
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {

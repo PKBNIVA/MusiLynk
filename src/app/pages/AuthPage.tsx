@@ -379,7 +379,7 @@ export default function AuthPage() {
       <div className="verse-orb absolute -left-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-fuchsia-500/45" />
       <div className="verse-orb absolute -bottom-40 -right-20 h-[34rem] w-[34rem] rounded-full bg-cyan-400/25" />
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col">
-        <div className="flex items-center justify-between">
+        <header className="flex items-center justify-between">
           <Link to="/">
             <BrandMark />
           </Link>
@@ -387,8 +387,8 @@ export default function AuthPage() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to home
           </Link>
-        </div>
-        <div className="grid flex-1 items-center gap-14 py-12 lg:grid-cols-[1fr_480px]">
+        </header>
+        <main className="grid flex-1 items-center gap-14 py-12 lg:grid-cols-[1fr_480px]">
           <div className="hidden lg:block">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.05] px-3 py-1.5 text-sm text-slate-300">
               <ShieldCheck size={15} className="text-emerald-300" />
@@ -408,7 +408,7 @@ export default function AuthPage() {
                 <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-500/30 to-violet-500/25 text-violet-200">
                   {role === 'employer' ? <Briefcase /> : <Users />}
                 </div>
-                <CardTitle className="mt-2 text-2xl font-black text-white">
+                <CardTitle level={2} className="mt-2 text-2xl font-black text-white">
                   {(method === 'code' || challenge) && codeStep === 'code'
                     ? 'Check your email'
                     : mode === 'login'
@@ -485,7 +485,7 @@ export default function AuthPage() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

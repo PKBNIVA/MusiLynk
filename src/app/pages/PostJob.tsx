@@ -338,7 +338,7 @@ export default function PostJob() {
         <form onSubmit={(e) => submit(e)} className="space-y-5" noValidate>
           <Card className="bg-white/[.055] border-white/10">
             <CardHeader>
-              <CardTitle>Opportunity basics</CardTitle>
+              <CardTitle level={2}>Opportunity basics</CardTitle>
               <RequiredNote className="mt-1" />
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
@@ -425,7 +425,7 @@ export default function PostJob() {
           </Card>
           <Card className="bg-white/[.055] border-white/10">
             <CardHeader>
-              <CardTitle>Compensation & timing</CardTitle>
+              <CardTitle level={2}>Compensation & timing</CardTitle>
             </CardHeader>
             <CardContent className="grid md:grid-cols-3 gap-5">
               <label className="flex items-center gap-2 md:col-span-3">
@@ -518,7 +518,7 @@ export default function PostJob() {
           </Card>
           <Card className="bg-white/[.055] border-white/10">
             <CardHeader>
-              <CardTitle>What the person will actually do</CardTitle>
+              <CardTitle level={2}>What the person will actually do</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <Field

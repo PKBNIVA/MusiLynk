@@ -530,6 +530,7 @@ export default function Messages() {
                 role="log"
                 aria-live="polite"
                 aria-label="Messages"
+                tabIndex={0}
               >
                 {!activeId ? (
                   <div className="h-full grid place-items-center text-slate-500">
@@ -592,7 +593,12 @@ export default function Messages() {
                             {linkify(m.body)}
                           </div>
                           {!mine && !!m.safetyFlags?.length && <SafetyNotice flags={m.safetyFlags} />}
-                          <div className="text-[11px] opacity-70 mt-1 flex gap-2 justify-end">
+                          {/* opacity-70 on the light bubble reads fine against the page background, but the
+                              same 70% white over the solid violet "mine" bubble drops below AA contrast;
+                              give that variant near-full opacity instead. */}
+                          <div
+                            className={`text-[11px] mt-1 flex gap-2 justify-end ${mine ? 'opacity-90' : 'opacity-70'}`}
+                          >
                             <time dateTime={m.createdAt}>{formatTime(m.createdAt)}</time>
                             {mine && m.id === lastMineId && (
                               <span data-testid="read-receipt">

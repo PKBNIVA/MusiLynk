@@ -95,7 +95,7 @@ export default function JobSeekerDashboard() {
                   <span>Completeness</span>
                   <span>{d.profileScore || 0}%</span>
                 </div>
-                <Progress value={d.profileScore || 0} />
+                <Progress value={d.profileScore || 0} aria-label={`Profile completeness, ${d.profileScore || 0}%`} />
                 <Link to="/jobseeker/profile" className="text-xs text-violet-300 mt-2 inline-flex items-center">
                   Improve profile <ArrowRight size={12} className="ml-1" />
                 </Link>

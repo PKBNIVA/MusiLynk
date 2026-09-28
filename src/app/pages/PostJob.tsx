@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -11,11 +11,30 @@ import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { OpportunityPipeline, jobStatusLabel, toastJobError } from '../components/OpportunityPipeline';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
-import { ShieldCheck } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  ClipboardCheck,
+  FileText,
+  Inbox,
+  ListChecks,
+  PenLine,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Wallet,
+} from 'lucide-react';
+import { flushSync } from 'react-dom';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { FieldHelp } from '../components/help/FieldHelp';
+import { StepForm, ReviewRow, focusStepHeading } from '../components/help/StepForm';
+import { optionLabel } from '../components/ui/option-labels';
 import { errorMessage, errorStatus } from '../lib/errors';
 import type { CreatedJob, Job } from '../lib/apiTypes';
 import { Field, FormError, RequiredNote } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
+import { AppSelect } from '../components/ui/app-select';
 
 type JobField =
   | 'title'
@@ -36,6 +55,19 @@ const JOB_IDS: Partial<Record<JobField, string>> = {
   slots: 'job-open-slots',
   applicationDeadline: 'job-application-deadline',
   screeningQuestions: 'job-screening-questions',
+};
+/* Which wizard step owns each validated field: Next checks only the step being left. */
+const STEP_IDS = ['basics', 'details', 'pay', 'review'] as const;
+const FIELD_STEP: Record<JobField, number> = {
+  title: 0,
+  company: 0,
+  location: 0,
+  description: 1,
+  compensationMin: 2,
+  compensationMax: 2,
+  slots: 2,
+  applicationDeadline: 2,
+  screeningQuestions: 3,
 };
 const SCREENING_PLACEHOLDER = [
   'Can you sight-read charts?',
@@ -136,6 +168,9 @@ export default function PostJob() {
   const seeker = user?.role === 'jobseeker';
   const editId = sp.get('edit') || '';
   const [f, setF] = useState<JobForm>(blank);
+  const [step, setStep] = useState(0);
+  const [reached, setReached] = useState(0);
+  const last = STEP_IDS.length - 1;
   const form = useFormErrors<JobField>({ ids: JOB_IDS });
   const saveOnce = useSubmitOnce();
   const busy = saveOnce.busy;
@@ -165,6 +200,7 @@ export default function PostJob() {
           throw new Error('Opportunity not found');
         setJob(d.job);
         setF(toForm(d.job));
+        setReached(STEP_IDS.length - 1);
       })
       .catch((e: unknown) => setLoadError(errorMessage(e, 'This opportunity could not be loaded.')))
       .finally(() => setLoadingJob(false));
@@ -210,8 +246,34 @@ export default function PostJob() {
       errors.applicationDeadline = 'The application deadline must be in the future.';
     return errors;
   }
+  function goTo(index: number) {
+    flushSync(() => {
+      setStep(index);
+      setReached((r) => Math.max(r, index));
+    });
+    focusStepHeading(STEP_IDS[index]);
+  }
+  /** Shows the earliest step that has an error, then focuses its first invalid field. */
+  function showErrors(errors: Partial<Record<JobField, string>>) {
+    const steps = (Object.keys(errors) as JobField[]).filter((k) => errors[k]).map((k) => FIELD_STEP[k] ?? 0);
+    if (steps.length) flushSync(() => setStep(Math.min(...steps)));
+    form.focusFirst();
+  }
+  function next() {
+    const all = check(false);
+    const mine = Object.fromEntries(Object.entries(all).filter(([k]) => FIELD_STEP[k as JobField] === step)) as Partial<
+      Record<JobField, string>
+    >;
+    if (form.setErrors(mine)) {
+      form.focusFirst();
+      return;
+    }
+    goTo(Math.min(step + 1, last));
+  }
   function done() {
     if (seeker) {
+      setStep(0);
+      setReached(0);
       setF(blank);
       setJob(null);
       setPipelineKey((k) => k + 1);
@@ -221,12 +283,18 @@ export default function PostJob() {
   }
   function submit(e: React.FormEvent | React.MouseEvent, mode: 'primary' | 'draft' = 'primary') {
     e.preventDefault();
+    // Enter in a field on an early step moves on instead of submitting half a listing.
+    if (mode === 'primary' && step < last) {
+      next();
+      return;
+    }
     void saveOnce.run(() => persist(mode === 'draft'));
   }
   async function persist(draft: boolean) {
     setFormError('');
-    if (form.setErrors(check(draft))) {
-      form.focusFirst();
+    const errors = check(draft);
+    if (form.setErrors(errors)) {
+      showErrors(errors);
       return;
     }
     try {
@@ -265,7 +333,16 @@ export default function PostJob() {
       }
       // Plan limits keep their "View plans" toast; everything else is shown next to its field.
       if (errorStatus(e) === 402) toastJobError(e, billing, nav);
-      if (form.setFromApi(e, 'This opportunity could not be saved. Try again.')) form.focusFirst();
+      if (form.setFromApi(e, 'This opportunity could not be saved. Try again.')) {
+        // Render the server's field errors, then open the step holding the first one.
+        flushSync(() => {});
+        const owner = document
+          .querySelector<HTMLElement>('[data-step] [aria-invalid="true"]')
+          ?.closest<HTMLElement>('[data-step]');
+        const index = STEP_IDS.indexOf(owner?.dataset.step as (typeof STEP_IDS)[number]);
+        if (index >= 0) flushSync(() => setStep(index));
+        form.focusFirst();
+      }
     }
   }
   const backTo = seeker ? '/jobseeker/hiring/post' : '/employer';
@@ -291,6 +368,388 @@ export default function PostJob() {
         </main>
       </div>
     );
+  const input = 'bg-black/20 border-white/15';
+  const payText =
+    f.compensationMin || f.compensationMax
+      ? `${f.currency} ${[f.compensationMin, f.compensationMax].filter(Boolean).join('–')}${f.compensationPeriod ? ` per ${f.compensationPeriod}` : ''}`
+      : f.paid
+        ? 'Paid · amount on request'
+        : 'Unpaid';
+  const questions = lines(f.screeningQuestions);
+  const steps = [
+    {
+      id: STEP_IDS[0],
+      title: 'Basics',
+      icon: PenLine,
+      description: 'What the opportunity is and where it happens.',
+      content: (
+        <div className="grid md:grid-cols-2 gap-5">
+          <RequiredNote className="md:col-span-2 -mt-2" />
+          <Field
+            id="job-title"
+            label="Title"
+            required
+            className="md:col-span-2"
+            error={form.errors.title}
+            hint="Lead with the role and the project, e.g. “Session drummer for an indie rock album”."
+          >
+            <Input
+              maxLength={160}
+              value={f.title}
+              onChange={(e) => set('title', e.target.value)}
+              placeholder="e.g. Session vocalist for Hindi indie EP"
+              className={input}
+            />
+          </Field>
+          <div>
+            <div className="flex items-center gap-1">
+              <Label htmlFor="job-opportunity-type">Opportunity type</Label>
+              <FieldHelp topic="Opportunity type">
+                The format of the work. Pick “Gig” for a single paid show, “Studio session” for recording work and “Job”
+                for an ongoing role.
+              </FieldHelp>
+            </div>
+            <AppSelect
+              id="job-opportunity-type"
+              value={f.opportunityKind}
+              onValueChange={(v) => set('opportunityKind', v)}
+              className="mt-2"
+              options={kinds}
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <Label htmlFor="job-function">Function</Label>
+              <FieldHelp topic="Function">
+                The area of music work this sits in. Professionals filter search by function, so choose the closest
+                match.
+              </FieldHelp>
+            </div>
+            <AppSelect
+              id="job-function"
+              value={f.functionArea}
+              onValueChange={(v) => set('functionArea', v)}
+              className="mt-2"
+              options={functions}
+            />
+          </div>
+          <Field id="job-location" label="Location" required error={form.errors.location}>
+            <Input
+              value={f.location}
+              maxLength={160}
+              onChange={(e) => set('location', e.target.value)}
+              placeholder="Mumbai, Maharashtra"
+              className={input}
+            />
+          </Field>
+          <div>
+            <div className="flex items-center gap-1">
+              <Label htmlFor="job-workplace">Workplace</Label>
+              <FieldHelp topic="Workplace">
+                Where the work is done: at a venue or studio (on-site), from home (remote), a mix (hybrid) or on the
+                road (travel).
+              </FieldHelp>
+            </div>
+            <AppSelect
+              id="job-workplace"
+              value={f.workplace}
+              onValueChange={(v) => set('workplace', v)}
+              className="mt-2"
+              options={['onsite', 'hybrid', 'remote', 'travel']}
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <Label htmlFor="job-engagement">Engagement</Label>
+              <FieldHelp topic="Engagement">
+                How the person is hired. Most gigs and sessions are “Freelance” or “Project-based”.
+              </FieldHelp>
+            </div>
+            <AppSelect
+              id="job-engagement"
+              value={f.type}
+              onValueChange={(v) => set('type', v)}
+              className="mt-2"
+              options={['Full-time', 'Part-time', 'Contract', 'Freelance', 'Project-based']}
+            />
+          </div>
+          <div>
+            <Label htmlFor="job-genre-repertoire">Genre / repertoire</Label>
+            <Input
+              id="job-genre-repertoire"
+              value={f.genre}
+              onChange={(e) => set('genre', e.target.value)}
+              className={`mt-2 ${input}`}
+            />
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: STEP_IDS[1],
+      title: 'Details',
+      icon: FileText,
+      description: 'What the person will actually do, and what they need to bring.',
+      content: (
+        <div className="space-y-5">
+          <Field
+            id="job-description"
+            label="Description"
+            required
+            hint="At least 60 characters."
+            help="Cover the scope, the dates or schedule, who they will work with and what a great result looks like. Specific listings get better applicants."
+            error={form.errors.description}
+          >
+            <Textarea
+              value={f.description}
+              onChange={(e) => set('description', e.target.value)}
+              placeholder="Scope, deliverables, collaborators, expected schedule, reporting line and what success looks like…"
+              className={`${input} min-h-44`}
+            />
+          </Field>
+          <div>
+            <div className="flex items-center gap-1">
+              <Label htmlFor="job-requirements">Requirements</Label>
+              <FieldHelp topic="Requirements">
+                Split must-haves from nice-to-haves. Concrete skills (“reads charts”, “owns in-ear monitors”) beat vague
+                ones.
+              </FieldHelp>
+            </div>
+            <Textarea
+              id="job-requirements"
+              value={f.requirements}
+              onChange={(e) => set('requirements', e.target.value)}
+              placeholder="Must-haves vs nice-to-haves. Avoid vague 'rockstar' criteria."
+              className={`mt-2 ${input}`}
+            />
+          </div>
+          <div className="grid md:grid-cols-2 gap-5">
+            <div>
+              <Label htmlFor="job-skills">
+                Skills <span className="text-slate-500">(comma separated)</span>
+              </Label>
+              <Input
+                id="job-skills"
+                value={f.skills}
+                onChange={(e) => set('skills', e.target.value)}
+                placeholder="Pro Tools, vocal comping, Hindi diction"
+                className={`mt-2 ${input}`}
+              />
+            </div>
+            <div>
+              <Label htmlFor="job-languages">
+                Languages <span className="text-slate-500">(optional)</span>
+              </Label>
+              <Input
+                id="job-languages"
+                value={f.languages}
+                onChange={(e) => set('languages', e.target.value)}
+                placeholder="Hindi, English"
+                className={`mt-2 ${input}`}
+              />
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: STEP_IDS[2],
+      title: 'Pay & dates',
+      icon: Wallet,
+      description: 'Clear pay and timing is the biggest reason people apply.',
+      content: (
+        <div className="grid md:grid-cols-3 gap-5">
+          <label className="flex items-center gap-2 md:col-span-3">
+            <Checkbox checked={f.paid} onCheckedChange={(v) => set('paid', !!v)} />
+            <span className="text-sm">This is a paid opportunity</span>
+          </label>
+          <Field
+            id="job-minimum"
+            label="Minimum pay"
+            error={form.errors.compensationMin}
+            help="The lowest you would pay for the whole engagement or per period. A range gets up to twice as many serious applicants as “negotiable”."
+          >
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              value={f.compensationMin}
+              onChange={(e) => set('compensationMin', e.target.value)}
+              className={input}
+            />
+          </Field>
+          <Field
+            id="job-maximum"
+            label="Maximum pay"
+            error={form.errors.compensationMax}
+            help="The top of your range. Leave it blank if the pay is a fixed amount."
+          >
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              value={f.compensationMax}
+              onChange={(e) => set('compensationMax', e.target.value)}
+              className={input}
+            />
+          </Field>
+          <div>
+            <Label htmlFor="job-currency">Currency</Label>
+            <AppSelect
+              id="job-currency"
+              value={f.currency}
+              onValueChange={(v) => set('currency', v)}
+              className="mt-2"
+              options={['INR', 'USD', 'EUR', 'GBP']}
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <Label htmlFor="job-pay-period">Pay period</Label>
+              <FieldHelp topic="Pay period">
+                What the amount covers: the whole project, one show, a day, or a month.
+              </FieldHelp>
+            </div>
+            <Input
+              id="job-pay-period"
+              value={f.compensationPeriod}
+              onChange={(e) => set('compensationPeriod', e.target.value)}
+              placeholder="project / show / month"
+              className={`mt-2 ${input}`}
+            />
+          </div>
+          <Field
+            id="job-application-deadline"
+            label="Application deadline"
+            error={form.errors.applicationDeadline}
+            help="The listing closes to new applicants after this day. Leave it blank to keep it open until you close it."
+          >
+            <Input
+              type="date"
+              min={new Date().toISOString().slice(0, 10)}
+              value={f.applicationDeadline}
+              onChange={(e) => set('applicationDeadline', e.target.value)}
+              className={input}
+            />
+          </Field>
+          <div>
+            <Label htmlFor="job-start-date">Start date</Label>
+            <Input
+              id="job-start-date"
+              type="date"
+              value={f.startDate}
+              onChange={(e) => set('startDate', e.target.value)}
+              className={`mt-2 ${input}`}
+            />
+          </div>
+          <div>
+            <Label htmlFor="job-duration">Duration</Label>
+            <Input
+              id="job-duration"
+              value={f.duration}
+              onChange={(e) => set('duration', e.target.value)}
+              placeholder="3 sessions / 6 weeks / ongoing"
+              className={`mt-2 ${input}`}
+            />
+          </div>
+          <Field
+            id="job-open-slots"
+            label="Open slots"
+            required
+            error={form.errors.slots}
+            help="How many people you want to hire for this. A horn section of three is 3 slots."
+          >
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              value={f.slots}
+              onChange={(e) => set('slots', e.target.value)}
+              className={input}
+            />
+          </Field>
+        </div>
+      ),
+    },
+    {
+      id: STEP_IDS[3],
+      title: 'Screening & review',
+      icon: ClipboardCheck,
+      description: 'Add optional questions, then check everything before it goes to review.',
+      content: (
+        <div className="space-y-6">
+          <Field
+            id="job-screening-questions"
+            label="Screening questions"
+            optional
+            hint="One per line, up to 8. Applicants must answer each one."
+            help="Short questions every applicant answers, like “Can you sight-read charts?”. They help you shortlist quickly. Keep them to what really matters."
+            error={form.errors.screeningQuestions}
+          >
+            <Textarea
+              value={f.screeningQuestions}
+              onChange={(e) => set('screeningQuestions', e.target.value)}
+              placeholder={SCREENING_PLACEHOLDER}
+              className={`${input} min-h-28`}
+            />
+          </Field>
+          <label className="flex gap-2 items-center">
+            <Checkbox checked={f.portfolioRequired} onCheckedChange={(v) => set('portfolioRequired', !!v)} />
+            <span className="text-sm">Require a portfolio / work sample</span>
+          </label>
+          <div className="rounded-2xl border border-white/10 bg-white/[.03] p-5">
+            <h3 className="mb-2 flex items-center gap-2 font-semibold">
+              <ListChecks aria-hidden="true" size={20} className="text-violet-300" />
+              Review your listing
+            </h3>
+            <dl>
+              <ReviewRow label="Title" value={f.title} onEdit={() => goTo(0)} />
+              <ReviewRow
+                label="Format"
+                value={[optionLabel(f.opportunityKind), f.functionArea, f.type].join(' · ')}
+                onEdit={() => goTo(0)}
+              />
+              <ReviewRow
+                label="Where"
+                value={[f.location, optionLabel(f.workplace)].filter(Boolean).join(' · ')}
+                onEdit={() => goTo(0)}
+              />
+              <ReviewRow
+                label="Description"
+                value={
+                  f.description ? `${f.description.trim().slice(0, 140)}${f.description.length > 140 ? '…' : ''}` : ''
+                }
+                onEdit={() => goTo(1)}
+              />
+              <ReviewRow label="Pay" value={payText} onEdit={() => goTo(2)} />
+              <ReviewRow
+                label="Dates"
+                value={[
+                  f.applicationDeadline && `Apply by ${f.applicationDeadline}`,
+                  f.startDate && `starts ${f.startDate}`,
+                  f.duration,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                onEdit={() => goTo(2)}
+              />
+              <ReviewRow
+                label="Screening"
+                value={`${questions.length ? `${questions.length} question${questions.length === 1 ? '' : 's'}` : 'No questions'}${f.portfolioRequired ? ' · work sample required' : ''}`}
+              />
+            </dl>
+          </div>
+          <div className="rounded-xl border border-emerald-400/15 bg-emerald-500/[.06] p-4 flex gap-3 text-sm text-emerald-100">
+            <ShieldCheck aria-hidden="true" className="shrink-0" size={20} />
+            <p>
+              Listings are reviewed for clarity, trust and suspicious off-platform fee/contact language. Verified
+              employers receive a trust marker, but verification never replaces candidate due diligence.
+            </p>
+          </div>
+        </div>
+      ),
+    },
+  ];
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -303,10 +762,28 @@ export default function PostJob() {
             {job ? job.title || 'Untitled opportunity' : 'Describe the work, not just the title'}
           </h1>
           <p className="text-slate-400 mt-2 max-w-3xl">
-            Music hiring is highly contextual. Clear format, function, pay, portfolio expectations and dates improve
-            applicant quality and reduce back-and-forth.
+            Four short steps. Clear format, pay and dates bring better applicants and fewer back-and-forth messages.
           </p>
         </div>
+        {!job && (
+          <HelpCallout
+            id="post-job"
+            title="How posting works"
+            steps={[
+              { icon: PenLine, title: 'Describe the work', text: 'Four quick steps. Save a draft at any point.' },
+              {
+                icon: BadgeCheck,
+                title: 'We review it',
+                text: 'Our team checks every listing for clarity and safety before it goes live.',
+              },
+              {
+                icon: Inbox,
+                title: 'Applicants arrive',
+                text: 'Answers, samples and messages land in Applications, ready to shortlist.',
+              },
+            ]}
+          />
+        )}
         {job?.status === 'published' && (
           <div
             role="note"
@@ -325,7 +802,8 @@ export default function PostJob() {
         )}
         {seeker && !job && (
           <section className="mb-8" aria-labelledby="my-opportunities">
-            <h2 id="my-opportunities" className="text-2xl font-semibold mb-4">
+            <h2 id="my-opportunities" className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <Sparkles aria-hidden="true" size={24} className="text-violet-300" />
               Your opportunities
             </h2>
             <OpportunityPipeline
@@ -335,284 +813,38 @@ export default function PostJob() {
             />
           </section>
         )}
-        <form onSubmit={(e) => submit(e)} className="space-y-5" noValidate>
-          <Card className="bg-white/[.055] border-white/10">
-            <CardHeader>
-              <CardTitle level={2}>Opportunity basics</CardTitle>
-              <RequiredNote className="mt-1" />
-            </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-5">
-              <Field id="job-title" label="Title" required className="md:col-span-2" error={form.errors.title}>
-                <Input
-                  maxLength={160}
-                  value={f.title}
-                  onChange={(e) => set('title', e.target.value)}
-                  placeholder="e.g. Session vocalist for Hindi indie EP"
-                  className="bg-black/20 border-white/15"
-                />
-              </Field>
-              <div>
-                <Label htmlFor="job-opportunity-type">Opportunity type</Label>
-                <select
-                  id="job-opportunity-type"
-                  value={f.opportunityKind}
-                  onChange={(e) => set('opportunityKind', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {kinds.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="job-function">Function</Label>
-                <select
-                  id="job-function"
-                  value={f.functionArea}
-                  onChange={(e) => set('functionArea', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {functions.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-              </div>
-              <Field id="job-location" label="Location" required error={form.errors.location}>
-                <Input
-                  value={f.location}
-                  maxLength={160}
-                  onChange={(e) => set('location', e.target.value)}
-                  placeholder="Mumbai, Maharashtra"
-                  className="bg-black/20 border-white/15"
-                />
-              </Field>
-              <div>
-                <Label htmlFor="job-workplace">Workplace</Label>
-                <select
-                  id="job-workplace"
-                  value={f.workplace}
-                  onChange={(e) => set('workplace', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {['onsite', 'hybrid', 'remote', 'travel'].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="job-engagement">Engagement</Label>
-                <select
-                  id="job-engagement"
-                  value={f.type}
-                  onChange={(e) => set('type', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {['Full-time', 'Part-time', 'Contract', 'Freelance', 'Project-based'].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="job-genre-repertoire">Genre / repertoire</Label>
-                <Input
-                  id="job-genre-repertoire"
-                  value={f.genre}
-                  onChange={(e) => set('genre', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/[.055] border-white/10">
-            <CardHeader>
-              <CardTitle level={2}>Compensation & timing</CardTitle>
-            </CardHeader>
-            <CardContent className="grid md:grid-cols-3 gap-5">
-              <label className="flex items-center gap-2 md:col-span-3">
-                <Checkbox checked={f.paid} onCheckedChange={(v) => set('paid', !!v)} />
-                <span className="text-sm">This is a paid opportunity</span>
-              </label>
-              <Field id="job-minimum" label="Minimum pay" error={form.errors.compensationMin}>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  value={f.compensationMin}
-                  onChange={(e) => set('compensationMin', e.target.value)}
-                  className="bg-black/20 border-white/15"
-                />
-              </Field>
-              <Field id="job-maximum" label="Maximum pay" error={form.errors.compensationMax}>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  value={f.compensationMax}
-                  onChange={(e) => set('compensationMax', e.target.value)}
-                  className="bg-black/20 border-white/15"
-                />
-              </Field>
-              <div>
-                <Label htmlFor="job-currency">Currency</Label>
-                <select
-                  id="job-currency"
-                  value={f.currency}
-                  onChange={(e) => set('currency', e.target.value)}
-                  className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                >
-                  {['INR', 'USD', 'EUR', 'GBP'].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="job-pay-period">Pay period</Label>
-                <Input
-                  id="job-pay-period"
-                  value={f.compensationPeriod}
-                  onChange={(e) => set('compensationPeriod', e.target.value)}
-                  placeholder="project / show / month"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <Field id="job-application-deadline" label="Application deadline" error={form.errors.applicationDeadline}>
-                <Input
-                  type="date"
-                  min={new Date().toISOString().slice(0, 10)}
-                  value={f.applicationDeadline}
-                  onChange={(e) => set('applicationDeadline', e.target.value)}
-                  className="bg-black/20 border-white/15"
-                />
-              </Field>
-              <div>
-                <Label htmlFor="job-start-date">Start date</Label>
-                <Input
-                  id="job-start-date"
-                  type="date"
-                  value={f.startDate}
-                  onChange={(e) => set('startDate', e.target.value)}
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div>
-                <Label htmlFor="job-duration">Duration</Label>
-                <Input
-                  id="job-duration"
-                  value={f.duration}
-                  onChange={(e) => set('duration', e.target.value)}
-                  placeholder="3 sessions / 6 weeks / ongoing"
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <Field id="job-open-slots" label="Open slots" required error={form.errors.slots}>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  value={f.slots}
-                  onChange={(e) => set('slots', e.target.value)}
-                  className="bg-black/20 border-white/15"
-                />
-              </Field>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/[.055] border-white/10">
-            <CardHeader>
-              <CardTitle level={2}>What the person will actually do</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <Field
-                id="job-description"
-                label="Description"
-                required
-                hint="At least 60 characters."
-                error={form.errors.description}
-              >
-                <Textarea
-                  value={f.description}
-                  onChange={(e) => set('description', e.target.value)}
-                  placeholder="Scope, deliverables, collaborators, expected schedule, reporting line and what success looks like…"
-                  className="bg-black/20 border-white/15 min-h-44"
-                />
-              </Field>
-              <div>
-                <Label htmlFor="job-requirements">Requirements</Label>
-                <Textarea
-                  id="job-requirements"
-                  value={f.requirements}
-                  onChange={(e) => set('requirements', e.target.value)}
-                  placeholder="Must-haves vs nice-to-haves. Avoid vague 'rockstar' criteria."
-                  className="mt-2 bg-black/20 border-white/15"
-                />
-              </div>
-              <div className="grid md:grid-cols-2 gap-5">
-                <div>
-                  <Label htmlFor="job-skills">
-                    Skills <span className="text-slate-500">(comma separated)</span>
-                  </Label>
-                  <Input
-                    id="job-skills"
-                    value={f.skills}
-                    onChange={(e) => set('skills', e.target.value)}
-                    placeholder="Pro Tools, vocal comping, Hindi diction"
-                    className="mt-2 bg-black/20 border-white/15"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="job-languages">
-                    Languages <span className="text-slate-500">(optional)</span>
-                  </Label>
-                  <Input
-                    id="job-languages"
-                    value={f.languages}
-                    onChange={(e) => set('languages', e.target.value)}
-                    placeholder="Hindi, English"
-                    className="mt-2 bg-black/20 border-white/15"
-                  />
-                </div>
-              </div>
-              <Field
-                id="job-screening-questions"
-                label="Screening questions"
-                optional
-                hint="One per line, up to 8. Applicants must answer each one."
-                error={form.errors.screeningQuestions}
-              >
-                <Textarea
-                  value={f.screeningQuestions}
-                  onChange={(e) => set('screeningQuestions', e.target.value)}
-                  placeholder={SCREENING_PLACEHOLDER}
-                  className="bg-black/20 border-white/15 min-h-28"
-                />
-              </Field>
-              <label className="flex gap-2 items-center">
-                <Checkbox checked={f.portfolioRequired} onCheckedChange={(v) => set('portfolioRequired', !!v)} />
-                <span className="text-sm">Require a portfolio / work sample</span>
-              </label>
-            </CardContent>
-          </Card>
-          <div className="rounded-xl border border-emerald-400/15 bg-emerald-500/[.06] p-4 flex gap-3 text-sm text-emerald-100">
-            <ShieldCheck className="shrink-0" size={20} />
-            <p>
-              Listings are reviewed for clarity, trust and suspicious off-platform fee/contact language. Verified
-              employers receive a trust marker, but verification never replaces candidate due diligence.
-            </p>
-          </div>
-          <FormError message={form.formError} />
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button disabled={busy} aria-busy={busy} type="submit" className="flex-1">
-              {busy ? 'Saving…' : primary.label}
-            </Button>
-            {canDraft && (
-              <Button disabled={busy} type="button" variant="outline" onClick={(e) => submit(e, 'draft')}>
-                {job && job.status !== 'draft' ? 'Move to drafts' : 'Save draft'}
+        <form onSubmit={(e) => submit(e)} className="verse-surface rounded-3xl p-5 md:p-8" noValidate>
+          <StepForm steps={steps} current={step} reached={reached} onStepChange={goTo} />
+          <FormError message={form.formError} className="mt-5" />
+          <div className="mt-8 flex flex-col-reverse gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center">
+            {step > 0 ? (
+              <Button type="button" variant="ghost" disabled={busy} onClick={() => goTo(step - 1)}>
+                <ArrowLeft aria-hidden="true" size={16} className="mr-2" />
+                Back
               </Button>
-            )}
-            {job && (
+            ) : job ? (
               <Button type="button" variant="ghost" disabled={busy} asChild>
                 <Link to={backTo}>Cancel</Link>
               </Button>
-            )}
+            ) : null}
+            <div className="flex flex-col-reverse gap-3 sm:ml-auto sm:flex-row">
+              {canDraft && (
+                <Button disabled={busy} type="button" variant="outline" onClick={(e) => submit(e, 'draft')}>
+                  {job && job.status !== 'draft' ? 'Move to drafts' : 'Save draft'}
+                </Button>
+              )}
+              {step < last ? (
+                <Button key="next" type="button" onClick={next} className="min-w-36">
+                  Next: {steps[step + 1].title}
+                  <ArrowRight aria-hidden="true" size={16} className="ml-2" />
+                </Button>
+              ) : (
+                <Button key="submit" disabled={busy} aria-busy={busy} type="submit" className="min-w-44">
+                  <Send aria-hidden="true" size={16} className="mr-2" />
+                  {busy ? 'Saving…' : primary.label}
+                </Button>
+              )}
+            </div>
           </div>
         </form>
       </main>

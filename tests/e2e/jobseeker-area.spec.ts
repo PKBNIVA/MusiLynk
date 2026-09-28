@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { chooseOption } from './qa-helpers';
 
 // Mocked-API regressions for the artist/jobseeker area, found by clicking through every
 // /jobseeker screen. Live and integration runs use real data instead.
@@ -73,7 +74,7 @@ test('changing a filter re-runs the search without pressing Search', async ({ pa
   await page.goto('/jobseeker/jobs');
   await expect(page.getByText('No exact matches')).toBeVisible();
   await page.getByRole('button', { name: 'Filters' }).click();
-  await page.locator('select').first().selectOption('audition');
+  await chooseOption(page.getByLabel('Opportunity type'), 'Audition');
   await expect.poll(() => queries.some((q) => q.includes('kind=audition'))).toBe(true);
 });
 
@@ -139,6 +140,10 @@ test('credits keep one entry per line after saving twice', async ({ page }) => {
   await page.goto('/jobseeker/profile');
   const credits = page.getByPlaceholder('Track / project — role — artist / company — year');
   await expect(credits).toHaveValue('Song A — guitar — 2024');
+  await page
+    .getByRole('button', { name: /Music skills/ })
+    .first()
+    .click();
   await credits.fill('Song A — guitar — 2024\nSong B — bass — 2025');
   const save = page.getByRole('button', { name: 'Save career profile' });
   await save.click();

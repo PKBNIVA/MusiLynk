@@ -1,3 +1,4 @@
+import { FieldHelp } from '../help/FieldHelp';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -136,18 +137,24 @@ export function Field({
   label,
   htmlFor,
   hint,
+  help,
   children,
 }: {
   label: string;
   htmlFor: string;
   hint?: string;
+  /** A short explanation behind an info button beside the label. */
+  help?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="space-y-1">
-      <label htmlFor={htmlFor} className="text-sm text-slate-300">
-        {label}
-      </label>
+      <div className="flex items-center gap-1">
+        <label htmlFor={htmlFor} className="text-sm text-slate-300">
+          {label}
+        </label>
+        {help && <FieldHelp topic={label}>{help}</FieldHelp>}
+      </div>
       {children}
       {hint && <p className="text-xs text-slate-500">{hint}</p>}
     </div>

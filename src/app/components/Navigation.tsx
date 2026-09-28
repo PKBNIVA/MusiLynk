@@ -22,6 +22,10 @@ import {
   Users,
   WalletCards,
   Zap,
+  Compass,
+  Mic2,
+  UserSearch,
+  BriefcaseBusiness,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '../lib/authContext';
@@ -46,7 +50,7 @@ import type { LucideIcon } from 'lucide-react';
 const UNREAD_POLL_MS = 10_000;
 
 type NavItem = { path: string; icon: LucideIcon; label: string };
-type NavGroup = { label: string; items: NavItem[] };
+type NavGroup = { label: string; icon: LucideIcon; items: NavItem[] };
 
 export function Navigation() {
   const { user, logout } = useAuth();
@@ -92,6 +96,7 @@ export function Navigation() {
     ? [
         {
           label: 'Career',
+          icon: Compass,
           items: [
             { path: `${baseUrl}/jobs`, icon: Search, label: 'Explore work' },
             { path: `${baseUrl}/saved`, icon: Star, label: 'Saved' },
@@ -103,6 +108,7 @@ export function Navigation() {
         },
         {
           label: 'Perform & book',
+          icon: Mic2,
           items: [
             { path: `${baseUrl}/acts`, icon: Music, label: 'My acts' },
             { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
@@ -113,6 +119,7 @@ export function Navigation() {
         },
         {
           label: 'Hire',
+          icon: UserSearch,
           items: [
             { path: `${baseUrl}/hiring/post`, icon: Briefcase, label: 'Post opportunity' },
             { path: `${baseUrl}/hiring/talent`, icon: Users, label: 'Find talent' },
@@ -124,6 +131,7 @@ export function Navigation() {
     : [
         {
           label: 'Hiring',
+          icon: BriefcaseBusiness,
           items: [
             { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Create opportunity' },
             { path: `${baseUrl}/candidates`, icon: Users, label: 'Find talent' },
@@ -133,6 +141,7 @@ export function Navigation() {
         },
         {
           label: 'Book & perform',
+          icon: Mic2,
           items: [
             { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
             { path: `${baseUrl}/bookings`, icon: CalendarDays, label: 'Bookings' },
@@ -200,6 +209,7 @@ export function Navigation() {
                     size="sm"
                     className={group.items.some((x) => active(x.path)) ? 'bg-white/10 text-white' : 'text-slate-300'}
                   >
+                    <group.icon size={16} className="mr-2" aria-hidden="true" />
                     {group.label}
                     <ChevronDown size={14} className="ml-1.5" />
                   </Button>

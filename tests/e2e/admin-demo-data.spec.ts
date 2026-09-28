@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { chooseOption } from './qa-helpers';
 
 // Mocked-API test of the admin demo-data panel. The real API is exercised by the Rails request tests.
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
@@ -149,8 +150,8 @@ test('admin creates demo data, sees progress and deletes it all after confirming
   await expect(panel.getByText('No demo data on the site.')).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Delete all demo data' })).toBeDisabled();
 
-  await panel.getByLabel('Size').selectOption('medium');
-  await panel.getByLabel('Size').selectOption('small');
+  await chooseOption(panel.getByLabel('Size'), /^Medium/);
+  await chooseOption(panel.getByLabel('Size'), /^Small/);
   await panel.getByRole('button', { name: 'Create demo data' }).click();
   await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', /queued|running/);
   await expect(panel.getByRole('button', { name: 'Create demo data' })).toBeDisabled();

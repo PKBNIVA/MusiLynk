@@ -11,6 +11,7 @@ import { useAuth } from '../lib/authContext';
 import { useConfirm } from '../components/booking/BookingDialogs';
 import { errorMessage } from '../lib/errors';
 import type { Organization, OrganizationMember } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 
 export default function Workspace() {
   const { user } = useAuth();
@@ -203,18 +204,15 @@ export default function Workspace() {
                         <label htmlFor="member-role" className="sr-only">
                           Member role
                         </label>
-                        <select
+                        <AppSelect
                           id="member-role"
-                          className="h-10 rounded-md bg-slate-900 border border-white/10 px-3"
+                          className="w-auto min-w-36"
                           value={invite.role}
-                          onChange={(e) => setInvite({ ...invite, role: e.target.value })}
-                        >
-                          {['admin', 'recruiter', 'booker', 'finance', 'member']
-                            .filter((role) => role !== 'admin' || selected.memberRole === 'owner')
-                            .map((role) => (
-                              <option key={role}>{role}</option>
-                            ))}
-                        </select>
+                          onValueChange={(v) => setInvite({ ...invite, role: v })}
+                          options={['admin', 'recruiter', 'booker', 'finance', 'member'].filter(
+                            (role) => role !== 'admin' || selected.memberRole === 'owner',
+                          )}
+                        />
                         <Button aria-label="Add team member" onClick={() => void add()} disabled={!invite.email.trim()}>
                           <UserPlus size={16} />
                         </Button>

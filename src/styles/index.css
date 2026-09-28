@@ -2,6 +2,17 @@
 @import './tailwind.css';
 @import './theme.css';
 
+:root {
+  /* Native form controls (date pickers, any stray <select>) render with the dark OS palette. */
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: #15151f;
+  color: #f1f1f7;
+}
+
 html {
   color-scheme: dark;
   scroll-behavior: smooth;
@@ -12,10 +23,49 @@ body {
   min-width: 320px;
   min-height: 100vh;
   color: #f7f7fb;
-  background:
-    radial-gradient(circle at 8% -8%, rgba(190, 52, 255, 0.16), transparent 30rem),
-    radial-gradient(circle at 92% 4%, rgba(29, 211, 234, 0.11), transparent 28rem), #070813;
+  /* html paints the solid base; body stays clear so the fixed backdrop below can sit between them. */
+  background: transparent;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Decorative backdrop behind every page: three soft glows and a dot grid that fades out.
+   Pseudo-elements, so it is invisible to assistive tech, never takes clicks and causes no layout
+   shift. Page roots are transparent so it shows through; body keeps the solid base colour. */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+body::before {
+  background:
+    radial-gradient(38rem 30rem at 12% 8%, rgba(168, 85, 247, 0.13), transparent 70%),
+    radial-gradient(34rem 28rem at 92% 30%, rgba(217, 70, 239, 0.08), transparent 70%),
+    radial-gradient(40rem 30rem at 55% 105%, rgba(20, 184, 166, 0.08), transparent 70%);
+}
+body::after {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.5px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
+}
+.min-h-screen.bg-slate-950 {
+  background-color: transparent !important;
+}
+
+/* Clickable cards lift slightly and pick up a violet edge on hover. */
+.verse-lift {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+.verse-lift:hover {
+  transform: translateY(-2px);
+  border-color: rgba(167, 139, 250, 0.4) !important;
+  box-shadow: 0 18px 40px -18px rgba(139, 92, 246, 0.45);
 }
 
 /* Contrast and depth shared by every existing screen. */
@@ -228,6 +278,9 @@ textarea::placeholder {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+  .verse-lift:hover {
+    transform: none;
   }
 }
 

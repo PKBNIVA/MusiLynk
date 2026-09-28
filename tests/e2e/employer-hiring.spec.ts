@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { chooseOption } from './qa-helpers';
 
 // Mocked-API regressions for the poster side of hiring (employer pages and the jobseeker hiring routes).
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
@@ -111,7 +112,16 @@ test('a saved draft can be reopened from the dashboard, edited and submitted for
   await expect(page.getByLabel('Title')).toHaveValue('Session guitarist');
   await expect(page.getByLabel('Skills')).toHaveValue('Guitar');
   await page.getByLabel('Location').fill('Mumbai');
+  // Editing opens the wizard with every step reachable; jump straight to Details.
+  await page
+    .getByRole('button', { name: /Details/ })
+    .first()
+    .click();
   await page.getByLabel(/^Description/).fill(description);
+  await page
+    .getByRole('button', { name: /Screening & review/ })
+    .first()
+    .click();
   await page.getByRole('button', { name: 'Submit for review' }).click();
 
   await expect(page).toHaveURL(/\/employer$/);
@@ -129,6 +139,23 @@ test('saving a draft without a title explains why instead of calling the API', a
   expect(calls.filter((c) => c.method === 'POST' && c.path === '/jobs')).toHaveLength(0);
 });
 
+test('the post wizard checks only the current step before moving on', async ({ page }) => {
+  const { calls } = await signIn(page, 'employer');
+  await page.goto('/employer/post-job');
+  await expect(page.getByText('Step 1 of 4')).toBeVisible();
+  await page.getByLabel('Title').fill('Tour keyboardist');
+  await page.getByRole('button', { name: 'Next: Details' }).click();
+  await expect(page.getByLabel('Location')).toBeFocused();
+  await page.getByLabel('Location').fill('Pune');
+  await page.getByRole('button', { name: 'Next: Details' }).click();
+  await expect(page.getByRole('heading', { name: 'Details', level: 2 })).toBeFocused();
+  await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
+  await expect(page.getByLabel(/^Description/)).toBeFocused();
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByLabel('Location')).toHaveValue('Pune');
+  expect(calls.filter((c) => c.method === 'POST' && c.path === '/jobs')).toHaveLength(0);
+});
+
 test('hitting the plan limit keeps the opportunity as a draft and links to plans', async ({ page }) => {
   const { calls } = await signIn(page, 'employer', (request, url) => {
     if (url.pathname !== '/api/jobs' || request.method() !== 'POST') return undefined;
@@ -140,7 +167,10 @@ test('hitting the plan limit keeps the opportunity as a draft and links to plans
   await page.goto('/employer/post-job');
   await page.getByLabel('Title').fill('Tour keyboardist');
   await page.getByLabel('Location').fill('Pune');
+  await page.getByRole('button', { name: 'Next: Details' }).click();
   await page.getByLabel(/^Description/).fill(description);
+  await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
+  await page.getByRole('button', { name: 'Next: Screening & review' }).click();
   await page.getByRole('button', { name: 'Submit for review' }).click();
   await expect(page.getByText(/saved as a draft/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'View plans' })).toBeVisible();
@@ -172,7 +202,7 @@ test('interview scheduling and recruiter notes use in-page dialogs, not browser 
   await page.getByRole('button', { name: 'Rate / note' }).click();
   const notes = page.getByRole('dialog', { name: 'Rate and note' });
   await notes.getByLabel('Recruiter note').fill('Great feel');
-  await notes.getByLabel('Internal rating').selectOption('4');
+  await chooseOption(notes.getByLabel('Internal rating'), '4 / 5');
   await notes.getByRole('button', { name: 'Save notes' }).click();
   await expect(notes).toBeHidden();
 
@@ -197,13 +227,13 @@ test('talent can be filed into a new or existing folder from a dialog', async ({
   await page.goto('/employer/candidates');
   await page.getByRole('button', { name: 'Add Asha Rao to a folder' }).click();
   let dialog = page.getByRole('dialog', { name: 'Add to talent folder' });
-  await expect(dialog.getByLabel('Folder', { exact: true })).toHaveValue('f-1');
+  await expect(dialog.getByLabel('Folder', { exact: true })).toHaveText('Tour band (3)');
   await dialog.getByRole('button', { name: 'Add to folder' }).click();
   await expect(dialog).toBeHidden();
 
   await page.getByRole('button', { name: 'Add Vik Shah to a folder' }).click();
   dialog = page.getByRole('dialog', { name: 'Add to talent folder' });
-  await dialog.getByLabel('Folder', { exact: true }).selectOption('new');
+  await chooseOption(dialog.getByLabel('Folder', { exact: true }), 'New folder…');
   await dialog.getByLabel('New folder name').fill('Session players');
   await dialog.getByRole('button', { name: 'Add to folder' }).click();
   await expect(dialog).toBeHidden();

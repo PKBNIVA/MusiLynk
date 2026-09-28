@@ -1,5 +1,8 @@
+import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -45,10 +48,12 @@ import {
   X,
   AlertCircle,
   CheckCircle2,
+  FileAudio,
 } from 'lucide-react';
 import { describeWorkSample, WorkSamplePlayer } from '../components/WorkSamplePlayer';
 import { errorCode, errorMessage, errorStatus } from '../lib/errors';
 import type { MediaMetadata, PortfolioItem } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 
 const split = (s: string) =>
   s
@@ -96,6 +101,20 @@ function kindForUpload(current: string, contentType: string) {
   return AUDIO_KINDS.includes(current) || VIDEO_KINDS.includes(current) ? 'project' : current;
 }
 
+const SAMPLE_KINDS = [
+  { value: 'audio', label: 'Audio / track' },
+  { value: 'video', label: 'Video' },
+  { value: 'live', label: 'Live performance' },
+  { value: 'showreel', label: 'Showreel' },
+  { value: 'composition', label: 'Composition' },
+  { value: 'production', label: 'Production' },
+  { value: 'mix', label: 'Mix' },
+  { value: 'master', label: 'Master' },
+  { value: 'technical', label: 'Technical / show work' },
+  { value: 'credit', label: 'Credit' },
+  { value: 'project', label: 'Project' },
+  { value: 'other', label: 'Other' },
+];
 export default function Portfolio() {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [f, setF] = useState<PortfolioForm>(blank);
@@ -266,6 +285,7 @@ export default function Portfolio() {
             the right employer sees the right proof.
           </p>
         </div>
+        <HelpCallout {...HELP.portfolio} />
         <div className="grid xl:grid-cols-[390px_1fr] gap-6">
           <Card className="bg-white/[.06] border-white/10 h-fit">
             <CardContent className="p-5">
@@ -276,25 +296,13 @@ export default function Portfolio() {
               <form onSubmit={save} className="space-y-3">
                 <div>
                   <Label htmlFor="sample-kind">Kind of work</Label>
-                  <select
+                  <AppSelect
                     id="sample-kind"
                     value={f.type}
-                    onChange={(e) => setF({ ...f, type: e.target.value })}
-                    className="w-full h-10 mt-2 rounded-md bg-slate-900 border border-white/15 px-3"
-                  >
-                    <option value="audio">Audio / track</option>
-                    <option value="video">Video</option>
-                    <option value="live">Live performance</option>
-                    <option value="showreel">Showreel</option>
-                    <option value="composition">Composition</option>
-                    <option value="production">Production</option>
-                    <option value="mix">Mix</option>
-                    <option value="master">Master</option>
-                    <option value="technical">Technical / show work</option>
-                    <option value="credit">Credit</option>
-                    <option value="project">Project</option>
-                    <option value="other">Other</option>
-                  </select>
+                    onValueChange={(v) => setF({ ...f, type: v })}
+                    className="mt-2"
+                    options={SAMPLE_KINDS}
+                  />
                 </div>
                 <Input
                   aria-label="Title"
@@ -488,15 +496,13 @@ export default function Portfolio() {
                     <Star size={15} />
                     Feature this
                   </label>
-                  <select
+                  <AppSelect
                     aria-label="Visibility"
                     value={f.visibility}
-                    onChange={(e) => setF({ ...f, visibility: e.target.value })}
-                    className="h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-                  >
-                    <option value="public">Public</option>
-                    <option value="private">Private</option>
-                  </select>
+                    onValueChange={(v) => setF({ ...f, visibility: v })}
+                    className="w-auto min-w-36"
+                    options={['public', 'private']}
+                  />
                 </div>
                 <div className="flex gap-2">
                   <Button className="flex-1" disabled={upload.status === 'uploading' || saving}>
@@ -533,14 +539,9 @@ export default function Portfolio() {
               ))}
             </div>
             {visible.length === 0 ? (
-              <Card className="bg-white/5 border-white/10">
-                <CardContent className="p-10 text-center">
-                  <div className="text-slate-300 font-medium">No work samples in this view.</div>
-                  <div className="text-slate-500 text-sm mt-2">
-                    A useful starting portfolio is 3–6 strong, different samples rather than dozens of unlabelled links.
-                  </div>
-                </CardContent>
-              </Card>
+              <EmptyState icon={FileAudio} title="No work samples in this view.">
+                A useful starting portfolio is 3–6 strong, different samples rather than dozens of unlabelled links.
+              </EmptyState>
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
                 {visible.map((i) => (

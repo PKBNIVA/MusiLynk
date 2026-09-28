@@ -252,8 +252,8 @@ test('each party only sees the actions its role can take', async ({ page }) => {
 
   await card('Owner New Enquiry').getByRole('button', { name: 'Send quote' }).click();
   const dialog = page.getByRole('dialog');
-  // Currency is a select like every other money form; every problem is shown at once, per field.
-  await expect(dialog.getByLabel('Currency')).toHaveJSProperty('tagName', 'SELECT');
+  // Currency is a dropdown like every other money form; every problem is shown at once, per field.
+  await expect(dialog.getByLabel('Currency')).toHaveAttribute('role', 'combobox');
   await page.getByLabel('Deposit %').fill('0');
   await dialog.getByRole('button', { name: 'Send quote' }).click();
   await expect(dialog.locator('#quote-performance-error')).toContainText('performance fee');

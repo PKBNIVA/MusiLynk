@@ -8,7 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { apiGet, apiPost, apiPut } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { toast } from 'sonner';
-import { ShieldCheck } from 'lucide-react';
+import { Building2, ShieldCheck } from 'lucide-react';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { errorMessage } from '../lib/errors';
 import type { AccountUser } from '../lib/apiTypes';
@@ -161,7 +161,10 @@ export default function CompanyProfile() {
         <form onSubmit={save} noValidate>
           <Card className="bg-white/[.055] border-white/10">
             <CardHeader>
-              <CardTitle>Organization details</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 aria-hidden="true" size={20} className="text-violet-300" />
+                Organization details
+              </CardTitle>
               <RequiredNote className="mt-1" />
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-5">
@@ -183,6 +186,7 @@ export default function CompanyProfile() {
                 id={ORG_IDS.companyWebsite}
                 label="Official website"
                 hint="Include https://"
+                help="Your label, studio or venue site. It is the quickest way for us to verify you and for artists to trust you."
                 error={form.errors.companyWebsite}
               >
                 <Input
@@ -205,7 +209,12 @@ export default function CompanyProfile() {
                   className="bg-black/20 border-white/15"
                 />
               </Field>
-              <Field id={ORG_IDS.phone} label="Contact phone" error={form.errors.phone}>
+              <Field
+                id={ORG_IDS.phone}
+                label="Contact phone"
+                error={form.errors.phone}
+                help="Used by our team for verification. It is never shown on your public profile."
+              >
                 <Input
                   type="tel"
                   inputMode="tel"
@@ -229,6 +238,7 @@ export default function CompanyProfile() {
               <Field
                 id={ORG_IDS.companyDescription}
                 label="What your organization does"
+                help="Two or three sentences on who you are and the kinds of projects you hire for. Artists read this before applying."
                 className="md:col-span-2"
                 error={form.errors.companyDescription}
                 count={(f.companyDescription || '').length}

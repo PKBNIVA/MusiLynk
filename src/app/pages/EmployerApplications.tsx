@@ -1,5 +1,9 @@
+import { Inbox, Plus } from 'lucide-react';
+import { EmptyState } from '../components/help/EmptyState';
 import { useCallback, useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -12,6 +16,7 @@ import { useAuth } from '../lib/authContext';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, EmployerApplication, Job } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 // datetime-local value for "now", in the viewer's time zone.
 const localNow = () => {
   const d = new Date();
@@ -137,23 +142,21 @@ export default function EmployerApplications() {
       <Navigation />
       <main className="max-w-6xl mx-auto px-5 md:px-6 pt-28 pb-16">
         <h1 className="text-4xl font-bold">Applications</h1>
+        <HelpCallout {...HELP.employerApplications} />
         <p className="text-slate-400 mt-2 mb-5">Review candidates only for opportunities you posted.</p>
         {jobs.length > 0 && (
           <div className="mb-6 max-w-md">
             <Label htmlFor="application-job-filter">Opportunity</Label>
-            <select
+            <AppSelect
               id="application-job-filter"
               value={jobId}
-              onChange={(e) => setJobFilter(e.target.value)}
-              className="mt-2 w-full h-10 rounded-md bg-slate-900 border border-white/15 px-3"
-            >
-              <option value="">All opportunities</option>
-              {jobs.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.title} ({j.status})
-                </option>
-              ))}
-            </select>
+              onValueChange={setJobFilter}
+              className="mt-2"
+              options={[
+                { value: '', label: 'All opportunities' },
+                ...jobs.map((j) => ({ value: j.id, label: `${j.title} (${j.status})` })),
+              ]}
+            />
           </div>
         )}
         {loading ? (
@@ -179,24 +182,30 @@ export default function EmployerApplications() {
             </CardContent>
           </Card>
         ) : apps.length === 0 ? (
-          <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-10 text-center text-slate-400">
-              <p>
-                {jobId
-                  ? `No applications for ${filteredJob?.title || 'this opportunity'} yet.`
-                  : 'No applications yet.'}
-              </p>
-              {jobId ? (
-                <Button className="mt-4" variant="outline" onClick={() => setJobFilter('')}>
+          <EmptyState
+            icon={Inbox}
+            title={
+              jobId ? `No applications for ${filteredJob?.title || 'this opportunity'} yet.` : 'No applications yet.'
+            }
+            action={
+              jobId ? (
+                <Button variant="outline" onClick={() => setJobFilter('')}>
                   Show all opportunities
                 </Button>
               ) : (
-                <Button className="mt-4" variant="outline" asChild>
-                  <Link to={postPath}>Create an opportunity</Link>
+                <Button asChild>
+                  <Link to={postPath}>
+                    <Plus aria-hidden="true" size={16} className="mr-2" />
+                    Create an opportunity
+                  </Link>
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+              )
+            }
+          >
+            {jobId
+              ? 'New applicants usually arrive within a few days of a listing going live.'
+              : 'Post an opportunity and applicants will appear here with their samples and answers.'}
+          </EmptyState>
         ) : (
           <div className="space-y-4">
             {apps.map((a) => (
@@ -347,19 +356,16 @@ export default function EmployerApplications() {
           </div>
           <div>
             <Label htmlFor="recruiter-rating">Internal rating</Label>
-            <select
+            <AppSelect
               id="recruiter-rating"
-              value={notes?.rating || ''}
-              onChange={(e) => setNotes((x) => x && { ...x, rating: e.target.value })}
-              className={fieldClass + ' bg-slate-900'}
-            >
-              <option value="">No rating</option>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <option key={n} value={n}>
-                  {n} / 5
-                </option>
-              ))}
-            </select>
+              value={String(notes?.rating || '')}
+              onValueChange={(v) => setNotes((x) => x && { ...x, rating: v })}
+              className="mt-2"
+              options={[
+                { value: '', label: 'No rating' },
+                ...[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n} / 5` })),
+              ]}
+            />
           </div>
         </FormDialog>
       </main>

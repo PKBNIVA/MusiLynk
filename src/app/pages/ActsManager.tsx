@@ -1,18 +1,23 @@
+import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { FormDialog, selectClass, useConfirm } from '../components/booking/BookingDialogs';
-import { Music, Plus, Users } from 'lucide-react';
+import { FormDialog, useConfirm } from '../components/booking/BookingDialogs';
+import { Music, Plus, Users, Mic2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Field, FormError, RequiredNote } from '../components/form/Field';
+import { MoreDetails } from '../components/help/MoreDetails';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { errorMessage } from '../lib/errors';
 import type { Act, ActMember, Taxonomy } from '../lib/apiTypes';
+import { AppSelect } from '../components/ui/app-select';
 
 const FALLBACK_ACT_TYPES = ['solo', 'duo', 'trio', 'band', 'ensemble', 'dj'];
 // Inputs hand back strings, so the lineup size holds whatever was typed until it is submitted.
@@ -183,6 +188,7 @@ export default function ActsManager() {
             Create a solo, duo, band or ensemble once, then use that identity for enquiries, quotes and bookings.
           </p>
         </div>
+        <HelpCallout {...HELP.acts} />
         <div className="grid lg:grid-cols-[.9fr_1.1fr] gap-6">
           <Card className="bg-white/[.055] border-white/10">
             <CardContent className="p-6">
@@ -208,15 +214,12 @@ export default function ActsManager() {
                   />
                 </Field>
                 <Field id="act-type" label="Act type">
-                  <select
-                    className={selectClass}
+                  <AppSelect
+                    className="h-11 rounded-xl"
                     value={f.actType}
-                    onChange={(e) => setF({ ...f, actType: e.target.value })}
-                  >
-                    {(actTypes.includes(f.actType) ? actTypes : [f.actType, ...actTypes]).map((x: string) => (
-                      <option key={x}>{x}</option>
-                    ))}
-                  </select>
+                    onValueChange={(v) => setF({ ...f, actType: v })}
+                    options={actTypes.includes(f.actType) ? actTypes : [f.actType, ...actTypes]}
+                  />
                 </Field>
                 <Field id="act-city" label="City / base" error={actErrors.errors.city}>
                   <Input
@@ -233,40 +236,62 @@ export default function ActsManager() {
                     onChange={(e) => setAct('genres', e.target.value)}
                   />
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field id="act-minFee" label="Min fee (₹)" error={actErrors.errors.minFee}>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min="0"
-                      value={f.minFee}
-                      onChange={(e) => setAct('minFee', e.target.value)}
-                    />
-                  </Field>
-                  <Field id="act-maxFee" label="Max fee (₹)" error={actErrors.errors.maxFee}>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min="0"
-                      value={f.maxFee}
-                      onChange={(e) => setAct('maxFee', e.target.value)}
-                    />
-                  </Field>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field id="act-lineupSize" label="Lineup size" error={actErrors.errors.lineupSize}>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min="1"
-                      value={f.lineupSize}
-                      onChange={(e) => setAct('lineupSize', e.target.value)}
-                    />
-                  </Field>
-                  <Field id="act-ownerRole" label="Your role" error={actErrors.errors.ownerRole}>
-                    <Input value={f.ownerRole} onChange={(e) => setAct('ownerRole', e.target.value)} />
-                  </Field>
-                </div>
+                <MoreDetails
+                  label="Fees & lineup (optional)"
+                  forceOpen={
+                    !!(
+                      actErrors.errors.minFee ||
+                      actErrors.errors.maxFee ||
+                      actErrors.errors.lineupSize ||
+                      actErrors.errors.ownerRole
+                    )
+                  }
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field
+                      id="act-minFee"
+                      label="Min fee (₹)"
+                      error={actErrors.errors.minFee}
+                      help="Your usual starting fee for one performance. Bookers see it as an indicative range, not a fixed quote."
+                    >
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        value={f.minFee}
+                        onChange={(e) => setAct('minFee', e.target.value)}
+                      />
+                    </Field>
+                    <Field id="act-maxFee" label="Max fee (₹)" error={actErrors.errors.maxFee}>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        value={f.maxFee}
+                        onChange={(e) => setAct('maxFee', e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field
+                      id="act-lineupSize"
+                      label="Lineup size"
+                      error={actErrors.errors.lineupSize}
+                      help="How many people perform, including you. You can name each member after creating the act."
+                    >
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        value={f.lineupSize}
+                        onChange={(e) => setAct('lineupSize', e.target.value)}
+                      />
+                    </Field>
+                    <Field id="act-ownerRole" label="Your role" error={actErrors.errors.ownerRole}>
+                      <Input value={f.ownerRole} onChange={(e) => setAct('ownerRole', e.target.value)} />
+                    </Field>
+                  </div>
+                </MoreDetails>
                 <FormError message={actErrors.formError} />
                 <Button type="submit" className="w-full" disabled={creating} aria-busy={creating}>
                   <Music size={16} className="mr-2" />
@@ -289,9 +314,9 @@ export default function ActsManager() {
                 </Button>
               </div>
             ) : acts.length === 0 ? (
-              <div className="text-slate-500 border border-dashed border-white/10 rounded-xl p-10 text-center">
-                No act created yet. Use the form to create your first bookable act.
-              </div>
+              <EmptyState icon={Mic2} title="No act created yet.">
+                Use the form to create your first bookable act. It takes about a minute.
+              </EmptyState>
             ) : (
               acts.map((a) => (
                 <Card key={a.id} className="bg-white/[.055] border-white/10">

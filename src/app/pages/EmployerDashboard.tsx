@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { apiGet } from '../lib/api';
 import { Link } from 'react-router';
-import { Briefcase, FileText, CheckCircle, Plus, Users, ShieldCheck } from 'lucide-react';
+import { Briefcase, FileText, CheckCircle, Plus, Users, ShieldCheck, Workflow } from 'lucide-react';
 import { useAuth } from '../lib/authContext';
 import { OpportunityPipeline } from '../components/OpportunityPipeline';
 import type { EmployerDashboard } from '../lib/apiTypes';
@@ -60,6 +62,7 @@ export default function EmployerDashboard() {
             </Link>
           </Button>
         </div>
+        <HelpCallout {...HELP.employerDashboard} />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Stat n={d.jobs} label="Total opportunities" icon={Briefcase} />
           <Stat n={d.published} label="Live" icon={CheckCircle} />
@@ -67,7 +70,10 @@ export default function EmployerDashboard() {
           <Stat n={d.shortlisted} label="Shortlisted applicants" icon={Users} />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h2 className="text-2xl font-semibold">Your opportunity pipeline</h2>
+          <h2 className="text-2xl font-semibold flex items-center gap-2">
+            <Workflow aria-hidden="true" size={24} className="text-violet-300" />
+            Your opportunity pipeline
+          </h2>
           <div className="flex gap-4 text-sm">
             <Link to="/employer/applications" className="text-violet-300">
               All applicants

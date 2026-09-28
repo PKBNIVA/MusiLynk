@@ -6,6 +6,8 @@ import { Badge } from './ui/badge';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
 import type { Booking, BookingPayment, BookingPaymentOrder } from '../lib/apiTypes';
+import { BookingFeeBreakdown } from './booking/BookingFeeBreakdown';
+import { trackBookingDepositPaid } from '../lib/analytics';
 
 // Requester-side deposit state and payment for one booking. The amount, currency and order
 // always come from the server; the browser only relays the Razorpay handler payload back.
@@ -36,7 +38,10 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; 
     (p) => p.kind === 'deposit' && ['paid', 'refunded', 'created'].includes(p.status),
   );
   const quote = booking.latestQuote;
-  const expected = quote ? Math.round((quote.total * quote.depositPercent) / 100) : null;
+  const baseDeposit = quote ? Math.round((quote.total * quote.depositPercent) / 100) : null;
+  // The server charges the deposit plus the platform fee/GST in one payment; showing that same
+  // total here (not just the base deposit) keeps this button's label truthful.
+  const expected = baseDeposit != null ? baseDeposit + (quote?.feeAmount ?? 0) + (quote?.gstAmount ?? 0) : null;
 
   async function pay() {
     if (inFlight.current) return;
@@ -47,6 +52,7 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; 
       const d = await apiPost<BookingPaymentOrder>(`/bookings/${booking.id}/payment-order`, {});
       if (d.checkout?.mode === 'mock') {
         await apiPost(`/booking-payments/${d.payment.id}/confirm`, {});
+        trackBookingDepositPaid();
         toast.success('Mock deposit recorded');
       } else {
         const result = await openRazorpayCheckout(d.checkout, {
@@ -60,6 +66,7 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; 
             paymentId: r.razorpay_payment_id,
             signature: r.razorpay_signature,
           });
+          trackBookingDepositPaid();
           toast.success('Deposit paid. Your booking is confirmed.');
         } else if (result.lastError) {
           setDeclined(result.lastError);
@@ -93,7 +100,8 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; 
     );
   if (booking.status !== 'accepted') return null;
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex flex-col items-start gap-3 w-full max-w-sm">
+      {quote && <BookingFeeBreakdown booking={booking} quote={quote} depositAmount={baseDeposit} />}
       <Button size="sm" disabled={paying} aria-busy={paying} onClick={pay}>
         {paying
           ? 'Processing payment…'

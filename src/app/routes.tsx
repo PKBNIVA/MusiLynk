@@ -63,6 +63,7 @@ function publicRoutes(): RouteObject[] {
   const ActsManager = L(() => import('./pages/ActsManager'));
   const BookTalent = L(() => import('./pages/BookTalent'));
   const Bookings = L(() => import('./pages/Bookings'));
+  const InvoicePrint = L(() => import('./pages/InvoicePrint'));
   const BandBuilder = L(() => import('./pages/BandBuilder'));
   const Billing = L(() => import('./pages/Billing'));
   const AccountData = L(() => import('./pages/AccountData'));
@@ -462,6 +463,14 @@ function publicRoutes(): RouteObject[] {
           ),
         },
         {
+          path: 'invoices/:id/print',
+          element: (
+            <P roles={['jobseeker']}>
+              <InvoicePrint />
+            </P>
+          ),
+        },
+        {
           path: 'band-builder',
           element: (
             <P roles={['jobseeker']}>
@@ -664,6 +673,14 @@ function publicRoutes(): RouteObject[] {
           element: (
             <P roles={['employer']}>
               <Bookings />
+            </P>
+          ),
+        },
+        {
+          path: 'invoices/:id/print',
+          element: (
+            <P roles={['employer']}>
+              <InvoicePrint />
             </P>
           ),
         },

@@ -1,11 +1,102 @@
-import { RefreshCw, CreditCard } from 'lucide-react';
-import { apiPost } from '../../lib/api';
+import { useEffect, useState } from 'react';
+import { RefreshCw, CreditCard, Undo2 } from 'lucide-react';
+import { apiGet, apiPatch, apiPost } from '../../lib/api';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import type { AdminBooking, AdminSubscription, BillingAttempt, BillingEventSummary } from '../../lib/apiTypes';
+import type {
+  AdminBooking,
+  AdminRefund,
+  AdminSubscription,
+  BillingAttempt,
+  BillingEventSummary,
+} from '../../lib/apiTypes';
+import { errorMessage } from '../../lib/errors';
 import { Panel, Pager, Empty, date, RECONCILABLE, type AdminActions, type PageMeta } from './shared';
 import { AdminPageHeader, HowToCallout, InfoTip } from './ui';
+
+const money = (currency: string | null | undefined, value: unknown) =>
+  `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
+
+// Self-fetches from GET/PATCH /api/admin/refunds (Admin::RefundsController) — a separate data
+// source from the rest of this tab (which is fed by AdminDashboard), so this list never needs a
+// change there. Never moves money itself: "Mark done" only records that an admin processed the
+// refund manually in the Razorpay dashboard (see backend/app/models/refund_record.rb).
+function RefundsToReview() {
+  const [refunds, setRefunds] = useState<AdminRefund[] | null>(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = () => {
+    apiGet<{ refunds: AdminRefund[] }>('/admin/refunds?status=pending_manual')
+      .then((d) => {
+        setRefunds(d.refunds);
+        setError('');
+      })
+      .catch((e: unknown) => setError(errorMessage(e, 'Unable to load refunds.')));
+  };
+  useEffect(load, []);
+
+  async function markDone(id: string) {
+    setBusy(id);
+    try {
+      await apiPatch(`/admin/refunds/${id}`, { note: 'Refunded manually in the Razorpay dashboard' });
+      toast.success('Refund marked done');
+      load();
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Unable to mark this refund done.'));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Card className="bg-white/[.05] border-white/10 xl:col-span-2">
+      <CardHeader>
+        <CardTitle>
+          <h2>Refunds to review</h2>
+        </CardTitle>
+        <p className="text-sm text-slate-400">
+          Cancellations and no-shows that owe a refund. None of these move money on their own — process the refund in
+          the Razorpay dashboard, then mark it done here.
+        </p>
+      </CardHeader>
+      <CardContent
+        className="space-y-3 max-h-[520px] overflow-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
+        tabIndex={0}
+        role="region"
+        aria-label="Refunds to review"
+      >
+        <Panel error={error} onRetry={load} loading={refunds === null}>
+          {(refunds || []).map((r) => (
+            <div
+              key={r.id}
+              className="border-b border-white/10 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-3"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <b>{r.actName || 'Booking'}</b>
+                  <Badge className="bg-amber-500/15 text-amber-200">{r.reason.replace(/_/g, ' ')}</Badge>
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  {r.requesterName} · {money(r.currency, r.amount)} ({r.refundPercent}%) · requested by {r.requestedBy}{' '}
+                  · {date(r.createdAt, true)}
+                </div>
+                {r.note && <div className="text-xs text-slate-500 mt-1">{r.note}</div>}
+              </div>
+              <Button size="sm" variant="outline" disabled={busy === r.id} onClick={() => markDone(r.id)}>
+                <Undo2 aria-hidden="true" size={14} className="mr-1" />
+                {busy === r.id ? 'Marking done…' : 'Mark done'}
+              </Button>
+            </div>
+          ))}
+          {!(refunds || []).length && <Empty text="No refunds waiting on review." />}
+        </Panel>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function CommerceTab({
   attempts,
@@ -47,6 +138,7 @@ export default function CommerceTab({
         <b>Reconcile</b> is available once an attempt is pending, ambiguous or failed and has a provider id to look up.
       </HowToCallout>
       <div className="grid xl:grid-cols-2 gap-5">
+        <RefundsToReview />
         <Card className="bg-white/[.05] border-white/10 xl:col-span-2">
           <CardHeader>
             <CardTitle>

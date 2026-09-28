@@ -13,6 +13,8 @@ import { Field, RequiredNote } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { toast } from 'sonner';
 import { BookingDepositPanel } from '../components/BookingDepositPanel';
+import { BookingFeeBreakdown } from '../components/booking/BookingFeeBreakdown';
+import { trackBookingQuoteAccepted, trackBookingQuoteSent } from '../lib/analytics';
 import { errorMessage } from '../lib/errors';
 import type { Booking, BookingPayment, ConversationCreated } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
@@ -166,9 +168,13 @@ export default function Bookings() {
   useEffect(() => {
     void load();
   }, []);
-  async function changeStatus(id: string, s: string, success: string) {
-    await apiPost(`/bookings/${id}/status`, { status: s });
-    toast.success(success);
+  async function changeStatus(id: string, s: string, success: string, noShow?: 'musician' | 'hirer') {
+    const res = await apiPost<{ refund?: { amount: number; currency: string; note: string } | null }>(
+      `/bookings/${id}/status`,
+      { status: s, ...(noShow ? { noShow } : {}) },
+    );
+    if (s === 'accepted') trackBookingQuoteAccepted();
+    toast.success(res.refund ? `${success} · ${res.refund.note}` : success);
     await load();
   }
   function sendQuote() {
@@ -192,6 +198,7 @@ export default function Bookings() {
           exclusions: quote.exclusions,
           cancellationTerms: quote.cancellationTerms,
         });
+        trackBookingQuoteSent();
         toast.success('Quote sent');
         setQuote(null);
         await load();
@@ -247,7 +254,7 @@ export default function Bookings() {
       cancellationTerms: last?.cancellationTerms || '',
     });
   };
-  const confirmStatus = (b: Booking, s: string) => {
+  const confirmStatus = (b: Booking, s: string, noShow?: 'musician' | 'hirer') => {
     const q = b.latestQuote;
     const copy: Record<string, [string, string, string, boolean]> = {
       accepted: [
@@ -267,7 +274,7 @@ export default function Bookings() {
       cancelled: [
         b.status === 'accepted' ? 'Cancel this booking?' : 'Cancel this enquiry?',
         b.depositPaid
-          ? "Your deposit is handled under the act's cancellation terms. This cannot be undone."
+          ? `Your deposit is handled under Verse's cancellation policy: ${b.bookingPolicy?.plainEnglish.slice(1, 4).join(' ') || "the act's cancellation terms."} This cannot be undone.`
           : 'The act is notified and the enquiry closes. This cannot be undone.',
         b.status === 'accepted' ? 'Cancel booking' : 'Cancel enquiry',
         true,
@@ -286,12 +293,23 @@ export default function Bookings() {
         'Mark completed',
         false,
       ],
-      disputed: [
-        'Report a problem with this booking?',
-        'The booking moves to dispute so the Verse team can review it.',
-        'Report problem',
-        true,
-      ],
+      disputed: noShow
+        ? [
+            noShow === 'musician' ? 'Report that the musician did not show?' : 'Report that the hirer did not show?',
+            b.depositPaid
+              ? noShow === 'musician'
+                ? 'The deposit is fully refunded and the platform fee is waived, per the cancellation policy.'
+                : 'The deposit is kept, per the cancellation policy.'
+              : 'The booking moves to dispute so the Verse team can review it.',
+            noShow === 'musician' ? 'Report musician no-show' : 'Report hirer no-show',
+            true,
+          ]
+        : [
+            'Report a problem with this booking?',
+            'The booking moves to dispute so the Verse team can review it.',
+            'Report problem',
+            true,
+          ],
     };
     const [title, description, confirmLabel, destructive] = copy[s];
     const success: Record<string, string> = {
@@ -302,7 +320,7 @@ export default function Bookings() {
       completed: 'Booking marked completed',
       disputed: 'Problem reported',
     };
-    ask({ title, description, confirmLabel, destructive, action: () => changeStatus(b.id, s, success[s]) });
+    ask({ title, description, confirmLabel, destructive, action: () => changeStatus(b.id, s, success[s], noShow) });
   };
   const setQ = (key: keyof QuoteForm, value: string) => {
     setQuote((current) => (current ? { ...current, [key]: value } : current));
@@ -404,7 +422,17 @@ export default function Bookings() {
                             {b.status === 'accepted' ? 'Cancel booking' : 'Cancel enquiry'}
                           </Button>
                         )}
-                        {can.includes('disputed') && (
+                        {can.includes('disputed') && b.depositPaid && b.isRequester && (
+                          <Button size="sm" variant="ghost" onClick={() => confirmStatus(b, 'disputed', 'musician')}>
+                            Report musician no-show
+                          </Button>
+                        )}
+                        {can.includes('disputed') && b.depositPaid && b.isOwner && (
+                          <Button size="sm" variant="ghost" onClick={() => confirmStatus(b, 'disputed', 'hirer')}>
+                            Report hirer no-show
+                          </Button>
+                        )}
+                        {can.includes('disputed') && !b.depositPaid && (
                           <Button size="sm" variant="ghost" onClick={() => confirmStatus(b, 'disputed')}>
                             Report a problem
                           </Button>
@@ -463,6 +491,13 @@ export default function Bookings() {
                             <b>Cancellation:</b> {b.latestQuote.cancellationTerms}
                           </p>
                         )}
+                        <div className="mt-3">
+                          <BookingFeeBreakdown
+                            booking={b}
+                            quote={b.latestQuote}
+                            depositAmount={Math.round((b.latestQuote.total * b.latestQuote.depositPercent) / 100)}
+                          />
+                        </div>
                       </section>
                     )}
                     {paymentOpen[b.id] && (
@@ -480,8 +515,16 @@ export default function Bookings() {
                                 <span>
                                   {p.kind} · {money(p.currency, p.amount)}
                                 </span>
-                                <span>
+                                <span className="flex items-center gap-3">
                                   {p.status} · {new Date(p.created_at).toLocaleString()}
+                                  {p.invoiceId && (
+                                    <Link
+                                      to={`${base}/invoices/${p.invoiceId}/print`}
+                                      className="text-violet-300 hover:text-violet-200 underline underline-offset-4"
+                                    >
+                                      Invoice
+                                    </Link>
+                                  )}
                                 </span>
                               </div>
                             ))}

@@ -427,6 +427,29 @@ export interface BookingQuote {
   exclusions?: string | null;
   cancellationTerms?: string | null;
   status: string;
+  /** Platform fee/GST snapshot from BookingFeePolicy at the time this quote was created. Both 0
+   * when the fee is off. */
+  feeAmount?: number;
+  gstAmount?: number;
+  feePercent?: number;
+  policyVersion?: number;
+}
+
+/** The fee/GST snapshot on a booking's deposit payment (BookingsController#booking_json). */
+export interface DepositBreakdown {
+  amount: number;
+  feeAmount: number;
+  gstAmount: number;
+  feePercent: number;
+  policyVersion: number;
+}
+
+/** The current booking fee/cancellation policy in plain words (BookingFeePolicy#plain_english),
+ * shown on the quote and booking pages so both parties see the same rules the server enforces. */
+export interface BookingPolicy {
+  feeEnabled: boolean;
+  plainEnglish: string[];
+  policyVersion: number;
 }
 
 /** BookingsController#booking_json: a booking_requests row plus both sides' view of its state. */
@@ -466,6 +489,8 @@ export interface Booking {
   paymentCount: number;
   depositPaid: boolean;
   allowedTransitions?: string[];
+  depositBreakdown?: DepositBreakdown | null;
+  bookingPolicy?: BookingPolicy;
 }
 
 /** A booking_payments row as rendered by GET /bookings/:id/payments and POST .../payment-order. */
@@ -483,6 +508,12 @@ export interface BookingPayment {
   amount: number;
   created_at: string;
   updated_at?: string;
+  fee_amount?: number;
+  gst_amount?: number;
+  fee_percent?: number;
+  policy_version?: number;
+  /** Present once InvoiceGenerator has created an invoice for this (paid, fee > 0) payment. */
+  invoiceId?: string | null;
 }
 
 /** POST /bookings/:id/payment-order: the payment row and how to collect it. */
@@ -1004,6 +1035,27 @@ export interface AdminBooking extends Omit<
   | 'allowedTransitions'
 > {
   actOwner: string;
+}
+
+/** Admin::RefundsController#refund_json: an intended refund from BookingFeePolicy's cancellation
+ * or no-show rules. Never moved money on its own — see backend/app/models/refund_record.rb. */
+export interface AdminRefund {
+  id: string;
+  bookingRequestId: string;
+  bookingPaymentId?: string | null;
+  amount: number;
+  currency: string;
+  refundPercent: number;
+  reason: string;
+  status: 'pending_manual' | 'done' | 'not_applicable';
+  note?: string | null;
+  policyVersion: number;
+  requestedBy?: string | null;
+  decidedBy?: string | null;
+  decidedAt?: string | null;
+  createdAt: string;
+  actName?: string | null;
+  requesterName?: string | null;
 }
 
 /** Admin::BillingEventsController#summary: one processed Razorpay webhook (no raw payload). */

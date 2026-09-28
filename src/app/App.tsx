@@ -5,6 +5,10 @@ import { AuthProvider } from './lib/authContext';
 import { AppErrorBoundary } from './components/ExperienceStates';
 import { PlanLimitPrompt } from './components/PlanLimitPrompt';
 
+// Dynamically imported so the analytics module (queueing, flush timers, sendBeacon wiring)
+// stays out of the entry chunk; every lazy-loaded page that calls track() already pulls it in.
+void import('./lib/analytics').then((m) => m.initRouteTracking(router));
+
 // The toast container is loaded after the first render so it stays out of the entry chunk.
 // Toasts raised before it mounts are kept by sonner and shown as soon as it subscribes.
 const Toaster = lazy(() => import('./components/ui/sonner').then((module) => ({ default: module.Toaster })));

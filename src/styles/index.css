@@ -55,6 +55,17 @@ textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Tailwind v4 preflight resets cursor to `default` on buttons. Every enabled, actionable
+   control should still look clickable. */
+button:not(:disabled):not([aria-disabled='true']),
+[role='button']:not([aria-disabled='true']):not([data-disabled='true']),
+a[href],
+summary,
+label[for],
+select {
+  cursor: pointer;
+}
+
 button,
 a {
   transition:
@@ -198,6 +209,24 @@ textarea::placeholder {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+/* A control that looks fine at its design size (a 40x40 icon button, a small checkbox) can still
+   be too small to reliably tap on a phone. This gives it a real >=44x44 hit area, centered on the
+   control, via an invisible overlay — the control itself never changes size. */
+@media (max-width: 767.98px) {
+  .tap-target-44 {
+    position: relative;
+  }
+  .tap-target-44::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(44px, 100%);
+    height: max(44px, 100%);
+    transform: translate(-50%, -50%);
   }
 }
 

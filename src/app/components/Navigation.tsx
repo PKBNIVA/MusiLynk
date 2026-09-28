@@ -42,7 +42,7 @@ import { SkipLink } from './SkipLink';
 import type { UnreadCounts } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
 
-const UNREAD_POLL_MS = 30_000;
+const UNREAD_POLL_MS = 10_000;
 
 type NavItem = { path: string; icon: LucideIcon; label: string };
 type NavGroup = { label: string; items: NavItem[] };
@@ -55,7 +55,7 @@ export function Navigation() {
   const baseUrl = isJobSeeker ? '/jobseeker' : '/employer';
   const [unread, setUnread] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
-  // Unread badges: fetched on mount and on route change, polled every 30 s while the tab is visible,
+  // Unread badges: fetched on mount and on route change, polled every 10 s while the tab is visible,
   // and refreshed immediately when a page reports that the viewer read something.
   const refreshUnread = () =>
     apiGet<UnreadCounts>('/notifications/unread')

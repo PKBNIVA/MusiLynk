@@ -419,7 +419,7 @@ test.describe('messages', () => {
 });
 
 test.describe('polling', () => {
-  test('an open thread refreshes every 10 s while visible and pauses while hidden', async ({ page }) => {
+  test('an open thread refreshes every 3 s while visible and pauses while hidden', async ({ page }) => {
     await page.clock.install();
     const state = await mockApi(page, 'employer', {
       conversations: [conversation('c1')],
@@ -429,7 +429,9 @@ test.describe('polling', () => {
     await expect(page.getByTestId('message-body')).toHaveText(['first']);
 
     state.threads.c1.push({ id: 'm2', senderId: 'other', body: 'arrived later', createdAt: at(2), readAt: null });
-    await page.clock.fastForward(10_500);
+    await page.clock.fastForward(2_000);
+    await expect(page.getByTestId('message-body')).toHaveText(['first'], { timeout: 1_000 });
+    await page.clock.fastForward(1_500);
     await expect(page.getByTestId('message-body')).toHaveText(['first', 'arrived later']);
 
     // Hidden tab: no polling.
@@ -451,7 +453,7 @@ test.describe('polling', () => {
     await expect(page.getByTestId('message-body')).toHaveText(['first', 'arrived later', 'while hidden']);
   });
 
-  test('navigation badges poll unread counts every 30 s', async ({ page }) => {
+  test('navigation badges poll unread counts every 10 s', async ({ page }) => {
     await page.clock.install();
     const state = await mockApi(page, 'jobseeker', { notifications: [] });
     await page.goto('/jobseeker/notifications');
@@ -460,7 +462,7 @@ test.describe('polling', () => {
 
     state.unread = 2;
     state.unreadMessages = 4;
-    await page.clock.fastForward(29_000);
+    await page.clock.fastForward(9_000);
     await expect(page.getByTestId('unread-notifications-badge')).toBeHidden();
     await page.clock.fastForward(2_000);
     await expect(page.getByTestId('unread-notifications-badge')).toHaveText('2');

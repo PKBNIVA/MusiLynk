@@ -113,10 +113,14 @@ module SyntheticQa
         url: "https://www.youtube.com/watch?v=verseDemo#{format('%03d', index % 1000)}", visibility: "public", featured: true,
         description: "Placeholder video link for demo data.", credited_as: role_name, year: 2020 + (index % 6),
         tags: [role_name, "Live"], genres: [genre], roles: [role_name])
-      user.portfolio_items.create!(kind: "audio", title: demo? ? "#{second_genre} studio demo" : "QA audio sample #{index + 1}",
-        url: "https://example.com/#{batch}/portfolio/#{index + 1}.mp3", visibility: "public", sort_order: 1,
-        description: "Placeholder audio link for demo data.", credited_as: second_role, year: 2021 + (index % 5),
-        tags: [second_role], genres: [second_genre], roles: [second_role])
+      # No audio file is bundled with demo/synthetic data, and example.com never actually serves one
+      # (it 404s, which the player then surfaces as a broken-media error). Give this sample a
+      # "project" work item instead of an unplayable audio one; the video sample above still
+      # demonstrates a playable work sample.
+      user.portfolio_items.create!(kind: "project", title: demo? ? "#{second_genre} studio demo" : "QA audio sample #{index + 1}",
+        url: "https://verse.example/#{batch}/portfolio/#{index + 1}", visibility: "public", sort_order: 1,
+        description: "Placeholder project write-up for demo data — no audio file is bundled with synthetic data.",
+        credited_as: second_role, year: 2021 + (index % 5), tags: [second_role], genres: [second_genre], roles: [second_role])
       user.availability_windows.create!(start_at: 2.weeks.from_now + index.hours, end_at: 2.weeks.from_now + index.hours + 4.hours,
         status: index % 5 == 0 ? "tentative" : "available", city:, note: "Open for sessions")
       user.availability_windows.create!(start_at: 5.weeks.from_now + index.hours, end_at: 5.weeks.from_now + index.hours + 1.day,

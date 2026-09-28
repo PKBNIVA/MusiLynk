@@ -112,7 +112,9 @@ export default defineConfig({
                 command:
                   'npm exec vite build -- --outDir dist-qa-admin && npm exec vite preview -- --outDir dist-qa-admin --host 127.0.0.1 --port 4176',
                 url: adminSiteUrl,
-                env: { VITE_APP_TARGET: 'admin' },
+                // No public routes exist in this build, so entityLink (shared.tsx) needs the public
+                // site's own origin to link to a listing/profile/act absolutely.
+                env: { VITE_APP_TARGET: 'admin', VITE_PUBLIC_URL: 'http://127.0.0.1:4173' },
                 reuseExistingServer: !process.env.CI,
                 timeout: 120_000,
               },

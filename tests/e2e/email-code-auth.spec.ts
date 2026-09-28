@@ -28,15 +28,19 @@ const GENERIC = {
 interface Calls {
   requests: Record<string, unknown>[];
   verifies: Record<string, unknown>[];
+  /** Only set when `holdRequest` is passed to `mockApi`: releases a pending "sending code" response. */
+  release?: () => void;
 }
 
-async function mockApi(
-  page: Page,
-  opts: { user?: typeof jobseeker; validCode?: string; requestDelayMs?: number } = {},
-) {
+async function mockApi(page: Page, opts: { user?: typeof jobseeker; validCode?: string; holdRequest?: boolean } = {}) {
   const calls: Calls = { requests: [], verifies: [] };
   const user = opts.user ?? jobseeker;
   const validCode = opts.validCode ?? '482913';
+  // `holdRequest` lets a test hold the mocked "sending code" response open on demand (via
+  // `calls.release()`) instead of racing a fixed real-time delay against its assertions —
+  // deterministic under any amount of CPU load, unlike a delay a slow machine could outrun.
+  let release: (() => void) | null = null;
+  calls.release = () => release?.();
   await page.addInitScript((role) => localStorage.setItem(`verse-tour-v2-${role}`, 'done'), user.role);
   await page.route('**/api/**', async (route: Route) => {
     const request = route.request();
@@ -45,7 +49,7 @@ async function mockApi(
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     if (pathname.endsWith('/auth/otp/request')) {
       calls.requests.push(request.postDataJSON());
-      if (opts.requestDelayMs) await new Promise((resolve) => setTimeout(resolve, opts.requestDelayMs));
+      if (opts.holdRequest) await new Promise<void>((resolve) => (release = resolve));
       return json(200, GENERIC);
     }
     if (pathname.endsWith('/auth/otp/verify')) {
@@ -112,11 +116,16 @@ test('a wrong code shows an error, clears the input and allows a retry', async (
 
 test('resend waits 60 seconds and sending shows a busy state', async ({ page }) => {
   await page.clock.install();
-  const calls = await mockApi(page, { requestDelayMs: 400 });
+  // The first request is held open on purpose, so the busy state below is observed by design —
+  // not by winning a race against a fixed delay — and is exactly as reliable on a loaded CI box
+  // as on an idle one.
+  const calls = await mockApi(page, { holdRequest: true });
   await page.goto('/auth/jobseeker');
   await page.getByLabel('Email').fill('qa@example.invalid');
   await page.getByRole('button', { name: 'Email me a sign-in code' }).click();
   await expect(page.getByRole('button', { name: 'Sending code…' })).toBeDisabled();
+  await expect.poll(() => calls.requests.length).toBe(1);
+  calls.release?.();
 
   const resend = page.getByRole('button', { name: /Resend code/ });
   await expect(resend).toHaveText('Resend code in 60s');
@@ -128,6 +137,7 @@ test('resend waits 60 seconds and sending shows a busy state', async ({ page }) 
   await resend.click();
   await expect.poll(() => calls.requests.length).toBe(2);
   await expect(resend).toBeDisabled();
+  calls.release?.();
 
   await page.getByRole('button', { name: 'Use a different email' }).click();
   await expect(page.getByLabel('Email')).toHaveValue('qa@example.invalid');

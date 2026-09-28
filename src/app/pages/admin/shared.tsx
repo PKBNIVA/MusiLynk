@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { toPublicUrl } from '../../lib/appTarget';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -134,14 +135,19 @@ export const date = (value: string | null | undefined, withTime = false) => {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? '—' : withTime ? d.toLocaleString() : d.toLocaleDateString();
 };
-export const entityLink = (type: string, id: string) =>
-  type === 'Job' || type === 'job'
-    ? `/opportunities/${id}`
-    : type === 'User' || type === 'user'
-      ? `/professionals/${id}`
-      : type === 'Act' || type === 'act'
-        ? `/acts/${id}`
-        : null;
+// On the admin build there is no public route to resolve a relative path against — those pages
+// simply don't exist in this bundle — so the link must be absolute to the public site instead.
+export const entityLink = (type: string, id: string) => {
+  const path =
+    type === 'Job' || type === 'job'
+      ? `/opportunities/${id}`
+      : type === 'User' || type === 'user'
+        ? `/professionals/${id}`
+        : type === 'Act' || type === 'act'
+          ? `/acts/${id}`
+          : null;
+  return path && toPublicUrl(path);
+};
 
 export function Stat({
   label,

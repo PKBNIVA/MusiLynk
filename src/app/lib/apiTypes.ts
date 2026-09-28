@@ -311,11 +311,17 @@ export interface Message {
   safetyFlags?: string[];
 }
 
-/** GET /conversations/:id/messages: the newest page of a thread (or the page before `before`). */
+/**
+ * GET /conversations/:id/messages: the newest page of a thread, the page before `before`, or
+ * (with `after`) only the messages newer than a message already held locally. `theirReadAt` is
+ * the most recent time the counterpart read one of the viewer's own messages, present so an
+ * `after`-only poll can still refresh an older message's read receipt.
+ */
 export interface MessagePage {
   messages: Message[];
   truncated: boolean;
   limit: number;
+  theirReadAt?: string | null;
 }
 
 /** POST /conversations (ConversationsController#create). */

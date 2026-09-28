@@ -307,9 +307,12 @@ export default function Portfolio() {
                 <Input
                   aria-label="Link"
                   required
-                  type="url"
-                  value={f.url}
-                  readOnly={upload.status === 'done'}
+                  type={isUploaded ? 'text' : 'url'}
+                  // An uploaded file's storage URL is not something a member should see or edit — show a
+                  // friendly placeholder instead of autofilling this field with it. `f.url` still carries
+                  // the real address for saving.
+                  value={isUploaded ? 'Uploaded file — see below' : f.url}
+                  readOnly={isUploaded}
                   onChange={(e) =>
                     setF({ ...f, url: e.target.value, mediaMetadata: {}, thumbnailUrl: '', waveformUrl: '' })
                   }

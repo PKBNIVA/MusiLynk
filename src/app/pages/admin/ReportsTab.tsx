@@ -52,9 +52,22 @@ export default function ReportsTab({
                 <h2 className="font-semibold break-all">
                   {r.entity_type} ·{' '}
                   {href ? (
-                    <Link className="text-sky-300 underline underline-offset-4" to={href} target="_blank">
-                      {r.entity_id}
-                    </Link>
+                    // entityLink is absolute on the admin build (no public routes exist there) and
+                    // relative on the public site; react-router's <Link> only resolves the latter.
+                    /^https?:\/\//.test(href) ? (
+                      <a
+                        className="text-sky-300 underline underline-offset-4"
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {r.entity_id}
+                      </a>
+                    ) : (
+                      <Link className="text-sky-300 underline underline-offset-4" to={href} target="_blank">
+                        {r.entity_id}
+                      </Link>
+                    )
                   ) : (
                     r.entity_id
                   )}

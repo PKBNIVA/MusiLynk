@@ -286,6 +286,7 @@ export default function CandidateSearch() {
                       <div className="flex gap-3 items-start">
                         <Checkbox
                           aria-label={`Compare ${c.name}`}
+                          className="tap-target-44"
                           checked={compare.includes(c.id)}
                           onCheckedChange={(v) =>
                             setCompare((xs) =>

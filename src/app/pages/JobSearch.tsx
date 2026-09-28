@@ -283,7 +283,13 @@ export default function JobSearch() {
                       </div>
                     </Link>
                     <div className="flex flex-col items-end gap-3">
-                      <Button aria-label="Save job" size="icon" variant="ghost" onClick={() => toggleSave(j)}>
+                      <Button
+                        aria-label="Save job"
+                        size="icon"
+                        variant="ghost"
+                        className="tap-target-44"
+                        onClick={() => toggleSave(j)}
+                      >
                         {j.saved ? <BookmarkCheck className="text-violet-300" /> : <Bookmark />}
                       </Button>
                       <div className="text-right hidden sm:block">

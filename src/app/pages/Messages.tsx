@@ -11,11 +11,12 @@ import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { errorCode, errorMessage as messageOf, errorStatus } from '../lib/errors';
 import { announceUnreadChanged, useVisiblePolling } from '../lib/usePolling';
+import { linkify } from '../lib/linkify';
 import type { Conversation, Message, MessagePage } from '../lib/apiTypes';
 
 const MESSAGE_MAX_LENGTH = 5000;
-const THREAD_POLL_MS = 10_000;
-const INBOX_POLL_MS = 30_000;
+const THREAD_POLL_MS = 3_000;
+const INBOX_POLL_MS = 10_000;
 
 const errorMessage = (e: unknown, fallback: string) => {
   if (errorStatus(e) === 429)
@@ -90,6 +91,8 @@ export default function Messages() {
   const [sendError, setSendError] = useState('');
   const convsRef = useRef(convs);
   convsRef.current = convs;
+  const msgsRef = useRef(msgs);
+  msgsRef.current = msgs;
   const activeRef = useRef(activeId);
   const readThreadRef = useRef<string | null>(null);
   const seenIds = useRef(new Set<string>());
@@ -141,19 +144,39 @@ export default function Messages() {
         setThreadState('loading');
         setThreadError('');
       }
+      // A silent (polling) fetch of a thread already in view only needs what's new: the `after`
+      // cursor keeps the fast 3s poll cheap instead of re-fetching the whole history each time.
+      const cursor = silent ? msgsRef.current[msgsRef.current.length - 1]?.id : undefined;
       try {
-        const d = await apiGet<MessagePage>(`/conversations/${id}/messages`);
+        const d = await apiGet<MessagePage>(
+          cursor
+            ? `/conversations/${id}/messages?after=${encodeURIComponent(cursor)}`
+            : `/conversations/${id}/messages`,
+        );
         if (activeRef.current !== id) return;
         const server: Message[] = [...(d.messages || [])].sort(byTime);
-        const oldest = server[0]?.createdAt || '';
-        const newest = server[server.length - 1]?.createdAt || '';
-        // Keep older pages already loaded, and anything sent locally after this response was produced; the next poll will include it.
-        setMsgs((prev) => [
-          ...prev.filter((m) => oldest && m.createdAt < oldest && !server.some((s) => s.id === m.id)),
-          ...server,
-          ...prev.filter((m) => m.createdAt > newest && !server.some((s) => s.id === m.id)),
-        ]);
-        if (!olderLoaded.current) setTruncated(Boolean(d.truncated));
+        if (cursor) {
+          setMsgs((prev) => {
+            const merged = [...prev.filter((m) => !server.some((s) => s.id === m.id)), ...server].sort(byTime);
+            // theirReadAt: the counterpart may have read an earlier message of ours that this
+            // cursor-limited response otherwise wouldn't include again.
+            if (!d.theirReadAt) return merged;
+            const lastMine = [...merged].reverse().find((m) => m.senderId === user?.id);
+            return lastMine && !lastMine.readAt && lastMine.createdAt <= d.theirReadAt
+              ? merged.map((m) => (m.id === lastMine.id ? { ...m, readAt: d.theirReadAt } : m))
+              : merged;
+          });
+        } else {
+          const oldest = server[0]?.createdAt || '';
+          const newest = server[server.length - 1]?.createdAt || '';
+          // Keep older pages already loaded, and anything sent locally after this response was produced; the next poll will include it.
+          setMsgs((prev) => [
+            ...prev.filter((m) => oldest && m.createdAt < oldest && !server.some((s) => s.id === m.id)),
+            ...server,
+            ...prev.filter((m) => m.createdAt > newest && !server.some((s) => s.id === m.id)),
+          ]);
+          if (!olderLoaded.current) setTruncated(Boolean(d.truncated));
+        }
         setThreadState('ready');
         // A thread opened by deep link right after it was created may be missing from an earlier inbox fetch.
         if (!silent && !convsRef.current.some((c) => c.id === id)) void loadConvsRef.current();
@@ -566,7 +589,7 @@ export default function Messages() {
                             className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
                             data-testid="message-body"
                           >
-                            {m.body}
+                            {linkify(m.body)}
                           </div>
                           {!mine && !!m.safetyFlags?.length && <SafetyNotice flags={m.safetyFlags} />}
                           <div className="text-[11px] opacity-70 mt-1 flex gap-2 justify-end">

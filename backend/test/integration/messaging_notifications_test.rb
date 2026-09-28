@@ -134,6 +134,54 @@ class MessagingNotificationsTest < ActionDispatch::IntegrationTest
     assert_response :not_found, "the anchor must belong to this conversation"
   end
 
+  test "after cursor returns only newer messages and carries the counterpart's read receipt" do
+    employer = create_user("After Employer", "employer")
+    candidate = create_user("After Candidate", "jobseeker")
+    conversation = Conversation.create!(candidate:, employer:)
+    path = "/api/conversations/#{conversation.id}/messages"
+
+    post path, params: { body: "first" }, headers: auth(employer), as: :json
+    first_id = response.parsed_body.dig("message", "id")
+    post path, params: { body: "second" }, headers: auth(employer), as: :json
+
+    get path, params: { after: first_id }, headers: auth(candidate)
+    assert_response :success
+    body = response.parsed_body
+    assert_equal ["second"], body["messages"].pluck("body")
+    assert_equal false, body["truncated"]
+    assert_nil body["theirReadAt"], "the candidate has not read any of the employer's messages yet"
+    assert conversation.messages.find(first_id).reload.read_at, "the after call still marks the thread read"
+
+    get path, params: { after: first_id }, headers: auth(employer)
+    assert response.parsed_body["theirReadAt"].present?, "the sender learns their message was read even without refetching it"
+
+    get path, params: { after: "missing" }, headers: auth(candidate)
+    assert_response :not_found
+    get path, params: { after: [1, 2] }, headers: auth(candidate)
+    assert_response :bad_request
+  end
+
+  test "the message notification link backfill fills in old linkless rows exactly once" do
+    employer = create_user("Backfill Employer", "employer")
+    candidate = create_user("Backfill Candidate", "jobseeker")
+    conversation = Conversation.create!(candidate:, employer:)
+    other_conversation = Conversation.create!(candidate: create_user("Someone Else", "jobseeker"), employer:)
+
+    note = candidate.notifications.create!(kind: "message", title: "New message from Backfill Employer", body: "hi", link: nil, created_at: conversation.updated_at)
+    unrelated = employer.notifications.create!(kind: "message", title: "3 new messages from Nobody Matching", link: nil)
+    already_linked = candidate.notifications.create!(kind: "message", title: "New message from Backfill Employer", link: "/messages?c=#{other_conversation.id}")
+    non_message = candidate.notifications.create!(kind: "booking", title: "Booking update", link: nil)
+
+    fixed = MessageNotificationLinkBackfill.run!
+    assert_equal 1, fixed
+    assert_equal "/messages?c=#{conversation.id}", note.reload.link
+    assert_nil unrelated.reload.link, "no matching conversation for an unrecognised name"
+    assert_equal "/messages?c=#{other_conversation.id}", already_linked.reload.link, "left untouched"
+    assert_nil non_message.reload.link, "only message notifications are touched"
+
+    assert_equal 0, MessageNotificationLinkBackfill.run!, "idempotent: nothing left to fix"
+  end
+
   test "messages to a suspended account are refused and the inbox marks it inactive" do
     employer = create_user("Active Employer", "employer")
     candidate = create_user("Suspended Candidate", "jobseeker")

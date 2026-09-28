@@ -131,6 +131,42 @@ test('book talent preselects the act from ?act and validates before sending', as
   expect(failures).toEqual([]);
 });
 
+test('acts sharing a name are told apart by owner, and each card shows a member count', async ({ page }) => {
+  const failures = await signIn(page, 'employer', {
+    '/api/acts': {
+      acts: [
+        {
+          id: 'act-1',
+          name: 'The Session',
+          status: 'active',
+          city: 'Delhi',
+          ownerName: 'Riya',
+          members: [{ id: 'm1' }, { id: 'm2' }],
+        },
+        {
+          id: 'act-2',
+          name: 'The Session',
+          status: 'active',
+          city: 'Pune',
+          ownerName: 'Kabir',
+          members: [{ id: 'm1' }],
+        },
+        { id: 'act-3', name: 'Unique Ensemble', status: 'active', city: 'Goa', ownerName: 'Zara', members: [] },
+      ],
+    },
+  });
+  await page.goto('/employer/book-talent');
+  const names = page.getByTestId('act-name');
+  await expect(names).toHaveCount(3);
+  await expect(names.filter({ hasText: 'Riya' })).toHaveText('The Session · Riya');
+  await expect(names.filter({ hasText: 'Kabir' })).toHaveText('The Session · Kabir');
+  await expect(names.filter({ hasText: 'Unique Ensemble' })).toHaveText('Unique Ensemble');
+  await expect(page.getByText('2 members')).toBeVisible();
+  await expect(page.getByText('1 member', { exact: true })).toBeVisible();
+  await expect(page.getByText('By Zara')).toBeVisible();
+  expect(failures).toEqual([]);
+});
+
 test('an unavailable ?act explains itself instead of doing nothing', async ({ page }) => {
   const failures = await signIn(page, 'employer', {
     '/api/acts': { acts: [] },

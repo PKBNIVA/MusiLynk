@@ -28,6 +28,11 @@ Rails.application.configure do
       cron: "43 4 * * *",
       class: "UploadSweepJob",
       description: "Delete stale pending uploads, unused or ownerless uploads, and orphaned bucket objects"
+    },
+    ai_batch_submit: {
+      cron: "*/30 * * * *",
+      class: "AiBatchSubmitJob",
+      description: "Submit queued portfolio item classifications as one Anthropic Message Batch, and ingest finished batches"
     }
   }
 end

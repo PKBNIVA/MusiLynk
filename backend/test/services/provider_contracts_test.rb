@@ -14,7 +14,7 @@ class ProviderContractsTest < ActiveSupport::TestCase
         configure.call(request)
         assert_equal "test-api-key", request.headers.fetch("api-key")
         message = JSON.parse(request.body)
-        assert_equal [{ "email" => "recipient@example.invalid" }], message.fetch("to")
+        assert_equal [{ "email" => "recipient@example.com" }], message.fetch("to")
         assert_equal "sender@example.invalid", message.dig("sender", "email")
         assert_includes message.fetch("textContent"), "https://verse.example/reset-password?token=test"
         assert_not_includes request.body, "test-api-key"
@@ -22,7 +22,7 @@ class ProviderContractsTest < ActiveSupport::TestCase
       end
 
       Faraday.stub(:post, transport) do
-        result = EmailDelivery.call(to: "recipient@example.invalid", template: "reset_password",
+        result = EmailDelivery.call(to: "recipient@example.com", template: "reset_password",
           data: { link: "https://verse.example/reset-password?token=test" })
         assert_equal({ delivered: true, status: 201, provider: "brevo" }, result)
       end
@@ -32,7 +32,7 @@ class ProviderContractsTest < ActiveSupport::TestCase
   test "Brevo rejection is reported as unsuccessful delivery" do
     with_env("BREVO_API_KEY" => "test-api-key", "BREVO_SENDER_EMAIL" => "sender@example.invalid") do
       Faraday.stub(:post, response_transport(403)) do
-        result = EmailDelivery.call(to: "recipient@example.invalid", template: "verify_email",
+        result = EmailDelivery.call(to: "recipient@example.com", template: "verify_email",
           data: { link: "https://verse.example/verify-email?token=test" })
         assert_equal false, result.fetch(:delivered)
         assert_equal 403, result.fetch(:status)
@@ -43,19 +43,40 @@ class ProviderContractsTest < ActiveSupport::TestCase
   test "an authentication rejection logs the provider's reason; other rejections never log the body" do
     with_env("BREVO_API_KEY" => "test-api-key", "BREVO_SENDER_EMAIL" => "sender@example.invalid") do
       unauthorized = '{"code":"unauthorized","message":"We have detected you are using an unrecognised IP address 203.0.113.9."}'
-      echoed = '{"code":"invalid_parameter","message":"Your code is 482913 for recipient@example.invalid"}'
+      echoed = '{"code":"invalid_parameter","message":"Your code is 482913 for recipient@example.com"}'
       logs = capture_logs do
         Faraday.stub(:post, ->(_url, &configure) { configure.call(fake_request); Response.new(401, unauthorized) }) do
-          EmailDelivery.call(to: "recipient@example.invalid", template: "sign_in_code", data: { code: "482913" })
+          EmailDelivery.call(to: "recipient@example.com", template: "sign_in_code", data: { code: "482913" })
         end
         Faraday.stub(:post, ->(_url, &configure) { configure.call(fake_request); Response.new(400, echoed) }) do
-          EmailDelivery.call(to: "recipient@example.invalid", template: "sign_in_code", data: { code: "482913" })
+          EmailDelivery.call(to: "recipient@example.com", template: "sign_in_code", data: { code: "482913" })
         end
       end
       assert_includes logs, '"status":401,"reason":"unauthorized: We have detected you are using an unrecognised IP address 203.0.113.9."'
       assert_includes logs, '"status":400}'
       assert_not_includes logs, "482913"
       assert_not_includes logs, "test-api-key"
+    end
+  end
+
+  test "real providers are never asked to send to a reserved domain; the local webhook still is" do
+    assert EmailDelivery.reserved_address?("admin@verse.local")
+    assert EmailDelivery.reserved_address?("qa+demo-0001@example.invalid")
+    assert EmailDelivery.reserved_address?("Someone@Host.TEST.")
+    assert_not EmailDelivery.reserved_address?("owner@notify.alienbrains.in")
+    assert_not EmailDelivery.reserved_address?("person@example.com"), "example.com is a real, routable test domain in our suites"
+    assert_not EmailDelivery.reserved_address?("not-an-email")
+
+    with_env("BREVO_API_KEY" => "test-api-key", "BREVO_SENDER_EMAIL" => "sender@example.invalid") do
+      Faraday.stub(:post, ->(*) { flunk "Brevo must not be called for a reserved address" }) do
+        result = EmailDelivery.call(to: "admin@verse.local", template: "sign_in_code", data: { code: "123456" })
+        assert_equal({ delivered: false, reason: "Reserved address" }, result)
+      end
+    end
+    with_env("BREVO_API_KEY" => nil, "RESEND_API_KEY" => nil, "EMAIL_DELIVERY_WEBHOOK" => "https://hook.example.com/send") do
+      Faraday.stub(:post, ->(_url, &configure) { configure.call(fake_request); Response.new(202, "{}") }) do
+        assert EmailDelivery.call(to: "qa@example.invalid", template: "sign_in_code", data: { code: "123456" }).fetch(:delivered)
+      end
     end
   end
 

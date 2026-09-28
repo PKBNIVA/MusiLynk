@@ -31,6 +31,7 @@ class AuthController < ApplicationController
   SECOND_FACTOR_UNAVAILABLE_MESSAGE = "Admin sign-in needs an emailed code, but email delivery is not configured on the server. Configure an email provider to sign in.".freeze
   SECOND_FACTOR_SKIPPED_WARNING = "Admin 2-step sign-in is off because email delivery is not configured. Add an email provider (BREVO_API_KEY), then set ADMIN_SECOND_FACTOR=required.".freeze
   SECOND_FACTOR_SUPPRESSED_WARNING = "Admin 2-step sign-in is off for this admin because email to their address is suppressed (bounced or reported as spam). Fix the address, then lift the suppression.".freeze
+  SECOND_FACTOR_ADDRESS_WARNING = "Admin 2-step sign-in is off for this admin because their email address can't receive mail (a reserved domain such as .local or .invalid). Change the admin's email to a real mailbox.".freeze
   SECOND_FACTOR_DISABLED_WARNING = "Admin 2-step sign-in is turned off (ADMIN_SECOND_FACTOR=off). Remove that setting once the emergency is over.".freeze
 
   # ADMIN_SECOND_FACTOR selects how an admin password sign-in is treated:
@@ -42,7 +43,8 @@ class AuthController < ApplicationController
   #     step fails closed (503 SECOND_FACTOR_UNAVAILABLE).
   #   "off": emergency disable only; every such sign-in is audited.
   # Outside production the on-screen debugCode counts as delivery. With an email
-  # address, a suppressed (bounced or complained) address counts as undeliverable.
+  # address, a suppressed (bounced or complained) address or one on a reserved domain
+  # (admin@verse.local) counts as undeliverable, so auto mode never sends the code nowhere.
   # Returns :enforced, :unavailable (required but undeliverable), :skipped or :off.
   def self.admin_second_factor_state(email = nil)
     mode = ENV.fetch("ADMIN_SECOND_FACTOR", "auto").strip.downcase
@@ -53,7 +55,13 @@ class AuthController < ApplicationController
 
   def self.admin_code_deliverable?(email)
     return !Rails.env.production? unless EmailDelivery.configured?
-    email.blank? || !EmailSuppression.blocks_all?(email)
+    email.blank? || (!EmailDelivery.reserved_address?(email) && !EmailSuppression.blocks_all?(email))
+  end
+
+  # Which warning explains a :skipped state for this admin address.
+  def self.admin_second_factor_warning(email)
+    return SECOND_FACTOR_SKIPPED_WARNING unless EmailDelivery.configured?
+    EmailDelivery.reserved_address?(email) ? SECOND_FACTOR_ADDRESS_WARNING : SECOND_FACTOR_SUPPRESSED_WARNING
   end
 
   def register
@@ -93,7 +101,10 @@ class AuthController < ApplicationController
       return render_error(SECOND_FACTOR_UNAVAILABLE_MESSAGE, :service_unavailable, "SECOND_FACTOR_UNAVAILABLE")
     end
     if second_factor == :skipped
-      reason = EmailDelivery.configured? ? "email_suppressed" : "email_delivery_not_configured"
+      reason = if !EmailDelivery.configured? then "email_delivery_not_configured"
+      elsif EmailDelivery.reserved_address?(user.email) then "email_address_undeliverable"
+      else "email_suppressed"
+      end
       Rails.logger.warn({ event: "admin_second_factor_skipped", userId: user.id, reason: }.to_json)
       audit!("auth.admin_second_factor_skipped", user, { reason:, ip: request.remote_ip })
     end

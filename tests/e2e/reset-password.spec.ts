@@ -21,14 +21,30 @@ async function mockApi(page: Page, opts: { valid: boolean; role?: string }) {
       }
       return json(200, {
         ok: true,
-        user: { id: 'qa-reset', name: 'Reset Person', email: 'reset@example.invalid', role: opts.role ?? 'jobseeker', status: 'active', profileComplete: true },
+        user: {
+          id: 'qa-reset',
+          name: 'Reset Person',
+          email: 'reset@example.invalid',
+          role: opts.role ?? 'jobseeker',
+          status: 'active',
+          profileComplete: true,
+        },
         accessToken: 'qa-reset-token',
       });
     }
     if (pathname.endsWith('/auth/forgot-password')) return json(200, { ok: true, message: 'sent' });
     if (pathname.endsWith('/me')) {
       return request.headers().authorization
-        ? json(200, { user: { id: 'qa-reset', name: 'Reset Person', email: 'reset@example.invalid', role: opts.role ?? 'jobseeker', status: 'active', profileComplete: true } })
+        ? json(200, {
+            user: {
+              id: 'qa-reset',
+              name: 'Reset Person',
+              email: 'reset@example.invalid',
+              role: opts.role ?? 'jobseeker',
+              status: 'active',
+              profileComplete: true,
+            },
+          })
         : json(401, { error: 'Authentication required' });
     }
     return json(200, {});
@@ -38,7 +54,9 @@ async function mockApi(page: Page, opts: { valid: boolean; role?: string }) {
 test('an expired or already-used link says so immediately and offers to send a new one', async ({ page }) => {
   await mockApi(page, { valid: false });
   await page.goto('/reset-password?token=stale-token');
-  await expect(page.getByRole('alert')).toHaveText('This link has expired or was already used. Request a new one below.');
+  await expect(page.getByRole('alert')).toHaveText(
+    'This link has expired or was already used. Request a new one below.',
+  );
   await page.getByLabel('Email').fill('someone@example.invalid');
   await page.getByRole('button', { name: 'Send a new link' }).click();
   await expect(page.getByText('If an account exists, a new reset link has been sent.')).toBeVisible();
@@ -48,7 +66,9 @@ test('an expired or already-used link says so immediately and offers to send a n
 test('a link with no token at all is treated as invalid without a network round trip', async ({ page }) => {
   await mockApi(page, { valid: false });
   await page.goto('/reset-password');
-  await expect(page.getByRole('alert')).toHaveText('This link has expired or was already used. Request a new one below.');
+  await expect(page.getByRole('alert')).toHaveText(
+    'This link has expired or was already used. Request a new one below.',
+  );
 });
 
 test('a valid link shows the password form, gates it on strength, and signs in on success', async ({ page }) => {
@@ -71,10 +91,21 @@ test('a valid link shows the password form, gates it on strength, and signs in o
 test('a weak-password rejection from the server is shown inline', async ({ page }) => {
   // The client checklist normally blocks this, but the server rule is authoritative and this
   // path shows what happens if a client-only bug ever let a bad password through.
-  await page.route('**/api/auth/reset-password/check*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valid: true, role: 'jobseeker' }) }));
+  await page.route('**/api/auth/reset-password/check*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ valid: true, role: 'jobseeker' }),
+    }),
+  );
   await page.route('**/api/auth/reset-password', (route) => {
-    if (route.request().method() !== 'POST') return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
-    return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'Password is too common. Choose something more unusual.', code: 'PASSWORD_WEAK' }) });
+    if (route.request().method() !== 'POST')
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    return route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Password is too common. Choose something more unusual.', code: 'PASSWORD_WEAK' }),
+    });
   });
   await page.goto('/reset-password?token=good-token');
   await page.getByLabel('New password').fill('LongEnough1234');

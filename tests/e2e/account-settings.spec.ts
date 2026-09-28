@@ -60,7 +60,12 @@ test('changing the email requests a code, then confirms it and signs out other s
       requested = request.postDataJSON();
       return {
         status: 202,
-        body: { changeToken: 'change-token-abc', expiresIn: 600, message: 'We emailed a 6-digit code.', debugCode: '042917' },
+        body: {
+          changeToken: 'change-token-abc',
+          expiresIn: 600,
+          message: 'We emailed a 6-digit code.',
+          debugCode: '042917',
+        },
       };
     }
     if (path === '/api/account/email/confirm') {
@@ -103,7 +108,9 @@ test('an invalid email-change code is shown inline and the field is cleared', as
 
 test('the password checklist gates the button and a wrong current password is shown inline', async ({ page }) => {
   await signIn(page, (_request, path) =>
-    path === '/api/account/password' ? { status: 403, body: { error: 'Your current password is incorrect.', code: 'PASSWORD_INCORRECT' } } : undefined,
+    path === '/api/account/password'
+      ? { status: 403, body: { error: 'Your current password is incorrect.', code: 'PASSWORD_INCORRECT' } }
+      : undefined,
   );
   await page.goto('/jobseeker/settings');
   const updateButton = page.getByRole('button', { name: 'Update password' });
@@ -117,7 +124,9 @@ test('the password checklist gates the button and a wrong current password is sh
 });
 
 test('a strong password change succeeds', async ({ page }) => {
-  const errors = await signIn(page, (_request, path) => (path === '/api/account/password' ? { body: { ok: true } } : undefined));
+  const errors = await signIn(page, (_request, path) =>
+    path === '/api/account/password' ? { body: { ok: true } } : undefined,
+  );
   await page.goto('/jobseeker/settings');
   await page.getByLabel('Current password').fill('CurrentPass123!');
   await page.getByLabel('New password').fill('BrandNewPass456!');

@@ -11,6 +11,7 @@ import { ReportDialog } from '../components/ReportDialog';
 import { useConfirm } from '../components/booking/BookingDialogs';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
+import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { errorCode, errorMessage as messageOf, errorStatus } from '../lib/errors';
 import { announceUnreadChanged, useVisiblePolling } from '../lib/usePolling';
 import { linkify } from '../lib/linkify';
@@ -638,6 +639,16 @@ export default function Messages() {
               )}
               {activeId && threadState !== 'missing' && !closedNotice && (
                 <form onSubmit={send} className="p-3 md:p-4 border-t border-white/10">
+                  {msgs.length > 0 && (
+                    <div className="mb-2 flex justify-end">
+                      <AiSuggestButton
+                        task="message_reply"
+                        label="Suggest a reply"
+                        getContext={() => ({ conversationId: activeId || undefined })}
+                        onAccept={(suggestion) => setText(suggestion)}
+                      />
+                    </div>
+                  )}
                   <div className="flex gap-2 items-end">
                     <textarea
                       value={text}

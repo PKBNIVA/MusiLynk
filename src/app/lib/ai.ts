@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiGet, apiPost, ApiError } from './api';
+import { openRazorpayCheckout, type RazorpayCheckoutConfig } from './razorpayCheckout';
 
 /**
  * Client for the AI Assist layer (AiController on the backend). Every suggestion is exactly
@@ -73,9 +74,10 @@ export interface AiUpgradeOptions {
  * Thrown by `suggestAi` in place of a plain `ApiError` when the server refused the call for a
  * credits/spend reason (never for a validation or access error, which stay plain `ApiError`s).
  * `AI_CREDITS_EXHAUSTED` is the person's own balance; `AI_FREE_PAUSED` / `AI_HARD_PAUSED` are the
- * spend guard. `balance`/`resetsAt` come straight off the 402 body when the server sent them;
- * `upgradeOptions` is filled in from GET /api/ai/pricing so AiPaywallDialog always has an offer
- * to show even though the generic API client drops extra error-body fields.
+ * spend guard. The generic API client drops the extra fields a 402 body carries (`balance`,
+ * `resetsAt`), so `balance`/`resetsAt` are refetched from GET /api/ai/usage and `upgradeOptions`
+ * from GET /api/ai/pricing, so AiPaywallDialog always has real numbers and an offer to show. Both
+ * refetches are best-effort — a failure there still surfaces the paywall, just without them.
  */
 export class AiPaywallError extends Error {
   code: 'AI_CREDITS_EXHAUSTED' | 'AI_FREE_PAUSED' | 'AI_HARD_PAUSED';
@@ -172,10 +174,20 @@ export function suggestAi(
     { signal: options?.signal },
   ).catch(async (error: unknown) => {
     if (error instanceof ApiError && error.status === 402 && error.code && PAYWALL_CODES.has(error.code)) {
-      const upgradeOptions = await loadAiPricing()
-        .then((pricing) => ({ aiPlus: pricing.aiPlus, topups: pricing.topups }))
-        .catch(() => undefined);
-      throw new AiPaywallError(error.message, error.code as AiPaywallError['code'], { upgradeOptions });
+      // The generic API client drops extra 402-body fields (balance/resetsAt), so they're
+      // refetched from GET /api/ai/usage — the same numbers, from the account's own ledger —
+      // alongside the public pricing catalogue for the upgrade offer.
+      const [usage, upgradeOptions] = await Promise.all([
+        loadAiUsage().catch(() => undefined),
+        loadAiPricing()
+          .then((pricing) => ({ aiPlus: pricing.aiPlus, topups: pricing.topups }))
+          .catch(() => undefined),
+      ]);
+      throw new AiPaywallError(error.message, error.code as AiPaywallError['code'], {
+        balance: usage?.balance,
+        resetsAt: usage?.resetsAt,
+        upgradeOptions,
+      });
     }
     throw error;
   });
@@ -210,7 +222,8 @@ export function useAiUsage(): { usage: AiUsage | null; reload: () => void } {
     let live = true;
     loadAiUsage()
       .then((value) => {
-        if (live) setUsage(value);
+        // Guards against an unmocked/misbehaving endpoint answering with an incomplete body.
+        if (live && value && typeof value.balance === 'number' && Array.isArray(value.recent)) setUsage(value);
       })
       .catch(() => undefined);
     return () => {
@@ -231,4 +244,28 @@ export function autocompleteAi(
 ): Promise<AutocompleteResponse> {
   const params = new URLSearchParams({ field, q: query });
   return apiGet<AutocompleteResponse>(`/ai/autocomplete?${params.toString()}`, { signal });
+}
+
+type PurchaseCheckout = { checkout: RazorpayCheckoutConfig | { mode: 'mock' } };
+
+/**
+ * Buys an AI credits top-up pack via Ai::BillingController, opening Razorpay checkout when the
+ * server hands one back. Answers `503 AI_BILLING_DISABLED` until AI_BILLING_ENABLED is set, so
+ * callers should treat a thrown ApiError with that code as "not offered yet" rather than a bug.
+ */
+export async function purchaseAiTopup(pack: string): Promise<void> {
+  const d = await apiPost<PurchaseCheckout>('/ai/topups', { pack });
+  if (d.checkout.mode === 'razorpay') {
+    const result = await openRazorpayCheckout(d.checkout, { description: 'Verse AI credits top-up' });
+    if (result.status !== 'success') throw new Error(result.lastError || 'Checkout was closed.');
+  }
+}
+
+/** Subscribes the signed-in account to Verse AI Plus (independent of the hiring/talent plan). */
+export async function subscribeAiPlus(): Promise<void> {
+  const d = await apiPost<PurchaseCheckout>('/ai/plus/subscribe', {});
+  if (d.checkout.mode === 'razorpay') {
+    const result = await openRazorpayCheckout(d.checkout, { description: 'Verse AI Plus' });
+    if (result.status !== 'success') throw new Error(result.lastError || 'Checkout was closed.');
+  }
 }

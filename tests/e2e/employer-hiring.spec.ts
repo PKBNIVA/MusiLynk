@@ -110,8 +110,9 @@ test('a saved draft can be reopened from the dashboard, edited and submitted for
 
   await expect(page).toHaveURL(/\/employer\/post-job\?edit=job-draft$/);
   await expect(page.getByLabel('Title')).toHaveValue('Session guitarist');
-  await expect(page.getByLabel('Skills')).toHaveValue('Guitar');
+  await expect(page.getByLabel('Selected skills')).toContainText('Guitar');
   await page.getByLabel('Location').fill('Mumbai');
+  await page.getByLabel('Location').press('Enter');
   // Editing opens the wizard with every step reachable; jump straight to Details.
   await page
     .getByRole('button', { name: /Details/ })
@@ -147,12 +148,13 @@ test('the post wizard checks only the current step before moving on', async ({ p
   await page.getByRole('button', { name: 'Next: Details' }).click();
   await expect(page.getByLabel('Location')).toBeFocused();
   await page.getByLabel('Location').fill('Pune');
+  await page.getByLabel('Location').press('Enter');
   await page.getByRole('button', { name: 'Next: Details' }).click();
   await expect(page.getByRole('heading', { name: 'Details', level: 2 })).toBeFocused();
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
   await expect(page.getByLabel(/^Description/)).toBeFocused();
   await page.getByRole('button', { name: 'Back' }).click();
-  await expect(page.getByLabel('Location')).toHaveValue('Pune');
+  await expect(page.getByLabel('Selected location (required)')).toContainText('Pune');
   expect(calls.filter((c) => c.method === 'POST' && c.path === '/jobs')).toHaveLength(0);
 });
 
@@ -167,6 +169,7 @@ test('hitting the plan limit keeps the opportunity as a draft and links to plans
   await page.goto('/employer/post-job');
   await page.getByLabel('Title').fill('Tour keyboardist');
   await page.getByLabel('Location').fill('Pune');
+  await page.getByLabel('Location').press('Enter');
   await page.getByRole('button', { name: 'Next: Details' }).click();
   await page.getByLabel(/^Description/).fill(description);
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();

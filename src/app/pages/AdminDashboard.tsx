@@ -16,6 +16,7 @@ import {
   Settings2,
   History,
   Database,
+  Sparkles,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -59,6 +60,7 @@ const CommerceTab = lazy(() => import('./admin/CommerceTab'));
 const OperationsTab = lazy(() => import('./admin/OperationsTab'));
 const DemoDataTab = lazy(() => import('./admin/DemoDataTab'));
 const AuditTab = lazy(() => import('./admin/AuditTab'));
+const AdminAiTab = lazy(() => import('./admin/AdminAiTab'));
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth(),
@@ -298,6 +300,10 @@ export default function AdminDashboard() {
               <Database aria-hidden="true" size={14} />
               Demo data
             </TabsTrigger>
+            <TabsTrigger value="ai" className="flex-none gap-1.5">
+              <Sparkles aria-hidden="true" size={14} />
+              AI
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="queue" className="space-y-3 mt-5">
@@ -409,6 +415,12 @@ export default function AdminDashboard() {
           <TabsContent value="demo" className="mt-5">
             <Suspense fallback={null}>
               <DemoDataTab />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="ai" className="mt-5">
+            <Suspense fallback={null}>
+              <AdminAiTab />
             </Suspense>
           </TabsContent>
 

@@ -23,6 +23,11 @@ export interface FieldProps {
   hint?: ReactNode;
   /** A short explanation behind an info button next to the label (kept out of the label's name). */
   help?: ReactNode;
+  /**
+   * Extra controls shown next to the label — e.g. an "Improve with AI" button — rendered as a
+   * sibling of the `<label>` element (never inside it), so they never join its accessible name.
+   */
+  labelExtra?: ReactNode;
   /** The field's error message; shown under the control with role=alert and sets aria-invalid. */
   error?: string;
   /** Current length, shown as "count / maxLength" when maxLength is set. */
@@ -62,6 +67,7 @@ export function Field({
   maxLength,
   className,
   labelClassName,
+  labelExtra,
   children,
 }: FieldProps) {
   const hintId = hint ? fieldHintId(id) : undefined;
@@ -103,10 +109,11 @@ export function Field({
 
   return (
     <div className={cn('space-y-1.5', className)} data-slot="field">
-      {help ? (
-        <div className="flex items-center gap-1">
+      {help || labelExtra ? (
+        <div className="flex flex-wrap items-center gap-2">
           {labelEl}
-          <FieldHelp topic={typeof label === 'string' ? label : 'this field'}>{help}</FieldHelp>
+          {help && <FieldHelp topic={typeof label === 'string' ? label : 'this field'}>{help}</FieldHelp>}
+          {labelExtra}
         </div>
       ) : (
         labelEl

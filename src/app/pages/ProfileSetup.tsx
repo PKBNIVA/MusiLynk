@@ -31,6 +31,9 @@ import type { AccountUser } from '../lib/apiTypes';
 import { Field, FormError } from '../components/form/Field';
 import { PHONE_MESSAGE, URL_MESSAGE, isHttpUrl, isPhone, useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { AppSelect } from '../components/ui/app-select';
+import { AiSuggestButton } from '../components/ai/AiSuggestButton';
+import { AutocompleteInput } from '../components/ai/AutocompleteInput';
+import { AiCreditsBadge } from '../components/ai/AiCreditsBadge';
 // List fields arrive as arrays and are edited as text: comma-separated, credits one per line.
 type ListField =
   'skills' | 'genres' | 'instruments' | 'languages' | 'credits' | 'openTo' | 'roles' | 'gear' | 'software';
@@ -279,6 +282,17 @@ export default function ProfileSetup() {
       />
     </Field>
   );
+  // Shared context for profile_headline / profile_bio: only the fields the task allow-lists.
+  const profileAiContext = () => ({
+    roles: list(f.roles),
+    skills: list(f.skills),
+    genres: list(f.genres),
+    city: f.location || '',
+    credits: String(f.credits || '')
+      .split('\n')
+      .map((x) => x.trim())
+      .filter(Boolean),
+  });
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -291,7 +305,8 @@ export default function ProfileSetup() {
               Credits, work samples and role-specific context matter more than generic profile completion.
             </p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            <AiCreditsBadge />
             {f.emailVerified ? (
               <Badge className="bg-sky-500/15 text-sky-300">
                 <MailCheck size={14} className="mr-1" />
@@ -357,14 +372,44 @@ export default function ProfileSetup() {
                 description: 'The first things people read on your profile.',
                 content: (
                   <div className="grid md:grid-cols-2 gap-5">
-                    {textField('headline', 'Professional headline', {
-                      placeholder: 'Playback singer · Vocal producer · Hindi / Punjabi',
-                      help: 'One line that says what you do. Roles and styles work better than adjectives, e.g. “Session bassist · Funk & pop”.',
-                    })}
-                    {textField('location', 'Base location', {
-                      placeholder: 'Mumbai, Maharashtra',
-                      autoComplete: 'address-level2',
-                    })}
+                    <Field
+                      id={fieldId('headline')}
+                      label="Professional headline"
+                      labelExtra={
+                        <AiSuggestButton
+                          task="profile_headline"
+                          label="Write with AI"
+                          getContext={profileAiContext}
+                          onAccept={(text) => set('headline', text)}
+                        />
+                      }
+                      error={form.errors.headline}
+                      count={
+                        String(f.headline || '').length > LIMITS.headline * 0.8
+                          ? String(f.headline || '').length
+                          : undefined
+                      }
+                      maxLength={String(f.headline || '').length > LIMITS.headline * 0.8 ? LIMITS.headline : undefined}
+                    >
+                      <Input
+                        maxLength={LIMITS.headline}
+                        value={String(f.headline ?? '')}
+                        onChange={(e) => set('headline', e.target.value)}
+                        placeholder="Playback singer · Vocal producer · Hindi / Punjabi"
+                        className="bg-black/20 border-white/15"
+                      />
+                    </Field>
+                    <div>
+                      <AutocompleteInput
+                        id={fieldId('location')}
+                        field="cities"
+                        label="Base location"
+                        multiple={false}
+                        values={f.location ? [String(f.location)] : []}
+                        onChange={(vs) => set('location', vs[0] || '')}
+                        placeholder="Mumbai, Maharashtra"
+                      />
+                    </div>
                     {textField('experience', 'Experience', { placeholder: '5 years / 30+ sessions / emerging' })}
                     {textField('availability', 'Availability', {
                       placeholder: 'Available weekends / touring Oct–Dec',
@@ -373,6 +418,25 @@ export default function ProfileSetup() {
                     <Field
                       id={fieldId('bio')}
                       label="Bio"
+                      labelExtra={
+                        <>
+                          <AiSuggestButton
+                            task="profile_bio"
+                            label="Write with AI"
+                            getContext={profileAiContext}
+                            onAccept={(text) => set('bio', text)}
+                          />
+                          {String(f.bio || '').trim() && (
+                            <AiSuggestButton
+                              task="improve_text"
+                              label="Improve"
+                              value={String(f.bio || '')}
+                              getContext={() => ({ tone: 'clearer', text: String(f.bio || '') })}
+                              onAccept={(text) => set('bio', text)}
+                            />
+                          )}
+                        </>
+                      }
                       className="md:col-span-2"
                       error={form.errors.bio}
                       count={String(f.bio || '').length}
@@ -397,12 +461,38 @@ export default function ProfileSetup() {
                 content: (
                   <div className="space-y-5">
                     <div className="grid md:grid-cols-2 gap-5">
-                      {textField('skills', 'Skills', { placeholder: 'Mixing, toplining, vocal production' })}
-                      {textField('genres', 'Genres', { placeholder: 'Bollywood, Indie Pop, Hip-Hop' })}
-                      {textField('instruments', 'Instruments / voice', { placeholder: 'Vocals, guitar, keys' })}
-                      {textField('roles', 'Professional roles', {
-                        placeholder: 'Session Bassist, Musical Director, FOH Engineer',
-                      })}
+                      <AutocompleteInput
+                        id={fieldId('skills')}
+                        field="skills"
+                        label="Skills"
+                        values={list(f.skills)}
+                        onChange={(vs) => set('skills', vs.join(', '))}
+                        placeholder="Mixing, toplining, vocal production"
+                      />
+                      <AutocompleteInput
+                        id={fieldId('genres')}
+                        field="genres"
+                        label="Genres"
+                        values={list(f.genres)}
+                        onChange={(vs) => set('genres', vs.join(', '))}
+                        placeholder="Bollywood, Indie Pop, Hip-Hop"
+                      />
+                      <AutocompleteInput
+                        id={fieldId('instruments')}
+                        field="instruments"
+                        label="Instruments / voice"
+                        values={list(f.instruments)}
+                        onChange={(vs) => set('instruments', vs.join(', '))}
+                        placeholder="Vocals, guitar, keys"
+                      />
+                      <AutocompleteInput
+                        id={fieldId('roles')}
+                        field="roles"
+                        label="Professional roles"
+                        values={list(f.roles)}
+                        onChange={(vs) => set('roles', vs.join(', '))}
+                        placeholder="Session Bassist, Musical Director, FOH Engineer"
+                      />
                       {textField('openTo', 'Open to', {
                         placeholder: 'Sessions, touring, full-time, sync, collaborations',
                         className: 'md:col-span-2',

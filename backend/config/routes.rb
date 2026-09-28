@@ -118,6 +118,9 @@ Rails.application.routes.draw do
     resources :reviews, only: %i[index create]
     resources :resources, only: :index
     get "taxonomy", to: "catalog#taxonomy"
+    get "ai/status", to: "ai#status"
+    post "ai/suggest", to: "ai#suggest"
+    get "ai/autocomplete", to: "ai#autocomplete"
     get "dashboard", to: "dashboard#show"
     get "search", to: "search#index"
     get "search/status", to: "search#status"

@@ -33,6 +33,11 @@ module Search
     # Genre names the portfolio classifier and rules recognise.
     def genres = data[:genres]
 
+    # Flat value lists for GET /api/ai/autocomplete (AutocompleteTaxonomy).
+    def autocomplete_skills = data[:autocomplete_skills]
+    def autocomplete_genres = data[:autocomplete_genres]
+    def autocomplete_cities = data[:autocomplete_cities]
+
     def as_json
       { functionAreas: function_areas, legacyFunctionAreas: legacy_function_areas,
         talentRoles: talent_roles.map { |key, role| { key:, label: role[:label] } } }
@@ -48,7 +53,10 @@ module Search
           [key, { label: role.fetch("label"), terms: role.fetch("terms").map { _1.to_s.downcase }.freeze }.freeze]
         end.freeze
         { function_areas: functions, legacy:, lookup: lookup.freeze, talent_roles: roles, genres: raw.fetch("genres", []).map(&:to_s).freeze,
-          role_lookup: roles.transform_keys(&:downcase).freeze }.freeze
+          role_lookup: roles.transform_keys(&:downcase).freeze,
+          autocomplete_skills: raw.fetch("autocomplete_skills", []).freeze,
+          autocomplete_genres: raw.fetch("autocomplete_genres", []).freeze,
+          autocomplete_cities: raw.fetch("autocomplete_cities", []).freeze }.freeze
       end
     end
   end

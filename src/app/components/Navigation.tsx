@@ -52,6 +52,7 @@ import { SkipLink } from './SkipLink';
 import type { UnreadCounts } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
 import { ActingAsChip, IdentitySwitcher } from './showcase/IdentitySwitcher';
+import { FEATURE_RESUMES, FEATURE_STAGE } from '../lib/features';
 import { usePendingSuggestions } from './showcase/usePendingSuggestions';
 
 const UNREAD_POLL_MS = 10_000;
@@ -111,7 +112,9 @@ export function Navigation() {
             { path: `${baseUrl}/applications`, icon: Briefcase, label: 'Applications' },
             { path: `${baseUrl}/library`, icon: Library, label: 'My work' },
             { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Portfolios' },
-            { path: `${baseUrl}/resumes`, icon: ScrollText, label: 'Career record & resumes' },
+            ...(FEATURE_RESUMES
+              ? [{ path: `${baseUrl}/resumes`, icon: ScrollText, label: 'Career record & resumes' }]
+              : []),
             { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
             { path: `${baseUrl}/resources`, icon: BookOpen, label: 'Resources' },
           ],
@@ -212,17 +215,19 @@ export function Navigation() {
                 Overview
               </Link>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className={location.pathname.startsWith('/stage') ? 'bg-white/10 text-white' : 'text-slate-300'}
-            >
-              <Link to="/stage">
-                <Radio size={16} className="mr-2" aria-hidden="true" />
-                Stage
-              </Link>
-            </Button>
+            {FEATURE_STAGE && (
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className={location.pathname.startsWith('/stage') ? 'bg-white/10 text-white' : 'text-slate-300'}
+              >
+                <Link to="/stage">
+                  <Radio size={16} className="mr-2" aria-hidden="true" />
+                  Stage
+                </Link>
+              </Button>
+            )}
             {groups.map((group) => (
               <DropdownMenu key={group.label}>
                 <DropdownMenuTrigger asChild>
@@ -411,12 +416,14 @@ export function Navigation() {
                     <DropdownMenuSeparator />
                   </div>
                 ))}
-                <DropdownMenuItem asChild>
-                  <Link to="/stage">
-                    <Radio className="mr-2 h-4 w-4" />
-                    Stage
-                  </Link>
-                </DropdownMenuItem>
+                {FEATURE_STAGE && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/stage">
+                      <Radio className="mr-2 h-4 w-4" />
+                      Stage
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link to={`${baseUrl}/messages`}>
                     <MessageSquare className="mr-2 h-4 w-4" />

@@ -6,6 +6,7 @@ import { FieldHelp } from '../help/FieldHelp';
 import { PortfolioPreview } from './PortfolioPreview';
 import { apiGet } from '../../lib/api';
 import type { Portfolio, Resume } from '../../lib/showcase';
+import { FEATURE_RESUMES } from '../../lib/features';
 
 export interface Materials {
   portfolioId?: string;
@@ -44,9 +45,11 @@ export function ApplyMaterials({
       apiGet<{ portfolios?: Portfolio[] }>('/portfolios')
         .then((d) => (d.portfolios || []).filter((p) => p.status !== 'hidden'))
         .catch(() => [] as Portfolio[]),
-      apiGet<{ resumes?: Resume[] }>('/resumes')
-        .then((d) => d.resumes || [])
-        .catch(() => [] as Resume[]),
+      FEATURE_RESUMES
+        ? apiGet<{ resumes?: Resume[] }>('/resumes')
+            .then((d) => d.resumes || [])
+            .catch(() => [] as Resume[])
+        : Promise.resolve([] as Resume[]),
     ]).then(([p, r]) => {
       if (!live) return;
       setPortfolios(p);

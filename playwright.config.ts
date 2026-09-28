@@ -80,6 +80,8 @@ export default defineConfig({
     : [
         {
           command: 'npm run build && npm exec vite preview -- --host 127.0.0.1 --port 4173',
+          // The mocked suite exercises the launch-switched surfaces too, so build with them on.
+          env: { ...process.env, VITE_FEATURE_STAGE: 'true', VITE_FEATURE_RESUMES: 'true' },
           url: 'http://127.0.0.1:4173',
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,

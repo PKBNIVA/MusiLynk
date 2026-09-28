@@ -1,4 +1,5 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
+import { FEATURE_RESUMES, FEATURE_STAGE } from './lib/features';
 import React from 'react';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PageLoading } from './components/ExperienceStates';
@@ -81,6 +82,7 @@ function publicRoutes(): RouteObject[] {
   const showcase = (role: Role): RouteObject[] =>
     Object.entries(showcasePaths)
       .filter(([page]) => role === 'jobseeker' || page !== 'library')
+      .filter(([page]) => FEATURE_RESUMES || !['career', 'resumes', 'resume', 'resumePrint'].includes(page))
       .map(([page, path]) => ({
         path,
         element: (
@@ -709,38 +711,42 @@ function publicRoutes(): RouteObject[] {
     // (person or a Page they run) on the Stage. Author and tag pages are public-data reads but
     // still sit behind sign-in here, matching the rest of the authenticated app; the composer
     // and reactions always require it.
-    {
-      path: '/stage',
-      element: (
-        <P roles={['jobseeker', 'employer']}>
-          <StageFeed />
-        </P>
-      ),
-    },
-    {
-      path: '/stage/tags/:tag',
-      element: (
-        <P roles={['jobseeker', 'employer']}>
-          <StageTag />
-        </P>
-      ),
-    },
-    {
-      path: '/stage/authors/:type/:id',
-      element: (
-        <P roles={['jobseeker', 'employer']}>
-          <StageAuthor />
-        </P>
-      ),
-    },
-    {
-      path: '/stage/posts/:id',
-      element: (
-        <P roles={['jobseeker', 'employer']}>
-          <StagePost />
-        </P>
-      ),
-    },
+    ...(FEATURE_STAGE
+      ? [
+          {
+            path: '/stage',
+            element: (
+              <P roles={['jobseeker', 'employer']}>
+                <StageFeed />
+              </P>
+            ),
+          },
+          {
+            path: '/stage/tags/:tag',
+            element: (
+              <P roles={['jobseeker', 'employer']}>
+                <StageTag />
+              </P>
+            ),
+          },
+          {
+            path: '/stage/authors/:type/:id',
+            element: (
+              <P roles={['jobseeker', 'employer']}>
+                <StageAuthor />
+              </P>
+            ),
+          },
+          {
+            path: '/stage/posts/:id',
+            element: (
+              <P roles={['jobseeker', 'employer']}>
+                <StagePost />
+              </P>
+            ),
+          },
+        ]
+      : []),
     // === The Stage (community feed) — end ===
     // Admin pages live on the separate admin site; the old sign-in link here is gone too.
     {

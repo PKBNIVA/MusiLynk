@@ -15,6 +15,7 @@ import { formatDate, formatDeadline, formatPay } from '../../lib/format';
 import { PostedBy } from '../../components/showcase/PostedBy';
 import { useAuth } from '../../lib/authContext';
 import { ShareToStageButton } from '../../components/stage/ShareToStageButton';
+import { FEATURE_STAGE } from '../../lib/features';
 
 export default function PublicOpportunity() {
   const { id } = useParams();
@@ -70,7 +71,7 @@ export default function PublicOpportunity() {
                   </Badge>
                 )}
               </div>
-              {isAuthenticated && <ShareToStageButton kind="job_share" id={j.id} label={j.title} />}
+              {FEATURE_STAGE && isAuthenticated && <ShareToStageButton kind="job_share" id={j.id} label={j.title} />}
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mt-4 break-words">{j.title}</h1>
             <p className="text-xl text-violet-300 mt-2">{j.company}</p>

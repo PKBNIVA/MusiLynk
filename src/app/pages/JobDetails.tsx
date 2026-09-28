@@ -34,6 +34,7 @@ import { ApplyMaterials, type Materials } from '../components/showcase/ApplyMate
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import type { Portfolio, Resume } from '../lib/showcase';
 import { ShareToStageButton } from '../components/stage/ShareToStageButton';
+import { FEATURE_STAGE } from '../lib/features';
 
 const COVER_MAX = 5_000;
 const answerId = (i: number) => `screening-${i}`;
@@ -178,7 +179,7 @@ export default function JobDetails() {
                       </Badge>
                     )}
                   </div>
-                  <ShareToStageButton kind="job_share" id={job.id} label={job.title} />
+                  {FEATURE_STAGE && <ShareToStageButton kind="job_share" id={job.id} label={job.title} />}
                 </div>
                 <h1 className="text-3xl md:text-5xl font-bold mt-4 leading-tight">{job.title}</h1>
                 <p className="text-xl text-violet-300 mt-2">{job.company}</p>

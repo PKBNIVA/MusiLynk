@@ -15,10 +15,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
-import { AlertTriangle, Check, CreditCard, FlaskConical, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Check, CreditCard, FlaskConical, ShieldCheck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
 import type { BillingCancellation, BillingCheckout, BillingHistoryEntry, Plan, Subscription } from '../lib/apiTypes';
+import { loadAiUsage, purchaseAiTopup, subscribeAiPlus, type AiUsage } from '../lib/ai';
 
 type Summary = {
   status: 'pending' | 'trialing' | 'active' | 'cancelling' | 'past_due' | 'cancelled';
@@ -105,6 +106,8 @@ export default function Billing() {
   const [cancelling, setCancelling] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<string | null>(null);
+  const [aiUsage, setAiUsage] = useState<AiUsage | null>(null);
+  const [aiBusy, setAiBusy] = useState<string | null>(null);
   // One Idempotency-Key per checkout intent. It is kept after a network/gateway failure so a retry replays the same intent instead of creating a second subscription.
   const intentKeys = useRef<Record<string, string>>({});
   const inFlight = useRef(false);
@@ -120,6 +123,40 @@ export default function Billing() {
   useEffect(() => {
     load().catch((e: unknown) => toast.error(errorMessage(e)));
   }, []);
+  const loadAi = () =>
+    loadAiUsage()
+      .then((u) => {
+        // Guards against an unmocked/misbehaving endpoint answering with an incomplete body.
+        if (u && typeof u.balance === 'number' && Array.isArray(u.recent)) setAiUsage(u);
+      })
+      .catch(() => undefined);
+  useEffect(() => {
+    void loadAi();
+  }, []);
+  async function buyTopup(pack: string) {
+    setAiBusy(pack);
+    try {
+      await purchaseAiTopup(pack);
+      toast.success('Credits added to your account.');
+      await loadAi();
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'The top-up could not be completed.'));
+    } finally {
+      setAiBusy(null);
+    }
+  }
+  async function subscribePlus() {
+    setAiBusy('ai_plus');
+    try {
+      await subscribeAiPlus();
+      toast.success('Verse AI Plus is active.');
+      await loadAi();
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'The subscription could not be started.'));
+    } finally {
+      setAiBusy(null);
+    }
+  }
 
   // Activation arrives by signed webhook, usually within seconds of checkout.
   async function waitForActivation() {
@@ -348,6 +385,71 @@ export default function Billing() {
             </Card>
           ))}
         </div>
+
+        {aiUsage && (
+          <Card className="mt-8 bg-white/[.04] border-white/10" data-testid="ai-usage-section">
+            <CardContent className="p-5">
+              <h2 className="font-semibold flex items-center gap-2">
+                <Sparkles aria-hidden="true" size={16} className="text-violet-300" />
+                Verse AI usage
+              </h2>
+              <div className="grid sm:grid-cols-4 gap-4 mt-4 text-sm">
+                <div>
+                  <div className="text-slate-400">Balance</div>
+                  <div className="text-xl font-bold mt-1">{aiUsage.balance} credits</div>
+                </div>
+                <div>
+                  <div className="text-slate-400">Monthly allowance</div>
+                  <div className="text-xl font-bold mt-1">{aiUsage.monthlyAllowance ?? '—'}</div>
+                </div>
+                <div>
+                  <div className="text-slate-400">Used this period</div>
+                  <div className="text-xl font-bold mt-1">{aiUsage.usedThisPeriod}</div>
+                </div>
+                <div>
+                  <div className="text-slate-400">Resets at</div>
+                  <div className="text-xl font-bold mt-1">{day(aiUsage.resetsAt)}</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-5">
+                <Button size="sm" disabled={!!aiBusy} aria-busy={aiBusy === 'ai_plus'} onClick={subscribePlus}>
+                  {aiBusy === 'ai_plus' ? 'Starting…' : 'Get Verse AI Plus'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!!aiBusy}
+                  aria-busy={aiBusy === 'small'}
+                  onClick={() => buyTopup('small')}
+                >
+                  {aiBusy === 'small' ? 'Processing…' : 'Buy top-up'}
+                </Button>
+              </div>
+              {aiUsage.recent.length > 0 && (
+                <div className="mt-5 overflow-x-auto">
+                  <table className="w-full text-sm" data-testid="ai-usage-recent">
+                    <thead className="text-left text-slate-400">
+                      <tr>
+                        <th className="py-2 pr-4 font-medium">Task</th>
+                        <th className="py-2 pr-4 font-medium">Credits</th>
+                        <th className="py-2 font-medium">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aiUsage.recent.map((r, i) => (
+                        <tr key={i} className="border-t border-white/10">
+                          <td className="py-2 pr-4">{r.task}</td>
+                          <td className="py-2 pr-4">{r.credits}</td>
+                          <td className="py-2">{day(r.date)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {(state?.history?.length || 0) > 0 && (
           <Card className="mt-8 bg-white/[.04] border-white/10">

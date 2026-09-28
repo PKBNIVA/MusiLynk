@@ -202,7 +202,10 @@ textarea::placeholder {
 }
 
 /* Phones and tablets show a fixed bottom "Quick navigation" bar (hidden from lg up). Reserve room
-   for it so the last buttons on every signed-in page can be scrolled clear of it and tapped. */
+   for it so the last buttons on every signed-in page can be scrolled clear of it and tapped.
+   This relies on <body> growing with its content (index.html sets min-height, not height): a
+   viewport-tall body would hold this padding inside its own box and the content would overflow
+   past it, leaving the last controls under the bar. */
 @media (max-width: 1023.98px) {
   body:has(nav[aria-label='Quick navigation']) {
     padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));

@@ -2,14 +2,16 @@ class ProfilesController < ApplicationController
   def update
     return unless authenticate!("jobseeker", "employer")
     attributes = profile_params
-    if (message = invalid_number_message(attributes))
-      return render_error(message, :unprocessable_content)
-    end
-    if attributes["currency"].present? && !CURRENCIES.include?(attributes["currency"])
-      return render_error("Currency must be one of #{CURRENCIES.join(', ')}", :unprocessable_content)
-    end
+    field_errors = request_field_errors(attributes)
     profile = current_user.profile || current_user.build_profile
-    profile.assign_attributes(attributes)
+    # Out-of-range numbers must not reach the model (ActiveModel::RangeError on save).
+    profile.assign_attributes(attributes.except(*field_errors.keys.map(&:underscore)))
+    profile.validate
+    profile.errors.to_hash(true).each { |name, messages| (field_errors[name.to_s.camelize(:lower)] ||= []).concat(messages) }
+    if field_errors.any?
+      # Every problem at once, per field; `error` keeps the whole text for older clients.
+      return render_error(field_errors.values.flatten.to_sentence, :unprocessable_content, "VALIDATION_FAILED", fields: field_errors)
+    end
     profile.save!
     current_user.update!(profile_complete: true)
     audit!("profile.update", current_user)
@@ -27,16 +29,30 @@ class ProfilesController < ApplicationController
   }.freeze
   MAX_NUMBER = 2_000_000_000
 
-  def invalid_number_message(attributes)
+  # Checks that need the raw request values (the model only sees type-cast ones), keyed by the
+  # camelCase request field.
+  def request_field_errors(attributes)
+    errors = {}
     NUMBER_FIELDS.each do |field, label|
-      raw = attributes[field]
-      next if raw.blank?
-      number = Float(raw.to_s, exception: false)
-      return "#{label} must be a number" if number.nil? || !number.finite?
-      return "#{label} cannot be negative" if number.negative?
-      return "#{label} is too large" if number > MAX_NUMBER
+      message = invalid_number_message(attributes[field], label)
+      errors[field.camelize(:lower)] = [message] if message
     end
-    nil
+    if attributes["currency"].present? && !CURRENCIES.include?(attributes["currency"])
+      errors["currency"] = ["Currency must be one of #{CURRENCIES.join(', ')}"]
+    end
+    # Employers are shown to candidates by their organization name, so it cannot be cleared.
+    if current_user.employer? && attributes.key?("company_name") && attributes["company_name"].to_s.strip.empty?
+      errors["companyName"] = ["Enter your company, label or studio name."]
+    end
+    errors
+  end
+
+  def invalid_number_message(raw, label)
+    return nil if raw.blank?
+    number = Float(raw.to_s, exception: false)
+    return "#{label} must be a number" if number.nil? || !number.finite?
+    return "#{label} cannot be negative" if number.negative?
+    "#{label} is too large" if number > MAX_NUMBER
   end
 
   def profile_params

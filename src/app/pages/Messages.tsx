@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router';
 import { ArrowLeft, Ban, Flag, MessageSquare, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { ReportDialog } from '../components/ReportDialog';
@@ -375,6 +377,8 @@ export default function Messages() {
       <Navigation />
       <main className="max-w-6xl mx-auto px-4 md:px-6 pt-24 md:pt-28 pb-28 lg:pb-16">
         <h1 className={`text-3xl md:text-4xl font-bold mb-5 md:mb-7 ${activeId ? 'hidden md:block' : ''}`}>Messages</h1>
+        {/* Tips show on the inbox itself; an open thread keeps the whole panel for the conversation. */}
+        {!activeId && <HelpCallout {...HELP.messages} />}
         <Card className="bg-white/[.05] border-white/10 overflow-hidden">
           {/* The single grid row is capped at the panel height so the message list scrolls instead of growing past it. */}
           <CardContent className="p-0 grid md:grid-cols-[320px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:h-[640px]">

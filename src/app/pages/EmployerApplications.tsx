@@ -1,5 +1,9 @@
+import { Inbox, Plus } from 'lucide-react';
+import { EmptyState } from '../components/help/EmptyState';
 import { useCallback, useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -138,6 +142,7 @@ export default function EmployerApplications() {
       <Navigation />
       <main className="max-w-6xl mx-auto px-5 md:px-6 pt-28 pb-16">
         <h1 className="text-4xl font-bold">Applications</h1>
+        <HelpCallout {...HELP.employerApplications} />
         <p className="text-slate-400 mt-2 mb-5">Review candidates only for opportunities you posted.</p>
         {jobs.length > 0 && (
           <div className="mb-6 max-w-md">
@@ -177,24 +182,30 @@ export default function EmployerApplications() {
             </CardContent>
           </Card>
         ) : apps.length === 0 ? (
-          <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-10 text-center text-slate-400">
-              <p>
-                {jobId
-                  ? `No applications for ${filteredJob?.title || 'this opportunity'} yet.`
-                  : 'No applications yet.'}
-              </p>
-              {jobId ? (
-                <Button className="mt-4" variant="outline" onClick={() => setJobFilter('')}>
+          <EmptyState
+            icon={Inbox}
+            title={
+              jobId ? `No applications for ${filteredJob?.title || 'this opportunity'} yet.` : 'No applications yet.'
+            }
+            action={
+              jobId ? (
+                <Button variant="outline" onClick={() => setJobFilter('')}>
                   Show all opportunities
                 </Button>
               ) : (
-                <Button className="mt-4" variant="outline" asChild>
-                  <Link to={postPath}>Create an opportunity</Link>
+                <Button asChild>
+                  <Link to={postPath}>
+                    <Plus aria-hidden="true" size={16} className="mr-2" />
+                    Create an opportunity
+                  </Link>
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+              )
+            }
+          >
+            {jobId
+              ? 'New applicants usually arrive within a few days of a listing going live.'
+              : 'Post an opportunity and applicants will appear here with their samples and answers.'}
+          </EmptyState>
         ) : (
           <div className="space-y-4">
             {apps.map((a) => (

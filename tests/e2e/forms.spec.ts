@@ -223,6 +223,7 @@ test.describe('forms using the shared pattern', () => {
     await page.getByRole('button', { name: /Create bookable act/ }).click();
     await expect(page.getByLabel(/Act \/ stage name/)).toBeFocused();
     await page.getByLabel(/Act \/ stage name/).fill('The Monsoon Collective');
+    await page.getByRole('button', { name: 'Fees & lineup (optional)' }).click();
     await page.getByLabel('Min fee (₹)').fill('50000');
     await page.getByLabel('Max fee (₹)').fill('10000');
     await page.getByRole('button', { name: /Create bookable act/ }).click();

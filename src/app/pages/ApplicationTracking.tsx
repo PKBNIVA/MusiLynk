@@ -1,5 +1,8 @@
+import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -7,7 +10,7 @@ import { apiDelete, apiGet } from '../lib/api';
 import { toast } from 'sonner';
 import { Link } from 'react-router';
 import { useConfirm } from '../components/booking/BookingDialogs';
-import { MapPin, Calendar, BriefcaseBusiness } from 'lucide-react';
+import { MapPin, Calendar, BriefcaseBusiness, Send, Search } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { Application } from '../lib/apiTypes';
 const ordered = ['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Offer', 'Hired'];
@@ -50,6 +53,7 @@ export default function ApplicationTracking() {
             Track every application from submission through interview, offer and hire.
           </p>
         </div>
+        <HelpCallout {...HELP.applications} />
         {error ? (
           <Card className="bg-rose-500/10 border-rose-400/20" role="alert">
             <CardContent className="p-6">
@@ -69,16 +73,20 @@ export default function ApplicationTracking() {
         ) : loading ? (
           <p className="text-slate-400">Loading applications…</p>
         ) : apps.length === 0 ? (
-          <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-12 text-center text-slate-400">
-              You have not applied to an opportunity yet.
-              <div>
-                <Button asChild className="mt-4">
-                  <Link to="/jobseeker/jobs">Browse opportunities</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Send}
+            title="You have not applied to an opportunity yet."
+            action={
+              <Button asChild>
+                <Link to="/jobseeker/jobs">
+                  <Search aria-hidden="true" size={16} className="mr-2" />
+                  Browse opportunities
+                </Link>
+              </Button>
+            }
+          >
+            Find a gig, session or role you like and apply with your profile in a couple of minutes.
+          </EmptyState>
         ) : (
           <div className="space-y-4">
             {apps.map((a) => (

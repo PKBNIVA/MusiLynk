@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { CalendarPlus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -111,6 +113,7 @@ export default function Availability() {
       <Navigation />
       <main className="max-w-5xl mx-auto px-4 sm:px-5 pt-28 pb-16">
         <h1 className="text-4xl font-bold">Availability calendar</h1>
+        <HelpCallout {...HELP.availability} />
         <p className="text-slate-400 mt-2">
           Publish when you are available, on hold, tentative, booked or unavailable.
         </p>
@@ -145,7 +148,12 @@ export default function Availability() {
                   className="bg-white/5 border-white/15"
                 />
               </Field>
-              <Field id={SLOT_IDS.status} label="Status" error={errors.errors.status}>
+              <Field
+                id={SLOT_IDS.status}
+                label="Status"
+                error={errors.errors.status}
+                help="Available: open to offers. On hold: pencilled in. Tentative: ask first. Booked or unavailable: not free."
+              >
                 <AppSelect
                   value={form.status}
                   onValueChange={(v) => set('status', v)}

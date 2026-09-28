@@ -1,5 +1,8 @@
+import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -45,6 +48,7 @@ import {
   X,
   AlertCircle,
   CheckCircle2,
+  FileAudio,
 } from 'lucide-react';
 import { describeWorkSample, WorkSamplePlayer } from '../components/WorkSamplePlayer';
 import { errorCode, errorMessage, errorStatus } from '../lib/errors';
@@ -281,6 +285,7 @@ export default function Portfolio() {
             the right employer sees the right proof.
           </p>
         </div>
+        <HelpCallout {...HELP.portfolio} />
         <div className="grid xl:grid-cols-[390px_1fr] gap-6">
           <Card className="bg-white/[.06] border-white/10 h-fit">
             <CardContent className="p-5">
@@ -534,14 +539,9 @@ export default function Portfolio() {
               ))}
             </div>
             {visible.length === 0 ? (
-              <Card className="bg-white/5 border-white/10">
-                <CardContent className="p-10 text-center">
-                  <div className="text-slate-300 font-medium">No work samples in this view.</div>
-                  <div className="text-slate-500 text-sm mt-2">
-                    A useful starting portfolio is 3–6 strong, different samples rather than dozens of unlabelled links.
-                  </div>
-                </CardContent>
-              </Card>
+              <EmptyState icon={FileAudio} title="No work samples in this view.">
+                A useful starting portfolio is 3–6 strong, different samples rather than dozens of unlabelled links.
+              </EmptyState>
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
                 {visible.map((i) => (

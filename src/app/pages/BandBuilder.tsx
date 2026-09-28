@@ -1,3 +1,4 @@
+import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { apiGet, apiPost } from '../lib/api';
@@ -12,6 +13,7 @@ import { Field as FormField, FormError, RequiredNote } from '../components/form/
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { errorMessage } from '../lib/errors';
 import type { BandProject, BandProjectRole, Taxonomy } from '../lib/apiTypes';
+import { MoreDetails } from '../components/help/MoreDetails';
 import { AppSelect } from '../components/ui/app-select';
 
 const list = (value: unknown): string[] =>
@@ -231,9 +233,9 @@ export default function BandBuilder() {
                 </Button>
               </div>
             ) : projects.length === 0 ? (
-              <div className="text-slate-500 border border-dashed border-white/10 rounded-xl p-10 text-center">
-                No projects yet. Create one, then add the seats you need to fill.
-              </div>
+              <EmptyState icon={Users} title="No projects yet.">
+                Create one, then add the seats you need to fill.
+              </EmptyState>
             ) : (
               projects.map((p) => {
                 const roles: BandProjectRole[] = Array.isArray(p.roles) ? p.roles : [];
@@ -343,7 +345,11 @@ export default function BandBuilder() {
                 />
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="How many" htmlFor="seat-count">
+                <Field
+                  label="How many"
+                  htmlFor="seat-count"
+                  help="People needed for this seat, e.g. 2 backing vocalists."
+                >
                   <Input
                     id="seat-count"
                     type="number"
@@ -353,7 +359,11 @@ export default function BandBuilder() {
                     onChange={(e) => setR('countNeeded', e.target.value)}
                   />
                 </Field>
-                <Field label="Skill level" htmlFor="seat-skill">
+                <Field
+                  label="Skill level"
+                  htmlFor="seat-skill"
+                  help="The experience you need for this seat. “Touring” means proven on multi-city runs."
+                >
                   <AppSelect
                     className="h-11 rounded-xl"
                     id="seat-skill"
@@ -363,22 +373,24 @@ export default function BandBuilder() {
                   />
                 </Field>
               </div>
-              <Field label="Compensation for this seat" htmlFor="seat-compensation">
-                <Input
-                  id="seat-compensation"
-                  value={role.compensation}
-                  onChange={(e) => setR('compensation', e.target.value)}
-                />
-              </Field>
-              <Field label="Requirements" htmlFor="seat-requirements">
-                <textarea
-                  id="seat-requirements"
-                  className={textareaClass}
-                  placeholder="Audition material, gear, availability, repertoire…"
-                  value={role.requirements}
-                  onChange={(e) => setR('requirements', e.target.value)}
-                />
-              </Field>
+              <MoreDetails defaultOpen={!!(role.compensation || role.requirements)}>
+                <Field label="Compensation for this seat" htmlFor="seat-compensation">
+                  <Input
+                    id="seat-compensation"
+                    value={role.compensation}
+                    onChange={(e) => setR('compensation', e.target.value)}
+                  />
+                </Field>
+                <Field label="Requirements" htmlFor="seat-requirements">
+                  <textarea
+                    id="seat-requirements"
+                    className={textareaClass}
+                    placeholder="Audition material, gear, availability, repertoire…"
+                    value={role.requirements}
+                    onChange={(e) => setR('requirements', e.target.value)}
+                  />
+                </Field>
+              </MoreDetails>
             </>
           )}
         </FormDialog>

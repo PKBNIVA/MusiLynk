@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -60,6 +62,7 @@ export default function EmployerDashboard() {
             </Link>
           </Button>
         </div>
+        <HelpCallout {...HELP.employerDashboard} />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Stat n={d.jobs} label="Total opportunities" icon={Briefcase} />
           <Stat n={d.published} label="Live" icon={CheckCircle} />

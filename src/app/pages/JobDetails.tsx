@@ -24,6 +24,7 @@ import {
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, Job } from '../lib/apiTypes';
 import { formatDate, formatDeadline, formatPay } from '../lib/format';
+import { MoreDetails } from '../components/help/MoreDetails';
 import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 
@@ -270,6 +271,9 @@ export default function JobDetails() {
                         {job.screeningQuestions?.length > 0 && (
                           <fieldset className="space-y-3 mb-4">
                             <legend className="text-sm font-medium mb-1">Screening questions</legend>
+                            <p className="text-xs text-slate-400">
+                              The employer asks everyone these. Short, honest answers are best.
+                            </p>
                             {job.screeningQuestions.map((q: string, i: number) => (
                               <Field
                                 key={q}
@@ -292,25 +296,31 @@ export default function JobDetails() {
                             ))}
                           </fieldset>
                         )}
-                        <Field
-                          id="cover-note"
-                          label="Short note to the employer"
-                          optional
-                          error={applyForm.errors.coverLetter}
-                          count={cover.length}
-                          maxLength={cover.length > COVER_MAX * 0.8 ? COVER_MAX : undefined}
+                        <MoreDetails
+                          label="Add a note to the employer (optional)"
+                          forceOpen={!!applyForm.errors.coverLetter}
                         >
-                          <Textarea
-                            value={cover}
-                            maxLength={COVER_MAX}
-                            onChange={(e) => {
-                              setCover(e.target.value);
-                              applyForm.clear('coverLetter');
-                            }}
-                            placeholder="Why this opportunity fits your work and what relevant proof should they review…"
-                            className="min-h-32 bg-black/20 border-white/15"
-                          />
-                        </Field>
+                          <Field
+                            id="cover-note"
+                            label="Short note to the employer"
+                            optional
+                            help="Two or three lines on why you fit, plus the one sample they should hear first. Your profile is sent automatically."
+                            error={applyForm.errors.coverLetter}
+                            count={cover.length}
+                            maxLength={cover.length > COVER_MAX * 0.8 ? COVER_MAX : undefined}
+                          >
+                            <Textarea
+                              value={cover}
+                              maxLength={COVER_MAX}
+                              onChange={(e) => {
+                                setCover(e.target.value);
+                                applyForm.clear('coverLetter');
+                              }}
+                              placeholder="Why this opportunity fits your work and what relevant proof should they review…"
+                              className="min-h-32 bg-black/20 border-white/15"
+                            />
+                          </Field>
+                        </MoreDetails>
                         <FormError message={applyForm.formError} className="mt-3" />
                         <Button className="w-full mt-3" disabled={busy} aria-busy={busy} onClick={apply}>
                           <Send size={16} className="mr-2" />

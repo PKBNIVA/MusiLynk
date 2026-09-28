@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -100,6 +102,7 @@ export default function JobSearch() {
             </Button>
           </div>
         </div>
+        <HelpCallout {...HELP.jobs} />
         <Card className="bg-white/[.055] border-white/10 mb-7">
           <CardContent className="p-4 md:p-5">
             <form onSubmit={submit} className="grid lg:grid-cols-[1.4fr_1fr_auto_auto] gap-3" role="search">

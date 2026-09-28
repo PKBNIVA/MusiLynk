@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -56,6 +58,7 @@ export default function JobSeekerDashboard() {
             </Link>
           </Button>
         </div>
+        <HelpCallout {...HELP.jobseekerDashboard} />
         {state === 'error' && (
           <div
             role="alert"

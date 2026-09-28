@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { HelpCallout } from '../components/help/HelpCallout';
+import { HELP } from '../components/help/helpContent';
 import { apiGet, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { useLatestCallback } from '../lib/useLatestCallback';
@@ -177,6 +179,7 @@ export default function BookTalent() {
             Quotes stay comparable instead of disappearing into WhatsApp threads.
           </p>
         </div>
+        <HelpCallout {...HELP.bookTalent} />
         <ActSearchForm
           idPrefix="book-acts"
           values={filters}
@@ -339,7 +342,11 @@ export default function BookTalent() {
                 />
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Budget min" htmlFor="enquiry-budget-min">
+                <Field
+                  label="Budget min"
+                  htmlFor="enquiry-budget-min"
+                  help="The range you can pay for the performance, in rupees. Acts reply faster when they can see a real budget."
+                >
                   <Input
                     id="enquiry-budget-min"
                     type="number"
@@ -360,7 +367,11 @@ export default function BookTalent() {
                   />
                 </Field>
               </div>
-              <Field label="Requirements" htmlFor="enquiry-requirements">
+              <Field
+                label="Requirements"
+                htmlFor="enquiry-requirements"
+                help="Set length, sound and stage you provide, dress code, song requests. Anything that changes the quote."
+              >
                 <textarea
                   id="enquiry-requirements"
                   className={textareaClass}

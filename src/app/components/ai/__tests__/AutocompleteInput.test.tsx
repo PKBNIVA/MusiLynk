@@ -115,11 +115,59 @@ describe('AutocompleteInput', () => {
       ),
     );
     const input = $('input') as HTMLInputElement;
+    // No chip row for a single-value field: the committed value is the input's own text.
+    expect($('ul[aria-label="Selected city"]')).toBeNull();
+    expect(input.value).toBe('Mumbai');
     typeInto(input, 'del');
     await runDebounce();
     const option = $('[role="option"]') as HTMLElement;
     act(() => option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
     expect(onChange).toHaveBeenCalledWith(['Delhi']);
+  });
+
+  it('a single-value field never renders a chip <ul>, empty, typing or committed (V-02 layout-shift fix)', async () => {
+    let values: string[] = [];
+    const onChange = vi.fn((next: string[]) => {
+      values = next;
+    });
+    const render = () =>
+      act(() =>
+        root.render(
+          <AutocompleteInput field="cities" values={values} onChange={onChange} label="City" multiple={false} />,
+        ),
+      );
+    render();
+    const input = $('input') as HTMLInputElement;
+
+    // Empty state: no <ul> anywhere in the component (that's what grows the field on commit), no clear button.
+    expect(container.querySelector('ul')).toBeNull();
+    expect($('button[aria-label="Clear City"]')).toBeNull();
+
+    // Typing: still no <ul>.
+    typeInto(input, 'Mumbai, Maharashtra');
+    expect(container.querySelector('ul')).toBeNull();
+
+    // Committed on blur: the input's own value becomes the committed text; still no <ul>.
+    act(() => input.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
+    render();
+    expect(onChange).toHaveBeenCalledWith(['Mumbai, Maharashtra']);
+    expect(($('input') as HTMLInputElement).value).toBe('Mumbai, Maharashtra');
+    expect(container.querySelector('ul')).toBeNull();
+    expect($('button[aria-label="Clear City"]')).not.toBeNull();
+  });
+
+  it('a single-value field can be cleared with the inline clear button', async () => {
+    const onChange = vi.fn();
+    act(() =>
+      root.render(
+        <AutocompleteInput field="cities" values={['Mumbai']} onChange={onChange} label="City" multiple={false} />,
+      ),
+    );
+    const clearButton = $('button[aria-label="Clear City"]') as HTMLButtonElement;
+    expect(clearButton).not.toBeNull();
+    act(() => clearButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })));
+    expect(onChange).toHaveBeenCalledWith([]);
+    expect(($('input') as HTMLInputElement).value).toBe('');
   });
 
   it('clears matches for a blank query without calling the API', async () => {

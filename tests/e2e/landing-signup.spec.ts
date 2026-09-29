@@ -120,7 +120,7 @@ test.describe('musician sign-up', () => {
     const calls = await mockSignupApi(page);
     await page.goto('/join/musician');
     await expect(page.getByRole('heading', { name: 'What you do' })).toBeVisible();
-    await expect(page.getByRole('list', { name: 'Selected city you work from' })).toContainText('Mumbai');
+    await expect(page.getByRole('combobox', { name: 'City you work from' })).toHaveValue('Mumbai');
 
     await page.getByRole('button', { name: 'Next: your work' }).click();
     await expect(page.getByRole('alert')).toContainText('Pick at least one');

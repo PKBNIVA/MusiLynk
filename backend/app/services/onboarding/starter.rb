@@ -16,16 +16,22 @@ module Onboarding
       "label" => "Music label", "venue" => "Venue", "other" => "Hiring for music work"
     }.freeze
     PERMITTED = [:city, :yearsExperience, :headline, :bio, :hirerKind, :companyName, { roles: [] },
-      { links: [:url, :title, :thumbnail] }].freeze
+      { genres: [] }, { instruments: [] },
+      { links: [:url, :title, :thumbnail, :caption] }].freeze
 
     attr_reader :errors
 
     # `params` is ActionController::Parameters (or a Hash) holding the starter fields. Links are
-    # objects ({url, title?, thumbnail?}) or plain URL strings.
+    # objects ({url, title?, thumbnail?, caption?}) or plain URL strings; credits (like a drafted
+    # profile's) are plain strings or {text, source_url} objects — only the text ever gets kept
+    # (see #credits), so both shapes are read straight off the raw params rather than fought
+    # through `permit`'s single fixed shape for an array.
     def self.from_params(params)
       source = params.respond_to?(:permit) ? params.permit(*PERMITTED).to_h : params.to_h
       raw_links = params[:links]
       source["links"] = raw_links if raw_links.is_a?(Array) && raw_links.any? && raw_links.all?(String)
+      raw_credits = params[:credits]
+      source["credits"] = raw_credits if raw_credits.is_a?(Array)
       new(source.with_indifferent_access)
     end
 
@@ -63,6 +69,16 @@ module Onboarding
 
     def roles_raw = Array(@input[:roles]).select { _1.is_a?(String) }
     def roles = roles_raw.map(&:strip).reject(&:empty?).uniq(&:downcase)
+    def genres = Array(@input[:genres]).select { _1.is_a?(String) }.map(&:strip).reject(&:empty?).uniq(&:downcase)
+    def instruments = Array(@input[:instruments]).select { _1.is_a?(String) }.map(&:strip).reject(&:empty?).uniq(&:downcase)
+    # A draft credit may be a plain string or a {text, source_url} object (LinkImport::ProfileDraft);
+    # only the text is stored — Profile#credits is a flat list, same as when typed by hand.
+    def credits
+      Array(@input[:credits]).filter_map do |entry|
+        text = entry.respond_to?(:[]) && !entry.is_a?(String) ? (entry[:text] || entry["text"]) : entry
+        text.to_s.strip.presence
+      end.uniq(&:downcase)
+    end
     def city = @input[:city].to_s.strip
     def company_name = @input[:companyName].to_s.strip
     def hirer_kind = @input[:hirerKind].to_s.strip
@@ -82,7 +98,7 @@ module Onboarding
 
     def links
       @links ||= Array(@input[:links]).first(MAX_LINKS + 1).map do |entry|
-        entry.is_a?(Hash) ? entry.with_indifferent_access.slice(:url, :title, :thumbnail) : { url: entry.to_s }.with_indifferent_access
+        entry.is_a?(Hash) ? entry.with_indifferent_access.slice(:url, :title, :thumbnail, :caption) : { url: entry.to_s }.with_indifferent_access
       end
     end
 
@@ -100,6 +116,9 @@ module Onboarding
 
     def apply_talent(user, profile)
       profile.roles = (Array(profile.roles) + roles).uniq(&:downcase).first(MAX_ROLES) if roles.any?
+      profile.genres = merge_unique(profile.genres, genres) if genres.any?
+      profile.instruments = merge_unique(profile.instruments, instruments) if instruments.any?
+      profile.credits = merge_unique(profile.credits, credits) if credits.any?
       profile.location = city if city.present?
       unless years.nil?
         profile.years_experience = years
@@ -129,6 +148,11 @@ module Onboarding
       { portfolioItems: 0, organizationId: organization&.id }
     end
 
+    def merge_unique(have, incoming)
+      have = Array(have)
+      have + incoming.reject { |value| have.any? { _1.to_s.casecmp?(value) } }
+    end
+
     def fill_text(profile, field, limit)
       value = @input[field].to_s.strip
       profile[field] = value.truncate(limit, omission: "") if value.present? && profile[field].blank?
@@ -151,7 +175,8 @@ module Onboarding
         "#{LinkPreview.label_for(provider)} #{provider == 'link' ? 'to my work' : 'work sample'}"
       thumbnail = LinkPreview.clean_thumbnail(link[:thumbnail]) || cached[:thumbnail]
       thumbnail = nil if thumbnail && PortfolioItem.storage_url?(thumbnail)
-      user.portfolio_items.create!(kind: LinkPreview.kind_for(provider), title:, url:, thumbnail_url: thumbnail,
+      description = LinkPreview.clean_text(link[:caption], 2_000)
+      user.portfolio_items.create!(kind: LinkPreview.kind_for(provider), title:, description:, url:, thumbnail_url: thumbnail,
         credited_as: roles.first, roles: roles.first(3), visibility: "public", sort_order: index, featured: index.zero?,
         media_metadata: { "source" => "signup", "provider" => provider })
     end

@@ -15,7 +15,9 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
 
   allow do
     origins(public_origin)
-    resource %r{\A/api/(?!admin/)}, headers: :any, methods:
+    resource %r{\A/api/(?!admin/)}, headers: :any, methods: methods
+    # Share cards are fetched by the SPA and rasterised to PNG in the browser (src/app/lib/shareCard.ts).
+    resource %r{\A/share-cards/}, headers: :any, methods: %i[get options head]
   end
 
   allow do

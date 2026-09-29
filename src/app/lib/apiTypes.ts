@@ -54,6 +54,9 @@ export interface ProfileFields {
   dayRate?: number | null;
   availability?: string | null;
   currency?: string | null;
+  /** Consent to announce a verification approval on The Stage and generate a share card
+   * (Post::SYSTEM_KINDS "verified", ShareCardsController). Defaults true. */
+  shareVerificationPublicly?: boolean;
 }
 
 /** ApplicationController#public_user: the signed-in user's own account plus profile (GET /me, PUT /profile). */
@@ -88,6 +91,11 @@ export interface Professional extends ProfileFields {
   /** Present (non-null) only when verified; see VerifiedBadge. */
   verification?: VerificationSummary | null;
   verificationTier?: VerificationTier | null;
+  /** ProfileStats: published reviews, urgent-response median (null under 3 samples), this week's badge. */
+  reviewsCount?: number;
+  reviewsAverage?: number | null;
+  responseTimeMinutes?: number | null;
+  fastResponderBadge?: boolean;
 }
 
 /** TalentController#compare: a professional with their public work and upcoming availability. */

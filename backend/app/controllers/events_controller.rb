@@ -18,6 +18,8 @@ class EventsController < ApplicationController
     urgent_request_submitted urgent_response_submitted
     booking_quote_sent booking_quote_accepted booking_deposit_paid
     route_change
+    profile_view
+    share_card_download share_whatsapp
   ].freeze
 
   def create
@@ -29,10 +31,28 @@ class EventsController < ApplicationController
 
     rows = events.filter_map { |raw| build_row(raw) }
     ProductEvent.insert_all(rows) if rows.any?
+    check_profile_view_milestones(rows)
     render json: { ok: true, accepted: rows.size, dropped: events.size - rows.size }
   end
 
   private
+
+  # A profile_view crossing exactly 100 views triggers a one-off milestone email to the
+  # profile's owner (Notifier.milestone_profile_100_views is itself idempotent).
+  def check_profile_view_milestones(rows)
+    rows.each do |row|
+      next unless row[:name] == "profile_view"
+
+      profile_id = row.dig(:props, "profileId")
+      next if profile_id.blank?
+
+      user = User.find_by(id: profile_id)
+      next unless user
+
+      count = ProductEvent.named("profile_view").where("props->>'profileId' = ?", profile_id).count
+      Notifier.milestone_profile_100_views(user, count)
+    end
+  end
 
   # Silently drops anything that doesn't fit the allow-list or size cap (never a 4xx for one bad
   # event in an otherwise good batch — the client fires-and-forgets these).

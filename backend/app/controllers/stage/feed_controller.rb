@@ -5,6 +5,9 @@ module Stage
   class FeedController < BaseController
     PAGE_SIZE = 20
     POOL_LIMIT = 500
+    # Above everything else: a pinned post (admin, or the weekly system roundup) always leads
+    # the feed while it's pinned.
+    PINNED_BONUS = 1_000_000_000.0
     FOLLOWED_BONUS = 1_000_000.0
     LOCATION_BONUS = 500_000.0
     TRENDING_WEIGHT = 1_000.0
@@ -40,6 +43,7 @@ module Stage
     def score(post, followed_keys, own_keys, city, genres)
       key = "#{post.author_type}:#{post.author_id}"
       total = 0.0
+      total += PINNED_BONUS if post.pinned?
       total += FOLLOWED_BONUS if own_keys.include?(key) || followed_keys.include?(key)
       matches_location = city.present? && post.city.present? && post.city.casecmp?(city)
       matches_genre = genres.any? && Array(post.genres).any? { genres.include?(_1.to_s.downcase) }

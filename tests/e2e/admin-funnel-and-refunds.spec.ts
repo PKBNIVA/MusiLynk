@@ -84,6 +84,14 @@ test('the Funnel tab shows the funnel, weekly bookings/hires, median response an
       json(route, funnelSummary);
       return true;
     }
+    if (pathname === '/api/admin/emails') {
+      json(route, {
+        windowDays: 7,
+        sentByKey: [{ key: 'musician_day1_first_link', count: 12 }],
+        optOutRates: { masterOff: 4.5, categories: { digest: 10, lifecycle: 2, requests: 0, product: 1 } },
+      });
+      return true;
+    }
     return false;
   });
   await page.getByRole('tab', { name: 'Funnel' }).click();
@@ -93,6 +101,10 @@ test('the Funnel tab shows the funnel, weekly bookings/hires, median response an
   await expect(page.getByText('14 bookings')).toBeVisible();
   await expect(page.getByTestId('median-first-response')).toHaveText('22.5 min');
   await expect(page.getByTestId('retention-week1')).toHaveText('41.2%');
+  await expect(page.getByRole('heading', { name: 'Emails', level: 2 })).toBeVisible();
+  await expect(page.getByTestId('emails-sent-musician_day1_first_link')).toHaveText('12');
+  await expect(page.getByTestId('emails-opt-out-master')).toHaveText('4.5%');
+  await expect(page.getByTestId('emails-opt-out-digest')).toHaveText('10%');
 
   await page.getByRole('button', { name: 'Last 30 days' }).click();
   await expect(page).toHaveURL(/\/admin/); // no navigation; just a re-fetch with days=30

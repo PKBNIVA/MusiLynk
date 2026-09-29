@@ -102,6 +102,7 @@ class TalentController < ApplicationController
     scope = filter(listing_scope.joins(:profile))
     limit = list_limit
     search = Search::Runner.call(scope, params[:q], Search::Targets::TALENT, order: LIST_ORDER, offset:, limit:)
+    prime_profile_stats(search.rows)
     body = { key => search.rows.map { yield _1 }, nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta)
     if (role = role_filter)
       body[:role] = role

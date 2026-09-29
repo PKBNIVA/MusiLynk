@@ -85,7 +85,7 @@ class VerificationAutomationIntegrationTest < ActionDispatch::IntegrationTest
     assert_equal admin.id, request.reviewed_by_id
     assert_equal %w[identity credits], request.checks
     assert artist.profile.reload.verified?
-    assert_equal "Your verification request was approved.", artist.notifications.last.body
+    assert_equal "You're verified on Verse", artist.notifications.last.title
     assert AuditLog.exists?(action: "admin.verification.status", entity_id: request.id)
   end
 

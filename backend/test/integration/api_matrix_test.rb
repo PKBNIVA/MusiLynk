@@ -49,6 +49,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/auth/reset-password/check", :public, { params: { token: "not-a-token" }, keys: %w[valid] }],
     [:get, "/api/me", :any, { keys: %w[user] }],
     [:get, "/api/me/identities", :talent, { keys: %w[identities] }],
+    [:put, "/api/me/email-preferences", :any, { params: { emailPreferences: { digest: false } }, bad: { emailPreferences: { spam: false } }, bad_status: [400], keys: %w[emailPreferences] }],
     [:get, "/api/account/export", :any, { keys: %w[format version account profile conversations] }],
     # Without the typed email the request is refused, so the matrix never erases its own users.
     [:delete, "/api/account", :any, { ok: [422], params: { confirmEmail: "someone-else@example.com" } }],
@@ -60,6 +61,8 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:put, "/api/profile", :talent, { params: { headline: "Updated headline" }, bad: { website: "javascript:alert(1)" }, bad_status: [422], keys: %w[user] }],
     [:post, "/api/onboarding/starter", :talent, { params: { city: "Mumbai" }, bad: { yearsExperience: 500 }, bad_status: [422], keys: %w[user starter] }],
     [:post, "/api/link-previews", :public, { params: { url: "https://myband.example/epk" }, bad: { url: "javascript:alert(1)" }, bad_status: [422], keys: %w[provider kind label url title author thumbnail] }],
+    [:post, "/api/link-import/draft", :public, { params: { links: ["https://soundcloud.com/matrix-artist/a-track"] }, bad: { links: [] }, bad_status: [422], keys: %w[sources draft aiUsed provenance] }],
+    [:post, "/api/library/import", :talent, { params: { roles: ["Guitarist"] }, keys: %w[portfolioItems suggestedReview] }],
     [:get, "/api/public/stats", :public, { keys: %w[verifiedProfiles professionals cities openOpportunities urgentRequests generatedAt] }],
 
     [:get, "/api/jobs", :public, { keys: %w[jobs nextCursor total] }],
@@ -134,6 +137,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/admin/refunds/{refund}", :admin, { params: { note: "Reviewed" }, missing: :refund, keys: %w[status] }],
     [:put, "/api/admin/refunds/{refund}", :admin, { params: { note: "Reviewed" }, missing: :refund, keys: %w[status] }],
     [:get, "/api/admin/funnel", :admin, { keys: %w[windowDays funnel weekly medianFirstResponseMinutes retentionWeek1] }],
+    [:get, "/api/admin/emails", :admin, { keys: %w[windowDays sentByKey optOutRates] }],
 
     [:get, "/api/portfolio", :jobseeker, { keys: %w[items] }],
     [:post, "/api/portfolio", :jobseeker, { ok: [201], params: { type: "audio", title: "Live take", url: "https://example.com/a.mp3" }, bad: { title: "No url" }, bad_status: [422], keys: %w[id item] }],
@@ -179,6 +183,8 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/notifications/preferences", :any, { params: { emailNotifications: false }, bad: { emailNotifications: "no" }, bad_status: [400], keys: %w[emailNotifications] }],
     [:get, "/api/notifications/unsubscribe", :public, { ok: [400], params: { token: "not-a-token" }, note: "valid tokens are covered in messaging_notifications_test" }],
     [:post, "/api/notifications/unsubscribe", :public, { ok: [400], params: { token: "not-a-token" } }],
+    [:get, "/api/notifications/unsubscribe/preferences", :public, { ok: [400], params: { token: "not-a-token" }, note: "valid tokens are covered in email_preferences_test" }],
+    [:patch, "/api/notifications/unsubscribe/preferences", :public, { ok: [400], params: { token: "not-a-token", emailNotifications: false } }],
     [:post, "/api/email/webhook/brevo", :public, { ok: [401, 503], note: "a call without the shared secret is refused; events are covered in email_suppression_test" }],
     [:get, "/api/notifications", :any, { keys: %w[notifications unread] }],
     [:patch, "/api/notifications/{notification}", :any, { idor: true, missing: :notification }],
@@ -338,7 +344,14 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:delete, "/api/stage/follows/user/{stage_follow_target}", :any, {}],
     [:get, "/api/stage/authors/user/{self}/followers", :public, { keys: %w[followersCount following] }],
     [:get, "/api/stage/authors/user/{self}/following", :public, { keys: %w[followingCount] }],
-    [:get, "/api/stage/tags/matrixtag", :public, { keys: %w[tag posts nextCursor] }]
+    [:get, "/api/stage/tags/matrixtag", :public, { keys: %w[tag posts nextCursor] }],
+    [:get, "/api/stage/events", :any, { keys: %w[city events] }],
+    [:get, "/api/stage/posts/{stage_event_post}/ics", :public, { missing: :stage_event_post }],
+    [:get, "/api/admin/stage-posts", :admin, { keys: %w[posts] }],
+    [:post, "/api/admin/stage-posts/{stage_post}/pin", :admin, { missing: :stage_post, keys: %w[post] }],
+    [:post, "/api/admin/stage-posts/{stage_post}/unpin", :admin, { missing: :stage_post, keys: %w[post] }],
+    [:post, "/api/admin/stage-posts/{stage_event_post}/feature", :admin, { missing: :stage_event_post, keys: %w[post] }],
+    [:delete, "/api/admin/stage-posts/{stage_delete_post}", :admin, { missing: :stage_delete_post }]
   ].freeze
 
   # Findings in files owned by other workstreams: label => [step, reason]. The generated test
@@ -464,6 +477,10 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
       password: ApiMatrixWorld::PASSWORD, role: "jobseeker", status: "active", profile_complete: true).id
     world.refs[:shared][:stage_tag_post] = Post.create!(author_type: "user", author_id: world.user(:js).id, created_by_user_id: world.user(:js).id,
       body: "Matrix #matrixtag post", visibility: "public").id
+    world.refs[:shared][:stage_event_post] = Post.create!(author_type: "user", author_id: world.user(:js).id, created_by_user_id: world.user(:js).id,
+      kind: "event", event_title: "Matrix Jam Night", event_starts_at: 3.days.from_now, event_venue: "Matrix Hall", city: "Mumbai", visibility: "public").id
+    world.refs[:shared][:stage_delete_post] = Post.create!(author_type: "user", author_id: world.user(:js).id, created_by_user_id: world.user(:js).id,
+      body: "Matrix post pending admin delete", visibility: "public").id
   end
 
   def ok_for(options, actor)

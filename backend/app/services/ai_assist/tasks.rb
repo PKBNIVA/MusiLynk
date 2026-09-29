@@ -450,6 +450,30 @@ module AiAssist::Tasks
     }
   )
 
+  # Drafts a profile (headline, bio, roles, genres, instruments, credits, per-link items) from
+  # the titles/descriptions/genres/credits LinkImport::Resolver already fetched — never raw HTML.
+  # Every fact must trace back to those sources; LinkImport::ProfileDraft.validate_ai_output then
+  # drops any credit whose source_url isn't one of the inputs and any role outside the taxonomy,
+  # so this system prompt's rule is enforced twice, not just asked for.
+  REGISTRY["profile_from_links"] = Task.new(
+    key: "profile_from_links",
+    system_prompt: COMMON_SYSTEM_PROMPT + <<~RULE,
+      Use only facts present in the provided sources. If a field is not supported by the sources, leave it empty. Never invent names, credits, awards, numbers or places.
+      Reply with strict JSON only, no other text: {"headline": string (max 80 chars), "bio": string (max 600 chars), "roles": string array, "genres": string array, "instruments": string array, "credits": array of {"text": string, "source_url": string}, "items": array of {"url": string, "title": string (max 80 chars), "caption": string (max 160 chars)}, one entry per source given}. Every "source_url" and "url" you output must be copied exactly from a "URL:" line below, never invented.
+    RULE
+    fields: {
+      sources: Field.new(type: :string, max: 6_000, required: true)
+    },
+    max_output_tokens: 500, max_output_chars: 2_400, long: true,
+    template: ->(c) {
+      <<~PROMPT
+        Sources fetched from the links this person pasted:
+        #{c[:sources]}
+      PROMPT
+    }
+  )
+
+
   # Admin-only (system-initiated by Verification::Summarizer, never reachable through
   # POST /api/ai/suggest: it is left out of PUBLIC_TASKS). Its own INR budget line lives in
   # config/ai_pricing.yml (`verification_summary_monthly_budget_inr`).

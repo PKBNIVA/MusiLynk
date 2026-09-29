@@ -2,7 +2,7 @@ import { DemoBadge } from '../../components/DemoBadge';
 import { usePageMeta } from '../../components/PageMeta';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { MapPin, Search, ShieldCheck, X } from 'lucide-react';
+import { MapPin, Search, ShieldCheck, X, Zap } from 'lucide-react';
 import { PublicNav } from '../../components/PublicNav';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -133,8 +133,17 @@ export default function PublicTalent() {
                         <h2 className="text-xl font-semibold">{c.name}</h2>
                         <DemoBadge show={c.demo} />
                         {c.verified && <ShieldCheck size={16} className="text-emerald-300" />}
+                        {c.fastResponderBadge && (
+                          <Zap size={16} className="text-amber-300" aria-label="Fast responder this week" />
+                        )}
                       </div>
                       <p className="text-violet-300 mt-1">{c.headline || 'Music professional'}</p>
+                      {(c.reviewsCount ?? 0) > 0 && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          {c.reviewsAverage?.toFixed(1)} ({c.reviewsCount} {c.reviewsCount === 1 ? 'review' : 'reviews'}
+                          )
+                        </p>
+                      )}
                       {c.location && (
                         <p className="flex text-sm text-slate-400 mt-3">
                           <MapPin size={15} className="mr-1" />

@@ -10,6 +10,13 @@ Rails.application.routes.draw do
   get "share/acts/:id", to: "share_pages#act"
   get "share/p/:slug", to: "share_pages#portfolio"
 
+  # Public "I'm verified on Verse" story/landscape cards for Instagram/WhatsApp sharing
+  # (ShareCardsController). Served without the /api scope like the other crawler/share pages,
+  # cached at the edge for 24h, and rendered as SVG — see ShareCard for why (no headless
+  # browser or ImageMagick at runtime).
+  get "share-cards/verified/:user_id.:format", to: "share_cards#verified", constraints: { format: /svg/ }
+  get "share-cards/verified/:user_id/landscape.:format", to: "share_cards#landscape", constraints: { format: /svg/ }
+
   scope :api do
     get "health", to: "health#show"
     get "live", to: "health#show"
@@ -33,6 +40,7 @@ Rails.application.routes.draw do
     delete "auth/connections/:id", to: "auth#destroy_connection"
     get "me", to: "auth#me"
     get "me/identities", to: "identities#index"
+    put "me/email-preferences", to: "notifications#update_email_preferences"
     get "account/export", to: "account#export"
     delete "account", to: "account#destroy"
     patch "account/name", to: "account#update_name"
@@ -43,6 +51,8 @@ Rails.application.routes.draw do
     post "profile/whatsapp-consent", to: "profiles#whatsapp_consent"
     post "onboarding/starter", to: "onboarding#starter"
     post "link-previews", to: "link_previews#create"
+    post "link-import/draft", to: "link_import#draft"
+    post "library/import", to: "library_imports#create"
     get "public/stats", to: "public_stats#show"
 
     resources :jobs, only: %i[index show create] do
@@ -100,6 +110,7 @@ Rails.application.routes.draw do
       get :bookings, to: "operations#bookings"
       resources :refunds, only: %i[index update]
       get :funnel, to: "funnel#show"
+      get :emails, to: "emails#show"
       post "search/reindex", to: "search#reindex"
       get "demo-data", to: "demo_data#index"
       post "demo-data", to: "demo_data#create"
@@ -110,6 +121,13 @@ Rails.application.routes.draw do
       get "urgent-requests/:id/candidates", to: "urgent_requests#candidates"
       post "urgent-requests/:id/notify", to: "urgent_requests#notify"
       patch "urgent-requests/:id", to: "urgent_requests#update"
+      resources :stage_posts, path: "stage-posts", only: %i[index destroy] do
+        member do
+          post :pin
+          post :unpin
+          post :feature
+        end
+      end
     end
 
     resources :portfolio, only: %i[index create update destroy], controller: "portfolio"
@@ -145,6 +163,8 @@ Rails.application.routes.draw do
     patch "notifications/preferences", to: "notifications#update_preferences"
     get "notifications/unsubscribe", to: "notifications#unsubscribe"
     post "notifications/unsubscribe", to: "notifications#unsubscribe"
+    get "notifications/unsubscribe/preferences", to: "notifications#unsubscribe_status"
+    patch "notifications/unsubscribe/preferences", to: "notifications#unsubscribe_update"
     post "email/webhook/brevo", to: "email_webhooks#brevo"
     resources :notifications, only: %i[index update]
     resources :reports, only: :create
@@ -236,6 +256,7 @@ Rails.application.routes.draw do
     end
     namespace :stage do
       get "feed", to: "feed#index"
+      get "events", to: "events#index"
       get "authors/:type/:authorId/posts", to: "posts#by_author"
       get "authors/:type/:id/followers", to: "follows#followers"
       get "authors/:type/:id/following", to: "follows#following"
@@ -247,6 +268,7 @@ Rails.application.routes.draw do
         member do
           post :applause, to: "applause#create"
           delete :applause, to: "applause#destroy"
+          get :ics, to: "events#ics"
         end
         resources :comments, only: %i[index create], controller: "post_comments"
       end

@@ -3,6 +3,9 @@ import { PROTECTED_AREA, signInPath } from './appTarget';
 
 // `?.`: the Node smoke tests import this module without Vite, where import.meta.env is undefined.
 export const API_BASE = import.meta.env?.VITE_API_URL || '/api';
+/** The Rails origin without the /api suffix, for routes served outside that scope (uploads,
+ * the public share cards at /share-cards/...). */
+export const BACKEND_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const MIN_RETRY_ATTEMPT_MS = 250;

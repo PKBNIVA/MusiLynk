@@ -37,6 +37,8 @@ import { AppSelect } from '../components/ui/app-select';
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { AutocompleteInput } from '../components/ai/AutocompleteInput';
 import { AiCreditsBadge } from '../components/ai/AiCreditsBadge';
+import { VerifiedBadge } from '../components/VerifiedBadge';
+import { ShareBadgeSection } from '../components/ShareBadgeSection';
 import { buildBio, buildHeadline, type ProfileFacts } from '../lib/profileTemplates';
 // List fields arrive as arrays and are edited as text: comma-separated, credits one per line.
 type ListField =
@@ -365,10 +367,7 @@ export default function ProfileSetup() {
               </Button>
             )}
             {f.verified ? (
-              <Badge className="bg-emerald-500/15 text-emerald-300">
-                <ShieldCheck size={14} className="mr-1" />
-                Verified professional
-              </Badge>
+              <VerifiedBadge className="bg-emerald-500/15 text-emerald-300" />
             ) : (
               <Button variant="outline" onClick={() => setVerifying(true)}>
                 <ShieldCheck size={16} className="mr-2" />
@@ -376,6 +375,18 @@ export default function ProfileSetup() {
               </Button>
             )}
           </div>
+          {f.verified && (
+            <div className="w-full md:w-auto space-y-3">
+              {f.id && <ShareBadgeSection userId={f.id} />}
+              <label className="flex items-center gap-2 text-xs text-slate-400">
+                <Checkbox
+                  checked={f.shareVerificationPublicly !== false}
+                  onCheckedChange={(v) => set('shareVerificationPublicly', !!v)}
+                />
+                Announce my verification on The Stage and let others share my badge card
+              </label>
+            </div>
+          )}
         </div>
         <FormError message={emailError} className="mb-5" />
         {loadError && (

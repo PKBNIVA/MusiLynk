@@ -13,7 +13,7 @@ module Verification
         # If this user was vouched for and has since joined, their voucher's slot graduates.
         Vouch.where(vouchee_id: request.user_id, status: "joined").update_all(status: "verified", updated_at: Time.current)
       end
-      notify(request, "Your verification request was approved.")
+      Notifier.verification_approved(request.user)
     end
 
     # Rejects (or revokes an approval): never leaves the badge behind unless another request is approved.

@@ -25,6 +25,7 @@ module Stage
 
     def create
       return unless within_user_rate_limit?("stage.posts", limit: CREATE_LIMIT_PER_HOUR, period: 1.hour)
+      return unless check_event_permission
       actor = current_actor
       return unless actor
       return unless check_related_blocks
@@ -60,6 +61,15 @@ module Stage
 
     private
 
+    # Meetup/event posts are creatable by verified users and admins only (not part of the
+    # ordinary "anyone can post" Stage flow).
+    def check_event_permission
+      return true unless params[:kind].to_s == "event"
+      return true if current_user.admin? || current_user.profile&.verified?
+      render_error("Only verified musicians and admins can post events.", :forbidden, "NOT_VERIFIED")
+      false
+    end
+
     def authorize_owner!(post)
       actor = current_actor
       return false unless actor
@@ -84,6 +94,7 @@ module Stage
 
     def post_params
       permitted = params.permit(:kind, :body, :linkUrl, :city, :visibility, :sharedPortfolioItemId, :sharedJobId, :resharedPostId,
+        :eventTitle, :eventStartsAt, :eventVenue,
         genres: [], media: [:uploadId, :type, :caption])
       {
         kind: permitted[:kind] || "update",
@@ -93,6 +104,9 @@ module Stage
         visibility: permitted[:visibility] || "public",
         genres: Array(permitted[:genres]),
         media: Array(permitted[:media]).map(&:to_h),
+        event_title: permitted[:eventTitle],
+        event_starts_at: permitted[:eventStartsAt],
+        event_venue: permitted[:eventVenue],
         shared_portfolio_item_id: permitted[:sharedPortfolioItemId],
         shared_job_id: permitted[:sharedJobId],
         reshared_post_id: permitted[:resharedPostId]

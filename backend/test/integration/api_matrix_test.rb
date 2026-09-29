@@ -105,7 +105,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/admin/reviews/{review}", :admin, { params: { status: "rejected" }, missing: :review, bad: { status: "x" }, bad_status: [400] }],
     [:put, "/api/admin/reviews/{review}", :admin, { params: { status: "published" }, missing: :review }],
     [:get, "/api/admin/verifications", :admin, { keys: %w[requests] }],
-    [:patch, "/api/admin/verifications/{verification}", :admin, { params: { status: "approved" }, missing: :verification, bad: { status: "x" }, bad_status: [400] }],
+    [:patch, "/api/admin/verifications/{verification}", :admin, { params: { status: "approved", checks: ["work_links"] }, missing: :verification, bad: { status: "x" }, bad_status: [400] }],
     [:put, "/api/admin/verifications/{verification}", :admin, { params: { status: "rejected" }, missing: :verification }],
     [:get, "/api/admin/reports", :admin, { keys: %w[reports] }],
     [:patch, "/api/admin/reports/{report}", :admin, { params: { status: "resolved" }, missing: :report, bad: { status: "x" }, bad_status: [400] }],
@@ -261,6 +261,14 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:put, "/api/urgent-requests/{urgent}", :talent, { params: { status: "cancelled" }, idor: true }],
     [:post, "/api/urgent-requests/{others_urgent}/respond", :talent, { ok: [201], params: { message: "Available" }, missing: :others_urgent }],
     [:get, "/api/urgent-requests/{urgent}/responses", :talent, { keys: %w[responses], idor: true, missing: :urgent }],
+    [:get, "/api/urgent-requests/{urgent}/token-action", :public, {
+      params: ->(w, actor) { { t: UrgentActionToken.generate(UrgentRequest.find(w.refs[actor][:urgent] || w.refs[:shared][:urgent]), "close") } },
+      keys: %w[ok status]
+    }],
+    [:get, "/api/vouches", :talent, { keys: %w[vouches] }],
+    # Fixture actors are not verified (Vouch requires a verified musician), so the happy-path
+    # replay documents the authorization rule itself rather than a successful vouch.
+    [:post, "/api/vouches", :talent, { ok: [403], params: ->(_w, _a) { { email: "matrix-vouch-#{SecureRandom.hex(4)}@example.com" } } }],
     [:post, "/api/profile/whatsapp-consent", :talent, { params: { phoneE164: "+919999999999", consent: true }, bad: { phoneE164: "not-a-number", consent: true }, bad_status: [422], keys: %w[phoneE164 whatsappConsentedAt] }],
     [:get, "/api/talent-folders", :talent, { keys: %w[folders] }],
     [:post, "/api/talent-folders", :talent, { ok: [201], params: { name: "Drummers" }, bad: {}, bad_status: [422] }],

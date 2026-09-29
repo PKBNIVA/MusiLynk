@@ -80,10 +80,15 @@ class AuthController < ApplicationController
       return render_error(starter.errors.values.flatten.to_sentence, :unprocessable_content, "VALIDATION_FAILED", fields: starter.errors)
     end
 
+    # A vouch link (/join/musician?vouch=<token>) stamps the new account so the admin
+    # verification queue can flag and sort it (see Vouch, Admin::VerificationsController#index).
+    vouch = Vouch.find_by(token: params[:vouch], status: "invited") if params[:vouch].present?
+
     user, created = User.transaction do
       account = User.create!(name: params[:name], email: params[:email], password: params[:password], role:, status: :active,
-        consented_at: consent_given? ? Time.current : nil)
+        consented_at: consent_given? ? Time.current : nil, vouched_by_id: vouch&.voucher_id)
       account.create_profile!
+      vouch&.update!(status: "joined", vouchee_id: account.id)
       [account, starter.apply!(account)]
     end
     token = sign_in(user)

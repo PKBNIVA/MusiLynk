@@ -200,8 +200,10 @@ Rails.application.routes.draw do
       member do
         post :respond
         get :responses
+        get "token-action", to: "urgent_requests#action_from_token"
       end
     end
+    resources :vouches, only: %i[index create]
     resources :talent_folders, path: "talent-folders", only: %i[index show create destroy] do
       member { post "candidates/:candidateId", to: "talent_folders#add_candidate" }
     end

@@ -16,6 +16,20 @@ import { useAuth } from '../../lib/authContext';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { PortfolioItem, Professional } from '../../lib/apiTypes';
 
+/** Person structured data for a public professional profile. */
+function personJsonLd(p: Professional, id?: string) {
+  const ld: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: p.name,
+    url: `/professionals/${id}`,
+  };
+  if (p.headline) ld.jobTitle = p.headline;
+  if (p.location) ld.address = { '@type': 'PostalAddress', addressLocality: p.location };
+  if (p.bio) ld.description = p.bio;
+  return ld;
+}
+
 export default function PublicProfile() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -49,6 +63,7 @@ export default function PublicProfile() {
   usePageMeta(
     p?.name && `${p.name}${p.headline ? ` — ${p.headline}` : ''}`,
     p ? p.bio || `${p.name} on Verse${p.location ? `, ${p.location}` : ''}.` : undefined,
+    { canonicalPath: `/professionals/${id}`, type: 'profile', jsonLd: p ? personJsonLd(p, id) : undefined },
   );
   if (loading || error || !p)
     return (

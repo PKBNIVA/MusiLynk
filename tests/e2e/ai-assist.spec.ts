@@ -90,8 +90,8 @@ test('a job description suggestion can be inserted, with no Improve button (impr
 
   await page.goto('/employer/post-job');
   await page.getByLabel('Title').fill('Session guitarist');
-  await page.getByLabel('Location').fill('Mumbai');
-  await page.getByLabel('Location').press('Enter');
+  await page.getByRole('combobox', { name: 'Location' }).fill('Mumbai');
+  await page.getByRole('combobox', { name: 'Location' }).press('Enter');
   await page.getByRole('button', { name: 'Next: Details' }).click();
 
   // Write with AI (job_description) always replaces — no draft text yet to insert alongside.
@@ -129,8 +129,8 @@ test('AI buttons and the usage hint are absent when AI assist is disabled', asyn
 
   await page.goto('/employer/post-job');
   await page.getByLabel('Title').fill('Session guitarist');
-  await page.getByLabel('Location').fill('Mumbai');
-  await page.getByLabel('Location').press('Enter');
+  await page.getByRole('combobox', { name: 'Location' }).fill('Mumbai');
+  await page.getByRole('combobox', { name: 'Location' }).press('Enter');
   await page.getByRole('button', { name: 'Next: Details' }).click();
 
   await expect(page.getByRole('button', { name: 'Write with AI' })).toHaveCount(0);

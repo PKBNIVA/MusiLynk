@@ -24,6 +24,9 @@ const DEFAULT_DEBOUNCE_MS = 200;
  * A combobox for skills/genres/instruments/roles/cities, backed by GET /api/ai/autocomplete
  * (works with no AI configured; AI only fills gaps when there are few taxonomy matches).
  * Follows the ARIA 1.2 combobox-with-listbox pattern; multi-value selections show as chips.
+ * A single-value field (multiple={false}) has no chip row — the committed value is the
+ * input's own text, with a small clear button inside it — so the field's height never
+ * changes between empty, typing and committed states.
  */
 export function AutocompleteInput({
   field,
@@ -39,7 +42,7 @@ export function AutocompleteInput({
   const generatedId = useId();
   const inputId = id || generatedId;
   const listboxId = `${inputId}-listbox`;
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => (multiple ? '' : (values[0] ?? '')));
   const [options, setOptions] = useState<AutocompleteSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -56,6 +59,15 @@ export function AutocompleteInput({
     },
     [],
   );
+
+  // Single-value fields show their committed value as the input's own text (no chip row, so
+  // the field's height never changes between empty/typing/committed) — keep it in sync with
+  // an externally-set/cleared value. This only reacts to the value actually changing, so it
+  // never clobbers text the user is mid-typing.
+  const committedSingleValue = !multiple ? values[0] : undefined;
+  useEffect(() => {
+    if (!multiple) setQuery(committedSingleValue ?? '');
+  }, [multiple, committedSingleValue]);
 
   function fetchOptions(text: string) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -86,23 +98,41 @@ export function AutocompleteInput({
     }, debounceMs);
   }
 
-  function selectValue(next: string) {
+  function selectValue(next: string, refocus = true) {
     const trimmed = next.trim();
     if (!trimmed) return;
     if (multiple) {
       if (!values.includes(trimmed)) onChange([...values, trimmed]);
+      setQuery('');
     } else {
       onChange([trimmed]);
+      // No chip row for a single-value field — the input's own text stays the committed value.
+      setQuery(trimmed);
     }
-    setQuery('');
     setOptions([]);
     setOpen(false);
     setActiveIndex(-1);
-    inputRef.current?.focus();
+    if (refocus) inputRef.current?.focus();
+  }
+
+  // Commits the field's current state as Enter would, but without stealing focus back —
+  // by the time this runs the user has already moved on to another control.
+  function commitOnBlur() {
+    if (activeIndex >= 0 && options[activeIndex]) selectValue(options[activeIndex].value, false);
+    else if (query.trim()) selectValue(query, false);
   }
 
   function removeValue(removed: string) {
     onChange(values.filter((existing) => existing !== removed));
+    inputRef.current?.focus();
+  }
+
+  // Single-value fields: clears the committed value and any in-progress text.
+  function clearSingleValue() {
+    onChange([]);
+    setQuery('');
+    setOptions([]);
+    setError(null);
     inputRef.current?.focus();
   }
 
@@ -133,7 +163,7 @@ export function AutocompleteInput({
       <label htmlFor={inputId} className="text-sm font-medium text-slate-200">
         {label}
       </label>
-      {values.length > 0 && (
+      {multiple && values.length > 0 && (
         <ul className="flex flex-wrap gap-1.5" aria-label={`Selected ${label.toLowerCase()}`}>
           {values.map((chip) => (
             <li
@@ -173,10 +203,33 @@ export function AutocompleteInput({
             fetchOptions(text);
           }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
+          onBlur={() => {
+            // A suggestion clicked via onMouseDown commits (and preventDefault keeps focus,
+            // so this blur never fires for it); this only handles a real, unhandled blur.
+            commitOnBlur();
+            setOpen(false);
+          }}
           onKeyDown={onKeyDown}
-          className="w-full rounded-md border border-white/15 bg-white/[.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-400 focus:outline-none"
+          className={cn(
+            'w-full rounded-md border border-white/15 bg-white/[.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-400 focus:outline-none',
+            !multiple && query.trim() && 'pr-8',
+          )}
         />
+        {!multiple && query.trim() && (
+          <button
+            type="button"
+            aria-label={`Clear ${label}`}
+            // onMouseDown (not onClick), like a suggestion, so it fires before onBlur commits
+            // the very text this button is meant to clear.
+            onMouseDown={(event) => {
+              event.preventDefault();
+              clearSingleValue();
+            }}
+            className="absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400 hover:text-slate-100"
+          >
+            <X className="size-3.5" aria-hidden="true" />
+          </button>
+        )}
         {open && (options.length > 0 || error) && (
           <ul
             id={listboxId}

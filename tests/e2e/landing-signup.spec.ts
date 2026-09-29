@@ -93,12 +93,14 @@ test.describe('landing page', () => {
     await expect(proof).not.toContainText(/\b3\b/);
   });
 
-  test('role × city links use the directory search, and structured data describes the site', async ({ page }) => {
+  test('popular searches link into the role × city hire pages, and structured data describes the site', async ({
+    page,
+  }) => {
     await mockSignupApi(page);
     await page.goto('/');
     await expect(page.getByRole('link', { name: 'Hire a drummer in Mumbai' })).toHaveAttribute(
       'href',
-      '/music-professionals?role=drummer&location=Mumbai',
+      '/hire/drummer/mumbai',
     );
     await expect(page.getByRole('link', { name: 'Hire a DJ in Mumbai' })).toBeVisible();
     const data = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent()) ?? '[]');
@@ -120,7 +122,7 @@ test.describe('musician sign-up', () => {
     const calls = await mockSignupApi(page);
     await page.goto('/join/musician');
     await expect(page.getByRole('heading', { name: 'What you do' })).toBeVisible();
-    await expect(page.getByRole('list', { name: 'Selected city you work from' })).toContainText('Mumbai');
+    await expect(page.getByRole('combobox', { name: 'City you work from' })).toHaveValue('Mumbai');
 
     await page.getByRole('button', { name: 'Next: your work' }).click();
     await expect(page.getByRole('alert')).toContainText('Pick at least one');

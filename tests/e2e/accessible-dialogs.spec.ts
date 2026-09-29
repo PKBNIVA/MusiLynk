@@ -196,7 +196,6 @@ test.describe('in-app dialogs', () => {
       {
         kind: 'professional',
         evidenceUrl: 'https://label.example/credits/asha',
-        note: 'Professional verification request',
       },
     ]);
 
@@ -209,6 +208,26 @@ test.describe('in-app dialogs', () => {
     expect(state.verificationRequests).toHaveLength(1);
     expect(state.nativeDialogs).toEqual([]);
     expect(state.pageErrors).toEqual([]);
+  });
+
+  test('professional verification sends the optional note when filled in (V-11)', async ({ page }) => {
+    const state = await signInWithDialogFixtures(page);
+    await page.goto('/jobseeker/profile');
+    await page.getByRole('button', { name: 'Request verification' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Request professional verification' });
+    await dialog.getByRole('textbox', { name: 'Proof URL' }).fill('https://label.example/credits/asha');
+    await dialog
+      .getByRole('textbox', { name: 'Anything the reviewer should know (optional)' })
+      .fill('Ask the label manager, Priya, to confirm the credit.');
+    await dialog.getByRole('button', { name: 'Submit for review' }).click();
+    await expect(dialog).toBeHidden();
+    expect(state.verificationRequests).toEqual([
+      {
+        kind: 'professional',
+        evidenceUrl: 'https://label.example/credits/asha',
+        note: 'Ask the label manager, Priya, to confirm the credit.',
+      },
+    ]);
   });
 
   test('profile form fields are labelled', async ({ page }) => {

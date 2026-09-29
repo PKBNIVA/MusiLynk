@@ -8,7 +8,9 @@ import { apiPost } from '../lib/api';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
 export default function ForgotPassword() {
-  usePageMeta('Reset your password', 'Request a secure link to reset the password on your Verse account.');
+  usePageMeta('Reset your password', 'Request a secure link to reset the password on your Verse account.', {
+    noindex: true,
+  });
   const [email, setEmail] = useState(''),
     [done, setDone] = useState(false),
     [busy, setBusy] = useState(false);

@@ -267,7 +267,7 @@ export default function LegalPage() {
   const content = sections[key] || sections.about;
   const policy = useLegalPolicy();
   const items = [...content.items, ...dynamicItems(key, policy)];
-  usePageMeta(content.title, content.intro);
+  usePageMeta(content.title, content.intro, { canonicalPath: `/${path}` });
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />

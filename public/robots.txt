@@ -3,5 +3,11 @@ Allow: /
 Disallow: /admin
 Disallow: /employer
 Disallow: /jobseeker
+Disallow: /auth/
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /unsubscribe
+Disallow: /search
+Disallow: /start
 
 Sitemap: https://verse-music-platform.vercel.app/sitemap.xml

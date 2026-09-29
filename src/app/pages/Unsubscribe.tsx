@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import { apiGet, apiPatch } from '../lib/api';
 import { errorStatus } from '../lib/errors';
+import { usePageMeta } from '../components/PageMeta';
 
 type State = 'loading' | 'ready' | 'invalid' | 'error';
 type Category = 'digest' | 'lifecycle' | 'requests' | 'product';
@@ -27,6 +28,7 @@ type Preferences = Record<Category, boolean>;
  * the older "Turn off these emails" link in transactional emails. No sign-in required: the
  * signed token (same one NotificationEmail issues) names the account. */
 export default function Unsubscribe() {
+  usePageMeta('Unsubscribe', 'Turn off Verse notification emails.', { noindex: true });
   const [search] = useSearchParams();
   const token = search.get('token') || '';
   const [state, setState] = useState<State>(token ? 'loading' : 'invalid');

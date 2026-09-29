@@ -48,6 +48,8 @@ function publicRoutes(): RouteObject[] {
   const PublicJobs = L(() => import('./pages/public/PublicJobs'));
   const PublicOpportunity = L(() => import('./pages/public/PublicOpportunity'));
   const PublicTalent = L(() => import('./pages/public/PublicTalent'));
+  const HirePage = L(() => import('./pages/public/HirePage'));
+  const RatesPage = L(() => import('./pages/public/RatesPage'));
   const PublicProfile = L(() => import('./pages/public/PublicProfile'));
   const PublicActs = L(() => import('./pages/public/PublicActs'));
   const PublicAct = L(() => import('./pages/public/PublicAct'));
@@ -182,6 +184,22 @@ function publicRoutes(): RouteObject[] {
       element: (
         <S>
           <PublicTalent />
+        </S>
+      ),
+    },
+    {
+      path: '/hire/:role/:city',
+      element: (
+        <S>
+          <HirePage />
+        </S>
+      ),
+    },
+    {
+      path: '/rates/:city',
+      element: (
+        <S>
+          <RatesPage />
         </S>
       ),
     },

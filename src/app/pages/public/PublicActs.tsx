@@ -25,6 +25,7 @@ export default function PublicActs() {
   usePageMeta(
     'Book singers, bands & live acts',
     'Discover bookable singers, duos, bands and ensembles, compare lineups and request a quote for your event on Verse.',
+    { canonicalPath: '/book-music', type: 'website' },
   );
   const { values, query, update, clear } = useUrlFilters(FILTERS);
   const list = usePagedList<Act, ActPage>({ path: '/public/acts', pick: pickActs, noun: 'acts' });

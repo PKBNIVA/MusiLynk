@@ -13,11 +13,13 @@ import { BrandMark } from '../components/BrandMark';
 import { errorCode, errorMessage } from '../lib/errors';
 import { useSubmitOnce } from '../lib/formErrors';
 import { CODE_LENGTH, CodeStep, FormError, focusField, useResendCooldown } from '../components/auth/CodeStep';
+import { usePageMeta } from '../components/PageMeta';
 
 /* Admins use the separate admin site; its address is deliberately not part of this bundle. */
 const ADMIN_SITE_MESSAGE = 'Admins sign in at the admin site.';
 
 export default function AuthPage() {
+  usePageMeta('Sign in', 'Sign in to your Verse account.', { noindex: true });
   const { userType = 'jobseeker' } = useParams();
   const role = userType === 'employer' ? 'employer' : 'jobseeker';
   const navigate = useNavigate();

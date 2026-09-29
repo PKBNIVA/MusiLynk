@@ -1,6 +1,7 @@
 import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { apiDelete, apiGet } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -38,8 +39,7 @@ export default function SavedJobs() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-5xl mx-auto px-6 pt-28 pb-16">
-        <h1 className="text-4xl font-bold">Saved opportunities</h1>
-        <p className="text-slate-400 mt-2 mb-7">A focused shortlist of roles you want to revisit.</p>
+        <PageHeader title="Saved" />
         {error ? (
           <Card className="bg-rose-500/10 border-rose-400/20" role="alert">
             <CardContent className="p-6">

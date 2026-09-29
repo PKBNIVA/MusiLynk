@@ -1,6 +1,7 @@
 import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
@@ -278,13 +279,7 @@ export default function Portfolio() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 pt-28 pb-16">
-        <div className="max-w-3xl">
-          <h1 className="text-4xl font-bold">Work samples</h1>
-          <p className="text-slate-400 mt-2 mb-7 leading-7">
-            Don’t use one generic reel for everything. Add several samples and tag each by genre, role and instrument so
-            the right employer sees the right proof.
-          </p>
-        </div>
+        <PageHeader title="Work samples" />
         <HelpCallout {...HELP.portfolio} />
         <div className="grid xl:grid-cols-[390px_1fr] gap-6">
           <Card className="bg-white/[.06] border-white/10 h-fit">

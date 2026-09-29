@@ -1,4 +1,4 @@
-import { createBrowserRouter, type RouteObject } from 'react-router';
+import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
 import { FEATURE_RESUMES, FEATURE_STAGE } from './lib/features';
 import React from 'react';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -9,6 +9,11 @@ const L = (f: () => Promise<{ default: React.ComponentType }>) => React.lazy(f);
 const S = ({ children }: { children: React.ReactNode }) => (
   <React.Suspense fallback={<PageLoading />}>{children}</React.Suspense>
 );
+/** Redirects to another path while keeping the query string and hash (e.g. /login?next=…). */
+const Redirect = ({ to }: { to: string }) => {
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to}${search}${hash}`} replace />;
+};
 const P = ({ roles, children }: { roles: Role[]; children: React.ReactNode }) => (
   <S>
     <ProtectedRoute roles={roles}>{children}</ProtectedRoute>
@@ -332,6 +337,8 @@ function publicRoutes(): RouteObject[] {
         </S>
       ),
     },
+    { path: '/login', element: <Redirect to="/auth/jobseeker" /> },
+    { path: '/signup', element: <Redirect to="/join" /> },
     {
       path: '/auth/:userType',
       element: (

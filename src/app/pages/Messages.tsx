@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import { ArrowLeft, Ban, Flag, MessageSquare, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
@@ -377,7 +378,7 @@ export default function Messages() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-4 md:px-6 pt-24 md:pt-28 pb-28 lg:pb-16">
-        <h1 className={`text-3xl md:text-4xl font-bold mb-5 md:mb-7 ${activeId ? 'hidden md:block' : ''}`}>Messages</h1>
+        <PageHeader title="Messages" className={activeId ? 'hidden md:flex' : ''} />
         {/* Tips show on the inbox itself; an open thread keeps the whole panel for the conversation. */}
         {!activeId && <HelpCallout {...HELP.messages} />}
         <Card className="bg-white/[.05] border-white/10 overflow-hidden">
@@ -388,8 +389,20 @@ export default function Messages() {
               className={`md:border-r border-white/10 md:h-full md:overflow-y-auto ${activeId ? 'hidden md:block' : ''}`}
             >
               {convsLoading ? (
-                <div className="p-6 text-sm text-slate-400" role="status">
-                  Loading conversations…
+                <div role="status" data-testid="messages-skeleton" aria-busy="true">
+                  <span className="sr-only">Loading conversations…</span>
+                  <div aria-hidden="true">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex animate-pulse gap-3 border-b border-white/10 p-4">
+                        <div className="size-10 shrink-0 rounded-full bg-white/10" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="h-3 w-2/3 rounded bg-white/10" />
+                          <div className="h-2.5 w-1/3 rounded bg-white/[.07]" />
+                          <div className="h-2.5 w-5/6 rounded bg-white/[.07]" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : convsError && convs.length === 0 ? (
                 <div className="p-6 text-sm" role="alert">
@@ -476,6 +489,14 @@ export default function Messages() {
               aria-label="Conversation"
               className={`flex-col min-w-0 md:h-full md:min-h-0 ${activeId ? 'flex' : 'hidden md:flex'}`}
             >
+              {convsLoading && !activeId && (
+                <div aria-hidden="true" className="hidden flex-1 animate-pulse flex-col gap-4 p-6 md:flex">
+                  <div className="h-4 w-1/3 rounded bg-white/10" />
+                  <div className="h-10 w-2/3 rounded-2xl bg-white/[.07]" />
+                  <div className="ml-auto h-10 w-1/2 rounded-2xl bg-white/[.07]" />
+                  <div className="h-10 w-3/5 rounded-2xl bg-white/[.07]" />
+                </div>
+              )}
               {activeId && (
                 <header className="flex items-center gap-3 border-b border-white/10 p-3 md:p-4">
                   <Button

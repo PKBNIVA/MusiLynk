@@ -2,6 +2,7 @@ import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
@@ -181,13 +182,7 @@ export default function ActsManager() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
-        <div className="mb-7">
-          <div className="text-xs uppercase tracking-[.2em] text-violet-300">Roster & booking identity</div>
-          <h1 className="text-3xl sm:text-4xl font-bold mt-2">Your acts</h1>
-          <p className="text-slate-400 mt-2">
-            Create a solo, duo, band or ensemble once, then use that identity for enquiries, quotes and bookings.
-          </p>
-        </div>
+        <PageHeader title="My acts" />
         <HelpCallout {...HELP.acts} />
         <div className="grid lg:grid-cols-[.9fr_1.1fr] gap-6">
           <Card className="bg-white/[.055] border-white/10">

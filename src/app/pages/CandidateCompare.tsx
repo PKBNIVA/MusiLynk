@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { apiGet } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -49,8 +50,7 @@ export default function CandidateCompare() {
           <ArrowLeft size={14} className="inline mr-1" />
           Back to talent
         </Link>
-        <h1 className="text-4xl font-bold mt-4">Compare professionals</h1>
-        <p className="text-slate-400 mt-2">Compare proof, rates, skills and availability side by side—not just bios.</p>
+        <PageHeader title="Compare professionals" className="mt-4" />
         {ids.length < 2 && (
           <Card className="mt-7 bg-white/5 border-white/10">
             <CardContent className="p-8 text-center text-slate-400">

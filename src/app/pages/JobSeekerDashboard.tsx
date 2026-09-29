@@ -1,33 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
+import { TourStrip } from '../components/ProductTour';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { WelcomeNextStep } from '../components/landing/WelcomeNextStep';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Progress } from '../components/ui/progress';
 import { apiGet } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { Link, useLocation } from 'react-router';
-import {
-  Briefcase,
-  Calendar,
-  Search,
-  Bookmark,
-  ArrowRight,
-  ShieldCheck,
-  Bell,
-  Gauge,
-  MapPin,
-  Sparkles,
-  Siren,
-} from 'lucide-react';
-import { EmptyState } from '../components/help/EmptyState';
+import { Search, ArrowRight, MapPin, Sparkles, Siren } from 'lucide-react';
 import { VouchCard } from '../components/VouchCard';
 import { optionLabel } from '../components/ui/option-labels';
 import type { Job, JobSeekerDashboard } from '../lib/apiTypes';
-import type { LucideIcon } from 'lucide-react';
+const plural = (n: number | undefined, word: string) => `${n || 0} ${word}${n === 1 ? '' : 's'}`;
 export default function JobSeekerDashboard() {
   const { user } = useAuth();
   const welcome = new URLSearchParams(useLocation().search).get('welcome') === '1';
@@ -43,41 +31,23 @@ export default function JobSeekerDashboard() {
       .catch(() => setState('error'));
   };
   useEffect(load, []);
-  const Stat = ({ n, label, icon: I }: { n?: number; label: string; icon: LucideIcon }) => (
-    <Card className="bg-white/[.055] border-white/10">
-      <CardContent className="p-5 flex items-center gap-4">
-        <div className="rounded-xl bg-violet-500/10 p-3">
-          <I className="text-violet-300" />
-        </div>
-        <div>
-          <div className="text-2xl font-bold">{n || 0}</div>
-          <div className="text-sm text-slate-400">{label}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const goodFits = d.recommendedJobs.filter((j) => (j.fitScore ?? 0) >= 60);
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="flex flex-col md:flex-row justify-between gap-5 mb-7">
-          <div>
-            <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Career workspace</div>
-            <h1 className="text-4xl md:text-5xl font-bold">
-              {/* Right after the two-minute sign-up (?welcome=1) it is a first visit, not a return. */}
-              {welcome ? 'Welcome' : 'Welcome back'}, {user?.name?.split(' ')[0]}
-            </h1>
-            <p className="text-slate-400 mt-2">
-              Focus on credible opportunities and proof of work, not application volume.
-            </p>
-          </div>
-          <Button asChild>
-            <Link to="/jobseeker/jobs">
-              <Search size={16} className="mr-2" />
-              Explore opportunities
-            </Link>
-          </Button>
-        </div>
+        <PageHeader
+          title={`Hi, ${user?.name?.split(' ')[0] || 'there'}`}
+          actions={
+            <Button asChild>
+              <Link to="/jobseeker/jobs">
+                <Search size={16} className="mr-2" />
+                Explore opportunities
+              </Link>
+            </Button>
+          }
+        />
+        {!welcome && <TourStrip role="jobseeker" />}
         <WelcomeNextStep role="jobseeker" />
         <HelpCallout {...HELP.jobseekerDashboard} />
         {state === 'error' && (
@@ -91,11 +61,6 @@ export default function JobSeekerDashboard() {
             </Button>
           </div>
         )}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
-          <Stat n={d.applications} label="Applications" icon={Briefcase} />
-          <Stat n={d.interviews} label="Interviews" icon={Calendar} />
-          <Stat n={d.saved} label="Saved opportunities" icon={Bookmark} />
-        </div>
         {Boolean(d.urgentNearby?.count) && (
           <Card className="bg-gradient-to-br from-orange-500/15 to-rose-500/[.06] border-orange-400/20 mb-8">
             <CardContent className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -125,92 +90,64 @@ export default function JobSeekerDashboard() {
             </CardContent>
           </Card>
         )}
-        <Card className="bg-gradient-to-br from-violet-500/10 to-sky-500/[.06] border-white/10 mb-10">
-          <CardContent className="p-5 md:p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="max-w-2xl">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-semibold flex items-center gap-2">
-                    <Gauge aria-hidden="true" size={20} className="text-violet-300" />
-                    Career profile strength
-                  </h2>
-                  {user?.verified && (
-                    <Badge className="bg-emerald-500/15 text-emerald-300">
-                      <ShieldCheck size={13} className="mr-1" />
-                      Verified
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-slate-400 mt-1">
-                  Credits, portfolio proof, skills, genres and availability are stronger hiring signals than a generic
-                  bio.
-                </p>
-              </div>
-              <div className="w-full md:w-64">
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Completeness</span>
-                  <span>{d.profileScore || 0}%</span>
-                </div>
-                <Progress value={d.profileScore || 0} aria-label={`Profile completeness, ${d.profileScore || 0}%`} />
-                <Link to="/jobseeker/profile" className="text-xs text-violet-300 mt-2 inline-flex items-center">
-                  Improve profile <ArrowRight size={12} className="ml-1" />
-                </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {state === 'ready' && (d.profileScore ?? 0) < 80 && (
+          <div
+            data-testid="profile-nudge"
+            className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-sm"
+          >
+            <span>
+              Profile {d.profileScore || 0}% complete{' '}
+              <span className="text-slate-400">· Finish it so hirers can find you</span>
+            </span>
+            <Link to="/jobseeker/profile" className="inline-flex items-center text-violet-300 hover:text-violet-200">
+              Finish profile <ArrowRight aria-hidden="true" size={14} className="ml-1" />
+            </Link>
+          </div>
+        )}
         {user?.verified && (
           <div className="mb-10">
             <VouchCard />
           </div>
         )}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-semibold flex items-center gap-2">
+        {goodFits.length > 0 && (
+          <section aria-labelledby="best-fits" className="mb-8">
+            <h2 id="best-fits" className="mb-4 flex items-center gap-2 text-2xl font-semibold">
               <Sparkles aria-hidden="true" size={24} className="text-violet-300" />
               Best current fits
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Transparent profile-fit score based on skills, genre, location and work mode—not a black-box AI verdict.
-            </p>
-          </div>
-        </div>
-        {state === 'ready' && !d.recommendedJobs?.length && (
-          <EmptyState
-            icon={Bell}
-            title="No open opportunities to recommend right now."
-            action={
-              <Button asChild variant="outline">
-                <Link to="/jobseeker/alerts">
-                  <Bell aria-hidden="true" size={16} className="mr-2" />
-                  Set up an alert
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {goodFits.map((j) => (
+                <Link key={j.id} to={`/jobseeker/jobs/${j.id}`}>
+                  <Card className="verse-lift h-full bg-white/[.055] border-white/10 hover:bg-white/[.075]">
+                    <CardContent className="p-5">
+                      <div className="flex justify-between gap-3">
+                        <Badge variant="secondary">{optionLabel(j.opportunity_kind || 'job')}</Badge>
+                        <Badge className="bg-emerald-500/10 text-emerald-200">Good fit</Badge>
+                      </div>
+                      <h3 className="font-semibold text-lg mt-4">{j.title}</h3>
+                      <p className="text-violet-300 text-sm mt-1">{j.company}</p>
+                      <p className="text-sm text-slate-400 mt-3 flex items-center gap-1.5">
+                        <MapPin aria-hidden="true" size={16} />
+                        {[j.location, j.workplace && optionLabel(j.workplace)].filter(Boolean).join(' · ')}
+                      </p>
+                    </CardContent>
+                  </Card>
                 </Link>
-              </Button>
-            }
-          >
-            New gigs and sessions arrive every week. An alert tells you as soon as one fits.
-          </EmptyState>
+              ))}
+            </div>
+          </section>
         )}
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {d.recommendedJobs?.map((j) => (
-            <Link key={j.id} to={`/jobseeker/jobs/${j.id}`}>
-              <Card className="verse-lift h-full bg-white/[.055] border-white/10 hover:bg-white/[.075]">
-                <CardContent className="p-5">
-                  <div className="flex justify-between gap-3">
-                    <Badge variant="secondary">{optionLabel(j.opportunity_kind || 'job')}</Badge>
-                    <Badge className="bg-sky-500/15 text-sky-200">{j.fitScore}% fit</Badge>
-                  </div>
-                  <h3 className="font-semibold text-lg mt-4">{j.title}</h3>
-                  <p className="text-violet-300 text-sm mt-1">{j.company}</p>
-                  <p className="text-sm text-slate-400 mt-3 flex items-center gap-1.5">
-                    <MapPin aria-hidden="true" size={16} />
-                    {[j.location, j.workplace && optionLabel(j.workplace)].filter(Boolean).join(' · ')}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        {state === 'ready' && (
+          <p className="flex flex-wrap gap-2 text-sm" data-testid="dashboard-stats">
+            {[plural(d.applications, 'application'), plural(d.interviews, 'interview'), `${d.saved || 0} saved`].map(
+              (t) => (
+                <span key={t} className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1 text-slate-300">
+                  {t}
+                </span>
+              ),
+            )}
+          </p>
+        )}
       </main>
     </div>
   );

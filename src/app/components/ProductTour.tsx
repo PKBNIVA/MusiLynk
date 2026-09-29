@@ -125,19 +125,17 @@ const tours: { [k: string]: TourStep[] } = {
     },
   ],
 };
+/**
+ * The full product tour modal. It never opens by itself: it is only shown when someone asks for
+ * it ("Take product tour"). First-visit guidance is the inline {@link TourStrip} instead.
+ */
 export function ProductTour({
   role = 'public',
   forceOpen = false,
-  // Whether this render is allowed to auto-start the tour the first time it is seen
-  // (CRAWL-03/C5): the caller passes true only on the role's dashboard home, once the
-  // profile is complete — never on a profile-setup page, so the tour never covers the
-  // form the person is trying to fill in.
-  autoStart = false,
   onClose,
 }: {
   role?: Role;
   forceOpen?: boolean;
-  autoStart?: boolean;
   onClose?: () => void;
 }) {
   const key = `verse-tour-v2-${role}`,
@@ -145,17 +143,8 @@ export function ProductTour({
   const [open, setOpen] = useState(false),
     [i, setI] = useState(0);
   useEffect(() => {
-    if (forceOpen) {
-      setOpen(true);
-      return;
-    }
-    if (!autoStart) return;
-    let seen: string | null = null;
-    try {
-      seen = localStorage.getItem(key);
-    } catch {}
-    if (!seen) setOpen(true);
-  }, [forceOpen, autoStart, key]);
+    if (forceOpen) setOpen(true);
+  }, [forceOpen]);
   const close = () => {
     try {
       localStorage.setItem(key, 'done');
@@ -242,5 +231,72 @@ export function TourLauncher({ role }: { role: Role }) {
       }
       {open && <ProductTour role={role} forceOpen onClose={() => setOpen(false)} />}
     </>
+  );
+}
+
+type StripCard = { icon: LucideIcon; title: string; text: string; to: string };
+const strips: { [k in 'jobseeker' | 'employer']: StripCard[] } = {
+  jobseeker: [
+    { icon: Music, title: 'Add your work', text: 'Get found faster.', to: '/jobseeker/library' },
+    { icon: Briefcase, title: 'Find work', text: 'Gigs, sessions, auditions.', to: '/jobseeker/jobs' },
+    {
+      icon: CalendarDays,
+      title: 'Set availability',
+      text: 'Show when you are free.',
+      to: '/jobseeker/availability',
+    },
+  ],
+  employer: [
+    { icon: Briefcase, title: 'Post an opportunity', text: 'Describe work and pay.', to: '/employer/post-job' },
+    { icon: Search, title: 'Find talent', text: 'Search by skill and city.', to: '/employer/candidates' },
+    { icon: Zap, title: 'Need someone fast?', text: 'Send an urgent request.', to: '/employer/urgent' },
+  ],
+};
+const stripKey = (role: string) => `verse-tour-strip-v1-${role}`;
+
+/**
+ * A dismissible three-card strip for the top of a dashboard. It replaces the old auto-opening
+ * modal: nothing blocks the page, "Got it" hides it for good (remembered in localStorage), and it
+ * never renders on small screens.
+ */
+export function TourStrip({ role }: { role: 'jobseeker' | 'employer' }) {
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      // People who already finished or closed the old first-run tour do not need the strip either.
+      return (
+        localStorage.getItem(stripKey(role)) === 'done' || localStorage.getItem(`verse-tour-v2-${role}`) === 'done'
+      );
+    } catch {
+      return false;
+    }
+  });
+  if (dismissed) return null;
+  const dismiss = () => {
+    try {
+      localStorage.setItem(stripKey(role), 'done');
+    } catch {}
+    setDismissed(true);
+  };
+  return (
+    <section aria-label="Getting started" data-testid="tour-strip" className="mb-5 hidden items-stretch gap-3 md:flex">
+      {strips[role].map((c) => (
+        <Link
+          key={c.title}
+          to={c.to}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-white/10 bg-white/[.04] p-3 hover:bg-white/[.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+        >
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-violet-500/15 text-violet-200">
+            <c.icon aria-hidden="true" size={18} />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-white">{c.title}</span>
+            <span className="block text-xs text-slate-400">{c.text}</span>
+          </span>
+        </Link>
+      ))}
+      <Button variant="ghost" size="sm" className="self-center" onClick={dismiss}>
+        Got it
+      </Button>
+    </section>
   );
 }

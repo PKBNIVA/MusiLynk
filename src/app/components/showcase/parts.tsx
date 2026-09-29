@@ -46,10 +46,10 @@ export function ShowcaseShell({
             {back.label}
           </Link>
         )}
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="min-w-0 max-w-3xl">
-            <h1 className="text-3xl font-bold break-words md:text-4xl">{title}</h1>
-            {description && <p className="mt-2 leading-7 text-slate-400">{description}</p>}
+            <h1 className="text-2xl font-bold leading-tight break-words md:text-3xl">{title}</h1>
+            {description && <p className="mt-0.5 text-sm text-slate-400">{description}</p>}
           </div>
           {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
         </div>

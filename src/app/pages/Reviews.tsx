@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -58,8 +59,7 @@ export default function Reviews() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-6 pt-28 pb-16">
-        <h1 className="text-4xl font-bold">Employer reviews</h1>
-        <p className="text-slate-400 mt-2 mb-7">Published reviews are moderated to reduce abuse and spam.</p>
+        <PageHeader title="Employer reviews" />
         <div className="grid lg:grid-cols-[360px_1fr] gap-6">
           <Card className="bg-white/[.06] border-white/10 h-fit">
             <CardContent className="p-5">

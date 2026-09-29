@@ -1,6 +1,7 @@
 import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
@@ -46,13 +47,7 @@ export default function ApplicationTracking() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-5xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="mb-7">
-          <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Your pipeline</div>
-          <h1 className="text-4xl font-bold">Applications</h1>
-          <p className="text-slate-400 mt-2">
-            Track every application from submission through interview, offer and hire.
-          </p>
-        </div>
+        <PageHeader title="Applications" />
         <HelpCallout {...HELP.applications} />
         {error ? (
           <Card className="bg-rose-500/10 border-rose-400/20" role="alert">

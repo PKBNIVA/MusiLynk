@@ -58,7 +58,7 @@ async function goToStage(
     SELF,
   );
   await page.goto('/stage');
-  await expect(page.getByRole('heading', { name: 'The Stage' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Stage', exact: true })).toBeVisible();
   await expect(page.getByLabel('Post text').first()).toBeVisible();
 }
 

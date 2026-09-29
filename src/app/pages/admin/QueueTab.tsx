@@ -57,7 +57,10 @@ export default function QueueTab({
                 <p className="text-sm text-slate-300 mt-3 line-clamp-3">{j.description}</p>
                 <div className="mt-3 text-sm">
                   <span className="text-slate-400">Compensation:</span>{' '}
-                  {j.salary || `${j.currency || 'INR'} ${j.compensation_min || '?'}–${j.compensation_max || '?'}`}
+                  {j.salary ||
+                    (j.compensation_min || j.compensation_max
+                      ? `${j.currency || 'INR'} ${j.compensation_min || '?'}–${j.compensation_max || '?'}`
+                      : 'not disclosed')}
                 </div>
                 {j.moderation_note && (
                   <div className="mt-3 rounded-lg bg-amber-500/10 border border-amber-400/20 p-3 text-sm text-amber-200">

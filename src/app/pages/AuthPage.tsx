@@ -100,7 +100,7 @@ export default function AuthPage() {
   };
   /* This site has no admin area: an admin session started here (possible while the API's admin
      origin lock is not configured) is ended at once and the admin is told where to go. */
-  const finish = async (u: User, welcome: string) => {
+  const finish = async (u: User) => {
     if (u.role === 'admin') {
       await logout().catch(() => undefined);
       leaveChallenge();
@@ -112,7 +112,6 @@ export default function AuthPage() {
     try {
       const confirmed = await submitUrgentDraft();
       if (confirmed) {
-        toast.success(welcome);
         navigate('/urgent', { replace: true, state: { confirmed } });
         return;
       }
@@ -121,7 +120,6 @@ export default function AuthPage() {
         errorMessage(e, 'Signed in, but the urgent request could not be posted. Please try again from /urgent.'),
       );
     }
-    toast.success(welcome);
     go(u.role, u.profileComplete);
   };
   /* Errors are shown inline (role=alert) next to the fields, for both the code and password flows. */
@@ -166,7 +164,7 @@ export default function AuthPage() {
         startChallenge(result);
         return;
       }
-      await finish(result, 'Welcome back');
+      await finish(result);
     } catch (e: unknown) {
       /* The API refuses admin passwords from this site once the admin site is live. */
       if (errorCode(e) === 'ADMIN_USE_ADMIN_SITE') setError(errorMessage(e, ADMIN_SITE_MESSAGE));
@@ -232,7 +230,7 @@ export default function AuthPage() {
       const u = challenge
         ? await completeSecondFactor(challenge.challengeToken, value)
         : await verifyCode(email, value);
-      await finish(u, 'Welcome back');
+      await finish(u);
     } catch (e: unknown) {
       /* An expired or unusable challenge cannot be retried; start again from the password. */
       if (challenge && errorCode(e) === 'SECOND_FACTOR_EXPIRED') {

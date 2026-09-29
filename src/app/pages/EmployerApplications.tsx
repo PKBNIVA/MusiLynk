@@ -2,6 +2,7 @@ import { ChevronDown, Inbox, ListOrdered, Mail, MessageCircleQuestion, Plus, Spa
 import { EmptyState } from '../components/help/EmptyState';
 import { useCallback, useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
@@ -59,6 +60,9 @@ const DRAFT_TITLES: Record<DraftKind, string> = {
   interview_questions: 'Interview questions',
   rejection_note: 'Draft kind rejection',
 };
+
+/** The applicant's email is only shown once the hirer has moved them forward. */
+const EMAIL_VISIBLE_STATUSES = ['Shortlisted', 'Interview Scheduled', 'Offer', 'Hired'];
 
 /** Parses candidate_summary's fixed output shape: "- bullet" lines, then a final "Fit: ..." line. */
 function parseCandidateSummary(text: string): CandidateSummary {
@@ -320,16 +324,14 @@ export default function EmployerApplications() {
   }
   const setJobFilter = (v: string) => setParams(v ? { jobId: v } : {}, { replace: true });
   const filteredJob = jobs.find((j) => j.id === jobId);
+  // One primary button per screen: "Shortlisted" on the first applicant who can be shortlisted.
+  const primaryShortlistId = apps.find((a) => (a.allowedNextStatuses || []).includes('Shortlisted'))?.id;
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <h1 className="text-4xl font-bold">Applications</h1>
-          <AiCreditsBadge />
-        </div>
+        <PageHeader title="Applicants" actions={<AiCreditsBadge />} />
         <HelpCallout {...HELP.employerApplications} />
-        <p className="text-slate-400 mt-2 mb-5">Review candidates only for opportunities you posted.</p>
         {jobs.length > 0 && (
           <div className="mb-6 flex flex-wrap items-end gap-3">
             <div className="max-w-md flex-1 min-w-56">
@@ -458,8 +460,21 @@ export default function EmployerApplications() {
                           </div>
                         )}
                         <div className="text-sm text-slate-400 mt-2 break-words">
-                          {a.candidateEmail} · {a.candidateLocation || 'Location not provided'} ·{' '}
-                          {a.experience || 'Experience not provided'}
+                          {[
+                            a.headline,
+                            a.candidateLocation || 'Location not provided',
+                            a.experience || 'Experience not provided',
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                          {EMAIL_VISIBLE_STATUSES.includes(a.status) && a.candidateEmail && (
+                            <>
+                              {' · '}
+                              <a href={`mailto:${a.candidateEmail}`} className="underline hover:text-white">
+                                {a.candidateEmail}
+                              </a>
+                            </>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-2 mt-3">
                           {a.skills?.map((s: string) => (
@@ -574,7 +589,12 @@ export default function EmployerApplications() {
                         )}
                       </div>
                       <div className="flex flex-wrap lg:flex-col gap-2 lg:w-52">
-                        <Button className="tap-target-44" size="sm" onClick={() => message(a.candidateId, a.jobId)}>
+                        <Button
+                          className="tap-target-44"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => message(a.candidateId, a.jobId)}
+                        >
                           Message
                         </Button>
                         <Button
@@ -635,7 +655,13 @@ export default function EmployerApplications() {
                             key={s}
                             className="tap-target-44"
                             size="sm"
-                            variant={s === 'Rejected' ? 'outline' : 'secondary'}
+                            variant={
+                              s === 'Rejected'
+                                ? 'outline'
+                                : s === 'Shortlisted' && a.id === primaryShortlistId
+                                  ? 'default'
+                                  : 'secondary'
+                            }
                             disabled={!!updating[a.id]}
                             aria-busy={!!updating[a.id]}
                             onClick={() => status(a, s)}

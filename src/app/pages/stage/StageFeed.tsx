@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { Music4, Users } from 'lucide-react';
 import { Navigation } from '../../components/Navigation';
+import { PageHeader } from '../../components/PageHeader';
 import { HelpCallout } from '../../components/help/HelpCallout';
 import { HELP } from '../../components/help/helpContent';
 import { EmptyState } from '../../components/help/EmptyState';
@@ -44,7 +45,7 @@ export default function StageFeed() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="mx-auto max-w-2xl px-4 pt-24 pb-16 md:px-6">
-        <h1 className="text-2xl font-bold">The Stage</h1>
+        <PageHeader title="Stage" />
         <HelpCallout {...HELP.stage} />
 
         <EventStrip />

@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { KeyRound, Link2, Mail, MessageCircle, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -41,17 +42,14 @@ export default function AccountSettings() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-3xl mx-auto px-5 md:px-6 pt-28 pb-16 space-y-6">
-        <div>
-          <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Settings</div>
-          <h1 className="text-4xl font-bold">Account settings</h1>
-          <p className="text-slate-400 mt-2">
-            Update your name, email and password. Looking for your data or to delete your account? Visit{' '}
-            <Link to={`${baseUrl}/account`} className="underline hover:text-white">
-              your data &amp; account
+        <PageHeader
+          title="Account settings"
+          actions={
+            <Link to={`${baseUrl}/account`} className="text-sm text-slate-400 underline hover:text-white">
+              Your data &amp; account
             </Link>
-            .
-          </p>
-        </div>
+          }
+        />
 
         {user && <NameCard user={user} onSaved={setUser} />}
         {user && <EmailCard user={user} onSaved={setUser} />}

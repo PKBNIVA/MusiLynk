@@ -85,7 +85,6 @@ export default function ReviewInbox() {
   return (
     <ShowcaseShell
       title="Review changes"
-      description="When new work almost fits a portfolio, or its description mentions something it isn’t tagged with, we ask here first."
       help={SHOWCASE_HELP.review}
       actions={
         tab === 'pending' &&

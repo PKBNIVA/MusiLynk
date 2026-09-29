@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -120,13 +121,7 @@ export default function CompanyProfile() {
       <Navigation />
       <main className="max-w-5xl mx-auto px-5 md:px-6 pt-28 pb-16">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-7">
-          <div>
-            <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Organization identity</div>
-            <h1 className="text-4xl font-bold">Employer trust profile</h1>
-            <p className="text-slate-400 mt-2">
-              Candidates should know who is hiring, where the work happens and whether the organization is verified.
-            </p>
-          </div>
+          <PageHeader title="Company profile" className="!mb-0" />
           {f.verified ? (
             <Badge className="bg-emerald-500/15 text-emerald-300">
               <ShieldCheck size={14} className="mr-1" />

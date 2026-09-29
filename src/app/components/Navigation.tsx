@@ -23,7 +23,6 @@ import {
   Users,
   WalletCards,
   Zap,
-  Compass,
   Mic2,
   UserSearch,
   BriefcaseBusiness,
@@ -46,7 +45,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { useEffect, useState } from 'react';
 import { apiGet } from '../lib/api';
 import { UNREAD_CHANGED_EVENT, useVisiblePolling } from '../lib/usePolling';
-import { ProductTour, TourLauncher } from './ProductTour';
+import { TourLauncher } from './ProductTour';
 import { BrandMark } from './BrandMark';
 import { SkipLink } from './SkipLink';
 import type { UnreadCounts } from '../lib/apiTypes';
@@ -101,71 +100,75 @@ export function Navigation() {
   const pendingReview = usePendingSuggestions(Boolean(user));
   const messagesLabel = unreadMessages > 0 ? `Messages, ${unreadMessages} unread` : 'Messages';
 
-  const groups: NavGroup[] = isJobSeeker
-    ? [
-        {
-          label: 'Career',
-          icon: Compass,
-          items: [
-            { path: `${baseUrl}/jobs`, icon: Search, label: 'Explore work' },
-            { path: `${baseUrl}/saved`, icon: Star, label: 'Saved' },
-            { path: `${baseUrl}/applications`, icon: Briefcase, label: 'Applications' },
-            { path: `${baseUrl}/library`, icon: Library, label: 'My work' },
-            { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Portfolios' },
-            ...(FEATURE_RESUMES
-              ? [{ path: `${baseUrl}/resumes`, icon: ScrollText, label: 'Career record & resumes' }]
-              : []),
-            { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
-            { path: `${baseUrl}/resources`, icon: BookOpen, label: 'Resources' },
-          ],
-        },
-        {
-          label: 'Perform & book',
-          icon: Mic2,
-          items: [
-            { path: `${baseUrl}/acts`, icon: Music, label: 'My acts' },
-            { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
-            { path: `${baseUrl}/bookings`, icon: CalendarDays, label: 'Bookings' },
-            { path: `${baseUrl}/band-builder`, icon: UserRoundPlus, label: 'Band builder' },
-            { path: `${baseUrl}/urgent`, icon: Zap, label: 'Urgent replacement' },
-          ],
-        },
-        {
-          label: 'Hire',
-          icon: UserSearch,
-          items: [
-            { path: `${baseUrl}/hiring/post`, icon: Briefcase, label: 'Post opportunity' },
-            { path: `${baseUrl}/hiring/talent`, icon: Users, label: 'Find talent' },
-            { path: `${baseUrl}/hiring/applicants`, icon: FileText, label: 'Applicants' },
-            { path: `${baseUrl}/build-my-crew`, icon: Users, label: 'Build my crew' },
-          ],
-        },
-      ]
-    : [
-        {
-          label: 'Hiring',
-          icon: BriefcaseBusiness,
-          items: [
-            { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Create opportunity' },
-            { path: `${baseUrl}/candidates`, icon: Users, label: 'Find talent' },
-            { path: `${baseUrl}/applications`, icon: FileText, label: 'Applicants' },
-            { path: `${baseUrl}/build-my-crew`, icon: Users, label: 'Build my crew' },
-          ],
-        },
-        {
-          label: 'Book & perform',
-          icon: Mic2,
-          items: [
-            { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
-            { path: `${baseUrl}/bookings`, icon: CalendarDays, label: 'Bookings' },
-            { path: `${baseUrl}/acts`, icon: Music, label: 'My acts' },
-            { path: `${baseUrl}/band-builder`, icon: UserRoundPlus, label: 'Band builder' },
-            { path: `${baseUrl}/urgent`, icon: Zap, label: 'Urgent replacement' },
-            { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
-            { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Page portfolios' },
-          ],
-        },
-      ];
+  const myWork: NavGroup = {
+    label: 'My work',
+    icon: Library,
+    items: [
+      { path: `${baseUrl}/library`, icon: Library, label: 'My work' },
+      { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Portfolios' },
+      { path: `${baseUrl}/applications`, icon: Briefcase, label: 'Applications' },
+      { path: `${baseUrl}/saved`, icon: Star, label: 'Saved' },
+      { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
+      { path: `${baseUrl}/bookings`, icon: CalendarDays, label: 'Bookings' },
+      { path: `${baseUrl}/resources`, icon: BookOpen, label: 'Resources' },
+      ...(FEATURE_RESUMES ? [{ path: `${baseUrl}/resumes`, icon: ScrollText, label: 'Career record & resumes' }] : []),
+    ],
+  };
+  // Musicians can hire and book too, but those tools live in the account menu, not the top bar.
+  const hireSomeone: NavGroup = {
+    label: 'Hire someone',
+    icon: UserSearch,
+    items: [
+      { path: `${baseUrl}/hiring/post`, icon: Briefcase, label: 'Post opportunity' },
+      { path: `${baseUrl}/hiring/talent`, icon: Users, label: 'Find talent' },
+      { path: `${baseUrl}/hiring/applicants`, icon: FileText, label: 'Applicants' },
+      { path: `${baseUrl}/build-my-crew`, icon: Users, label: 'Build my crew' },
+    ],
+  };
+  const performAndBook: NavGroup = {
+    label: 'Perform & book',
+    icon: Mic2,
+    items: [
+      { path: `${baseUrl}/acts`, icon: Music, label: 'My acts' },
+      { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
+      { path: `${baseUrl}/bookings`, icon: CalendarDays, label: 'Bookings' },
+      { path: `${baseUrl}/band-builder`, icon: UserRoundPlus, label: 'Band builder' },
+      { path: `${baseUrl}/urgent`, icon: Zap, label: 'Urgent replacement' },
+    ],
+  };
+  const employerGroups: NavGroup[] = [
+    {
+      label: 'Post & hire',
+      icon: BriefcaseBusiness,
+      items: [
+        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Create opportunity' },
+        { path: `${baseUrl}/candidates`, icon: Users, label: 'Find talent' },
+        { path: `${baseUrl}/applications`, icon: FileText, label: 'Applicants' },
+        { path: `${baseUrl}/build-my-crew`, icon: Users, label: 'Build my crew' },
+      ],
+    },
+    {
+      label: 'Book & perform',
+      icon: Mic2,
+      items: [
+        { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
+        { path: `${baseUrl}/bookings`, icon: CalendarDays, label: 'Bookings' },
+        { path: `${baseUrl}/acts`, icon: Music, label: 'My acts' },
+        { path: `${baseUrl}/band-builder`, icon: UserRoundPlus, label: 'Band builder' },
+        { path: `${baseUrl}/urgent`, icon: Zap, label: 'Urgent replacement' },
+        { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
+        { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Page portfolios' },
+      ],
+    },
+  ];
+  // Top-bar dropdowns, the full mobile menu, and the extra groups in the account menu.
+  const groups: NavGroup[] = isJobSeeker ? [myWork] : employerGroups;
+  const menuGroups: NavGroup[] = isJobSeeker ? [myWork, performAndBook, hireSomeone] : employerGroups;
+  const accountGroups: NavGroup[] = isJobSeeker ? [hireSomeone, performAndBook] : [];
+  // Warm the Messages chunk before the click so the page does not paint empty.
+  const preloadMessages = () => {
+    void import('../pages/Messages').catch(() => undefined);
+  };
   const active = (path: string) =>
     location.pathname === path || (path !== baseUrl && location.pathname.startsWith(`${path}/`));
   const quick = isJobSeeker
@@ -188,17 +191,6 @@ export function Navigation() {
 
   return (
     <>
-      {/* C5/CRAWL-03: only the dashboard home (never a profile-setup page) may auto-start the
-          tour, and only once the profile is complete, so it never covers the form itself. It
-          also waits while the post-sign-up welcome card (?welcome=1) shows the next step. */}
-      <ProductTour
-        role={isJobSeeker ? 'jobseeker' : 'employer'}
-        autoStart={
-          location.pathname === baseUrl &&
-          Boolean(user?.profileComplete) &&
-          !new URLSearchParams(location.search).has('welcome')
-        }
-      />
       <nav
         className="fixed top-0 z-50 w-full border-b border-white/10 bg-[#070813]/88 backdrop-blur-2xl"
         aria-label="Workspace navigation"
@@ -220,6 +212,19 @@ export function Navigation() {
                 Overview
               </Link>
             </Button>
+            {isJobSeeker && (
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className={active(`${baseUrl}/jobs`) ? 'bg-white/10 text-white' : 'text-slate-300'}
+              >
+                <Link to={`${baseUrl}/jobs`}>
+                  <Search size={16} className="mr-2" aria-hidden="true" />
+                  Find work
+                </Link>
+              </Button>
+            )}
             {FEATURE_STAGE && (
               <Button
                 variant="ghost"
@@ -270,7 +275,12 @@ export function Navigation() {
               asChild
               className={active(`${baseUrl}/messages`) ? 'bg-white/10 text-white' : 'text-slate-300'}
             >
-              <Link to={`${baseUrl}/messages`} aria-label={messagesLabel}>
+              <Link
+                to={`${baseUrl}/messages`}
+                aria-label={messagesLabel}
+                onMouseEnter={preloadMessages}
+                onFocus={preloadMessages}
+              >
                 <MessageSquare size={16} className="mr-2" />
                 Messages{messageBadge('ml-1.5')}
               </Link>
@@ -324,12 +334,31 @@ export function Navigation() {
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuContent align="end" className="max-h-[80vh] w-72 overflow-y-auto">
                 <div className="px-2 py-2">
                   <p className="text-sm font-semibold">{user?.name}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
                 <DropdownMenuSeparator />
+                {accountGroups.map((group) => (
+                  <div key={group.label}>
+                    <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {group.label}
+                    </DropdownMenuLabel>
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <DropdownMenuItem key={item.path} asChild className={active(item.path) ? 'bg-accent' : ''}>
+                          <Link to={item.path}>
+                            <Icon className="mr-2 h-4 w-4" />
+                            {item.label}
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                    <DropdownMenuSeparator />
+                  </div>
+                ))}
                 <DropdownMenuItem asChild>
                   <Link to={`${baseUrl}/profile`}>
                     <User className="mr-2 h-4 w-4" />
@@ -402,7 +431,7 @@ export function Navigation() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="max-h-[72vh] w-72 overflow-y-auto">
-                {groups.map((group) => (
+                {menuGroups.map((group) => (
                   <div key={group.label}>
                     <DropdownMenuLabel className="text-[10px] uppercase tracking-widest">
                       {group.label}

@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Input } from '../components/ui/input';
@@ -83,25 +84,21 @@ export default function JobSearch() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-7">
-          <div>
-            <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Opportunities</div>
-            <h1 className="text-4xl md:text-5xl font-bold">Find work across the music industry</h1>
-            <p className="text-slate-400 mt-3 max-w-3xl">
-              Jobs are only one format. Discover gigs, auditions, sessions, tours, internships and collaborations with
-              clearer work terms and trust signals.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" asChild>
-              <Link to="/jobseeker/alerts">Manage alerts</Link>
-            </Button>
-            <Button variant="outline" onClick={createAlert}>
-              <Bell className="w-4 h-4 mr-2" />
-              Save this search
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title="Find work"
+          hint="Gigs, sessions, auditions and tours"
+          actions={
+            <>
+              <Button variant="ghost" asChild>
+                <Link to="/jobseeker/alerts">Manage alerts</Link>
+              </Button>
+              <Button variant="outline" onClick={createAlert}>
+                <Bell className="w-4 h-4 mr-2" />
+                Save this search
+              </Button>
+            </>
+          }
+        />
         <HelpCallout {...HELP.jobs} />
         <Card className="bg-white/[.055] border-white/10 mb-7">
           <CardContent className="p-4 md:p-5">

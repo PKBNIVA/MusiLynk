@@ -70,7 +70,6 @@ export default function Resumes() {
   return (
     <ShowcaseShell
       title="Resumes"
-      description="Each resume is a view of your career record for one kind of work. Update the record once and every resume follows."
       help={SHOWCASE_HELP.resumes}
       actions={
         <>

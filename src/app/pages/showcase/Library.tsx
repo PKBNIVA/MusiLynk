@@ -509,7 +509,6 @@ export default function Library() {
     <ShowcaseShell
       wide
       title="My work"
-      description="Every track, video, credit and show, entered once. Your portfolios pick from here."
       help={SHOWCASE_HELP.library}
       actions={
         <>

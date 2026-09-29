@@ -130,4 +130,50 @@ describe('AutocompleteInput', () => {
     expect(autocompleteAi).not.toHaveBeenCalled();
     expect($('[role="listbox"]')).toBeNull();
   });
+
+  it('commits typed free text on blur (V-02)', async () => {
+    const onChange = vi.fn();
+    act(() => root.render(<AutocompleteInput field="cities" values={[]} onChange={onChange} label="City" />));
+    const input = $('input') as HTMLInputElement;
+    typeInto(input, 'Mumbai, Maharashtra');
+    act(() => input.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
+    expect(onChange).toHaveBeenCalledWith(['Mumbai, Maharashtra']);
+    expect(input.value).toBe('');
+  });
+
+  it('typing then Enter still commits once, with no double commit on a later blur', async () => {
+    const onChange = vi.fn();
+    act(() => root.render(<AutocompleteInput field="cities" values={[]} onChange={onChange} label="City" />));
+    const input = $('input') as HTMLInputElement;
+    typeInto(input, 'Delhi');
+    act(() => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    act(() => input.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('a clicked suggestion still commits via mousedown, unaffected by the new blur handler', async () => {
+    vi.mocked(autocompleteAi).mockResolvedValue({
+      field: 'cities',
+      query: 'mum',
+      suggestions: [{ value: 'Mumbai', source: 'taxonomy' }],
+    });
+    const onChange = vi.fn();
+    act(() => root.render(<AutocompleteInput field="cities" values={[]} onChange={onChange} label="City" />));
+    const input = $('input') as HTMLInputElement;
+    typeInto(input, 'mum');
+    await runDebounce();
+    const option = $('[role="option"]') as HTMLElement;
+    act(() => option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })));
+    expect(onChange).toHaveBeenCalledWith(['Mumbai']);
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('blurring an empty input commits nothing', async () => {
+    const onChange = vi.fn();
+    act(() => root.render(<AutocompleteInput field="cities" values={[]} onChange={onChange} label="City" />));
+    const input = $('input') as HTMLInputElement;
+    act(() => input.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

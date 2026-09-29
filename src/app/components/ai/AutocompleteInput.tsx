@@ -86,7 +86,7 @@ export function AutocompleteInput({
     }, debounceMs);
   }
 
-  function selectValue(next: string) {
+  function selectValue(next: string, refocus = true) {
     const trimmed = next.trim();
     if (!trimmed) return;
     if (multiple) {
@@ -98,7 +98,14 @@ export function AutocompleteInput({
     setOptions([]);
     setOpen(false);
     setActiveIndex(-1);
-    inputRef.current?.focus();
+    if (refocus) inputRef.current?.focus();
+  }
+
+  // Commits the field's current state as Enter would, but without stealing focus back —
+  // by the time this runs the user has already moved on to another control.
+  function commitOnBlur() {
+    if (activeIndex >= 0 && options[activeIndex]) selectValue(options[activeIndex].value, false);
+    else if (query.trim()) selectValue(query, false);
   }
 
   function removeValue(removed: string) {
@@ -173,7 +180,12 @@ export function AutocompleteInput({
             fetchOptions(text);
           }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
+          onBlur={() => {
+            // A suggestion clicked via onMouseDown commits (and preventDefault keeps focus,
+            // so this blur never fires for it); this only handles a real, unhandled blur.
+            commitOnBlur();
+            setOpen(false);
+          }}
           onKeyDown={onKeyDown}
           className="w-full rounded-md border border-white/15 bg-white/[.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-400 focus:outline-none"
         />

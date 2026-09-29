@@ -33,6 +33,12 @@ Rails.application.configure do
       cron: "43 4 * * *",
       class: "UploadSweepJob",
       description: "Delete stale pending uploads, unused or ownerless uploads, and orphaned bucket objects"
+    },
+    # 09:30 IST == 04:00 UTC (GoodJob cron times are UTC, like every other entry here).
+    billing_reminders: {
+      cron: "0 4 * * *",
+      class: "BillingRemindersJob",
+      description: "Email trial/renewal/Early Access Pro ending reminders, each sent at most once"
     }
   }
   # classify_portfolio_item is launch-disabled (see config/ai_pricing.yml `launch:`), so the cron

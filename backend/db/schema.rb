@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -271,6 +271,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
     t.string "processing_result"
     t.index ["provider", "provider_event_id"], name: "index_billing_events_on_provider_and_provider_event_id", unique: true
     t.index ["user_id"], name: "index_billing_events_on_user_id"
+  end
+
+  create_table "billing_reminders", id: :string, force: :cascade do |t|
+    t.string "subscription_id", null: false
+    t.string "kind", null: false
+    t.date "sent_on", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["subscription_id", "kind", "sent_on"], name: "index_billing_reminders_on_sub_kind_date", unique: true
+    t.check_constraint "kind::text = ANY (ARRAY['trial_ending'::character varying, 'renewal_ending'::character varying, 'early_access_7d'::character varying, 'early_access_1d'::character varying]::text[])", name: "billing_reminders_kind_valid"
   end
 
   create_table "booking_payments", id: :string, force: :cascade do |t|
@@ -1069,10 +1079,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
     t.datetime "updated_at", null: false
     t.datetime "provider_state_at"
     t.string "last_provider_event_id"
+    t.boolean "early_access", default: false, null: false
     t.index ["provider_subscription_id"], name: "index_subscriptions_on_provider_subscription_id", unique: true, where: "(provider_subscription_id IS NOT NULL)"
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
     t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying, 'razorpay'::character varying]::text[])", name: "subscriptions_provider_valid"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'trialing'::character varying, 'active'::character varying, 'past_due'::character varying, 'cancelled'::character varying]::text[])", name: "subscriptions_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'trialing'::character varying, 'active'::character varying, 'past_due'::character varying, 'cancelled'::character varying, 'early_access'::character varying]::text[])", name: "subscriptions_status_valid"
   end
 
   create_table "talent_folder_members", id: false, force: :cascade do |t|
@@ -1230,6 +1241,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
   add_foreign_key "band_projects", "users", column: "owner_id"
   add_foreign_key "billing_attempts", "users"
   add_foreign_key "billing_events", "users"
+  add_foreign_key "billing_reminders", "subscriptions", on_delete: :cascade
   add_foreign_key "booking_payments", "booking_quotes"
   add_foreign_key "booking_payments", "booking_requests"
   add_foreign_key "booking_payments", "users", column: "payer_id"

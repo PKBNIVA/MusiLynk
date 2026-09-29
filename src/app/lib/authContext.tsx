@@ -41,9 +41,15 @@ export interface RegisterPayload extends StarterPayload {
   /** The sign-up's "I agree to the Terms and Privacy Policy" box; recorded as consented_at. */
   consent?: boolean;
 }
+/** Hydration status for the stored session: 'loading' until the boot-time /me call (or its
+ * absence) resolves, then 'signedIn' or 'signedOut'. Header/nav components branch on this
+ * instead of `loading`/`isAuthenticated` so they never flash the signed-out variant while a
+ * stored token is still being verified. */
+export type AuthStatus = 'loading' | 'signedIn' | 'signedOut';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  status: AuthStatus;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User | SecondFactorChallenge>;
   completeSecondFactor: (challengeToken: string, code: string) => Promise<User>;
@@ -149,6 +155,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         () => ({
           user,
           loading,
+          status: (loading ? 'loading' : user ? 'signedIn' : 'signedOut') as AuthStatus,
           isAuthenticated: !!user,
           login,
           register,

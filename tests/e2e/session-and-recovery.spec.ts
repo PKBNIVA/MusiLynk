@@ -253,3 +253,36 @@ test('password reset request is a labelled form that cannot be submitted twice',
   await expect(page.getByText('If an account exists, reset instructions have been sent.')).toBeVisible();
   expect(requests).toBe(1);
 });
+
+// V-13: the stored session is re-verified on every full page load, and public pages that branch
+// on sign-in (the header, and the job card's apply CTA) show the signed-in variant once it
+// resolves, instead of flashing signed-out first.
+test('signing in, then a full page load on the public jobs list shows the signed-in header and "Apply"', async ({
+  page,
+}) => {
+  await page.route(
+    '**/api/**',
+    apiMock((pathname, route) => {
+      if (!pathname.endsWith('/jobs')) return false;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ jobs: [job], total: 1, nextCursor: null }),
+      });
+    }),
+  );
+
+  await page.goto('/auth/jobseeker');
+  await page.getByLabel('Email').fill('qa@example.invalid');
+  await page.getByRole('button', { name: 'Use password instead' }).click();
+  await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page).toHaveURL(/\/jobseeker$/);
+
+  // A full page load, not client-side navigation: the stored token must be re-verified before
+  // the header settles on the signed-in variant.
+  await page.goto('/music-jobs');
+  await expect(page.getByTestId('account-menu')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Apply' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Sign in to apply' })).toHaveCount(0);
+});

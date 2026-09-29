@@ -1,16 +1,31 @@
 import { Link, useLocation, useNavigate } from 'react-router';
-import { Briefcase, CalendarDays, ChevronDown, Compass, LogIn, Menu, Search, Users } from 'lucide-react';
+import {
+  Briefcase,
+  CalendarDays,
+  ChevronDown,
+  Compass,
+  LayoutDashboard,
+  LogIn,
+  LogOut,
+  Menu,
+  Search,
+  Users,
+} from 'lucide-react';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { lazy, Suspense, useState } from 'react';
 import { BrandMark } from './BrandMark';
 import { SkipLink } from './SkipLink';
+import { useAuth } from '../lib/authContext';
+
+const dashboardPathFor = (role: string) => (role === 'employer' ? '/employer' : role === 'admin' ? '/' : '/jobseeker');
 
 const IdentitySwitcher = lazy(() =>
   import('./showcase/IdentitySwitcher').then((m) => ({ default: m.IdentitySwitcher })),
@@ -26,6 +41,7 @@ const links = [
 export function PublicNav() {
   const nav = useNavigate();
   const location = useLocation();
+  const { status, user, logout } = useAuth();
   const [q, setQ] = useState('');
   const go = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,49 +118,99 @@ export function PublicNav() {
                   Search everything
                 </Link>
               </DropdownMenuItem>
-              <div className="sm:hidden">
+              {status === 'signedOut' && (
+                <div className="sm:hidden">
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/auth/jobseeker">
+                      <LogIn size={16} className="mr-2" />
+                      Sign in as a professional
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/auth/employer">
+                      <Briefcase size={16} className="mr-2" />
+                      Sign in as an employer
+                    </Link>
+                  </DropdownMenuItem>
+                </div>
+              )}
+              {status === 'signedIn' && (
+                <div className="sm:hidden">
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to={dashboardPathFor(user?.role || 'jobseeker')}>
+                      <LayoutDashboard size={16} className="mr-2" />
+                      Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => void logout()}>
+                    <LogOut size={16} className="mr-2" />
+                    Sign out
+                  </DropdownMenuItem>
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* Neutral while the stored session is still hydrating: no auth buttons, so the
+              header never flashes the signed-out variant (V-13). */}
+          {status === 'signedIn' && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="hidden sm:flex" data-testid="account-menu">
+                  <LayoutDashboard size={15} className="mr-2" />
+                  {user?.name || 'Account'}
+                  <ChevronDown size={14} className="ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {user?.name}
+                </DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                  <Link to={dashboardPathFor(user?.role || 'jobseeker')}>
+                    <LayoutDashboard size={15} className="mr-2" />
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/auth/jobseeker">
-                    <LogIn size={16} className="mr-2" />
-                    Sign in as a professional
-                  </Link>
+                <DropdownMenuItem onSelect={() => void logout()}>
+                  <LogOut size={15} className="mr-2" />
+                  Sign out
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/auth/employer">
-                    <Briefcase size={16} className="mr-2" />
-                    Sign in as an employer
-                  </Link>
-                </DropdownMenuItem>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="hidden sm:flex">
-                <LogIn size={15} className="mr-2" />
-                Sign in
-                <ChevronDown size={14} className="ml-1" />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {status === 'signedOut' && (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="hidden sm:flex">
+                    <LogIn size={15} className="mr-2" />
+                    Sign in
+                    <ChevronDown size={14} className="ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/auth/jobseeker">
+                      <Users size={15} className="mr-2" />
+                      Professional account
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/auth/employer">
+                      <Briefcase size={15} className="mr-2" />
+                      Employer account
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button size="sm" asChild className="border-0 bg-gradient-to-r from-fuchsia-500 to-violet-500">
+                <Link to="/join/musician">Join Verse</Link>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link to="/auth/jobseeker">
-                  <Users size={15} className="mr-2" />
-                  Professional account
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/auth/employer">
-                  <Briefcase size={15} className="mr-2" />
-                  Employer account
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button size="sm" asChild className="border-0 bg-gradient-to-r from-fuchsia-500 to-violet-500">
-            <Link to="/join/musician">Join Verse</Link>
-          </Button>
+            </>
+          )}
         </div>
       </nav>
     </>

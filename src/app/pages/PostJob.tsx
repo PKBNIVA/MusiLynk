@@ -40,6 +40,7 @@ import { AutocompleteInput } from '../components/ai/AutocompleteInput';
 import { AiCreditsBadge } from '../components/ai/AiCreditsBadge';
 import { JobPostTemplates, type JobPostTemplate } from '../components/templates/JobPostTemplates';
 import { trackJobPosted } from '../lib/analytics';
+import { PostJobPlanLimitDialog } from '../components/PostJobPlanLimitDialog';
 
 /** ActorResolver::Actor#as_json — the identities a person can post an opportunity as. */
 type Identity = { type: 'user' | 'organization' | 'act'; id: string; name: string; key: string };
@@ -192,6 +193,10 @@ export default function PostJob() {
     [pipelineKey, setPipelineKey] = useState(0);
   const [identities, setIdentities] = useState<Identity[]>([]);
   const [postedAs, setPostedAs] = useState(''); // '' = personal; else "organization:<id>" / "act:<id>"
+  // The 402 plan-limit dialog (V-14): non-null holds the server's verbatim message and keeps
+  // the person on this page until they pick "See plans", "Close another listing" or "Keep as
+  // draft" — the draft itself was already saved by the time this opens.
+  const [planLimitMessage, setPlanLimitMessage] = useState<string | null>(null);
   const { setFormError, clear: clearErrors } = form;
   const set = <K extends keyof JobForm>(k: K, v: JobForm[K]) => {
     setF((x) => ({ ...x, [k]: v }));
@@ -341,17 +346,27 @@ export default function PostJob() {
     try {
       if (job) {
         const target = draft ? 'draft' : primary.status;
-        const d = await apiPatch<{ ok: boolean; job?: Job }>(`/employer/jobs/${job.id}`, {
-          ...payload(),
-          ...((target && target !== job.status) || target === 'pending' ? { status: target } : {}),
-        });
+        const d = await apiPatch<{ ok: boolean; job?: Job }>(
+          `/employer/jobs/${job.id}`,
+          {
+            ...payload(),
+            ...((target && target !== job.status) || target === 'pending' ? { status: target } : {}),
+          },
+          // The dedicated plan-limit dialog below replaces the app-wide upgrade toast for this
+          // call; skip its event so the two don't both fire on the same 402 (V-14).
+          { skipPlanLimitEvent: true },
+        );
         const next = d.job?.status;
         toast.success(
           next === 'draft' ? 'Draft saved' : next === 'pending' ? 'Saved and submitted for review' : 'Changes saved',
         );
         done();
       } else {
-        const d = await apiPost<CreatedJob>('/jobs', { ...payload(), status: draft ? 'draft' : 'pending' });
+        const d = await apiPost<CreatedJob>(
+          '/jobs',
+          { ...payload(), status: draft ? 'draft' : 'pending' },
+          { skipPlanLimitEvent: true },
+        );
         if (!draft) trackJobPosted();
         if (d.moderationFlags?.length && !draft)
           toast.info(
@@ -364,12 +379,12 @@ export default function PostJob() {
       const billing = seeker ? '/jobseeker/billing' : '/employer/billing';
       if (errorStatus(e) === 402 && !draft) {
         /* Keep the work: save it as a draft so publishing can resume after an upgrade or closing another post. */ try {
-          if (job) await apiPatch(`/employer/jobs/${job.id}`, { ...payload(), status: 'draft' });
-          else await apiPost('/jobs', { ...payload(), status: 'draft' });
-          toast.warning(`${errorMessage(e)} Your opportunity was saved as a draft.`, {
-            action: { label: 'View plans', onClick: () => nav(billing) },
-          });
-          done();
+          if (job)
+            await apiPatch(`/employer/jobs/${job.id}`, { ...payload(), status: 'draft' }, { skipPlanLimitEvent: true });
+          else await apiPost('/jobs', { ...payload(), status: 'draft' }, { skipPlanLimitEvent: true });
+          // A dialog, not a toast (V-14): stay on this page until the person picks a way
+          // forward, since the draft is already safe.
+          setPlanLimitMessage(errorMessage(e));
           return;
         } catch {}
       }
@@ -972,6 +987,21 @@ export default function PostJob() {
           </div>
         </form>
       </main>
+      <PostJobPlanLimitDialog
+        message={planLimitMessage}
+        billingPath={seeker ? '/jobseeker/billing' : '/employer/billing'}
+        // No dedicated "manage active listings" route exists for either role; both dashboards
+        // hold the OpportunityPipeline the listing would be closed from.
+        closeListingsPath={seeker ? '/jobseeker/hiring/post' : '/employer'}
+        onNavigate={(path) => {
+          setPlanLimitMessage(null);
+          nav(path);
+        }}
+        onKeepAsDraft={() => {
+          setPlanLimitMessage(null);
+          done();
+        }}
+      />
     </div>
   );
 }

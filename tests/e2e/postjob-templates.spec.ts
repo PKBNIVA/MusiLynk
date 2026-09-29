@@ -70,3 +70,63 @@ test("picking a different template replaces the previous one's content", async (
   await page.getByRole('button', { name: 'Teaching' }).click();
   await expect(page.getByLabel('Title')).toHaveValue('Music teacher / instructor');
 });
+
+// V-14: a Free hirer publishing a second active listing sees a dialog, not a toast, and the
+// work is saved as a draft without navigating away.
+test('a 402 plan limit on publish opens the plan-limit dialog instead of a toast, and keeps the work as a draft', async ({
+  page,
+}) => {
+  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+  await page.addInitScript(() => localStorage.removeItem('verse:post-job:posted-as'));
+  let jobsPosts = 0;
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
+    const method = route.request().method();
+    if (path === '/me') return json(route, { user: employer });
+    if (path === '/notifications/unread') return json(route, { unread: 0 });
+    if (path === '/ai/status') return json(route, { enabled: false, tasks: [] });
+    if (path === '/employer/jobs') return json(route, { jobs: [] });
+    if (path === '/me/identities') return json(route, { identities: [] });
+    if (path === '/jobs' && method === 'POST') {
+      jobsPosts += 1;
+      if (jobsPosts === 1)
+        return json(
+          route,
+          {
+            error: 'Your plan allows 1 active opportunity. Close one or upgrade your plan to continue.',
+            code: 'PLAN_LIMIT',
+          },
+          402,
+        );
+      // The draft-save retry that follows the 402.
+      return json(route, { id: 'job-new', status: 'draft', postedAs: null }, 201);
+    }
+    return json(route, {});
+  });
+  await page.goto('/employer/post-job');
+
+  await page.getByRole('button', { name: 'Studio session' }).click();
+  await page.getByLabel('Location').fill('Mumbai');
+  await page.getByLabel('Location').press('Enter');
+  await page.getByRole('button', { name: 'Next: Details' }).click();
+  await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
+  await page.getByRole('button', { name: 'Next: Screening & review' }).click();
+  await page.getByRole('button', { name: 'Submit for review' }).click();
+
+  const dialog = page.getByTestId('plan-limit-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("You've reached your plan's limit");
+  await expect(dialog).toContainText(
+    'Your plan allows 1 active opportunity. Close one or upgrade your plan to continue.',
+  );
+  await expect(dialog).toContainText('We saved this opportunity as a draft.');
+  await expect(dialog.getByRole('button', { name: 'See plans' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Close another listing' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Keep as draft' })).toBeVisible();
+  // No navigation until a button is clicked.
+  await expect(page).toHaveURL(/\/employer\/post-job$/);
+  expect(jobsPosts).toBe(2);
+
+  await dialog.getByRole('button', { name: 'See plans' }).click();
+  await expect(page).toHaveURL(/\/employer\/billing$/);
+});

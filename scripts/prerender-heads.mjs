@@ -58,7 +58,7 @@ export function render(indexHtml, path, [title, description]) {
   const canonical = `${BASE_URL}${path}`;
   const image = `${BASE_URL}/og-default.png`;
   const head = pageHead({ title: escapeHtml(title), description: escapeHtml(description), canonical, image });
-  let html = indexHtml.replace(/<title>[^<]*<\/title>\s*/, '').replace(/<meta name="description"[^>]*>\s*/, '');
+  let html = indexHtml.replace(/<title>[^<]*<\/title>\s*/, '').replace(/<meta\s+name="description"[^>]*>\s*/, '');
   html = html.replace('</head>', `${head}`);
   return html;
 }

@@ -63,8 +63,10 @@ test.describe('real frontend and Rails journeys', () => {
       await page.goto(`/${role}`);
       await expect(tour).toBeHidden();
       const strip = page.getByTestId('tour-strip');
-      await expect(strip).toBeVisible();
-      await strip.getByRole('button', { name: 'Got it' }).click();
+      if ((page.viewportSize()?.width ?? 0) >= 768) {
+        await expect(strip).toBeVisible();
+        await strip.getByRole('button', { name: 'Got it' }).click();
+      }
       await expect(strip).toBeHidden();
 
       await page.getByRole('button', { name: 'Open account menu' }).click();

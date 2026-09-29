@@ -1,9 +1,28 @@
+import { useState } from 'react';
 import { UserCheck } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '../../components/ui/dialog';
 import type { AdminVerification } from '../../lib/apiTypes';
 import { Panel, Pager, Empty, type AdminActions, type PageMeta } from './shared';
 import { AdminPageHeader, HowToCallout } from './ui';
+
+// What Admin::VerificationsController#update accepts for `checks` — kept in sync with
+// VerificationRequest::CHECKS on the backend.
+const CHECK_OPTIONS: { value: string; label: string }[] = [
+  { value: 'identity', label: 'Identity' },
+  { value: 'work_links', label: 'Work links' },
+  { value: 'credits', label: 'Credits' },
+  { value: 'organization', label: 'Organization' },
+];
 
 export default function VerificationTab({
   verifications,
@@ -23,6 +42,10 @@ export default function VerificationTab({
   onPage: (page: number) => void;
 }) {
   const { busy, patch } = actions;
+  const [approving, setApproving] = useState<AdminVerification | null>(null);
+  const [checks, setChecks] = useState<string[]>([]);
+  const toggleCheck = (value: string) =>
+    setChecks((current) => (current.includes(value) ? current.filter((c) => c !== value) : [...current, value]));
   return (
     <Panel error={error} onRetry={retry} loading={loading}>
       <AdminPageHeader
@@ -41,7 +64,12 @@ export default function VerificationTab({
         <Card key={v.id} className="bg-white/[.05] border-white/10">
           <CardContent className="p-5 flex flex-col md:flex-row justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="font-semibold">{v.companyName || v.name}</h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-semibold">{v.companyName || v.name}</h2>
+                {v.vouchedByName && (
+                  <Badge className="bg-violet-500/15 text-violet-200">Vouched by {v.vouchedByName}</Badge>
+                )}
+              </div>
               <div className="text-sm text-slate-400 break-words">
                 {v.email} · {v.role} · {v.kind}
               </div>
@@ -61,9 +89,10 @@ export default function VerificationTab({
               <Button
                 size="sm"
                 disabled={!!busy}
-                onClick={() =>
-                  patch(`ver:${v.id}`, `/admin/verifications/${v.id}`, { status: 'approved' }, 'Verification approved')
-                }
+                onClick={() => {
+                  setChecks([]);
+                  setApproving(v);
+                }}
               >
                 Approve
               </Button>
@@ -82,6 +111,45 @@ export default function VerificationTab({
         </Card>
       ))}
       <Pager meta={meta} onPage={onPage} loading={loading} />
+      <Dialog open={Boolean(approving)} onOpenChange={(open) => !open && setApproving(null)}>
+        <DialogContent className="bg-slate-950 text-white border-white/15 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>What did you check?</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Choose at least one. This is what the public Verified badge will say was checked.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {CHECK_OPTIONS.map((option) => (
+              <label key={option.value} className="flex items-center gap-2 text-sm text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={checks.includes(option.value)}
+                  onChange={() => toggleCheck(option.value)}
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button
+              disabled={!!busy || checks.length === 0}
+              onClick={async () => {
+                if (!approving) return;
+                await patch(
+                  `ver:${approving.id}`,
+                  `/admin/verifications/${approving.id}`,
+                  { status: 'approved', checks },
+                  'Verification approved',
+                );
+                setApproving(null);
+              }}
+            >
+              Approve with these checks
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Panel>
   );
 }

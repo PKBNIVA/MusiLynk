@@ -291,6 +291,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_170300) do
     t.index ["user_id"], name: "index_billing_attempts_on_user_id"
   end
 
+  create_table "billing_credits", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.integer "days", null: false
+    t.string "reason", null: false
+    t.string "promo_redemption_id"
+    t.datetime "applied_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["promo_redemption_id"], name: "index_billing_credits_on_promo_redemption_id", unique: true, where: "(promo_redemption_id IS NOT NULL)"
+    t.index ["user_id", "reason"], name: "index_billing_credits_on_user_and_reason"
+    t.check_constraint "days > 0", name: "billing_credits_days_positive"
+  end
+
   create_table "billing_events", id: :string, force: :cascade do |t|
     t.string "provider", null: false
     t.string "provider_event_id", null: false
@@ -970,6 +983,53 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_170300) do
     t.index ["headline"], name: "index_profiles_on_headline", opclass: :gin_trgm_ops, using: :gin
   end
 
+  create_table "promo_codes", id: :string, force: :cascade do |t|
+    t.citext "code", null: false
+    t.string "kind", null: false
+    t.integer "percent_off"
+    t.integer "duration_periods"
+    t.integer "trial_days"
+    t.jsonb "plan_codes", default: [], null: false
+    t.jsonb "intervals", default: [], null: false
+    t.string "razorpay_offer_id"
+    t.integer "max_redemptions"
+    t.integer "redemptions_count", default: 0, null: false
+    t.integer "per_user_limit", default: 1, null: false
+    t.datetime "starts_at"
+    t.datetime "expires_at"
+    t.boolean "active", default: true, null: false
+    t.string "owner_user_id"
+    t.string "created_by_id"
+    t.text "notes"
+    t.string "batch_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["batch_id"], name: "index_promo_codes_on_batch_id"
+    t.index ["code"], name: "index_promo_codes_on_code", unique: true
+    t.index ["owner_user_id"], name: "index_promo_codes_on_owner_user_id", unique: true, where: "(owner_user_id IS NOT NULL)"
+    t.check_constraint "duration_periods IS NULL OR duration_periods >= 1", name: "promo_codes_duration_valid"
+    t.check_constraint "kind::text = ANY (ARRAY['discount_percent'::character varying, 'extended_trial'::character varying, 'early_access'::character varying, 'referral'::character varying]::text[])", name: "promo_codes_kind_valid"
+    t.check_constraint "per_user_limit >= 1", name: "promo_codes_per_user_limit_valid"
+    t.check_constraint "percent_off IS NULL OR percent_off >= 1 AND percent_off <= 100", name: "promo_codes_percent_off_valid"
+    t.check_constraint "trial_days IS NULL OR trial_days >= 1", name: "promo_codes_trial_days_valid"
+  end
+
+  create_table "promo_redemptions", id: :string, force: :cascade do |t|
+    t.string "promo_code_id", null: false
+    t.string "user_id", null: false
+    t.string "subscription_id"
+    t.string "kind", null: false
+    t.integer "percent_off"
+    t.integer "trial_days"
+    t.datetime "redeemed_at", null: false
+    t.datetime "referrer_rewarded_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["promo_code_id", "user_id"], name: "index_promo_redemptions_on_code_and_user"
+    t.index ["subscription_id"], name: "index_promo_redemptions_on_subscription_id"
+    t.index ["user_id"], name: "index_promo_redemptions_on_user_id"
+  end
+
   create_table "recent_activities", id: :string, force: :cascade do |t|
     t.string "user_id", null: false
     t.string "kind", null: false
@@ -1162,8 +1222,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_170300) do
     t.datetime "provider_state_at"
     t.string "last_provider_event_id"
     t.boolean "early_access", default: false, null: false
+    t.string "interval", default: "monthly", null: false
+    t.string "promo_code_id"
+    t.integer "discount_percent"
+    t.integer "discount_periods"
+    t.integer "discount_periods_used", default: 0, null: false
+    t.index ["promo_code_id"], name: "index_subscriptions_on_promo_code_id"
     t.index ["provider_subscription_id"], name: "index_subscriptions_on_provider_subscription_id", unique: true, where: "(provider_subscription_id IS NOT NULL)"
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
+    t.check_constraint "\"interval\"::text = ANY (ARRAY['monthly'::character varying, 'annual'::character varying]::text[])", name: "subscriptions_interval_valid"
     t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying, 'razorpay'::character varying]::text[])", name: "subscriptions_provider_valid"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'trialing'::character varying::text, 'active'::character varying::text, 'past_due'::character varying::text, 'cancelled'::character varying::text, 'early_access'::character varying::text])", name: "subscriptions_status_valid"
   end
@@ -1348,6 +1415,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_170300) do
   add_foreign_key "band_project_roles", "jobs", column: "opportunity_id"
   add_foreign_key "band_projects", "users", column: "owner_id"
   add_foreign_key "billing_attempts", "users"
+  add_foreign_key "billing_credits", "promo_redemptions", on_delete: :nullify
+  add_foreign_key "billing_credits", "users", on_delete: :cascade
   add_foreign_key "billing_events", "users"
   add_foreign_key "billing_reminders", "subscriptions", on_delete: :cascade
   add_foreign_key "booking_payments", "booking_quotes"
@@ -1389,6 +1458,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_170300) do
   add_foreign_key "posts", "users", column: "created_by_user_id"
   add_foreign_key "product_events", "users", on_delete: :nullify
   add_foreign_key "profiles", "users"
+  add_foreign_key "promo_codes", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "promo_codes", "users", column: "owner_user_id", on_delete: :nullify
+  add_foreign_key "promo_redemptions", "promo_codes", on_delete: :cascade
+  add_foreign_key "promo_redemptions", "subscriptions", on_delete: :nullify
+  add_foreign_key "promo_redemptions", "users", on_delete: :cascade
   add_foreign_key "recent_activities", "users"
   add_foreign_key "refund_records", "booking_payments", on_delete: :nullify
   add_foreign_key "refund_records", "booking_requests"
@@ -1405,6 +1479,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_170300) do
   add_foreign_key "saved_jobs", "jobs"
   add_foreign_key "saved_jobs", "users"
   add_foreign_key "sessions", "users"
+  add_foreign_key "subscriptions", "promo_codes", on_delete: :nullify
   add_foreign_key "subscriptions", "users"
   add_foreign_key "talent_folder_members", "talent_folders"
   add_foreign_key "talent_folder_members", "users", column: "candidate_id"

@@ -18,6 +18,7 @@ import {
   Database,
   Sparkles,
   TrendingUp,
+  Ticket,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -64,6 +65,7 @@ const AuditTab = lazy(() => import('./admin/AuditTab'));
 const AdminAiTab = lazy(() => import('./admin/AdminAiTab'));
 const UrgentTab = lazy(() => import('./admin/UrgentTab'));
 const FunnelTab = lazy(() => import('./admin/FunnelTab'));
+const CodesTab = lazy(() => import('./admin/CodesTab'));
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth(),
@@ -291,6 +293,10 @@ export default function AdminDashboard() {
               <CreditCard aria-hidden="true" size={14} />
               Commerce
             </TabsTrigger>
+            <TabsTrigger value="codes" className="flex-none gap-1.5">
+              <Ticket aria-hidden="true" size={14} />
+              Codes
+            </TabsTrigger>
             <TabsTrigger value="operations" className="flex-none gap-1.5">
               <Settings2 aria-hidden="true" size={14} />
               Operations
@@ -443,6 +449,11 @@ export default function AdminDashboard() {
           <TabsContent value="urgent" className="mt-5">
             <Suspense fallback={null}>
               <UrgentTab />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="codes" className="mt-5">
+            <Suspense fallback={null}>
+              <CodesTab actions={actions} />
             </Suspense>
           </TabsContent>
           <TabsContent value="funnel" className="mt-5">

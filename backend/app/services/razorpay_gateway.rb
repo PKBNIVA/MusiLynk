@@ -20,9 +20,12 @@ class RazorpayGateway
     post("orders", amount: amount_paise, currency:, receipt:, notes:)
   end
 
-  def create_subscription(plan_id:, total_count: 100, start_at: nil, notes: {})
+  # `offer_id` attaches a Razorpay Offer (Dashboard -> Offers), which is how a code's discount
+  # reaches live billing.
+  def create_subscription(plan_id:, total_count: 100, start_at: nil, notes: {}, offer_id: nil)
     payload = { plan_id:, total_count:, quantity: 1, customer_notify: 1, notes: }
     payload[:start_at] = start_at if start_at
+    payload[:offer_id] = offer_id if offer_id.present?
     post("subscriptions", payload)
   end
 

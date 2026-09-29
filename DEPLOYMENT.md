@@ -410,6 +410,9 @@ Set these on the Railway **API service** (production environment). Never in Verc
 | `RAZORPAY_WEBHOOK_SECRET` | Account & Settings → Webhooks → your webhook → **Secret** (you choose it; use `openssl rand -hex 32`) |
 | `RAZORPAY_PLAN_PRO` | Subscriptions → Plans → the Pro plan's **Plan ID** (`plan_…`): Monthly, every 1 month, **INR 2,499.00** |
 | `RAZORPAY_PLAN_STUDIO` | Subscriptions → Plans → the Studio plan's **Plan ID**: Monthly, every 1 month, **INR 5,999.00** |
+| `RAZORPAY_PLAN_PRO_ANNUAL` | Subscriptions → Plans → the Pro annual plan's **Plan ID**: every 12 months, **INR 24,990.00**. Until both annual ids are set the pricing page hides the monthly/annual toggle and annual checkout answers 503 |
+| `RAZORPAY_PLAN_STUDIO_ANNUAL` | Subscriptions → Plans → the Studio annual plan's **Plan ID**: every 12 months, **INR 59,990.00** |
+| `RAZORPAY_REFERRAL_OFFER_ID` | Offers → the referral offer (20% off for 3 billing cycles) → **Offer ID** (`offer_…`). Referral codes are refused at live checkout without it. Each discount code's own offer id is pasted in the admin Codes tab |
 | `RAZORPAY_ALLOW_TEST_MODE` | not a dashboard field: set `true` **only** during the test-mode rehearsal below, then delete |
 | `RAZORPAY_SIMULATOR` | must **not** exist on Railway (it is ignored in production and `GET /api/admin/health` reports `checks.payments.ok: false` if present) |
 

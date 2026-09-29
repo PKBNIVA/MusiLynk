@@ -524,6 +524,32 @@ class VerificationAutomationTest < ActiveSupport::TestCase
     assert_operator AiSpendGuard.task_spend_inr("verification_summary"), :>, 0
   end
 
+  test "with OpenAI selected, a 5xx twice or a refusal falls back to the deterministic template" do
+    AiAssist::Providers::OpenAi.retry_delay_range = 0..0
+    scripted = Class.new do
+      attr_reader :calls
+      def initialize(*responses) = (@responses = responses; @calls = 0)
+      def post(*, **) = (@calls += 1; @responses.shift)
+    end
+    refusal = { output: [{ type: "message", content: [{ type: "refusal", refusal: "no" }] }], usage: {} }.to_json
+
+    [[[503, "{}"], [503, "{}"]], [[200, refusal]]].each do |script|
+      request = scored_request
+      client = scripted.new(*script)
+      previous = ENV.values_at("AI_PROVIDER", "OPENAI_API_KEY")
+      ENV["AI_PROVIDER"], ENV["OPENAI_API_KEY"] = "openai", "sk-openai-test"
+      begin
+        text = Verification::Summarizer.new(request, client:).call
+      ensure
+        ENV["AI_PROVIDER"], ENV["OPENAI_API_KEY"] = previous
+      end
+      assert_equal script.size, client.calls
+      assert_includes text, "Score #{request.evidence_score}/100"
+      assert_equal 3, text.lines.size
+      assert_not AiCreditLedger.exists?(task: "verification_summary")
+    end
+  end
+
   test "the facts sent to the model are plain text capped at 2000 characters" do
     request = scored_request
     request.evidence_breakdown["facts"]["evidence"] = { "provider" => "youtube", "title" => "x" * 5_000 }

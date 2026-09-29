@@ -22,6 +22,8 @@ class AdminAiTest < ActionDispatch::IntegrationTest
     assert_equal 2.5, body["totalSpendInr"].to_f
     assert_equal 2.5, body["freeTierSpendInr"].to_f
     assert_equal 2.5, body.dig("byTask", "post_caption").to_f
+    assert_equal AiPricing.provider, body["provider"]
+    assert_equal AiAssist.model_name, body["model"]
   end
 
   test "admin grants credits with an audit entry, idempotent per call" do

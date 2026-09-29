@@ -324,7 +324,14 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:delete, "/api/stage/follows/user/{stage_follow_target}", :any, {}],
     [:get, "/api/stage/authors/user/{self}/followers", :public, { keys: %w[followersCount following] }],
     [:get, "/api/stage/authors/user/{self}/following", :public, { keys: %w[followingCount] }],
-    [:get, "/api/stage/tags/matrixtag", :public, { keys: %w[tag posts nextCursor] }]
+    [:get, "/api/stage/tags/matrixtag", :public, { keys: %w[tag posts nextCursor] }],
+    [:get, "/api/stage/events", :any, { keys: %w[city events] }],
+    [:get, "/api/stage/posts/{stage_event_post}/ics", :public, { missing: :stage_event_post }],
+    [:get, "/api/admin/stage-posts", :admin, { keys: %w[posts] }],
+    [:post, "/api/admin/stage-posts/{stage_post}/pin", :admin, { missing: :stage_post, keys: %w[post] }],
+    [:post, "/api/admin/stage-posts/{stage_post}/unpin", :admin, { missing: :stage_post, keys: %w[post] }],
+    [:post, "/api/admin/stage-posts/{stage_event_post}/feature", :admin, { missing: :stage_event_post, keys: %w[post] }],
+    [:delete, "/api/admin/stage-posts/{stage_delete_post}", :admin, { missing: :stage_delete_post }]
   ].freeze
 
   # Findings in files owned by other workstreams: label => [step, reason]. The generated test
@@ -450,6 +457,10 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
       password: ApiMatrixWorld::PASSWORD, role: "jobseeker", status: "active", profile_complete: true).id
     world.refs[:shared][:stage_tag_post] = Post.create!(author_type: "user", author_id: world.user(:js).id, created_by_user_id: world.user(:js).id,
       body: "Matrix #matrixtag post", visibility: "public").id
+    world.refs[:shared][:stage_event_post] = Post.create!(author_type: "user", author_id: world.user(:js).id, created_by_user_id: world.user(:js).id,
+      kind: "event", event_title: "Matrix Jam Night", event_starts_at: 3.days.from_now, event_venue: "Matrix Hall", city: "Mumbai", visibility: "public").id
+    world.refs[:shared][:stage_delete_post] = Post.create!(author_type: "user", author_id: world.user(:js).id, created_by_user_id: world.user(:js).id,
+      body: "Matrix post pending admin delete", visibility: "public").id
   end
 
   def ok_for(options, actor)

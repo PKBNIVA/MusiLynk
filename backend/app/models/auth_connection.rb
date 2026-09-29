@@ -15,6 +15,9 @@ class AuthConnection < ApplicationRecord
 
   scope :google, -> { where(provider: "google") }
 
+  # A connection can change a pending verification request's evidence score.
+  after_commit -> { Verification::RescoreJob.for_user(owner_id) if owner_type == "User" }
+
   def as_summary
     { id:, provider:, email:, displayName: display_name, connectedAt: created_at }
   end

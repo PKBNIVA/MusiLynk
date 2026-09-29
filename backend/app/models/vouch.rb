@@ -19,6 +19,7 @@ class Vouch < ApplicationRecord
   validate :voucher_under_cap, on: :create
 
   before_validation :generate_token, on: :create
+  after_commit -> { Verification::RescoreJob.for_user(vouchee_id) }
 
   def api_json = attributes.except("token").merge("voucherName" => voucher.name)
 

@@ -74,6 +74,9 @@ default: &default
   budgets:
     free_tier_monthly_budget_inr: 1500
     hard_monthly_budget_inr: 1500
+    # Admin/system-initiated verification summaries (Verification::Summarizer) have their own
+    # monthly line, on top of the global hard budget above.
+    verification_summary_monthly_budget_inr: 300
 
   # Launch mode (owner decision, 2026-09-28): "AI is way too costly right now, both for me and
   # for the user." Only the tasks listed here are reachable through GET /api/ai/status and
@@ -90,6 +93,10 @@ default: &default
     hirer_tasks:
       - job_description
       - job_screening_questions
+    # System-initiated tasks (no per-account usage cap): reachable only from server code, never
+    # through POST /api/ai/suggest.
+    admin_tasks:
+      - verification_summary
     talent_lifetime_limit: 5
     hirer_monthly_limit: 10
 

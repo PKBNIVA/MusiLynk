@@ -17,6 +17,7 @@ class UrgentRequest < ApplicationRecord
   validates :budget_min, :budget_max, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validate :valid_schedule_and_budget
   before_validation :set_expires_at, on: :create
+  after_commit -> { Verification::RescoreJob.for_user(filled_by_id) if status == "filled" }
 
   scope :open_and_recent, -> { where(status: "open").where("start_at >= ?", STALE_AFTER.ago) }
   # Open requests past their expiry warning point (6 hours before expires_at), that have at

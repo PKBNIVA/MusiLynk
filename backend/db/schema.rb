@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_29_170300) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_170400) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1380,8 +1380,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_170300) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "checks", default: [], null: false
+    t.integer "evidence_score"
+    t.jsonb "evidence_breakdown", default: {}, null: false
+    t.jsonb "flags", default: [], null: false
+    t.string "auto_decision"
+    t.boolean "audit_sample", default: false, null: false
+    t.text "summary"
+    t.index ["audit_sample"], name: "idx_verification_requests_audit_sample", where: "audit_sample"
     t.index ["reviewed_by_id"], name: "index_verification_requests_on_reviewed_by_id"
     t.index ["user_id"], name: "index_verification_requests_on_user_id"
+    t.check_constraint "auto_decision::text = ANY (ARRAY['auto_approved'::character varying, 'needs_more_proof'::character varying]::text[])", name: "verification_requests_auto_decision_valid"
   end
 
   create_table "vouches", id: :string, force: :cascade do |t|

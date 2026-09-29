@@ -89,7 +89,10 @@ Rails.application.routes.draw do
       end
       resources :jobs, only: %i[index update]
       resources :reviews, only: %i[index update]
-      resources :verifications, only: %i[index update]
+      resources :verifications, only: %i[index update] do
+        get :stats, on: :collection
+        post :revoke, on: :member
+      end
       resources :reports, only: %i[index update] do
         member do
           get :context

@@ -187,6 +187,84 @@ test.describe('admin console', () => {
     expect(nativeDialog).toBe(false);
   });
 
+  test('verification queue shows the evidence score and approves in one click with the suggested checks', async ({
+    page,
+  }) => {
+    const request = (id: string, name: string, score: number, extra: Record<string, unknown> = {}) => ({
+      id,
+      user_id: `u-${id}`,
+      kind: 'professional',
+      status: 'pending',
+      created_at: '2026-09-01T00:00:00Z',
+      name,
+      email: `${id}@example.invalid`,
+      role: 'jobseeker',
+      evidence_score: score,
+      ...extra,
+    });
+    const calls = await mockApi(
+      page,
+      {
+        ...adminFixtures(),
+        '/api/admin/verifications': {
+          body: {
+            requests: [
+              request('v-1', 'Rahul Drums', 82, {
+                summary: 'Name matches YouTube channel.\n1 vouch from verified Priya S.',
+                evidence_breakdown: {
+                  identity: { score: 30, max: 30 },
+                  links: { score: 20, max: 30 },
+                  community: { score: 10, max: 20 },
+                },
+              }),
+              request('v-2', 'Mid Person', 55, { flags: ['duplicate_links'] }),
+              request('v-3', 'Low Person', 10),
+              request('v-4', 'Auto Person', 90, {
+                status: 'approved',
+                auto_decision: 'auto_approved',
+                audit_sample: true,
+              }),
+            ],
+            page: 1,
+            perPage: 100,
+            total: 4,
+          },
+        },
+        '/api/admin/verifications/stats': {
+          body: {
+            days7: { total: 8, autoApproved: 2, autoApprovalRate: 25, auditSample: 1 },
+            days30: { total: 30, autoApproved: 9, autoApprovalRate: 30, auditSample: 3 },
+          },
+        },
+        'PATCH /api/admin/verifications/v-1': { body: { ok: true } },
+      },
+      admin,
+    );
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: /Verification/ }).click();
+    await expect(page.getByLabel('Evidence score 82 out of 100')).toHaveAttribute('data-band', 'green');
+    await expect(page.getByLabel('Evidence score 55 out of 100')).toHaveAttribute('data-band', 'amber');
+    await expect(page.getByLabel('Evidence score 10 out of 100')).toHaveAttribute('data-band', 'grey');
+    await expect(page.getByText('Duplicate links')).toBeVisible();
+    await expect(page.getByText('1 vouch from verified Priya S.')).toBeVisible();
+    await expect(page.getByTestId('verification-stats')).toContainText(
+      '7 days: 2 of 8 auto-approved (25%), 1 in audit sample',
+    );
+
+    await page.getByRole('button', { name: 'Approve', exact: true }).first().click();
+    await expect
+      .poll(() => calls.find((c) => c.method === 'PATCH' && c.path === '/api/admin/verifications/v-1')?.body)
+      .toEqual({
+        status: 'approved',
+        checks: ['identity', 'work_links', 'credits'],
+      });
+
+    await page.getByRole('button', { name: /Audit sample/ }).click();
+    await expect(page.getByText('Auto Person')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Revoke' })).toBeVisible();
+    await expect(page.getByText('Mid Person')).toBeHidden();
+  });
+
   test('users tab searches the server and pages through the rest instead of filtering only what loaded', async ({
     page,
   }) => {

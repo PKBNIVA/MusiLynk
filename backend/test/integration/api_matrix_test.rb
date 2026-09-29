@@ -110,6 +110,8 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/admin/reviews/{review}", :admin, { params: { status: "rejected" }, missing: :review, bad: { status: "x" }, bad_status: [400] }],
     [:put, "/api/admin/reviews/{review}", :admin, { params: { status: "published" }, missing: :review }],
     [:get, "/api/admin/verifications", :admin, { keys: %w[requests] }],
+    [:get, "/api/admin/verifications/stats", :admin, { keys: %w[days7 days30] }],
+    [:post, "/api/admin/verifications/{verification}/revoke", :admin, { ok: [422], missing: :verification }],
     [:patch, "/api/admin/verifications/{verification}", :admin, { params: { status: "approved", checks: ["work_links"] }, missing: :verification, bad: { status: "x" }, bad_status: [400] }],
     [:put, "/api/admin/verifications/{verification}", :admin, { params: { status: "rejected" }, missing: :verification }],
     [:get, "/api/admin/reports", :admin, { keys: %w[reports] }],

@@ -182,7 +182,8 @@ class ApplicationController < ActionController::API
   def public_profile(user)
     public_user(user).except("email", "status", "profileComplete", "emailVerified", "last_login_at", "phone", "synthetic_batch",
       "phoneE164", "whatsappConsentedAt")
-      .merge("demo" => SyntheticQa::Demo.user?(user), "verification" => verification_summary(user))
+      .merge("demo" => SyntheticQa::Demo.user?(user), "verification" => verification_summary(user),
+        "verificationTier" => Verification::Tier.for(user))
       .merge(@profile_stats&.dig(user.id) || ProfileStats.for(user))
   end
 

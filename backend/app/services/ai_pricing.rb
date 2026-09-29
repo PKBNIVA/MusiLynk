@@ -28,8 +28,10 @@ class AiPricing
   def self.launch = config.fetch(:launch)
   def self.talent_tasks = launch.fetch(:talent_tasks).map(&:to_s)
   def self.hirer_tasks = launch.fetch(:hirer_tasks).map(&:to_s)
+  def self.admin_tasks = launch.fetch(:admin_tasks, []).map(&:to_s)
   def self.enabled_tasks = talent_tasks + hirer_tasks
-  def self.task_enabled?(task) = enabled_tasks.include?(task.to_s)
+  def self.task_enabled?(task) = (enabled_tasks + admin_tasks).include?(task.to_s)
+  def self.verification_summary_budget_inr = budgets.fetch(:verification_summary_monthly_budget_inr)
   def self.talent_lifetime_limit = launch.fetch(:talent_lifetime_limit)
   def self.hirer_monthly_limit = launch.fetch(:hirer_monthly_limit)
 

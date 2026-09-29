@@ -23,6 +23,7 @@ class BookingRequest < ApplicationRecord
   end
 
   belongs_to :act
+  after_commit -> { Verification::RescoreJob.for_user(act&.owner_id) if status == "completed" }
   belongs_to :requester, class_name: "User"
   has_many :booking_quotes, dependent: :destroy
   has_many :booking_payments, dependent: :destroy

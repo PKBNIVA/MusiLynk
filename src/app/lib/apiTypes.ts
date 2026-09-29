@@ -77,6 +77,9 @@ export interface VerificationSummary {
   verifiedAt?: string | null;
 }
 
+/** Verification::Tier: null when unverified. */
+export type VerificationTier = 'verified' | 'verified_pro';
+
 /** ApplicationController#public_profile: a professional as other people see them. */
 export interface Professional extends ProfileFields {
   id: string;
@@ -87,6 +90,7 @@ export interface Professional extends ProfileFields {
   shortlisted?: boolean;
   /** Present (non-null) only when verified; see VerifiedBadge. */
   verification?: VerificationSummary | null;
+  verificationTier?: VerificationTier | null;
   /** ProfileStats: published reviews, urgent-response median (null under 3 samples), this week's badge. */
   reviewsCount?: number;
   reviewsAverage?: number | null;
@@ -1088,6 +1092,38 @@ export interface AdminVerification {
   companyName?: string | null;
   checks?: string[];
   vouchedByName?: string | null;
+  /** Verification::Evidence: 0-100, with its per-component breakdown (null until first scored). */
+  evidence_score?: number | null;
+  evidence_breakdown?: EvidenceBreakdown;
+  flags?: string[];
+  auto_decision?: 'auto_approved' | 'needs_more_proof' | null;
+  audit_sample?: boolean;
+  summary?: string | null;
+}
+
+export interface EvidenceComponent {
+  score: number;
+  max: number;
+}
+/** Verification::Evidence#call: component scores (the facts behind the summary stay server-side in use). */
+export interface EvidenceBreakdown {
+  identity?: EvidenceComponent;
+  links?: EvidenceComponent;
+  signals?: EvidenceComponent;
+  community?: EvidenceComponent;
+  total?: number;
+}
+
+/** Admin::VerificationsController#stats. */
+export interface VerificationWindowStats {
+  total: number;
+  autoApproved: number;
+  autoApprovalRate: number;
+  auditSample: number;
+}
+export interface AdminVerificationStats {
+  days7: VerificationWindowStats;
+  days30: VerificationWindowStats;
 }
 
 /** Admin::ReportsController#index: a reports row plus the reporter's name. */

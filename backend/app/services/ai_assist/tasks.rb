@@ -473,6 +473,25 @@ module AiAssist::Tasks
     }
   )
 
-  PUBLIC_TASKS = (REGISTRY.keys - ["autocomplete"]).freeze
+
+  # Admin-only (system-initiated by Verification::Summarizer, never reachable through
+  # POST /api/ai/suggest: it is left out of PUBLIC_TASKS). Its own INR budget line lives in
+  # config/ai_pricing.yml (`verification_summary_monthly_budget_inr`).
+  VERIFICATION_SUMMARY_PROMPT = <<~PROMPT.squish.freeze
+    You write a short summary of verification evidence for a Verse admin deciding whether to
+    verify a musician. Use only the facts provided. Do not infer or invent. Reply in plain text:
+    at most 3 short lines, factual, no markdown, no preamble.
+  PROMPT
+
+  REGISTRY["verification_summary"] = Task.new(
+    key: "verification_summary",
+    system_prompt: VERIFICATION_SUMMARY_PROMPT,
+    fields: { facts: Field.new(type: :string, max: 2000, required: true) },
+    max_output_tokens: 120, max_output_chars: 400, long: false,
+    template: ->(c) { "Facts:\n#{c[:facts]}" }
+  )
+
+  ADMIN_TASKS = %w[verification_summary].freeze
+  PUBLIC_TASKS = (REGISTRY.keys - ["autocomplete"] - ADMIN_TASKS).freeze
   REGISTRY.freeze
 end

@@ -130,6 +130,7 @@ class TalentController < ApplicationController
     end
     scope = scope.where("profiles.instruments::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:instrument])}%") if params[:instrument].present?
     scope = scope.where(profiles: { verified: true }) if params[:verified] == "true"
+    scope = scope.where(profiles: { verified: true }).where(users: { id: Verification::Tier.pro_user_ids }) if params[:verified] == "pro"
     scope = scope.where(profiles: { remote_recording: true }) if params[:remoteRecording] == "true"
     scope
   end

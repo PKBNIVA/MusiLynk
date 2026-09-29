@@ -1,0 +1,46 @@
+# Verification automation (Verification::Evidence, Verification::Evaluate). Nothing here is
+# client-configurable. Strong evidence with proven identity is approved automatically; a
+# request is never auto-rejected.
+default: &default
+  auto_approve:
+    enabled: true
+    min_score: 75
+    # Auto-approval also needs the identity component to reach identity_min (phone or Google
+    # sign-in proven), whatever the total says.
+    require_identity: true
+    identity_min: 15
+    # Share of auto-approvals (percent) that also land in the admin "Audit sample" tab for a
+    # human look. The approval stands unless an admin revokes it.
+    audit_sample_percent: 10
+  # Requests scoring at least this get an AI (or templated) queue summary; below it the
+  # musician is asked to add more proof.
+  summary_min_score: 40
+  # Max verification requests per user in a rolling window (also the `velocity` flag threshold).
+  rate_limit:
+    max_requests: 3
+    window_days: 30
+  # "Verified Pro": verified AND at least this many completed urgent fills / bookings as the
+  # hired party AND at least this many published reviews received.
+  pro:
+    min_completed: 3
+    min_reviews: 1
+  disposable_email_domains:
+    - mailinator.com
+    - guerrillamail.com
+    - 10minutemail.com
+    - tempmail.com
+    - temp-mail.org
+    - yopmail.com
+    - trashmail.com
+    - sharklasers.com
+    - getnada.com
+    - throwawaymail.com
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

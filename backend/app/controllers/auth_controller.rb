@@ -20,7 +20,6 @@ class AuthController < ApplicationController
   OTP_REQUEST_MESSAGE = "If this email can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.".freeze
   OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
   EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so Verse can no longer send to it. Use a different email address, or sign in with your password.".freeze
-  PRODUCTION_FRONTEND_URL = "https://verse-music-platform.vercel.app".freeze
   # Admin password sign-in needs a second step: a code emailed to the admin.
   SECOND_FACTOR_PURPOSE = :admin_second_factor
   SECOND_FACTOR_CHALLENGES_PER_EMAIL = 5
@@ -460,12 +459,5 @@ class AuthController < ApplicationController
     { queued: false, delivered: false, reason: "delivery error" }
   end
 
-  def frontend_url
-    configured = ENV["FRONTEND_URL"].to_s.strip.sub(%r{/+\z}, "")
-    return configured if configured.present?
-    return "http://localhost:5173" unless Rails.env.production?
-
-    Rails.logger.error({ event: "frontend_url_missing", fallback: PRODUCTION_FRONTEND_URL }.to_json)
-    PRODUCTION_FRONTEND_URL
-  end
+  def frontend_url = FrontendUrl.base
 end

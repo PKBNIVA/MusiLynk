@@ -5,7 +5,6 @@
 # Every interpolated value is user-supplied (names, titles), so HTML is escaped and
 # message bodies are never part of an email.
 class NotificationEmail
-  PRODUCTION_FRONTEND_URL = "https://verse-music-platform.vercel.app".freeze
   UNSUBSCRIBE_PURPOSE = :notification_email_unsubscribe
 
   TEMPLATES = {
@@ -123,11 +122,7 @@ class NotificationEmail
 
   def self.workspace(user) = user.role == "employer" ? "/employer" : "/jobseeker"
 
-  def self.frontend_url
-    configured = ENV["FRONTEND_URL"].to_s.strip.sub(%r{/+\z}, "")
-    return configured if configured.present?
-    Rails.env.production? ? PRODUCTION_FRONTEND_URL : "http://localhost:5173"
-  end
+  def self.frontend_url = FrontendUrl.base
 
   def self.html(heading:, copy:, action:, link:, unsubscribe:)
     h = ERB::Util.method(:html_escape)

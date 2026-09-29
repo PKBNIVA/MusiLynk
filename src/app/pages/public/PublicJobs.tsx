@@ -22,6 +22,7 @@ export default function PublicJobs() {
   usePageMeta(
     'Music jobs, gigs, sessions & auditions',
     'Browse open music jobs, gigs, studio sessions, auditions and tours across performance, production and live events.',
+    { canonicalPath: '/music-jobs', type: 'website' },
   );
   // Filters live in the URL and every change is a history entry, so Back undoes one (SRCH-09).
   const { values, query, update, clear } = useUrlFilters(FILTERS);

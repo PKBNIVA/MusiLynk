@@ -158,6 +158,7 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
   usePageMeta(
     'Join as a musician or crew',
     'Create a verified music portfolio in two minutes: pick your role, paste links to your YouTube, Instagram, SoundCloud or Spotify work, and get booked in Mumbai.',
+    { canonicalPath: '/join/musician' },
   );
   const { step, reached, goTo } = useSteps(MUSICIAN_STEPS);
   const [roles, setRoles] = useState<string[]>([]);
@@ -338,6 +339,7 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
   usePageMeta(
     'Join to hire musicians and crew',
     'Studios, event and wedding companies, bands, labels and venues: create a free account in two minutes and find a verified musician in Mumbai within 24 hours.',
+    { canonicalPath: '/join/hiring' },
   );
   const { step, reached, goTo } = useSteps(HIRER_STEPS);
   const [kind, setKind] = useState<HirerKind | ''>('');

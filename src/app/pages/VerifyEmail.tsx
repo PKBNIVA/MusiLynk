@@ -18,7 +18,7 @@ export default function VerifyEmail() {
   );
   // A verification token is single-use: never send it twice (StrictMode / re-render).
   const sentFor = useRef<string | null>(null);
-  usePageMeta('Verify your email', 'Confirm the email address on your Verse account.');
+  usePageMeta('Verify your email', 'Confirm the email address on your Verse account.', { noindex: true });
   useEffect(() => {
     if (!token || sentFor.current === token) return;
     sentFor.current = token;

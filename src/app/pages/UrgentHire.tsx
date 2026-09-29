@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { usePageMeta } from '../components/PageMeta';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -30,6 +31,11 @@ type Confirmed = { id: string; notifiedCount: number; responseTimePromise: strin
 type LocationState = { confirmed?: Confirmed } | null;
 
 export default function UrgentHire() {
+  usePageMeta(
+    'Need someone by tomorrow?',
+    'Post an urgent music hiring request and get matched with available, verified musicians and crew near you within hours.',
+    { canonicalPath: '/urgent' },
+  );
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

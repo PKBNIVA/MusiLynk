@@ -17,6 +17,7 @@ Rails.application.routes.draw do
     get "auth/methods", to: "auth#sign_in_methods"
     get "me", to: "auth#me"
     get "me/identities", to: "identities#index"
+    put "me/email-preferences", to: "notifications#update_email_preferences"
     get "account/export", to: "account#export"
     delete "account", to: "account#destroy"
     patch "account/name", to: "account#update_name"
@@ -79,6 +80,7 @@ Rails.application.routes.draw do
       get :bookings, to: "operations#bookings"
       resources :refunds, only: %i[index update]
       get :funnel, to: "funnel#show"
+      get :emails, to: "emails#show"
       post "search/reindex", to: "search#reindex"
       get "demo-data", to: "demo_data#index"
       post "demo-data", to: "demo_data#create"
@@ -124,6 +126,8 @@ Rails.application.routes.draw do
     patch "notifications/preferences", to: "notifications#update_preferences"
     get "notifications/unsubscribe", to: "notifications#unsubscribe"
     post "notifications/unsubscribe", to: "notifications#unsubscribe"
+    get "notifications/unsubscribe/preferences", to: "notifications#unsubscribe_status"
+    patch "notifications/unsubscribe/preferences", to: "notifications#unsubscribe_update"
     post "email/webhook/brevo", to: "email_webhooks#brevo"
     resources :notifications, only: %i[index update]
     resources :reports, only: :create

@@ -44,6 +44,16 @@ Rails.application.configure do
       cron: "0 4 * * 2",
       class: "WeeklyDigestJob",
       description: "Send the weekly 'This week on Verse' digest"
+    },
+    urgent_requests_sweep: {
+      cron: "*/30 * * * *",
+      class: "UrgentRequestsSweepJob",
+      description: "Warn hirers 6 hours before an urgent request expires, and expire lapsed ones"
+    },
+    jobs_deadline_sweep: {
+      cron: "13 * * * *",
+      class: "JobsDeadlineSweepJob",
+      description: "Close published jobs past their application deadline and notify the hirer"
     }
   }
   # classify_portfolio_item is launch-disabled (see config/ai_pricing.yml `launch:`), so the cron

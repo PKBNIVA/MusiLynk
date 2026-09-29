@@ -144,19 +144,28 @@ export default function UrgentRequests() {
       toast.error(errorMessage(e));
     }
   }
-  const closeRequest = (r: UrgentRequest, status: 'filled' | 'cancelled') =>
+  const applyStatus = async (r: UrgentRequest, status: 'filled' | 'closed', filledByUserId?: string) => {
+    await apiPatch(`/urgent-requests/${r.id}`, { status, filledByUserId });
+    toast.success(status === 'filled' ? 'Request marked filled' : 'Request closed');
+    setExpanded(null);
+    await load();
+  };
+  const closeRequest = (r: UrgentRequest, status: 'filled' | 'closed', filledByUserId?: string) =>
     ask({
-      title: status === 'filled' ? 'Mark this request filled?' : 'Cancel this request?',
+      title: status === 'filled' ? 'Mark this request filled?' : 'Close this request?',
       description: 'It stops appearing to professionals and cannot be reopened.',
-      confirmLabel: status === 'filled' ? 'Mark filled' : 'Cancel request',
-      destructive: status === 'cancelled',
-      action: async () => {
-        await apiPatch(`/urgent-requests/${r.id}`, { status });
-        toast.success(status === 'filled' ? 'Request marked filled' : 'Request cancelled');
-        setExpanded(null);
-        await load();
-      },
+      confirmLabel: status === 'filled' ? 'Mark filled' : 'Close request',
+      destructive: status === 'closed',
+      action: () => applyStatus(r, status, filledByUserId),
     });
+  const [pickResponder, setPickResponder] = useState<UrgentRequest | null>(null);
+  const markFilled = async (r: UrgentRequest) => {
+    // "asks which responder, optional": load responses first so the hirer can pick one.
+    if (!responses[r.id]) await viewResponses(r.id);
+    setPickResponder(r);
+  };
+  const statusLabel = (status: string) =>
+    ({ open: 'Open', filled: 'Filled', expired: 'Expired', closed: 'Closed', cancelled: 'Closed' })[status] || status;
   const filter = (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -233,8 +242,19 @@ export default function UrgentRequests() {
                   <div className="flex flex-col sm:flex-row justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap gap-2">
-                        <Badge className="bg-orange-500/15 text-orange-200 capitalize">
-                          {r.status === 'open' ? 'Urgent' : r.status}
+                        <Badge
+                          data-testid="urgent-status-chip"
+                          className={
+                            r.status === 'open'
+                              ? 'bg-orange-500/15 text-orange-200'
+                              : r.status === 'filled'
+                                ? 'bg-emerald-500/15 text-emerald-200'
+                                : r.status === 'expired'
+                                  ? 'bg-rose-500/15 text-rose-200'
+                                  : 'bg-white/10 text-slate-300'
+                          }
+                        >
+                          {r.status === 'open' ? 'Urgent' : statusLabel(r.status)}
                         </Badge>
                         {r.requesterVerified && <Badge variant="secondary">Verified requester</Badge>}
                       </div>
@@ -257,6 +277,15 @@ export default function UrgentRequests() {
                         </p>
                       )}
                       {r.requirements && <p className="text-sm text-slate-300 mt-2 break-words">{r.requirements}</p>}
+                      {Boolean(r.myMatchReasons?.length) && (
+                        <p className="text-xs text-slate-500 mt-2">Why you: {r.myMatchReasons!.join(' · ')}</p>
+                      )}
+                      {r.status === 'filled' &&
+                        (r.filled_by_id === user?.id ? (
+                          <p className="text-sm text-emerald-300 mt-2">You were chosen</p>
+                        ) : r.myResponse ? (
+                          <p className="text-sm text-slate-400 mt-2">Filled — thanks for responding</p>
+                        ) : null)}
                     </div>
                     {r.requester_id === user?.id ? (
                       <div className="flex flex-wrap sm:justify-end gap-2 items-start">
@@ -269,11 +298,11 @@ export default function UrgentRequests() {
                         </Button>
                         {r.status === 'open' && (
                           <>
-                            <Button variant="outline" onClick={() => closeRequest(r, 'filled')}>
+                            <Button variant="outline" onClick={() => markFilled(r)}>
                               Mark filled
                             </Button>
-                            <Button variant="ghost" onClick={() => closeRequest(r, 'cancelled')}>
-                              Cancel request
+                            <Button variant="ghost" onClick={() => closeRequest(r, 'closed')}>
+                              Close
                             </Button>
                           </>
                         )}
@@ -445,6 +474,37 @@ export default function UrgentRequests() {
                 />
               </Field>
             </>
+          )}
+        </FormDialog>
+        <FormDialog
+          open={Boolean(pickResponder)}
+          onOpenChange={(open) => !open && setPickResponder(null)}
+          title="Mark this request filled"
+          description="Optionally choose who you booked — they'll see they were chosen; other responders see it's filled."
+          submitLabel="Mark filled"
+          busyLabel="Marking filled…"
+          busy={Boolean(pickResponder && pending === pickResponder.id)}
+          error={formError}
+          onSubmit={async () => {
+            if (!pickResponder) return;
+            const chosen = (document.querySelector('input[name="filled-by"]:checked') as HTMLInputElement | null)
+              ?.value;
+            await applyStatus(pickResponder, 'filled', chosen || undefined);
+            setPickResponder(null);
+          }}
+        >
+          {pickResponder && (
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input type="radio" name="filled-by" value="" defaultChecked /> No particular responder
+              </label>
+              {(responses[pickResponder.id] || []).map((response) => (
+                <label key={response.user_id} className="flex items-center gap-2 text-sm text-slate-300">
+                  <input type="radio" name="filled-by" value={response.user_id} />
+                  {response.name}
+                </label>
+              ))}
+            </div>
           )}
         </FormDialog>
         {confirmDialog}

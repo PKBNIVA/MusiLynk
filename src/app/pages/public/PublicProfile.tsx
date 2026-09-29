@@ -12,6 +12,8 @@ import { trackProfileView } from '../../lib/analytics';
 import { MapPin, ShieldCheck, Flag } from 'lucide-react';
 import { WorkSamplePlayer } from '../../components/WorkSamplePlayer';
 import { ReportDialog } from '../../components/ReportDialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
+import { verifiedBadgeCopy } from '../../components/VerifiedBadge';
 import { useAuth } from '../../lib/authContext';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { PortfolioItem, Professional } from '../../lib/apiTypes';
@@ -86,7 +88,18 @@ export default function PublicProfile() {
             <div className="flex items-center gap-3">
               <h1 className="text-4xl md:text-5xl font-bold break-words">{c.name}</h1>
               <DemoBadge show={c.demo} />
-              {c.verified && <ShieldCheck className="text-emerald-300" aria-label="Verified professional" />}
+              {c.verified && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ShieldCheck
+                      className="text-emerald-300"
+                      aria-label={verifiedBadgeCopy(c.verification)}
+                      tabIndex={0}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>{verifiedBadgeCopy(c.verification)}</TooltipContent>
+                </Tooltip>
+              )}
             </div>
             <p className="text-xl text-violet-300 mt-2">{c.headline}</p>
             {c.location && (

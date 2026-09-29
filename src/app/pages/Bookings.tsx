@@ -389,6 +389,15 @@ export default function Bookings() {
                           {b.isOwner ? `Enquiry from ${b.requesterName}` : 'Your booking enquiry'}
                         </p>
                         {hint && <p className="text-sm text-violet-200 mt-2">{hint}</p>}
+                        {b.status === 'accepted' && (
+                          <p className="text-xs text-slate-500 mt-2">
+                            If the act cancels, tell us and we'll help you find a replacement through Verse's{' '}
+                            <Link to="/urgent" className="text-violet-300 underline">
+                              urgent requests
+                            </Link>
+                            .
+                          </p>
+                        )}
                       </div>
                       <div className="flex gap-2 flex-wrap items-start md:justify-end">
                         {b.isOwner && QUOTABLE.includes(b.status) && (

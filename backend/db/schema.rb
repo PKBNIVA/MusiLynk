@@ -1137,6 +1137,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_090100) do
     t.string "channel", null: false
     t.string "notified_by_admin_id"
     t.datetime "created_at", null: false
+    t.jsonb "reasons", default: [], null: false
     t.index ["urgent_request_id", "user_id", "channel"], name: "idx_urgent_notif_unique", unique: true
     t.index ["user_id"], name: "index_urgent_request_notifications_on_user_id"
   end
@@ -1176,6 +1177,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_090100) do
     t.datetime "last_notified_at"
     t.string "filled_by_id"
     t.text "founder_notes"
+    t.datetime "expires_at"
+    t.datetime "expiry_warned_at"
+    t.index ["expires_at"], name: "index_urgent_requests_on_expires_at"
     t.index ["requester_id"], name: "index_urgent_requests_on_requester_id"
     t.index ["start_at"], name: "index_urgent_requests_on_start_at"
     t.index ["status"], name: "index_urgent_requests_on_status"
@@ -1203,9 +1207,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_090100) do
     t.datetime "updated_at", null: false
     t.string "synthetic_batch"
     t.datetime "consented_at"
+    t.string "vouched_by_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["name"], name: "index_users_on_name", opclass: :gin_trgm_ops, using: :gin
     t.index ["synthetic_batch"], name: "index_users_on_synthetic_batch", where: "(synthetic_batch IS NOT NULL)"
+    t.index ["vouched_by_id"], name: "index_users_on_vouched_by_id"
   end
 
   create_table "verification_requests", id: :string, force: :cascade do |t|
@@ -1218,8 +1224,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_090100) do
     t.datetime "reviewed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "checks", default: [], null: false
     t.index ["reviewed_by_id"], name: "index_verification_requests_on_reviewed_by_id"
     t.index ["user_id"], name: "index_verification_requests_on_user_id"
+  end
+
+  create_table "vouches", id: :string, force: :cascade do |t|
+    t.string "voucher_id", null: false
+    t.citext "vouchee_email", null: false
+    t.string "vouchee_id"
+    t.string "token", null: false
+    t.string "status", default: "invited", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token"], name: "index_vouches_on_token", unique: true
+    t.index ["vouchee_id"], name: "index_vouches_on_vouchee_id"
+    t.index ["voucher_id", "vouchee_email"], name: "idx_vouches_voucher_and_email", unique: true
+    t.check_constraint "status::text = ANY (ARRAY['invited'::character varying, 'joined'::character varying, 'verified'::character varying]::text[])", name: "vouches_status_valid"
   end
 
   add_foreign_key "act_members", "acts"
@@ -1308,6 +1329,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_090100) do
   add_foreign_key "urgent_requests", "users", column: "requester_id"
   add_foreign_key "user_blocks", "users", column: "blocked_id", on_delete: :cascade
   add_foreign_key "user_blocks", "users", column: "blocker_id", on_delete: :cascade
+  add_foreign_key "users", "users", column: "vouched_by_id", on_delete: :nullify
   add_foreign_key "verification_requests", "users"
   add_foreign_key "verification_requests", "users", column: "reviewed_by_id"
+  add_foreign_key "vouches", "users", column: "vouchee_id", on_delete: :nullify
+  add_foreign_key "vouches", "users", column: "voucher_id"
 end

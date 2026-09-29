@@ -182,8 +182,7 @@ export default function ActsManager() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
-        <PageHeader title="My acts" />
-        <HelpCallout {...HELP.acts} />
+        <PageHeader title="My acts" help={<HelpCallout {...HELP.acts} />} />
         <div className="grid lg:grid-cols-[.9fr_1.1fr] gap-6">
           <Card className="bg-white/[.055] border-white/10">
             <CardContent className="p-6">

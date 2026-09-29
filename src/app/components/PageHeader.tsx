@@ -9,11 +9,14 @@ export function PageHeader({
   title,
   hint,
   actions,
+  help,
   className = '',
 }: {
   title: string;
   hint?: string;
   actions?: ReactNode;
+  /** A collapsed "How this works" link, shown first in the actions cluster. */
+  help?: ReactNode;
   className?: string;
 }) {
   return (
@@ -22,7 +25,12 @@ export function PageHeader({
         <h1 className="text-2xl font-bold leading-tight md:text-3xl">{title}</h1>
         {hint && <p className="mt-0.5 text-sm text-slate-400">{hint}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {(actions || help) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {help}
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

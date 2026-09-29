@@ -113,8 +113,7 @@ export default function Availability() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-5xl mx-auto px-4 sm:px-5 pt-28 pb-16">
-        <PageHeader title="Availability" />
-        <HelpCallout {...HELP.availability} />
+        <PageHeader title="Availability" help={<HelpCallout {...HELP.availability} />} />
         <Card className="bg-white/[.055] border-white/10 mt-7">
           <CardContent className="p-5">
             <form onSubmit={add} noValidate className="grid md:grid-cols-5 gap-3 items-start">

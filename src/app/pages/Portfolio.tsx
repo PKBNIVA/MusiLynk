@@ -279,8 +279,7 @@ export default function Portfolio() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 pt-28 pb-16">
-        <PageHeader title="Work samples" />
-        <HelpCallout {...HELP.portfolio} />
+        <PageHeader title="Work samples" help={<HelpCallout {...HELP.portfolio} />} />
         <div className="grid xl:grid-cols-[390px_1fr] gap-6">
           <Card className="bg-white/[.06] border-white/10 h-fit">
             <CardContent className="p-5">

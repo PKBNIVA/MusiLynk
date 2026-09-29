@@ -892,29 +892,31 @@ export default function PostJob() {
       <Navigation />
       <main className="max-w-5xl mx-auto px-5 md:px-6 pt-28 pb-16">
         <PageHeader
+          help={
+            job ? undefined : (
+              <HelpCallout
+                id="post-job"
+                title="How posting works"
+                steps={[
+                  { icon: PenLine, title: 'Describe the work', text: 'Four quick steps. Save a draft at any point.' },
+                  {
+                    icon: BadgeCheck,
+                    title: 'We review it',
+                    text: 'Our team checks every listing for clarity and safety before it goes live.',
+                  },
+                  {
+                    icon: Inbox,
+                    title: 'Applicants arrive',
+                    text: 'Answers, samples and messages land in Applications, ready to shortlist.',
+                  },
+                ]}
+              />
+            )
+          }
           title={job ? job.title || 'Untitled opportunity' : 'Post an opportunity'}
           hint={job ? `Editing · ${jobStatusLabel[job.status] || job.status}` : 'Four short steps'}
           actions={<AiCreditsBadge />}
         />
-        {!job && (
-          <HelpCallout
-            id="post-job"
-            title="How posting works"
-            steps={[
-              { icon: PenLine, title: 'Describe the work', text: 'Four quick steps. Save a draft at any point.' },
-              {
-                icon: BadgeCheck,
-                title: 'We review it',
-                text: 'Our team checks every listing for clarity and safety before it goes live.',
-              },
-              {
-                icon: Inbox,
-                title: 'Applicants arrive',
-                text: 'Answers, samples and messages land in Applications, ready to shortlist.',
-              },
-            ]}
-          />
-        )}
         {job?.status === 'published' && (
           <div
             role="note"

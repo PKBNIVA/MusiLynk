@@ -378,9 +378,12 @@ export default function Messages() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-4 md:px-6 pt-24 md:pt-28 pb-28 lg:pb-16">
-        <PageHeader title="Messages" className={activeId ? 'hidden md:flex' : ''} />
+        <PageHeader
+          title="Messages"
+          help={<HelpCallout {...HELP.messages} />}
+          className={activeId ? 'hidden md:flex' : ''}
+        />
         {/* Tips show on the inbox itself; an open thread keeps the whole panel for the conversation. */}
-        {!activeId && <HelpCallout {...HELP.messages} />}
         <Card className="bg-white/[.05] border-white/10 overflow-hidden">
           {/* The single grid row is capped at the panel height so the message list scrolls instead of growing past it. */}
           <CardContent className="p-0 grid md:grid-cols-[320px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:h-[640px]">

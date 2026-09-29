@@ -47,8 +47,7 @@ export default function ApplicationTracking() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-5xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <PageHeader title="Applications" />
-        <HelpCallout {...HELP.applications} />
+        <PageHeader title="Applications" help={<HelpCallout {...HELP.applications} />} />
         {error ? (
           <Card className="bg-rose-500/10 border-rose-400/20" role="alert">
             <CardContent className="p-6">

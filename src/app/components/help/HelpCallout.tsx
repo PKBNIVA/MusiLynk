@@ -34,71 +34,62 @@ export function HelpCallout({ id, title, steps }: { id: string; title: string; s
     setShown(next);
     writeShown(id, next);
   };
-  const linkClass =
-    'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-violet-200 hover:bg-violet-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400';
-  if (!shown)
-    return (
-      <div className="mb-2 flex justify-end">
-        <button
-          type="button"
-          onClick={() => toggle(true)}
-          aria-expanded="false"
-          className={`hidden md:inline-flex ${linkClass}`}
-        >
-          <HelpCircle aria-hidden="true" size={16} />
-          How this works
-        </button>
-        <a href="/guide" className={`md:hidden ${linkClass}`}>
-          <HelpCircle aria-hidden="true" size={16} />
-          How this works
-        </a>
-      </div>
-    );
+  const onLink = () => {
+    // Small screens never get the card: the link goes to the guide instead.
+    const wide = typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 768px)').matches : true;
+    if (wide) toggle(!shown);
+    else window.location.assign('/guide');
+  };
   return (
-    <>
-      <div className="mb-2 flex justify-end md:hidden">
-        <a href="/guide" className={linkClass}>
-          <HelpCircle aria-hidden="true" size={16} />
-          How this works
-        </a>
-      </div>
-      <section
-        aria-label={title}
-        data-help-callout={id}
-        className="verse-help relative mb-8 hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/[.09] via-fuchsia-500/[.04] to-teal-400/[.05] p-5 md:block md:p-6"
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onLink}
+        aria-expanded={shown}
+        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1.5 text-sm text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <p className="flex items-center gap-2 font-semibold text-white">
-            <HelpCircle aria-hidden="true" size={20} className="text-violet-300" />
-            {title}
-          </p>
-          <button
-            type="button"
-            onClick={() => toggle(false)}
-            aria-label={`Hide tips: ${title}`}
-            aria-expanded="true"
-            className="-m-1 grid size-8 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-          >
-            <X aria-hidden="true" size={16} />
-          </button>
-        </div>
-        <ol className="grid gap-4 md:grid-cols-3">
-          {steps.map((s, i) => (
-            <li key={s.title} className="flex gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-500/15 text-violet-200">
-                <s.icon aria-hidden="true" size={20} />
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-white">
-                  <span className="sr-only">Step {i + 1}: </span>
-                  {s.title}
-                </p>
-                <p className="mt-0.5 text-sm leading-snug text-slate-400">{s.text}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
-    </>
+        <HelpCircle aria-hidden="true" size={16} />
+        How this works
+      </button>
+      {shown && (
+        <section
+          aria-label={title}
+          data-help-callout={id}
+          className="verse-help absolute right-0 top-full z-30 mt-2 hidden w-[min(92vw,52rem)] rounded-2xl border border-violet-400/20 bg-slate-950 p-5 shadow-2xl md:block md:p-6"
+        >
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <p className="flex items-center gap-2 font-semibold text-white">
+              <HelpCircle aria-hidden="true" size={20} className="text-violet-300" />
+              {title}
+            </p>
+            <button
+              type="button"
+              onClick={() => toggle(false)}
+              aria-label={`Hide tips: ${title}`}
+              aria-expanded="true"
+              className="-m-1 grid size-8 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+            >
+              <X aria-hidden="true" size={16} />
+            </button>
+          </div>
+          <ol className="grid gap-4 md:grid-cols-3">
+            {steps.map((s, i) => (
+              <li key={s.title} className="flex gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-500/15 text-violet-200">
+                  <s.icon aria-hidden="true" size={20} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white">
+                    <span className="sr-only">Step {i + 1}: </span>
+                    {s.title}
+                  </p>
+                  <p className="mt-0.5 text-sm leading-snug text-slate-400">{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+    </div>
   );
 }

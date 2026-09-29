@@ -45,8 +45,7 @@ export default function StageFeed() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="mx-auto max-w-2xl px-4 pt-24 pb-16 md:px-6">
-        <PageHeader title="Stage" />
-        <HelpCallout {...HELP.stage} />
+        <PageHeader title="Stage" help={<HelpCallout {...HELP.stage} />} />
 
         <EventStrip />
 

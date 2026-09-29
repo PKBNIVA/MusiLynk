@@ -37,6 +37,7 @@ export default function JobSeekerDashboard() {
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
         <PageHeader
+          help={<HelpCallout {...HELP.jobseekerDashboard} />}
           title={`Hi, ${user?.name?.split(' ')[0] || 'there'}`}
           actions={
             <Button asChild>
@@ -49,7 +50,6 @@ export default function JobSeekerDashboard() {
         />
         {!welcome && <TourStrip role="jobseeker" />}
         <WelcomeNextStep role="jobseeker" />
-        <HelpCallout {...HELP.jobseekerDashboard} />
         {state === 'error' && (
           <div
             role="alert"

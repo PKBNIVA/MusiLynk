@@ -30,6 +30,7 @@ export default function EmployerDashboard() {
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
         <PageHeader
+          help={<HelpCallout {...HELP.employerDashboard} />}
           title={`Hi, ${user?.name?.split(' ')[0] || 'there'}`}
           actions={
             <>
@@ -50,7 +51,6 @@ export default function EmployerDashboard() {
         />
         {!new URLSearchParams(location.search).has('welcome') && <TourStrip role="employer" />}
         <WelcomeNextStep role="employer" />
-        <HelpCallout {...HELP.employerDashboard} />
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="text-2xl font-semibold flex items-center gap-2">
             <Workflow aria-hidden="true" size={24} className="text-violet-300" />

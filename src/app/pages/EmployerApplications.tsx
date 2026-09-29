@@ -330,8 +330,11 @@ export default function EmployerApplications() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <PageHeader title="Applicants" actions={<AiCreditsBadge />} />
-        <HelpCallout {...HELP.employerApplications} />
+        <PageHeader
+          title="Applicants"
+          actions={<AiCreditsBadge />}
+          help={<HelpCallout {...HELP.employerApplications} />}
+        />
         {jobs.length > 0 && (
           <div className="mb-6 flex flex-wrap items-end gap-3">
             <div className="max-w-md flex-1 min-w-56">
@@ -650,25 +653,45 @@ export default function EmployerApplications() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
-                        {(a.allowedNextStatuses || []).map((s: string) => (
+                        {a.id === primaryShortlistId && (
                           <Button
-                            key={s}
                             className="tap-target-44"
                             size="sm"
-                            variant={
-                              s === 'Rejected'
-                                ? 'outline'
-                                : s === 'Shortlisted' && a.id === primaryShortlistId
-                                  ? 'default'
-                                  : 'secondary'
-                            }
                             disabled={!!updating[a.id]}
                             aria-busy={!!updating[a.id]}
-                            onClick={() => status(a, s)}
+                            onClick={() => status(a, 'Shortlisted')}
                           >
-                            {s}
+                            Shortlisted
                           </Button>
-                        ))}
+                        )}
+                        {(() => {
+                          const moves = (a.allowedNextStatuses || []).filter(
+                            (s: string) => !(a.id === primaryShortlistId && s === 'Shortlisted'),
+                          );
+                          return moves.length > 0 ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  className="tap-target-44"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!!updating[a.id]}
+                                  aria-busy={!!updating[a.id]}
+                                >
+                                  Move to…
+                                  <ChevronDown aria-hidden="true" size={14} className="ml-1" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {moves.map((s: string) => (
+                                  <DropdownMenuItem key={s} onSelect={() => status(a, s)}>
+                                    {s}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                   </CardContent>

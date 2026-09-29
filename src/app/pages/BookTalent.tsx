@@ -172,8 +172,7 @@ export default function BookTalent() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
-        <PageHeader title="Book talent" />
-        <HelpCallout {...HELP.bookTalent} />
+        <PageHeader title="Book talent" help={<HelpCallout {...HELP.bookTalent} />} />
         <ActSearchForm
           idPrefix="book-acts"
           values={filters}

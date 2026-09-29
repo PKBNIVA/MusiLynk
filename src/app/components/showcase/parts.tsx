@@ -51,9 +51,13 @@ export function ShowcaseShell({
             <h1 className="text-2xl font-bold leading-tight break-words md:text-3xl">{title}</h1>
             {description && <p className="mt-0.5 text-sm text-slate-400">{description}</p>}
           </div>
-          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+          {(actions || help) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {help && <HelpCallout {...help} />}
+              {actions}
+            </div>
+          )}
         </div>
-        {help && <HelpCallout {...help} />}
         {children}
       </main>
     </div>

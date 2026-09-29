@@ -85,6 +85,7 @@ export default function JobSearch() {
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
         <PageHeader
+          help={<HelpCallout {...HELP.jobs} />}
           title="Find work"
           hint="Gigs, sessions, auditions and tours"
           actions={
@@ -99,7 +100,6 @@ export default function JobSearch() {
             </>
           }
         />
-        <HelpCallout {...HELP.jobs} />
         <Card className="bg-white/[.055] border-white/10 mb-7">
           <CardContent className="p-4 md:p-5">
             <form onSubmit={submit} className="grid lg:grid-cols-[1.4fr_1fr_auto_auto] gap-3" role="search">

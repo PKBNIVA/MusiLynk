@@ -7,6 +7,7 @@ class ReferralsController < ApplicationController
 
     promo = PromoCodes::Generator.referral_for(current_user)
     render json: { code: promo.code, shareUrl: "#{FrontendUrl.base}/pricing?code=#{CGI.escape(promo.code)}", redemptions: promo.redemptions_count,
-                   rewardsEarned: BillingCredit.where(user: current_user, reason: "referral_reward").count }
+                   rewardsEarned: BillingCredit.where(user: current_user, reason: "referral_reward").count,
+                   refereePercentOff: BillingConfig.referral[:referee_percent_off] }
   end
 end

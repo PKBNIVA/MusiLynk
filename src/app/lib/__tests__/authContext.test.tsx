@@ -207,6 +207,33 @@ describe('AuthProvider', () => {
     expect(auth).toMatchObject({ user: null, loading: false });
   });
 
+  it('picks up the session token from a Google sign-in redirect and cleans the URL', async () => {
+    const original = window.location.href;
+    window.history.replaceState({}, '', '/jobseeker?auth=google&token=google-tok&foo=bar');
+    try {
+      fetchMock.mockResolvedValueOnce(jsonResponse({ user: asha }));
+      await mount();
+      await settle();
+      expect(auth).toMatchObject({ user: asha, isAuthenticated: true });
+      expect(modules.api.hasAccessToken()).toBe(true);
+      expect(window.location.search).toBe('?foo=bar');
+    } finally {
+      window.history.replaceState({}, '', original);
+    }
+  });
+
+  it('ignores a token query param without auth=google', async () => {
+    const original = window.location.href;
+    window.history.replaceState({}, '', '/jobseeker?token=not-a-real-flow');
+    try {
+      await mount();
+      await settle();
+      expect(modules.api.hasAccessToken()).toBe(false);
+    } finally {
+      window.history.replaceState({}, '', original);
+    }
+  });
+
   it('exposes setUser for profile edits', async () => {
     await mount();
     await settle();

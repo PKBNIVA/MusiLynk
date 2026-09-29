@@ -1,5 +1,28 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, apiGet, apiPost, hasAccessToken, onAccessTokenChange, setAccessToken } from './api';
+
+/**
+ * A full-page "Continue with Google" round trip lands back on whatever page the backend
+ * chose (see GoogleAuthController), not necessarily AuthPage — so the session's bearer
+ * token (carried as `?token=` since there is no cookie to carry it instead) is picked up
+ * once here, for every route, rather than in any one page.
+ */
+function consumeGoogleRedirectToken() {
+  try {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get('token');
+    if (url.searchParams.get('auth') !== 'google' || !token) return;
+    setAccessToken(token);
+    // Dynamically imported so this module (loaded eagerly at the app root) never pulls the
+    // analytics module into the entry chunk (see App.tsx's own dynamic import of it).
+    void import('./analytics').then((m) => m.track('auth_google_success'));
+    url.searchParams.delete('token');
+    url.searchParams.delete('auth');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    /* non-browser, or a blocked history API; the token stays unset and sign-in shows the sign-in page */
+  }
+}
 import type { StarterPayload } from './onboarding';
 export type Role = 'jobseeker' | 'employer' | 'admin';
 export interface User {
@@ -81,6 +104,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   useEffect(() => {
+    consumeGoogleRedirectToken();
     refresh();
   }, []);
   /* Sign-in or sign-out in another tab updates this one; a cleared token drops to signed-out state and protected routes send the user to sign-in. */

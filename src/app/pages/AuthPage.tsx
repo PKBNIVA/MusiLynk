@@ -6,7 +6,8 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User } from '../lib/authContext';
-import { consumeReturnTo, getSignInMethods, requestSignInCode } from '../lib/api';
+import { consumeReturnTo, GOOGLE_AUTH_ERROR_MESSAGES, getSignInMethods, requestSignInCode } from '../lib/api';
+import { GoogleButton } from '../components/auth/GoogleButton';
 import { submitUrgentDraft } from '../lib/urgentDraft';
 import { toast } from 'sonner';
 import { BrandMark } from '../components/BrandMark';
@@ -43,6 +44,7 @@ export default function AuthPage() {
   /* Until the API says otherwise both paths are offered; an explicit `false` means email cannot be delivered. */
   const [codesAvailable, setCodesAvailable] = useState(true);
   const [emailAvailable, setEmailAvailable] = useState(true);
+  const [googleAvailable, setGoogleAvailable] = useState(false);
   const touched = useRef(false);
   const focusCode = () => focusField('auth-code');
   const verifying = useRef(false);
@@ -57,6 +59,7 @@ export default function AuthPage() {
           setCodesAvailable(false);
           if (!touched.current) setMethod('password');
         }
+        if (m.providers?.google) setGoogleAvailable(true);
       })
       .catch(() => {
         /* keep both paths; the code request reports its own error */
@@ -64,6 +67,17 @@ export default function AuthPage() {
     return () => {
       active = false;
     };
+  }, []);
+
+  /* `?auth_error=` on return from "Continue with Google" (see GoogleAuthController). */
+  useEffect(() => {
+    const code = searchParams.get('auth_error');
+    if (!code) return;
+    setError(GOOGLE_AUTH_ERROR_MESSAGES[code] ?? "Google didn't complete the sign-in. Try again.");
+    const url = new URL(window.location.href);
+    url.searchParams.delete('auth_error');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const go = (r: string, complete = true) => {
@@ -413,6 +427,7 @@ export default function AuthPage() {
                     </Link>
                   </div>
                 )}
+                {codeStep === 'email' && !challenge && googleAvailable && <GoogleButton intent="signin" role={role} />}
                 {method === 'code' || challenge ? codeForms : passwordForm}
                 {codeStep === 'email' && (
                   <div className="mt-3 flex items-center justify-between gap-3">

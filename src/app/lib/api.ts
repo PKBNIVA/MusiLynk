@@ -57,7 +57,7 @@ function writeStored(kind: StoreKind, key: string, value: string | null) {
 
 let legacyTokenChecked = false;
 
-function readToken() {
+export function readToken() {
   const token = readStored('local', TOKEN_KEY);
   if (token || legacyTokenChecked) return token;
   // Sessions created before the token moved to localStorage live in this tab's
@@ -195,7 +195,7 @@ function wait(ms: number, signal?: AbortSignal | null) {
   });
 }
 
-async function fetchWithTimeout(url: string, options: ApiOptions) {
+export async function fetchWithTimeout(url: string, options: ApiOptions) {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, signal: callerSignal, ...fetchOptions } = options;
   const controller = new AbortController();
   const abortFromCaller = () => controller.abort(callerSignal?.reason);

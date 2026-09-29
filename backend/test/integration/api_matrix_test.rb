@@ -322,6 +322,14 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:delete, "/api/uploads/{upload}", :any, { idor: true, missing: :upload }],
     [:get, "/api/admin/billing-events", :admin, { keys: %w[events nextBefore] }],
     [:get, "/api/admin/billing-events/{billing_event}", :admin, { missing: :billing_event, keys: %w[event] }],
+    [:post, "/api/billing/codes/validate", :any, { params: { code: "NO-SUCH-CODE", planCode: "pro", interval: "monthly" }, bad: { code: "X", planCode: "platinum" }, bad_status: [400], keys: %w[valid reason kind effect message] }],
+    [:get, "/api/me/referral-code", :talent, { keys: %w[code shareUrl redemptions rewardsEarned] }],
+    [:get, "/api/admin/promo-codes", :admin, { keys: %w[codes programme page perPage total] }],
+    [:post, "/api/admin/promo-codes", :admin, { ok: [201], params: ->(_w, _a) { { kind: "discount_percent", code: "MTX#{SecureRandom.hex(3)}", percentOff: 10 } }, bad: { kind: "referral" }, bad_status: [422], keys: %w[code] }],
+    [:patch, "/api/admin/promo-codes/{promo_code}", :admin, { params: { notes: "Matrix note" }, missing: :promo_code, bad: {}, bad_status: [400], keys: %w[code] }],
+    [:put, "/api/admin/promo-codes/{promo_code}", :admin, { params: { notes: "Matrix note" }, missing: :promo_code }],
+    [:get, "/api/admin/promo-codes/{promo_code}/redemptions", :admin, { missing: :promo_code, keys: %w[redemptions] }],
+    [:get, "/api/admin/promo-codes/export", :admin, { note: "CSV download; the .csv suffix form is covered in AdminPromoCodesTest" }],
     [:get, "/api/admin/demo-data", :admin, { keys: %w[batches jobs busy demoUsers maxUsers sizes] }],
     [:post, "/api/admin/demo-data", :admin, { ok: [202], params: { size: "small" }, bad: { size: "enormous" }, bad_status: [422], keys: %w[jobId job] }],
     [:delete, "/api/admin/demo-data", :admin, { ok: [202], keys: %w[jobId job] }],
@@ -473,6 +481,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     end
     world.refs[:shared][:stage_post] = world.refs[:js][:stage_post]
     world.refs[:shared][:stage_comment] = world.refs[:js][:stage_comment]
+    world.refs[:shared][:promo_code] = PromoCode.create!(code: "MATRIX#{SecureRandom.hex(3)}", kind: "discount_percent", percent_off: 15).id
     world.refs[:shared][:stage_follow_target] = User.create!(name: "Matrix Stage Followable", email: "matrix-stage-follow-#{SecureRandom.hex(4)}@example.com",
       password: ApiMatrixWorld::PASSWORD, role: "jobseeker", status: "active", profile_complete: true).id
     world.refs[:shared][:stage_tag_post] = Post.create!(author_type: "user", author_id: world.user(:js).id, created_by_user_id: world.user(:js).id,

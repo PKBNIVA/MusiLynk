@@ -886,6 +886,8 @@ export interface Plan {
   code: string;
   name: string;
   monthly: number | null;
+  /** Price for a year (10 x monthly). Null for Enterprise. */
+  annual?: number | null;
   trialDays: number;
   activePosts: number;
   seats: number;
@@ -921,12 +923,109 @@ export interface BillingHistoryEntry {
   event: string;
 }
 
+export type BillingInterval = 'monthly' | 'annual';
+
+/** GET /billing/plans. `annualAvailable` is false until every paid plan has an annual Razorpay plan id. */
+export interface BillingPlans {
+  plans: Plan[];
+  annualAvailable?: boolean;
+}
+
+export type PromoKind = 'discount_percent' | 'extended_trial' | 'early_access' | 'referral';
+
+export interface PromoEffect {
+  percentOff: number | null;
+  durationPeriods: number | null;
+  trialDays: number | null;
+  earlyAccessDays: number | null;
+}
+
+/** POST /billing/codes/validate. */
+export interface PromoValidation {
+  valid: boolean;
+  reason?: string | null;
+  kind: PromoKind | null;
+  effect: PromoEffect;
+  message: string;
+}
+
+/** GET /me/referral-code. */
+export interface ReferralCode {
+  code: string;
+  shareUrl: string;
+  redemptions: number;
+  rewardsEarned: number;
+  refereePercentOff?: number;
+}
+
+/** The code behind the current subscription's discount, trial or Early Access (billing summary). */
+export interface BillingPromo {
+  code: string;
+  kind: PromoKind;
+  percentOff: number | null;
+  periodsLeft: number | null;
+  trialDays: number | null;
+}
+
+/** A promo_codes row as the admin Codes tab reads it. */
+export interface AdminPromoCode {
+  id: string;
+  code: string;
+  kind: PromoKind;
+  percentOff: number | null;
+  durationPeriods: number | null;
+  trialDays: number | null;
+  planCodes: string[];
+  intervals: string[];
+  razorpayOfferId: string | null;
+  maxRedemptions: number | null;
+  redemptionsCount: number;
+  perUserLimit: number;
+  startsAt: string | null;
+  expiresAt: string | null;
+  active: boolean;
+  ownerUserId: string | null;
+  notes: string | null;
+  batchId: string | null;
+  needsOffer: boolean;
+  createdAt: string;
+}
+
+export interface AdminPromoProgramme {
+  referral: {
+    enabled: boolean;
+    refereePercentOff: number;
+    refereeDurationPeriods: number;
+    referrerRewardDays: number;
+    referrerRewardCap: number;
+    offerConfigured: boolean;
+  };
+  codeFormat: string;
+  codeAlphabet: string;
+  earlyAccess: { days: number; seats: number; granted: number };
+  offerRequired: boolean;
+  editNote: string;
+}
+
+export interface AdminPromoRedemption {
+  id: string;
+  userId: string;
+  name: string | null;
+  email: string | null;
+  subscriptionId: string | null;
+  kind: PromoKind;
+  percentOff: number | null;
+  trialDays: number | null;
+  redeemedAt: string;
+  referrerReward: { days: number; appliedAt: string | null; userId: string } | null;
+}
+
 /** POST /billing/checkout: a sales hand-off for Enterprise, otherwise the subscription and how to pay. */
 export interface BillingCheckout {
   salesAssisted?: boolean;
   message?: string;
   subscription?: Subscription;
-  checkout?: RazorpayCheckoutConfig | { mode: 'mock' };
+  checkout?: RazorpayCheckoutConfig | { mode: 'mock' | 'early_access' };
   idempotent?: boolean;
 }
 

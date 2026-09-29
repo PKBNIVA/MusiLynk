@@ -1,5 +1,8 @@
 class Subscription < ApplicationRecord
-  STATUSES = %w[pending trialing active past_due cancelled].freeze
+  # "early_access" (Early Access Pro) is admin-granted only (Admin::UsersController
+  # #grant_early_access) and never reached through a Razorpay webhook, so it does not appear in
+  # PROVIDER_TRANSITIONS/STATUS_PRIORITY below, which apply_provider_status! uses.
+  STATUSES = %w[pending trialing active past_due cancelled early_access].freeze
   PROVIDERS = %w[internal razorpay].freeze
   PROVIDER_TRANSITIONS = {
     "pending" => %w[pending trialing active past_due cancelled],

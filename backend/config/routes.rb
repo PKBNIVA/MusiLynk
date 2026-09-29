@@ -1,4 +1,9 @@
 Rails.application.routes.draw do
+  # Full-page browser redirects (the Google consent screen and its callback), not JSON, so
+  # these are outside the /api scope. See GoogleAuthController.
+  get "auth/google/start", to: "google_auth#start"
+  get "auth/google/callback", to: "google_auth#callback"
+
   scope :api do
     get "health", to: "health#show"
     get "live", to: "health#show"
@@ -13,8 +18,11 @@ Rails.application.routes.draw do
     post "auth/reset-password", to: "auth#reset_password"
     post "auth/otp/request", to: "auth#otp_request"
     post "auth/otp/verify", to: "auth#otp_verify"
+    post "auth/phone-otp/request", to: "auth#phone_otp_request"
+    post "auth/phone-otp/verify", to: "auth#phone_otp_verify"
     post "auth/second-factor", to: "auth#second_factor"
     get "auth/methods", to: "auth#sign_in_methods"
+    delete "auth/connections/:id", to: "auth#destroy_connection"
     get "me", to: "auth#me"
     get "me/identities", to: "identities#index"
     get "account/export", to: "account#export"

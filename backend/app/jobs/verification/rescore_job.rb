@@ -11,10 +11,11 @@ module Verification
     end
 
     # Cheap to call from anywhere: one indexed query, and nothing is enqueued for a user with no
-    # pending request. Never lets a scoring problem fail the write that triggered it.
+    # pending request or a synthetic account. Never lets a scoring problem fail the write that triggered it.
     def self.for_user(user_id)
       return if user_id.blank?
-      VerificationRequest.where(user_id:, status: "pending").pluck(:id).each { perform_later(_1) }
+      # Synthetic QA/demo accounts are never scored (their fixtures would only churn the queue).
+      VerificationRequest.where(user_id:, status: "pending").joins(:user).where(users: { synthetic_batch: nil }).pluck(:id).each { perform_later(_1) }
     rescue StandardError => error
       ErrorReporter.capture(error, tags: { source: "verification_rescore_enqueue" })
     end

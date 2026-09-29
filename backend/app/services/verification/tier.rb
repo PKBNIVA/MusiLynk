@@ -23,20 +23,13 @@ module Verification
 
     def reviews_count(user) = Review.where(employer_id: user.id, status: "published").count
 
-    # User ids that qualify for Verified Pro, as a subquery for the directory filter.
-    def pro_user_ids_sql
-      min_completed = Config.pro.fetch(:min_completed).to_i
-      min_reviews = Config.pro.fetch(:min_reviews).to_i
-      <<~SQL.squish
-        SELECT fills.user_id FROM (
-          SELECT filled_by_id AS user_id FROM urgent_requests WHERE status = 'filled' AND filled_by_id IS NOT NULL
-          UNION ALL
-          SELECT acts.owner_id AS user_id FROM booking_requests JOIN acts ON acts.id = booking_requests.act_id WHERE booking_requests.status = 'completed'
-        ) fills
-        JOIN (SELECT employer_id AS user_id FROM reviews WHERE status = 'published' GROUP BY employer_id HAVING COUNT(*) >= #{min_reviews}) reviewed
-          ON reviewed.user_id = fills.user_id
-        GROUP BY fills.user_id HAVING COUNT(*) >= #{min_completed}
-      SQL
+    # User ids that qualify for Verified Pro, for the directory filter.
+    def pro_user_ids
+      fills = Hash.new(0)
+      UrgentRequest.where(status: "filled").where.not(filled_by_id: nil).group(:filled_by_id).count.each { |id, n| fills[id] += n }
+      BookingRequest.where(status: "completed").joins(:act).group("acts.owner_id").count.each { |id, n| fills[id] += n }
+      reviewed = Review.where(status: "published").group(:employer_id).having("COUNT(*) >= ?", Config.pro.fetch(:min_reviews).to_i).count.keys
+      fills.select { |_id, n| n >= Config.pro.fetch(:min_completed) }.keys & reviewed
     end
   end
 end

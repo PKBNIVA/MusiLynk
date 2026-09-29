@@ -407,6 +407,11 @@ class VerificationAutomationTest < ActiveSupport::TestCase
     assert_enqueued_with(job: Verification::RescoreJob, args: [request.id]) { Verification::RescoreJob.for_user(u.id) }
     request.update!(status: "approved")
     assert_no_enqueued_jobs { Verification::RescoreJob.for_user(u.id) }
+
+    demo = user
+    demo.update_columns(synthetic_batch: "demo-20260101-0000")
+    request_for(demo)
+    assert_no_enqueued_jobs { Verification::RescoreJob.for_user(demo.id) }
   end
 
   test "the job re-scores a pending request and skips a decided one" do
@@ -459,8 +464,7 @@ class VerificationAutomationTest < ActiveSupport::TestCase
     assert_equal "verified", Verification::Tier.for(u), "3 completed but no review"
     Review.create!(author: user, employer: u, rating: 5, body: "Great", status: "published")
     assert_equal "verified_pro", Verification::Tier.for(u)
-    ids = Verification::Tier.pro_user_ids_sql
-    assert_equal [u.id], User.where("users.id IN (#{ids})").pluck(:id)
+    assert_equal [u.id], Verification::Tier.pro_user_ids
   end
 
   test "tier: two completed jobs are not enough and pending reviews do not count" do
@@ -471,7 +475,7 @@ class VerificationAutomationTest < ActiveSupport::TestCase
     complete_fill(u)
     Review.where(employer_id: u.id).update_all(status: "pending")
     assert_equal "verified", Verification::Tier.for(u)
-    assert_empty User.where("users.id IN (#{Verification::Tier.pro_user_ids_sql})")
+    assert_empty Verification::Tier.pro_user_ids
   end
 
   # --- AI summary ---

@@ -174,10 +174,16 @@ class ApplicationController < ActionController::API
       .merge(user.profile&.api_json || {})
   end
 
+  # Call before mapping a list through public_profile: loads every row's ProfileStats in one go.
+  def prime_profile_stats(users)
+    @profile_stats = ProfileStats.batch(users)
+  end
+
   def public_profile(user)
     public_user(user).except("email", "status", "profileComplete", "emailVerified", "last_login_at", "phone", "synthetic_batch",
       "phoneE164", "whatsappConsentedAt")
       .merge("demo" => SyntheticQa::Demo.user?(user), "verification" => verification_summary(user))
+      .merge(@profile_stats&.dig(user.id) || ProfileStats.for(user))
   end
 
   # {checks:, verifiedAt:} for the public Verified badge tooltip, or nil when unverified /

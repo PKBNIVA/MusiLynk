@@ -40,7 +40,7 @@ class UrgentMatcher
       ranked_candidates.first(UrgentConfig.notify_count)
     end
 
-    notified = candidates.filter_map { |candidate| notify_one(candidate.user, actor_admin:) }
+    notified = candidates.filter_map { |candidate| notify_one(candidate, actor_admin:) }
     return notified if notified.empty?
 
     @request.with_lock do
@@ -72,26 +72,41 @@ class UrgentMatcher
     points = 0
     if role_match
       points += 40
-      reasons << "Role match"
+      reasons << "Plays #{@request.role_name}"
     end
     if instrument_match
       points += 20
-      reasons << "Instrument match"
+      reasons << "Plays #{@request.instrument}" unless reasons.any? { _1.start_with?("Plays") }
     end
-    if city.present? && profile&.location.to_s.downcase.include?(city.downcase)
+    city_match = city.present? && profile&.location.to_s.downcase.include?(city.downcase)
+    if city_match
       points += 25
-      reasons << "Same city"
+      reasons << "In #{@request.city}"
     end
     if profile&.verified
       points += 20
       reasons << "Verified"
     end
     last_seen = last_seen_at(user)
-    if last_seen && last_seen >= UrgentConfig.recent_activity_within.ago
+    active_recently = last_seen && last_seen >= UrgentConfig.recent_activity_within.ago
+    if active_recently
       points += 10
-      reasons << "Recently active"
+      reasons << "Active in the last 30 days"
     end
-    Candidate.new(user:, score: points, reasons:)
+    if available_on_request_date?(user)
+      points += 5
+      reasons << "Available on #{@request.start_at.to_date.strftime('%d %b')}"
+    end
+    Candidate.new(user:, score: points, reasons: reasons.first(3))
+  end
+
+  # An AvailabilityWindow the candidate explicitly marked "available" that covers the
+  # request's start time — a positive signal distinct from just not being blocked.
+  def available_on_request_date?(user)
+    return false unless @request.start_at
+    window_end = @request.end_at || @request.start_at + 3.hours
+    AvailabilityWindow.where(user:, status: "available")
+      .where("start_at <= ? AND end_at >= ?", @request.start_at, window_end).exists?
   end
 
   # An availability window the candidate marked "unavailable"/"booked"/"hold" that overlaps the
@@ -108,13 +123,14 @@ class UrgentMatcher
     @last_seen.fetch(user.id) { @last_seen[user.id] = user.sessions.maximum(:last_seen_at) }
   end
 
-  def notify_one(user, actor_admin:)
+  def notify_one(candidate, actor_admin:)
+    user = candidate.user
     any_new = false
-    if record_notification!(user, "in_app", actor_admin)
-      Notifier.urgent_request_alert(@request, user)
+    if record_notification!(user, "in_app", actor_admin, candidate.reasons)
+      Notifier.urgent_request_alert(@request, user, candidate.reasons)
       any_new = true
     end
-    if WhatsappAlerts.enabled? && WhatsappAlerts.eligible?(user) && record_notification!(user, "whatsapp", actor_admin)
+    if WhatsappAlerts.enabled? && WhatsappAlerts.eligible?(user) && record_notification!(user, "whatsapp", actor_admin, candidate.reasons)
       WhatsappAlertJob.perform_later(@request.id, user.id)
       any_new = true
     end
@@ -124,8 +140,8 @@ class UrgentMatcher
   # Inserts the (request, user, channel) row if it doesn't exist yet; returns true only for a
   # fresh insert, so a repeat call never re-notifies. Relies on idx_urgent_notif_unique to stay
   # correct under races (two admins clicking "Notify" at once).
-  def record_notification!(user, channel, actor_admin)
-    UrgentRequestNotification.create!(urgent_request: @request, user:, channel:, notified_by_admin: actor_admin)
+  def record_notification!(user, channel, actor_admin, reasons = [])
+    UrgentRequestNotification.create!(urgent_request: @request, user:, channel:, notified_by_admin: actor_admin, reasons:)
     true
   rescue ActiveRecord::RecordNotUnique
     false

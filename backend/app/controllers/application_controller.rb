@@ -177,7 +177,16 @@ class ApplicationController < ActionController::API
   def public_profile(user)
     public_user(user).except("email", "status", "profileComplete", "emailVerified", "last_login_at", "phone", "synthetic_batch",
       "phoneE164", "whatsappConsentedAt")
-      .merge("demo" => SyntheticQa::Demo.user?(user))
+      .merge("demo" => SyntheticQa::Demo.user?(user), "verification" => verification_summary(user))
+  end
+
+  # {checks:, verifiedAt:} for the public Verified badge tooltip, or nil when unverified /
+  # nothing was actually recorded (older approvals, backfilled — see the migration).
+  def verification_summary(user)
+    return nil unless user.profile&.verified?
+    approved = user.verification_requests.where(status: "approved").order(reviewed_at: :desc, created_at: :desc).first
+    return nil unless approved
+    { "checks" => approved.checks, "verifiedAt" => approved.reviewed_at || approved.updated_at }
   end
 
   def public_employer(user)

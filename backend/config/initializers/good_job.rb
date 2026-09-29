@@ -33,6 +33,16 @@ Rails.application.configure do
       cron: "43 4 * * *",
       class: "UploadSweepJob",
       description: "Delete stale pending uploads, unused or ownerless uploads, and orphaned bucket objects"
+    },
+    urgent_requests_sweep: {
+      cron: "*/30 * * * *",
+      class: "UrgentRequestsSweepJob",
+      description: "Warn hirers 6 hours before an urgent request expires, and expire lapsed ones"
+    },
+    jobs_deadline_sweep: {
+      cron: "13 * * * *",
+      class: "JobsDeadlineSweepJob",
+      description: "Close published jobs past their application deadline and notify the hirer"
     }
   }
   # classify_portfolio_item is launch-disabled (see config/ai_pricing.yml `launch:`), so the cron

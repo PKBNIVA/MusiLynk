@@ -27,7 +27,7 @@ class JobsController < ApplicationController
     limit = page_size
     # Each branch below sets its own order (BROWSE_ORDER for browsing, LIST_ORDER as the
     # relevance tiebreak for search), so this relation starts unordered.
-    jobs = Job.published.with_applications_count.with_posted_as.includes(employer: :profile)
+    jobs = Job.published.from_active_hirers.with_applications_count.with_posted_as.includes(employer: :profile)
     # Same rule as talent: non-demo synthetic QA batches are only listed to synthetic viewers.
     jobs = SyntheticQa::Demo.publicly_listed(jobs.joins(:employer)) unless current_user&.synthetic_batch.present?
     jobs = Search::Query.new(params[:location]).filter(jobs, LOCATION_FIELDS)
@@ -75,7 +75,9 @@ class JobsController < ApplicationController
   def show
     job = Job.with_applications_count.with_posted_as.includes(employer: :profile).find(params[:id])
     hidden_synthetic = job.employer.synthetic_batch.present? && !job.employer.synthetic_batch.start_with?(SyntheticQa::Demo::PREFIX) && current_user&.synthetic_batch.blank?
-    unless (job.published? && !hidden_synthetic) || current_user&.admin? || current_user&.id == job.employer_id
+    # A closed listing (deadline passed, JobsDeadlineSweepJob) stays reachable at its own URL
+    # rather than 404ing — the client shows a "This listing has closed" banner and hides Apply.
+    unless ((job.published? || job.closed?) && !hidden_synthetic) || current_user&.admin? || current_user&.id == job.employer_id
       return render_error("Opportunity not found", :not_found)
     end
     applied = current_user&.jobseeker? && Application.exists?(candidate: current_user, job:)

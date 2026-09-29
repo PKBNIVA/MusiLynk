@@ -53,6 +53,13 @@ class EmailDelivery
       action: nil,
       notice: true,
       footer: "If you made this change, nothing else is needed. If you did not, sign in right away and change your password, or contact support."
+    },
+    # data: { link:, name: }. Sent to the invitee's address; they may not have a Verse account yet.
+    "vouch_invite" => {
+      subject: "You were vouched for on Verse",
+      heading: ->(d) { "#{d[:name]} vouched for you on Verse" },
+      copy: ->(d) { "#{d[:name]} vouched for you on Verse — verified musicians get reviewed first. Follow the link below to join." },
+      action: "Join Verse"
     }
   }.freeze
   DEFAULT_FOOTER = "If you did not request this, you can safely ignore this email.".freeze
@@ -174,8 +181,12 @@ class EmailDelivery
     content[:notice] ? data.fetch(:detail).to_s : data.fetch(:code).to_s
   end
 
+  # A template's heading/copy is normally a plain string; a small number (vouch_invite) need
+  # a value from data (the voucher's name), so either is accepted here.
+  def self.render_value(value, data) = value.respond_to?(:call) ? value.call(data) : value
+
   def self.email_text(content:, data:)
-    "#{content[:heading]}\n\n#{content[:copy]}\n\n#{email_body_value(content:, data:)}\n\n#{content[:footer] || DEFAULT_FOOTER}"
+    "#{render_value(content[:heading], data)}\n\n#{render_value(content[:copy], data)}\n\n#{email_body_value(content:, data:)}\n\n#{content[:footer] || DEFAULT_FOOTER}"
   end
 
   def self.email_html(content:, data:)
@@ -188,8 +199,10 @@ class EmailDelivery
       %(<p style="margin:22px 0 0;font-family:'Courier New',monospace;font-size:34px;font-weight:800;letter-spacing:8px;color:#f8fafc">#{value}</p>)
     end
     footer = ERB::Util.html_escape(content[:footer] || DEFAULT_FOOTER)
+    heading = ERB::Util.html_escape(render_value(content[:heading], data))
+    copy = ERB::Util.html_escape(render_value(content[:copy], data))
     <<~HTML.squish
-      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px"><div style="font-size:22px;font-weight:800;color:#a78bfa">VERSE</div><h1 style="font-size:28px;margin:28px 0 12px">#{content[:heading]}</h1><p style="color:#cbd5e1;line-height:1.6">#{content[:copy]}</p>#{body}<p style="margin-top:28px;color:#94a3b8;font-size:13px">#{footer}</p></div></body></html>
+      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px"><div style="font-size:22px;font-weight:800;color:#a78bfa">VERSE</div><h1 style="font-size:28px;margin:28px 0 12px">#{heading}</h1><p style="color:#cbd5e1;line-height:1.6">#{copy}</p>#{body}<p style="margin-top:28px;color:#94a3b8;font-size:13px">#{footer}</p></div></body></html>
     HTML
   end
 

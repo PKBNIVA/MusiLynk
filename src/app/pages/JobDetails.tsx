@@ -283,7 +283,12 @@ export default function JobDetails() {
                     </Button>
                   </div>
                 )}
-                {user?.role === 'jobseeker' && (
+                {job.status === 'closed' && (
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-slate-300">
+                    This listing has closed.
+                  </div>
+                )}
+                {user?.role === 'jobseeker' && job.status !== 'closed' && (
                   <>
                     {job.applied ? (
                       <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/20 p-4 text-emerald-200">

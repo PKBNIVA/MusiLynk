@@ -1,5 +1,5 @@
 # Verse — Launch readiness and release plan
-_Prepared 2026-09-29 for the launch. Decisions here are final; anything marked "owner" needs you. Build state as of 15:45 IST: merged to production — SEO pack (#107), launch fixes (#109), hire/rates pages (#110), marketplace mechanics (#115); in CI or being finished — Early Access Pro + reminder emails (#111), lifecycle/digest emails (#112), Google sign-in + connections (#113), fix wave 2 (#114), paste-anything import, community/Stage. Verification automation follows #113._
+_Prepared 2026-09-29 for the launch. Decisions here are final; anything marked "owner" needs you. **Build state (18:36 IST): everything below is merged to `production`** — SEO pack (#107), launch fixes (#109, #114), Early Access Pro + reminder emails (#111), hire/rates pages (#110), marketplace mechanics (#115), e2e spec fix (#118), integration of lifecycle/digest emails, Google sign-in, link import and the community Stage (#119), promo/referral/trial codes + annual plans (#120), verification automation (#121). API live on Railway; public site deploys 22:25 IST._
 
 ## 1. The one-line strategy
 
@@ -308,3 +308,15 @@ Brevo's free tier sends about 300 emails/day. One weekly digest to 1,000 people 
 **Fraud controls:** disposable-email block, link-reuse block, 3 requests per account per 30 days, IP/device clustering flag, one-click reversal with audit trail.
 
 **Expected effect:** 40–60% of genuine musicians verified in minutes; the rest reviewed in ~20 seconds each. Removes the owner as the bottleneck until well past 10,000 members.
+
+## 15. Codes, referrals and annual plans (merged, #120)
+
+- **One code system, managed in the admin Codes tab:** `discount_percent` (X% off Pro/Studio for N billing periods), `extended_trial` (N free days instead of 14), `early_access` (grants Early Access Pro, seat-capped), and `referral`. Vanity codes (`MUMBAI50`) or generated batches in a configurable format (`VERSE-XXXXXX`), with plan/interval scope, max redemptions, one-per-user, start/expiry, deactivate, redemptions list and CSV export.
+- **Referrals:** every user gets a code (`VERSE-RAHU7K2P`) from their billing page with a WhatsApp share. Referee gets 20% off for 3 cycles; referrer gets 30 free days per paying referee, capped at 6. Programme settings live in `backend/config/billing.yml`.
+- **Annual plans:** Pro ₹24,990/yr, Studio ₹59,990/yr ("2 months free"), monthly/annual toggle on pricing. Hidden automatically until the annual Razorpay plan ids are set.
+- **Razorpay rule:** percentage discounts on live subscriptions need a Razorpay Offer — paste each code's offer id in the Codes tab (the tab warns when one is missing). Trial and Early Access codes need nothing.
+- **Owner:** Razorpay → create annual plans → Railway `RAZORPAY_PLAN_PRO_ANNUAL`, `RAZORPAY_PLAN_STUDIO_ANNUAL`; create the referral offer (20% × 3 cycles) → `RAZORPAY_REFERRAL_OFFER_ID`.
+
+## 16. Verification automation (merged, #121)
+
+Implemented as designed in §14: evidence score 0–100 with breakdown and flags; auto-approve at ≥75 with proven identity and no flags (10% random audit sample to your queue); AI three-line summaries for 40–74 (₹300/month budget, template fallback); "add more proof" guidance below 40; never auto-reject; one-click approve/revoke; "Verified Pro" tier (verified + 3 completed fills/bookings + a review). Thresholds in `backend/config/verification.yml`. Organisation requests are scored but always human-approved.

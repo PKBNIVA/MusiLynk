@@ -33,8 +33,9 @@ describe('ShareBadgeSection', () => {
   it('offers a download, a copy-link and a WhatsApp share, and fires the product events', () => {
     render(<ShareBadgeSection userId="user_123" />);
 
-    const download = container.querySelector('a[download]') as HTMLAnchorElement;
-    expect(download.href).toContain('/share-cards/verified/user_123.svg');
+    const download = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Download story card'),
+    ) as HTMLButtonElement;
     act(() => download.click());
     expect(trackMock).toHaveBeenCalledWith('share_card_download');
 
@@ -45,6 +46,6 @@ describe('ShareBadgeSection', () => {
     act(() => whatsapp.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
     expect(trackMock).toHaveBeenCalledWith('share_whatsapp');
 
-    expect(container.querySelector('button')?.textContent).toContain('Copy profile link');
+    expect(container.textContent).toContain('Copy profile link');
   });
 });

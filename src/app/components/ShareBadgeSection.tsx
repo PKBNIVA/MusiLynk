@@ -12,6 +12,7 @@ import { track } from '../lib/analytics';
 export function ShareBadgeSection({ userId }: { userId: string }) {
   const profileUrl = `${window.location.origin}/professionals/${userId}`;
   const storyCardUrl = `${BACKEND_ORIGIN}/share-cards/verified/${userId}.svg`;
+  const landscapeCardUrl = `${BACKEND_ORIGIN}/share-cards/verified/${userId}/landscape.svg`;
   const whatsappText = encodeURIComponent(`I'm verified on Verse — ${profileUrl}`);
 
   async function copyLink() {
@@ -23,8 +24,15 @@ export function ShareBadgeSection({ userId }: { userId: string }) {
     }
   }
 
-  function trackDownload() {
+  async function download(variant: 'story' | 'landscape') {
     track('share_card_download');
+    try {
+      const { downloadCardPng } = await import('../lib/shareCard');
+      const result = await downloadCardPng(variant === 'story' ? storyCardUrl : landscapeCardUrl, variant, userId);
+      if (result === 'opened') toast.message('Long-press to save');
+    } catch {
+      toast.error('Could not create the image. Try again.');
+    }
   }
 
   function trackWhatsapp() {
@@ -41,11 +49,25 @@ export function ShareBadgeSection({ userId }: { userId: string }) {
         You're verified on Verse — share the story card on Instagram or WhatsApp to reach more work.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button asChild variant="outline" size="sm" className="border-white/15 text-slate-200" onClick={trackDownload}>
-          <a href={storyCardUrl} download>
-            <Download aria-hidden="true" size={14} />
-            Download story card
-          </a>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="border-white/15 text-slate-200"
+          onClick={() => void download('story')}
+        >
+          <Download aria-hidden="true" size={14} />
+          Download story card
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="border-white/15 text-slate-200"
+          onClick={() => void download('landscape')}
+        >
+          <Download aria-hidden="true" size={14} />
+          Download landscape card
         </Button>
         <Button type="button" variant="outline" size="sm" className="border-white/15 text-slate-200" onClick={copyLink}>
           <Link2 aria-hidden="true" size={14} />

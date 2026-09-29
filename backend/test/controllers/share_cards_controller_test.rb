@@ -26,6 +26,12 @@ class ShareCardsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, "1200"
   end
 
+  test "does not claim a .png route" do
+    user = make_user(verified: true, consented: true)
+    get "/share-cards/verified/#{user.id}.png"
+    assert_response :not_found
+  end
+
   test "404s for an unverified musician" do
     user = make_user(verified: false, consented: true)
     get "/share-cards/verified/#{user.id}.svg"

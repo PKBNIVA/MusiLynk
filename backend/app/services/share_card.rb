@@ -5,7 +5,8 @@
 # does not render through Playwright/Chromium or convert to PNG: it builds the card directly as
 # SVG (dark background matching the site's theme, the wordmark, the musician's name/roles/city,
 # a short profile URL and a QR code via rqrcode) and ShareCardsController serves it as
-# `image/svg+xml`. See Deviations in the PR description.
+# `image/svg+xml`; the SPA rasterises it to PNG client-side. Only system fonts and no external
+# <image> hrefs are used, so drawing it on a canvas does not taint it.
 class ShareCard
   BACKGROUND = "#0a0a0a".freeze
   PRIMARY = "#6747e8".freeze

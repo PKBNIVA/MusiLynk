@@ -9,8 +9,8 @@ Rails.application.routes.draw do
   # (ShareCardsController). Served without the /api scope like the other crawler/share pages,
   # cached at the edge for 24h, and rendered as SVG — see ShareCard for why (no headless
   # browser or ImageMagick at runtime).
-  get "share-cards/verified/:user_id.:format", to: "share_cards#verified", constraints: { format: /svg|png/ }
-  get "share-cards/verified/:user_id/landscape.:format", to: "share_cards#landscape", constraints: { format: /svg|png/ }
+  get "share-cards/verified/:user_id.:format", to: "share_cards#verified", constraints: { format: /svg/ }
+  get "share-cards/verified/:user_id/landscape.:format", to: "share_cards#landscape", constraints: { format: /svg/ }
 
   scope :api do
     get "health", to: "health#show"

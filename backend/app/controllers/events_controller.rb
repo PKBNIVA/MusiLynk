@@ -17,6 +17,7 @@ class EventsController < ApplicationController
     urgent_request_submitted urgent_response_submitted
     booking_quote_sent booking_quote_accepted booking_deposit_paid
     route_change
+    share_card_download share_whatsapp
   ].freeze
 
   def create

@@ -62,6 +62,7 @@ test("the landing page's popular searches open a hire page, whose urgent CTA pre
 
   await page.getByTestId('urgent-cta').click();
   await expect(page).toHaveURL(/\/urgent\?role=Drummer&city=Mumbai$/);
-  await expect(page.getByRole('button', { name: 'Remove Drummer' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Remove Mumbai' })).toBeVisible();
+  // Single-value fields show the prefilled value in the combobox itself, not as a removable chip.
+  await expect(page.getByRole('combobox', { name: 'Role needed' })).toHaveValue('Drummer');
+  await expect(page.getByRole('combobox', { name: 'City' })).toHaveValue('Mumbai');
 });

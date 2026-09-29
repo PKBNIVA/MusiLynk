@@ -6,7 +6,7 @@ default: &default
     enabled: true
     seats: 50
     days: 90
-  # Code generator: `{N}` is N random characters from `alphabet` (no 0/O/1/I/L lookalikes).
+  # Code generator: `{N}` is N random characters from `alphabet` (no 0/O/1/I lookalikes).
   codes:
     format: "VERSE-{6}"
     alphabet: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"

@@ -44,7 +44,7 @@ module PlanPricing
   # annual plan id must be set; without keys (local mock or simulator) annual just works, except
   # in production where checkout itself is unavailable.
   def annual_available?(plan_code = nil)
-    codes = plan_code ? [plan_code] : plans.keys.select { plans.dig(_1, :annual)&.positive? }
+    codes = (plan_code ? [plan_code.to_s] : plans.keys).select { plans.dig(_1, :annual).to_i.positive? }
     return false if codes.empty?
     return codes.all? { provider_plan_id(_1, "annual").present? } if RazorpayConfig.key_present?
 

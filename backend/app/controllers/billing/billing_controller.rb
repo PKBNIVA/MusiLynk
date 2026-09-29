@@ -1,7 +1,5 @@
 module Billing
   class BillingController < ApplicationController
-    # AI credits/pricing is entirely separate from this plan catalogue now (see AiPricing / the
-    # AI::BillingController comment) — no plan advertises an AI credit allowance here.
     PLANS = {
       "free" => { code: "free", name: "Free", monthly: 0, trialDays: 0, activePosts: 1, seats: 1, shortlist: 20, bookings: 2 },
       "pro" => { code: "pro", name: "Pro", monthly: 2499, trialDays: 14, activePosts: 10, seats: 2, shortlist: 250, bookings: 20 },

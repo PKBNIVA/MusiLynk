@@ -7,6 +7,7 @@ import { HELP } from '../../components/help/helpContent';
 import { EmptyState } from '../../components/help/EmptyState';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Composer } from '../../components/stage/Composer';
+import { EventStrip } from '../../components/stage/EventStrip';
 import { PostCard } from '../../components/stage/PostCard';
 import { useFeedList } from '../../components/stage/useFeedList';
 import { fetchFeed, authorPath } from '../../lib/stage';
@@ -45,6 +46,8 @@ export default function StageFeed() {
       <main className="mx-auto max-w-2xl px-4 pt-24 pb-16 md:px-6">
         <h1 className="text-2xl font-bold">The Stage</h1>
         <HelpCallout {...HELP.stage} />
+
+        <EventStrip />
 
         <div className="mb-5">
           <Composer onPosted={prepend} />

@@ -1,11 +1,11 @@
 // The Stage: types, API calls and small helpers shared by every Stage page/component.
 // See backend/docs/api-stage-feed.md for the full contract this file wraps.
 import { useCallback, useEffect, useState } from 'react';
-import { apiDelete, apiGet, apiPatch, apiPost } from './api';
+import { API_BASE, apiDelete, apiGet, apiPatch, apiPost } from './api';
 import { useAuth } from './authContext';
 import type { Act, Job, Organization, PortfolioItem } from './apiTypes';
 
-export type StageAuthorType = 'user' | 'organization' | 'act';
+export type StageAuthorType = 'user' | 'organization' | 'act' | 'system';
 
 export interface StageAuthor {
   type: StageAuthorType;
@@ -13,9 +13,21 @@ export interface StageAuthor {
   name: string;
   avatar?: string | null;
   verified?: boolean;
+  /** True for the platform's own "Verse" author (StageSystemPostsJob, FastResponderWeekJob). */
+  system?: boolean;
 }
 
-export type PostKind = 'update' | 'performance' | 'release' | 'gig' | 'looking_for' | 'job_share' | 'portfolio_share';
+export type PostKind =
+  'update' | 'performance' | 'release' | 'gig' | 'looking_for' | 'job_share' | 'portfolio_share' | 'system' | 'event';
+
+export interface StageEvent {
+  title: string | null;
+  startsAt: string | null;
+  venue: string | null;
+  city: string | null;
+  link: string | null;
+  featured: boolean;
+}
 
 export interface StageMedia {
   uploadId: string;
@@ -47,6 +59,9 @@ export interface StagePost {
   commentCount: number;
   reshareCount: number;
   applauded: boolean;
+  pinned: boolean;
+  pinnedUntil: string | null;
+  event: StageEvent | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -316,7 +331,30 @@ export const POST_KIND_LABEL: Record<PostKind, string> = {
   looking_for: 'Looking for',
   job_share: 'Job',
   portfolio_share: 'Portfolio',
+  system: 'Verse',
+  event: 'Event',
 };
+
+/** Pinned-and-current posts first (most recent pin first), everything else by recency — the same
+ * order the feed API already returns; used when merging client-side (e.g. after Composer
+ * prepends a fresh post) so a pinned post never gets bumped below it. */
+export function sortPinnedFirst(posts: StagePost[]): StagePost[] {
+  return [...posts].sort((a, b) => {
+    const pinnedDiff = Number(b.pinned) - Number(a.pinned);
+    if (pinnedDiff !== 0) return pinnedDiff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
+export function fetchUpcomingEvents(city?: string | null) {
+  return apiGet<{ city: string | null; events: StagePost[] }>(
+    `${base}/events${city ? `?city=${encodeURIComponent(city)}` : ''}`,
+  );
+}
+
+export function icsUrlFor(postId: string) {
+  return `${API_BASE}${base}/posts/${encodeURIComponent(postId)}/ics`;
+}
 
 const YOUTUBE_PATTERN = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]{6,})/i;
 const INSTAGRAM_PATTERN = /instagram\.com\/(?:reel|p|tv)\/([\w-]+)/i;

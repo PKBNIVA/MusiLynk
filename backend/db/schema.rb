@@ -1389,7 +1389,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_170300) do
     t.index ["audit_sample"], name: "idx_verification_requests_audit_sample", where: "audit_sample"
     t.index ["reviewed_by_id"], name: "index_verification_requests_on_reviewed_by_id"
     t.index ["user_id"], name: "index_verification_requests_on_user_id"
-    t.check_constraint "auto_decision::text = ANY (ARRAY['auto_approved'::character varying::text, 'needs_more_proof'::character varying::text])", name: "verification_requests_auto_decision_valid"
+    t.check_constraint "auto_decision::text = ANY (ARRAY['auto_approved'::character varying, 'needs_more_proof'::character varying]::text[])", name: "verification_requests_auto_decision_valid"
   end
 
   create_table "vouches", id: :string, force: :cascade do |t|

@@ -1,0 +1,17 @@
+# Early Access Pro: the first `seats` employer/hirer accounts an admin grants a free run of the
+# Pro plan for `days` days, no card required. Loaded once per process by BillingConfig, the same
+# way config/ai_pricing.yml is loaded by AiPricing.
+default: &default
+  early_access:
+    enabled: true
+    seats: 50
+    days: 90
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

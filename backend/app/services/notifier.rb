@@ -167,6 +167,14 @@ class Notifier
       EmailDeliveryJob.enqueue_link_with_name(template: "vouch_invite", link: join_link, email: vouch.vouchee_email, name: vouch.voucher.name)
     end
 
+    # Admin::UsersController#grant_early_access just switched this employer onto Early Access Pro.
+    def early_access_granted(subscription)
+      until_date = subscription.trial_ends_at&.strftime("%d %b %Y")
+      notify(subscription.user, kind: "early_access_granted", title: "Your Early Access Pro is active",
+        link: "/employer/billing", body: "No card needed. Pro features are unlocked on Verse until #{until_date}.")
+      email(subscription.user, "early_access_granted", until: until_date)
+    end
+
     private
 
     def notify(user, **attributes)

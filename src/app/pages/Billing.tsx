@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { ApiError, apiGet, apiPost } from '../lib/api';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
@@ -22,7 +23,7 @@ import type { BillingCancellation, BillingCheckout, BillingHistoryEntry, Plan, S
 import { loadAiUsage, type AiUsage } from '../lib/ai';
 
 type Summary = {
-  status: 'pending' | 'trialing' | 'active' | 'cancelling' | 'past_due' | 'cancelled';
+  status: 'pending' | 'trialing' | 'active' | 'cancelling' | 'past_due' | 'cancelled' | 'early_access';
   planCode: string;
   planName: string;
   provider: string;
@@ -31,6 +32,7 @@ type Summary = {
   nextChargeAt?: string | null;
   accessEndsAt?: string | null;
   monthlyAmount?: number | null;
+  earlyAccess?: { until: string | null } | null;
 };
 type BillingState = {
   subscription: Subscription | null;
@@ -72,6 +74,7 @@ const STATUS_LABEL: Record<Summary['status'], string> = {
   cancelling: 'Cancellation scheduled',
   past_due: 'Payment failed',
   cancelled: 'Cancelled',
+  early_access: 'Early Access Pro',
 };
 
 function statusCopy(s: Summary): string {
@@ -89,6 +92,8 @@ function statusCopy(s: Summary): string {
       return 'We could not collect your latest payment, so paid features are paused. Razorpay retries automatically; use the payment link Razorpay emailed you to update your card, or cancel below.';
     case 'cancelled':
       return `Your ${s.planName} plan has ended. You are on the Free plan and can subscribe again at any time.`;
+    case 'early_access':
+      return `Pro — Early Access until ${day(s.earlyAccess?.until || s.accessEndsAt)}. No card needed. We'll email you 7 days and 1 day before it ends.`;
   }
 }
 
@@ -107,6 +112,7 @@ export default function Billing() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<string | null>(null);
   const [aiUsage, setAiUsage] = useState<AiUsage | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   // One Idempotency-Key per checkout intent. It is kept after a network/gateway failure so a retry replays the same intent instead of creating a second subscription.
   const intentKeys = useRef<Record<string, string>>({});
   const inFlight = useRef(false);
@@ -121,6 +127,27 @@ export default function Billing() {
     );
   useEffect(() => {
     load().catch((e: unknown) => toast.error(errorMessage(e)));
+  }, []);
+  // One-click cancel link from a lifecycle reminder email (?cancel=1&t=...): verify the token
+  // server-side for the signed-in user, then open the existing cancel dialog, pre-focused — never
+  // cancel automatically. An invalid/expired/foreign token is ignored silently.
+  useEffect(() => {
+    if (searchParams.get('cancel') !== '1') return;
+    const token = searchParams.get('t');
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('cancel');
+        next.delete('t');
+        return next;
+      },
+      { replace: true },
+    );
+    if (!token) return;
+    apiGet(`/billing/cancel-link?t=${encodeURIComponent(token)}`)
+      .then(() => setConfirmOpen(true))
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once, off the initial query string only
   }, []);
   useEffect(() => {
     loadAiUsage()
@@ -217,7 +244,7 @@ export default function Billing() {
   const summary = state?.summary || null;
   const notice = state ? PAYMENT_MODE_NOTICE[state.paymentMode || (state.testMode ? 'test' : 'live')] : undefined;
   const currentCode = summary && !['cancelled'].includes(summary.status) ? summary.planCode : 'free';
-  const cancellable = summary && ['pending', 'trialing', 'active', 'past_due'].includes(summary.status);
+  const cancellable = summary && ['pending', 'trialing', 'active', 'past_due', 'early_access'].includes(summary.status);
   const immediateCancel = summary && summary.status !== 'active';
 
   return (
@@ -268,8 +295,14 @@ export default function Billing() {
                 )}
                 <div>
                   <h2 className="font-semibold text-lg">
-                    {summary.planName} plan ·{' '}
-                    <span data-testid="billing-status-label">{STATUS_LABEL[summary.status]}</span>
+                    {summary.status === 'early_access' ? (
+                      `${summary.planName} — Early Access until ${day(summary.earlyAccess?.until || summary.accessEndsAt)}`
+                    ) : (
+                      <>
+                        {summary.planName} plan ·{' '}
+                        <span data-testid="billing-status-label">{STATUS_LABEL[summary.status]}</span>
+                      </>
+                    )}
                   </h2>
                   <p className="text-sm text-slate-300 mt-1 max-w-3xl" data-testid="billing-status-copy">
                     {statusCopy(summary)}

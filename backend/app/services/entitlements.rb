@@ -2,6 +2,9 @@
 #
 # A subscription grants its plan only while it is effective:
 # - `active`, or `trialing` with a trial end in the future (or none recorded);
+# - `early_access` (Early Access Pro, admin-granted) with `trial_ends_at` — reused as the
+#   early-access end date — in the future; once that date passes it grants nothing and the
+#   account is free again, same as an expired trial;
 # - an internal (mock or admin-granted) subscription with a `current_period_end`
 #   stops granting access once that period has ended.
 # `pending`, `past_due` and `cancelled` never grant paid capacity (see docs/engineering/SAAS_BILLING.md).
@@ -36,7 +39,7 @@ class Entitlements
   def subscription
     return @subscription if defined?(@subscription)
 
-    candidates = @user ? Subscription.where(user: @user, status: %w[active trialing]).order(created_at: :desc).to_a : []
+    candidates = @user ? Subscription.where(user: @user, status: %w[active trialing early_access]).order(created_at: :desc).to_a : []
     @subscription = candidates.select { effective?(_1) }.max_by { [PLAN_RANK.fetch(_1.plan_code, 0), _1.created_at] }
   end
 
@@ -56,8 +59,9 @@ class Entitlements
   end
 
   def effective?(sub)
-    return false unless %w[active trialing].include?(sub.status)
+    return false unless %w[active trialing early_access].include?(sub.status)
     return false if sub.status == "trialing" && sub.trial_ends_at.present? && sub.trial_ends_at <= @now
+    return false if sub.status == "early_access" && sub.trial_ends_at.present? && sub.trial_ends_at <= @now
     return false if sub.provider == "internal" && sub.current_period_end.present? && sub.current_period_end <= @now
 
     true

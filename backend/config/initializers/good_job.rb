@@ -40,6 +40,17 @@ Rails.application.configure do
       class: "BillingRemindersJob",
       description: "Email trial/renewal/Early Access Pro ending reminders, each sent at most once"
     },
+    lifecycle_emails: {
+      cron: "0 * * * *",
+      class: "LifecycleEmailsJob",
+      description: "Send the day-N onboarding sequence email to musicians and hirers whose condition still holds"
+    },
+    weekly_digest: {
+      # Tuesday 09:30 IST = 04:00 UTC.
+      cron: "0 4 * * 2",
+      class: "WeeklyDigestJob",
+      description: "Send the weekly 'This week on Verse' digest"
+    },
     urgent_requests_sweep: {
       cron: "*/30 * * * *",
       class: "UrgentRequestsSweepJob",

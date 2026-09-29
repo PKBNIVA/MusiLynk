@@ -44,6 +44,42 @@ class Notifier
       job = application.job
       notify(job.employer, kind: "application", title: "New application", link: "/hiring/applicants",
         body: "#{application.candidate.name} applied to #{job.title}.")
+      milestone_first_application(job.employer, application)
+    end
+
+    # Milestone: this hirer's first application, ever, across any of their listings.
+    def milestone_first_application(employer, application)
+      return unless employer && Application.joins(:job).where(jobs: { employer_id: employer.id }).count == 1
+      return unless LifecycleEmail.record!(employer, "milestone_hirer_first_application")
+
+      LifecycleEmailDeliveryJob.perform_later(employer.id, "milestone_hirer_first_application",
+        candidate: application.candidate.name, job: application.job.title)
+    end
+
+    # Milestone: a musician's first response to an urgent request, ever. `minutes` is how
+    # long after the request was posted they responded.
+    def milestone_first_urgent_response(user, urgent_request)
+      return unless LifecycleEmail.record!(user, "milestone_musician_first_response")
+
+      minutes = ((Time.current - urgent_request.created_at) / 60).round
+      LifecycleEmailDeliveryJob.perform_later(user.id, "milestone_musician_first_response", minutes:)
+    end
+
+    # Milestone: a hirer's 5th urgent request filled through Verse.
+    def milestone_5th_filled_request(requester)
+      return unless requester && requester.urgent_requests.where(status: "filled").count == 5
+      return unless LifecycleEmail.record!(requester, "milestone_hirer_5th_filled_request")
+
+      LifecycleEmailDeliveryJob.perform_later(requester.id, "milestone_hirer_5th_filled_request")
+    end
+
+    # Milestone: a profile crossing 100 views (product_events `profile_view`, deduped by the
+    # caller). Fires once, exactly at 100, so it never double-sends as views keep climbing.
+    def milestone_profile_100_views(user, view_count)
+      return unless view_count == 100
+      return unless LifecycleEmail.record!(user, "milestone_profile_100_views")
+
+      LifecycleEmailDeliveryJob.perform_later(user.id, "milestone_profile_100_views")
     end
 
     def application_status(application)

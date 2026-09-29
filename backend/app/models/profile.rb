@@ -21,8 +21,19 @@ class Profile < ApplicationRecord
   end
   validate :phone_is_a_number, if: -> { phone.present? && phone_changed? }
 
+  # Granular opt-outs shown on the "Manage emails" page (linked from every lifecycle,
+  # digest and milestone email's footer). `email_notifications` is the master switch and
+  # always wins; these only ever narrow what it already allows through.
+  EMAIL_PREFERENCE_CATEGORIES = %w[digest lifecycle requests product].freeze
+
   def api_json
     attributes.except("user_id", "created_at", "updated_at", "email_notifications").transform_keys { _1.camelize(:lower) }
+  end
+
+  # True when the master switch is on and this category hasn't been turned off. A hash
+  # missing the key (an old row, or one built by hand) defaults that category to opted in.
+  def email_category_enabled?(category)
+    email_notifications? && email_preferences.to_h.fetch(category.to_s, true) != false
   end
 
   private

@@ -49,6 +49,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/auth/reset-password/check", :public, { params: { token: "not-a-token" }, keys: %w[valid] }],
     [:get, "/api/me", :any, { keys: %w[user] }],
     [:get, "/api/me/identities", :talent, { keys: %w[identities] }],
+    [:put, "/api/me/email-preferences", :any, { params: { emailPreferences: { digest: false } }, bad: { emailPreferences: { spam: false } }, bad_status: [400], keys: %w[emailPreferences] }],
     [:get, "/api/account/export", :any, { keys: %w[format version account profile conversations] }],
     # Without the typed email the request is refused, so the matrix never erases its own users.
     [:delete, "/api/account", :any, { ok: [422], params: { confirmEmail: "someone-else@example.com" } }],
@@ -132,6 +133,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/admin/refunds/{refund}", :admin, { params: { note: "Reviewed" }, missing: :refund, keys: %w[status] }],
     [:put, "/api/admin/refunds/{refund}", :admin, { params: { note: "Reviewed" }, missing: :refund, keys: %w[status] }],
     [:get, "/api/admin/funnel", :admin, { keys: %w[windowDays funnel weekly medianFirstResponseMinutes retentionWeek1] }],
+    [:get, "/api/admin/emails", :admin, { keys: %w[windowDays sentByKey optOutRates] }],
 
     [:get, "/api/portfolio", :jobseeker, { keys: %w[items] }],
     [:post, "/api/portfolio", :jobseeker, { ok: [201], params: { type: "audio", title: "Live take", url: "https://example.com/a.mp3" }, bad: { title: "No url" }, bad_status: [422], keys: %w[id item] }],
@@ -177,6 +179,8 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/notifications/preferences", :any, { params: { emailNotifications: false }, bad: { emailNotifications: "no" }, bad_status: [400], keys: %w[emailNotifications] }],
     [:get, "/api/notifications/unsubscribe", :public, { ok: [400], params: { token: "not-a-token" }, note: "valid tokens are covered in messaging_notifications_test" }],
     [:post, "/api/notifications/unsubscribe", :public, { ok: [400], params: { token: "not-a-token" } }],
+    [:get, "/api/notifications/unsubscribe/preferences", :public, { ok: [400], params: { token: "not-a-token" }, note: "valid tokens are covered in email_preferences_test" }],
+    [:patch, "/api/notifications/unsubscribe/preferences", :public, { ok: [400], params: { token: "not-a-token", emailNotifications: false } }],
     [:post, "/api/email/webhook/brevo", :public, { ok: [401, 503], note: "a call without the shared secret is refused; events are covered in email_suppression_test" }],
     [:get, "/api/notifications", :any, { keys: %w[notifications unread] }],
     [:patch, "/api/notifications/{notification}", :any, { idor: true, missing: :notification }],

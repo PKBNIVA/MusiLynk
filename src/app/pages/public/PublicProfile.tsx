@@ -8,6 +8,7 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet, apiPost } from '../../lib/api';
+import { trackProfileView } from '../../lib/analytics';
 import { MapPin, ShieldCheck, Flag } from 'lucide-react';
 import { WorkSamplePlayer } from '../../components/WorkSamplePlayer';
 import { ReportDialog } from '../../components/ReportDialog';
@@ -58,6 +59,9 @@ export default function PublicProfile() {
     void load();
   }, [load]);
   const p = d?.professional;
+  useEffect(() => {
+    if (p?.id) trackProfileView(p.id);
+  }, [p?.id]);
   usePageMeta(
     p?.name && `${p.name}${p.headline ? ` — ${p.headline}` : ''}`,
     p ? p.bio || `${p.name} on Verse${p.location ? `, ${p.location}` : ''}.` : undefined,

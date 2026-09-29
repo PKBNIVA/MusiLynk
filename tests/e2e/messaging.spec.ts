@@ -33,6 +33,7 @@ async function mockApi(
     preferenceStatus: 200,
     preferenceWrites: [] as unknown[],
     unsubscribeTokens: [] as string[],
+    unsubscribeWrites: [] as Record<string, unknown>[],
     blocks: [] as string[],
     reports: [] as Record<string, unknown>[],
   };
@@ -74,6 +75,21 @@ async function mockApi(
         state.emailNotifications = value;
       }
       return json(route, { emailNotifications: state.emailNotifications });
+    }
+    if (path === '/notifications/unsubscribe/preferences') {
+      const body = request.method() === 'GET' ? null : request.postDataJSON();
+      const token = (
+        request.method() === 'GET' ? new URL(request.url()).searchParams.get('token') : body?.token
+      ) as string;
+      state.unsubscribeTokens.push(token);
+      if (token !== 'good-token')
+        return json(route, { error: 'This unsubscribe link is invalid.', code: 'INVALID_TOKEN' }, 400);
+      if (body) state.unsubscribeWrites.push(body);
+      return json(route, {
+        ok: true,
+        emailNotifications: body?.emailNotifications ?? true,
+        emailPreferences: { digest: true, lifecycle: true, requests: true, product: true },
+      });
     }
     if (path === '/notifications/unsubscribe') {
       const token = request.postDataJSON()?.token as string;
@@ -604,21 +620,25 @@ test.describe('email notification preference', () => {
     await expect(page.getByText('Service unavailable')).toBeVisible();
   });
 
-  test('the unsubscribe page turns emails off without signing in and explains bad links', async ({ page }) => {
+  test('the unsubscribe page manages email preferences without signing in and explains bad links', async ({ page }) => {
     const state = await mockApi(page, 'jobseeker');
     await page.addInitScript(() => localStorage.removeItem('verse_access_token'));
     await page.goto('/unsubscribe?token=good-token');
-    await expect(page.getByTestId('unsubscribe-status')).toContainText(
-      'won’t get emails about messages, bookings or application updates',
-    );
-    await expect.poll(() => state.unsubscribeTokens).toEqual(['good-token']);
+    const master = page.getByTestId('toggle-master');
+    await expect(master).toHaveAttribute('aria-checked', 'true');
+    for (const category of ['digest', 'lifecycle', 'requests', 'product'])
+      await expect(page.getByTestId(`toggle-${category}`)).toHaveAttribute('aria-checked', 'true');
     await expect(page).toHaveURL(/\/unsubscribe\?token=good-token$/);
+
+    await master.click();
+    await expect(master).toHaveAttribute('aria-checked', 'false');
+    await expect.poll(() => state.unsubscribeWrites).toEqual([{ token: 'good-token', emailNotifications: false }]);
 
     await page.goto('/unsubscribe?token=tampered');
     await expect(page.getByTestId('unsubscribe-status')).toContainText('invalid or incomplete');
 
     await page.goto('/unsubscribe');
     await expect(page.getByTestId('unsubscribe-status')).toContainText('invalid or incomplete');
-    await expect.poll(() => state.unsubscribeTokens).toEqual(['good-token', 'tampered']);
+    await expect.poll(() => state.unsubscribeTokens).toEqual(['good-token', 'good-token', 'tampered']);
   });
 });

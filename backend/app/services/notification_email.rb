@@ -95,8 +95,13 @@ class NotificationEmail
   # holder), never to someone who turned notification emails off, and never to an address
   # the provider reported as bounced, complaining or unsubscribed (EmailSuppression).
   # Transactional emails (sign-in codes, verification, password reset) do not go through this class.
-  def self.deliverable_to?(user)
+  # `category` narrows delivery to one of Profile::EMAIL_PREFERENCE_CATEGORIES (digest,
+  # lifecycle, requests, product) for the lifecycle/digest/milestone emails that offer that
+  # granular opt-out (LifecycleMailer). Left nil for the transactional templates in this
+  # class, which only the master switch (email_notifications) can turn off.
+  def self.deliverable_to?(user, category: nil)
     EmailDelivery.configured? && user.email.present? && user.email_verified? && user.status == "active" && opted_in?(user) &&
+      (category.nil? || user.profile.nil? || user.profile.email_category_enabled?(category)) &&
       !EmailSuppression.blocks_notifications?(user.email) && !EmailDelivery.skip_reserved?(user.email)
   end
 

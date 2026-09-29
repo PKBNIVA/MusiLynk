@@ -1,5 +1,35 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, apiGet, apiPost, hasAccessToken, onAccessTokenChange, setAccessToken } from './api';
+
+/**
+ * A full-page "Continue with Google" round trip lands back on whatever page the backend
+ * chose (see GoogleAuthController), not necessarily AuthPage. The redirect carries only a
+ * one-time, 60-second `code` (never a session token, which would leak via history, Referer
+ * and request logs); it is stripped from the URL at once, then traded for the real session
+ * over POST /api/auth/exchange. Runs once here, for every route.
+ */
+async function consumeGoogleRedirectCode(): Promise<void> {
+  let code: string | null = null;
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('auth') !== 'google') return;
+    code = url.searchParams.get('code');
+    if (!code) return;
+    url.searchParams.delete('code');
+    url.searchParams.delete('auth');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    return;
+  }
+  try {
+    const d = await apiPost<{ accessToken: string }>('/auth/exchange', { code });
+    setAccessToken(d.accessToken);
+    // Dynamically imported so this eagerly loaded module never pulls analytics into the entry chunk.
+    void import('./analytics').then((m) => m.track('auth_google_success'));
+  } catch {
+    /* an invalid, reused or expired code: stay signed out; nothing else to recover */
+  }
+}
 import type { StarterPayload } from './onboarding';
 export type Role = 'jobseeker' | 'employer' | 'admin';
 export interface User {
@@ -87,7 +117,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   useEffect(() => {
-    refresh();
+    void consumeGoogleRedirectCode().then(() => refresh());
   }, []);
   /* Sign-in or sign-out in another tab updates this one; a cleared token drops to signed-out state and protected routes send the user to sign-in. */
   useEffect(

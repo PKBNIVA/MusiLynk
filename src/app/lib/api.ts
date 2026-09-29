@@ -408,12 +408,61 @@ export interface SignInCodeResponse {
 }
 export const requestSignInCode = (payload: SignInCodeRequest) =>
   apiPost<SignInCodeResponse>('/auth/otp/request', payload);
+export interface AuthConnectionSummary {
+  id: string;
+  provider: 'google' | 'youtube' | 'spotify' | 'instagram';
+  email?: string | null;
+  displayName?: string | null;
+  connectedAt: string;
+}
 export interface SignInMethods {
   signInCodes?: boolean;
   password?: boolean;
   emailDelivery?: boolean;
+  /** Which third-party/alternate sign-in paths are configured right now. */
+  providers?: { google?: boolean; whatsapp?: boolean };
+  /** Only present when signed in: the caller's own connected accounts. */
+  connections?: AuthConnectionSummary[];
 }
 export const getSignInMethods = () => apiGet<SignInMethods>('/auth/methods');
+/** A single-use, 5-minute ticket identifying the signed-in user for intent=connect. */
+export const requestGoogleConnectTicket = () => apiPost<{ ticket: string; expiresIn: number }>('/auth/connect-ticket');
+export const disconnectAuthConnection = (id: string) => apiDelete(`/auth/connections/${id}`);
+
+/**
+ * The API's origin (without the trailing /api), for the two Google sign-in endpoints
+ * (GoogleAuthController) that live outside the JSON API and are navigated to directly by
+ * the browser, not fetched.
+ */
+export const apiOrigin = () => API_BASE.replace(/\/api\/?$/, '') || window.location.origin;
+
+export interface GoogleStartOptions {
+  intent: 'signin' | 'connect';
+  role?: 'jobseeker' | 'employer';
+  returnTo?: string;
+  consent?: boolean;
+  /** intent=connect only: a one-time ticket from requestGoogleConnectTicket (never the bearer token). */
+  ticket?: string;
+}
+/** Builds the URL for "Continue with Google"; the caller navigates the browser to it directly
+ * (window.location.href = …), it is never fetched. See GoogleAuthController#start. */
+export function googleStartUrl({ intent, role, returnTo, consent, ticket }: GoogleStartOptions): string {
+  const params = new URLSearchParams({ intent });
+  if (role) params.set('role', role);
+  if (returnTo) params.set('return_to', returnTo);
+  if (consent) params.set('consent', '1');
+  if (intent === 'connect' && ticket) params.set('ticket', ticket);
+  return `${apiOrigin()}/auth/google/start?${params.toString()}`;
+}
+
+/** Friendly copy for `?auth_error=` on return from Google (see GoogleAuthController). */
+export const GOOGLE_AUTH_ERROR_MESSAGES: Record<string, string> = {
+  state_mismatch: 'That sign-in link expired. Try again.',
+  email_unverified: "Google hasn't verified that email. Sign in with your email instead.",
+  connected_elsewhere:
+    'That Google account is already connected to another Verse account. Sign in with Google to use it, or contact us to merge.',
+  provider_error: "Google didn't complete the sign-in. Try again.",
+};
 
 // ---- Uploads -------------------------------------------------------------
 // Mirrors backend MediaTypeSniffer / Upload::MAX_SIZE. The server re-checks the real

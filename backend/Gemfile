@@ -10,6 +10,7 @@ gem "bcrypt", "~> 3.1"
 gem "rack-cors", "~> 3.0"
 gem "aws-sdk-s3", require: false
 gem "faraday", "~> 2.12"
+gem "jwt", "~> 2.9"
 gem "redis", "~> 5.2"
 gem "good_job", "~> 4.13"
 gem "solid_cache", "~> 1.0"

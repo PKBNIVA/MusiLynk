@@ -78,6 +78,7 @@ module ApiMatrixWorld
       refs[:urgent] = UrgentRequest.create!(requester: owner, title: "Urgent #{actor}", role_name: "Drummer", city: "Mumbai", start_at: 1.day.from_now, currency: "INR", status: "open").id
       folder = TalentFolder.create!(owner:, name: "Folder #{actor}")
       refs[:folder] = folder.id
+      refs[:auth_connection] = AuthConnection.create!(owner:, provider: "google", provider_uid: "matrix-#{actor}-google", email_verified: true).id
       project = BandProject.create!(owner:, name: "Project #{actor}", status: "open", commitment_type: "project")
       refs[:project] = project.id
       refs[:project_role] = project.band_project_roles.create!(role_name: "Bassist", status: "open", count_needed: 1, skill_level: "professional").id
@@ -169,6 +170,7 @@ module ApiMatrixWorld
       refund: world.refs[:js][:refund], invoice: world.refs[:js][:invoice]
     )
     world.refs[:admin][:notification] = Notification.create!(user: admin, kind: "system", title: "Admin note", body: "x").id
+    world.refs[:admin][:auth_connection] = AuthConnection.create!(owner: admin, provider: "google", provider_uid: "matrix-admin-google", email_verified: true).id
     CareerResource.create!(title: "Rider basics", category: "live", status: "published", description: "How to write a rider")
 
     # Stored uploads (disk, already verified: completing one again is an idempotent 200 with no storage call).

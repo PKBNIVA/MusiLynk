@@ -3,16 +3,16 @@ import { ArrowRight } from 'lucide-react';
 import { HowItWorks } from './HowItWorks';
 import { LiveProof } from './LiveProof';
 import { TrustStrip } from './TrustStrip';
-import { HireByRole } from './HireByRole';
+import { PopularSearches } from './PopularSearches';
 
 /** Everything under the hero, loaded as its own chunk after the first paint. */
-export default function LandingBelowFold({ city }: { city: string }) {
+export default function LandingBelowFold({ city: _city }: { city: string }) {
   return (
     <>
       <HowItWorks />
       <LiveProof />
       <TrustStrip />
-      <HireByRole city={city} />
+      <PopularSearches />
       <section aria-labelledby="final-title" className="px-4 pb-20 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 rounded-3xl border border-violet-300/20 bg-gradient-to-br from-fuchsia-500/15 via-violet-500/10 to-teal-400/10 p-6 md:flex-row md:items-center md:justify-between md:p-10">
           <div>

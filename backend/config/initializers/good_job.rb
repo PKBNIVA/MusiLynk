@@ -33,6 +33,17 @@ Rails.application.configure do
       cron: "43 4 * * *",
       class: "UploadSweepJob",
       description: "Delete stale pending uploads, unused or ownerless uploads, and orphaned bucket objects"
+    },
+    lifecycle_emails: {
+      cron: "0 * * * *",
+      class: "LifecycleEmailsJob",
+      description: "Send the day-N onboarding sequence email to musicians and hirers whose condition still holds"
+    },
+    weekly_digest: {
+      # Tuesday 09:30 IST = 04:00 UTC.
+      cron: "0 4 * * 2",
+      class: "WeeklyDigestJob",
+      description: "Send the weekly 'This week on Verse' digest"
     }
   }
   # classify_portfolio_item is launch-disabled (see config/ai_pricing.yml `launch:`), so the cron

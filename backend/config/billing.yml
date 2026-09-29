@@ -1,4 +1,4 @@
-# Early Access Pro: the first `seats` employer/hirer accounts an admin grants a free run of the
+# Billing programmes. Early Access Pro: the first `seats` employer/hirer accounts an admin grants a free run of the
 # Pro plan for `days` days, no card required. Loaded once per process by BillingConfig, the same
 # way config/ai_pricing.yml is loaded by AiPricing.
 default: &default
@@ -6,6 +6,20 @@ default: &default
     enabled: true
     seats: 50
     days: 90
+  # Code generator: `{N}` is N random characters from `alphabet` (no 0/O/1/I/L lookalikes).
+  codes:
+    format: "VERSE-{6}"
+    alphabet: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+  # Referral programme. The referee's discount is applied through a single Razorpay Offer
+  # (Dashboard -> Offers), whose id goes in RAZORPAY_REFERRAL_OFFER_ID (or `razorpay_offer_id`
+  # below). Edited here in config, read-only in the admin Codes tab.
+  referral:
+    enabled: true
+    referee_percent_off: 20
+    referee_duration_periods: 3
+    referrer_reward_days: 30
+    referrer_reward_cap: 6
+    razorpay_offer_id: null
 
 development:
   <<: *default

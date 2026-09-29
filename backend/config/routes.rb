@@ -23,6 +23,7 @@ Rails.application.routes.draw do
     get "auth/methods", to: "auth#sign_in_methods"
     get "me", to: "auth#me"
     get "me/identities", to: "identities#index"
+    get "me/referral-code", to: "referrals#show"
     get "account/export", to: "account#export"
     delete "account", to: "account#destroy"
     patch "account/name", to: "account#update_name"
@@ -78,6 +79,10 @@ Rails.application.routes.draw do
       get :operations, to: "operations#show"
       get :audit, to: "operations#audit"
       get :subscriptions, to: "operations#subscriptions"
+      get "promo-codes/export", to: "promo_codes#export", defaults: { format: "csv" }
+      resources :promo_codes, path: "promo-codes", only: %i[index create update] do
+        member { get :redemptions }
+      end
       get "billing-attempts", to: "operations#billing_attempts"
       post "billing-attempts/:id/reconcile", to: "operations#reconcile_billing_attempt"
       resources :billing_events, path: "billing-events", only: %i[index show]
@@ -244,6 +249,7 @@ Rails.application.routes.draw do
       post :checkout, to: "billing#checkout"
       post :cancel, to: "billing#cancel"
       get "cancel-link", to: "billing#verify_cancel_link"
+      post "codes/validate", to: "codes#validate"
       post "webhook/razorpay", to: "billing#razorpay_webhook"
     end
     # Local Razorpay simulator (RAZORPAY_SIMULATOR=true, test key, never production).

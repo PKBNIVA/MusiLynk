@@ -80,7 +80,10 @@ class NotificationEmail
     "plan_renewing_soon" => {
       subject: ->(_) { "Your Verse plan renews in 3 days" },
       heading: ->(_) { "Your plan renews in 3 days" },
-      copy: ->(p) { "Your #{p['planName']} plan renews on #{p['renewsOn']} for #{p['amount']}. Cancel any time before then if you don't want to be charged." },
+      copy: ->(p) do
+        credit = p["creditDays"].to_i.positive? ? " Your #{p['creditDays']} bonus days from referrals are recorded on your account." : ""
+        "Your #{p['planName']} #{p['interval'] == 'annual' ? 'annual' : 'monthly'} plan renews on #{p['renewsOn']} for #{p['amount']}#{p['interval'] == 'annual' ? ' a year' : ' a month'}. Cancel any time before then if you don't want to be charged.#{credit}"
+      end,
       action: "Cancel or manage billing"
     },
     "early_access_ending" => {

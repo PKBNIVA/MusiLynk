@@ -96,20 +96,12 @@ module Admin
     # never a paying customer, and never past the configured seat count — a seat, once granted, is
     # never freed back up even if later revoked (see the `early_access` column on Subscription).
     def grant_early_access
-      return render_error("Early access grants are turned off.", :service_unavailable) unless BillingConfig.early_access_enabled?
       user = User.find(params[:id])
-      return render_error("Early Access Pro can only be granted to employer accounts.", :unprocessable_content) unless user.employer?
+      subscription, refusal = EarlyAccessGrant.call(user:)
+      return render_error(refusal.message, refusal.status, refusal.code) if refusal
 
-      seats_taken = Subscription.where(early_access: true).count
-      return render_error("All #{BillingConfig.early_access_seats} Early Access Pro seats have been granted.", :conflict, "EARLY_ACCESS_SEATS_EXHAUSTED") if seats_taken >= BillingConfig.early_access_seats
-
-      paid_mandate = Subscription.where(user:, status: %w[active trialing], provider: "razorpay").where.not(provider_subscription_id: nil).exists?
-      return render_error("This account already has an active paid subscription.", :conflict, "ALREADY_SUBSCRIBED") if paid_mandate
-
-      days = BillingConfig.early_access_days
-      subscription = Subscription.create!(user:, plan_code: "pro", provider: "internal", status: "early_access",
-        early_access: true, trial_started_at: Time.current, trial_ends_at: days.days.from_now)
-      audit!("admin.early_access.grant", subscription, seatsTaken: seats_taken + 1, seats: BillingConfig.early_access_seats)
+      seats_taken = EarlyAccessGrant.seats_taken
+      audit!("admin.early_access.grant", subscription, seatsTaken: seats_taken, seats: BillingConfig.early_access_seats)
       Notifier.early_access_granted(subscription)
       render json: { id: subscription.id, trialEndsAt: subscription.trial_ends_at }, status: :created
     end

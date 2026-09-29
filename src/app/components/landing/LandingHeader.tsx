@@ -1,9 +1,16 @@
 import { Link } from 'react-router';
+import { LayoutDashboard } from 'lucide-react';
 import { Button } from '../ui/button';
 import { BrandMark } from '../BrandMark';
+import { useAuth } from '../../lib/authContext';
 
-/** The landing page's slim top bar: the brand, three ways in, and sign-in. */
+const dashboardPathFor = (role: string) => (role === 'employer' ? '/employer' : role === 'admin' ? '/' : '/jobseeker');
+
+/** The landing page's slim top bar: the brand, three ways in, and sign-in. While the stored
+ * session is still hydrating, the sign-in/dashboard slot stays empty rather than flashing the
+ * signed-out "Sign in" button (V-13). */
 export function LandingHeader() {
+  const { status, user } = useAuth();
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070813]/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
@@ -21,9 +28,19 @@ export function LandingHeader() {
             {/* Same-page anchor; a plain link so the browser scrolls without a route change. */}
             <a href="/#how-it-works">How it works</a>
           </Button>
-          <Button variant="outline" size="sm" className="border-white/20" asChild>
-            <Link to="/auth/jobseeker">Sign in</Link>
-          </Button>
+          {status === 'signedIn' && (
+            <Button variant="outline" size="sm" className="border-white/20" asChild data-testid="account-menu">
+              <Link to={dashboardPathFor(user?.role || 'jobseeker')}>
+                <LayoutDashboard size={15} className="mr-2" />
+                Dashboard
+              </Link>
+            </Button>
+          )}
+          {status === 'signedOut' && (
+            <Button variant="outline" size="sm" className="border-white/20" asChild>
+              <Link to="/auth/jobseeker">Sign in</Link>
+            </Button>
+          )}
         </nav>
       </div>
     </header>

@@ -218,6 +218,18 @@ describe('api() error mapping', () => {
     window.removeEventListener(PLAN_LIMIT_EVENT, listener);
   });
 
+  it('skips the app-wide plan-limit event when the caller shows its own dialog (V-14)', async () => {
+    const { api, PLAN_LIMIT_EVENT } = await loadApi();
+    const listener = vi.fn();
+    window.addEventListener(PLAN_LIMIT_EVENT, listener);
+    fetchMock.mockResolvedValue(jsonResponse({ error: 'Upgrade to post more jobs', code: 'PLAN_LIMIT_REACHED' }, 402));
+
+    await expect(api('/jobs', { method: 'POST', skipPlanLimitEvent: true })).rejects.toMatchObject({ status: 402 });
+
+    expect(listener).not.toHaveBeenCalled();
+    window.removeEventListener(PLAN_LIMIT_EVENT, listener);
+  });
+
   it('maps a failed POST to NETWORK_ERROR without retrying', async () => {
     const { apiPost } = await loadApi();
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));

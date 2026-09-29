@@ -71,7 +71,7 @@ function jobPostingJsonLd(j: Job) {
 
 export default function PublicOpportunity() {
   const { id } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, status } = useAuth();
   const [j, setJ] = useState<Job>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
@@ -173,11 +173,24 @@ export default function PublicOpportunity() {
                 </Badge>
               ))}
             </div>
-            <Button size="lg" className="mt-8" asChild>
-              <Link to="/auth/jobseeker" state={{ from: `/jobseeker/jobs/${encodeURIComponent(String(j.id ?? id))}` }}>
-                Sign in to apply
-              </Link>
-            </Button>
+            {/* status stays 'loading' briefly on a full page load while the stored session is
+                verified; holding the button back until then avoids flashing "Sign in to apply"
+                before switching to "Apply" (V-13). */}
+            {status !== 'loading' &&
+              (status === 'signedIn' ? (
+                <Button size="lg" className="mt-8" asChild>
+                  <Link to={`/jobseeker/jobs/${encodeURIComponent(String(j.id ?? id))}`}>Apply</Link>
+                </Button>
+              ) : (
+                <Button size="lg" className="mt-8" asChild>
+                  <Link
+                    to="/auth/jobseeker"
+                    state={{ from: `/jobseeker/jobs/${encodeURIComponent(String(j.id ?? id))}` }}
+                  >
+                    Sign in to apply
+                  </Link>
+                </Button>
+              ))}
           </CardContent>
         </Card>
         <p className="text-xs text-slate-500 mt-5">

@@ -11,7 +11,29 @@ import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../../components/Sear
 import { usePagedJobs } from '../../lib/usePagedJobs';
 import { useUrlFilters } from '../../lib/useUrlFilters';
 import { useLatestCallback } from '../../lib/useLatestCallback';
+import { useAuth } from '../../lib/authContext';
 import type { Job } from '../../lib/apiTypes';
+
+/** Apply/sign-in-to-apply CTA beside a public job card. Held back while the stored session is
+ * still hydrating so it never flashes "Sign in to apply" for a visitor who turns out to be
+ * signed in (V-13). */
+function ApplyCta({ job }: { job: Job }) {
+  const { status } = useAuth();
+  if (status === 'loading') return null;
+  if (status === 'signedIn')
+    return (
+      <Button size="sm" asChild>
+        <Link to={`/jobseeker/jobs/${encodeURIComponent(String(job.id))}`}>Apply</Link>
+      </Button>
+    );
+  return (
+    <Button size="sm" variant="outline" asChild>
+      <Link to="/auth/jobseeker" state={{ from: `/jobseeker/jobs/${encodeURIComponent(String(job.id))}` }}>
+        Sign in to apply
+      </Link>
+    </Button>
+  );
+}
 
 const kinds = ['job', 'gig', 'audition', 'session', 'tour'] as const;
 const FILTERS = ['q', 'location', 'kind'] as const;
@@ -129,7 +151,7 @@ export default function PublicJobs() {
           <>
             <div className="grid gap-4 mt-6">
               {jobs.map((j, index) => (
-                <JobCard key={j.id} job={j} index={index} to={`/opportunities/${j.id}`} />
+                <JobCard key={j.id} job={j} index={index} to={`/opportunities/${j.id}`} aside={<ApplyCta job={j} />} />
               ))}
             </div>
             <LoadMoreJobs

@@ -81,7 +81,14 @@ class RequestDeadlineError extends Error {
   }
 }
 
-export type ApiOptions = RequestInit & { timeoutMs?: number; skipAuthRedirect?: boolean };
+export type ApiOptions = RequestInit & {
+  timeoutMs?: number;
+  skipAuthRedirect?: boolean;
+  /** Suppresses the app-wide PLAN_LIMIT_EVENT for this call, for a caller that shows its own
+   * dedicated plan-limit dialog for the 402 (see PostJob's publish flow, V-14) instead of the
+   * generic upgrade prompt. */
+  skipPlanLimitEvent?: boolean;
+};
 
 // Server-enforced plan limits (402). Pages still show their own error; the app-level
 // PlanLimitPrompt listens for this event and offers the upgrade path.
@@ -212,7 +219,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
 
   const method = (options.method || 'GET').toUpperCase();
   const canRetry = method === 'GET';
-  const { timeoutMs, skipAuthRedirect, signal, ...requestOptions } = options;
+  const { timeoutMs, skipAuthRedirect, skipPlanLimitEvent, signal, ...requestOptions } = options;
   const deadlineAt = Date.now() + (timeoutMs ?? DEFAULT_TIMEOUT_MS);
   let lastResponse: Response | undefined;
 
@@ -264,7 +271,8 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
       const requestId = requestIdFor(response, data);
       if (response.status === 401) redirectAfterUnauthorized(path, token, skipAuthRedirect);
       if (!response.ok) {
-        if (response.status === 402 && PLAN_LIMIT_CODES.has(data.code ?? '')) announcePlanLimit(data.error);
+        if (response.status === 402 && PLAN_LIMIT_CODES.has(data.code ?? '') && !skipPlanLimitEvent)
+          announcePlanLimit(data.error);
         // A Page the person can no longer act as (removed as admin, Page hidden): fall back to themselves.
         if (response.status === 403 && data.code === 'ACT_AS_FORBIDDEN' && actingAs) setActingAs(null);
         if (response.status >= 500)

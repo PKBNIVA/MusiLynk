@@ -16,6 +16,11 @@ vi.mock('../../lib/api', async (importOriginal) => ({
 // PublicNav lazy-loads the identity switcher, which needs the auth provider this page test omits.
 vi.mock('../../components/showcase/IdentitySwitcher', () => ({ IdentitySwitcher: () => null }));
 
+// PublicNav reads the session; this test is about the page copy, so present a signed-out visitor.
+vi.mock('../../lib/authContext', () => ({
+  useAuth: () => ({ status: 'signedOut', user: null, loading: false, isAuthenticated: false, logout: vi.fn() }),
+}));
+
 let container: HTMLDivElement;
 let root: Root;
 

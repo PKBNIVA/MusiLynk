@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_054200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -191,6 +191,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["actor_id"], name: "index_audit_logs_on_actor_id"
+  end
+
+  create_table "auth_connections", id: :string, force: :cascade do |t|
+    t.string "owner_type", null: false
+    t.string "owner_id", null: false
+    t.string "provider", null: false
+    t.string "provider_uid", null: false
+    t.citext "email"
+    t.boolean "email_verified", default: false, null: false
+    t.string "display_name"
+    t.string "avatar_url"
+    t.text "access_token"
+    t.text "refresh_token"
+    t.jsonb "scopes", default: [], null: false
+    t.datetime "expires_at"
+    t.jsonb "raw", default: {}, null: false
+    t.datetime "last_synced_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["owner_type", "owner_id"], name: "index_auth_connections_on_owner"
+    t.index ["provider", "provider_uid"], name: "index_auth_connections_on_provider_and_uid", unique: true
   end
 
   create_table "availability_windows", id: :string, force: :cascade do |t|
@@ -720,6 +741,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
     t.index ["owner_id"], name: "index_organizations_on_owner_id"
   end
 
+  create_table "phone_otps", id: :string, force: :cascade do |t|
+    t.citext "phone", null: false
+    t.string "code_digest", null: false
+    t.string "pending_name"
+    t.string "pending_role"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.datetime "pending_consented_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_phone_otps_on_expires_at"
+    t.index ["phone", "created_at"], name: "index_phone_otps_on_phone_and_created_at"
+  end
+
   create_table "portfolio_items", id: :string, force: :cascade do |t|
     t.string "user_id", null: false
     t.string "kind"
@@ -1194,8 +1230,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
     t.datetime "updated_at", null: false
     t.string "synthetic_batch"
     t.datetime "consented_at"
+    t.citext "phone"
+    t.datetime "phone_verified_at"
+    t.datetime "password_set_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["name"], name: "index_users_on_name", opclass: :gin_trgm_ops, using: :gin
+    t.index ["phone"], name: "index_users_on_phone", unique: true, where: "(phone IS NOT NULL)"
     t.index ["synthetic_batch"], name: "index_users_on_synthetic_batch", where: "(synthetic_batch IS NOT NULL)"
   end
 

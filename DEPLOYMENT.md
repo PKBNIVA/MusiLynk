@@ -175,6 +175,22 @@ Before enabling each integration, configure and test its variables:
 - Razorpay: key ID, key secret, webhook secret, and plan IDs
 - Brevo: API key and verified sender
 
+### AI provider (`AI_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL`)
+
+AI writing help runs on OpenAI by default (`provider: openai` in `backend/config/ai_pricing.yml`,
+model `gpt-5.6-luna`). On the Railway web service (and the worker, which runs the verification
+summaries and link-import drafting) set:
+
+- `OPENAI_API_KEY`: platform.openai.com, API keys, create a project key. Blank means AI is
+  reported disabled in `GET /api/ai/status` and every feature uses its deterministic fallback.
+- `OPENAI_MODEL` (optional): override the model id from the yml.
+- `AI_PROVIDER` (optional): `openai` or `anthropic`. `anthropic` switches back to the previous
+  provider and needs `ANTHROPIC_API_KEY` instead; no deploy of code is needed, only the variable.
+
+Set a monthly usage limit in OpenAI billing that matches the app's ₹1,500 hard cap. Admin, AI
+spend shows the active provider and model. The Anthropic Message Batches queue
+(`classify_portfolio_item`, launch-disabled) only submits when the provider is `anthropic`.
+
 ### Email sign-in codes and `PASSWORD_LOGIN_ENABLED`
 
 Email sign-in codes are the primary sign-in path; password sign-in stays available as a

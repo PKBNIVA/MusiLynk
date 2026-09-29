@@ -1,4 +1,10 @@
 Rails.application.routes.draw do
+  get "sitemap.xml", to: "sitemaps#show"
+  get "share/opportunities/:id", to: "share_pages#job"
+  get "share/professionals/:id", to: "share_pages#professional"
+  get "share/acts/:id", to: "share_pages#act"
+  get "share/p/:slug", to: "share_pages#portfolio"
+
   scope :api do
     get "health", to: "health#show"
     get "live", to: "health#show"

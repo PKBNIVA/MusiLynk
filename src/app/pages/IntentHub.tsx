@@ -52,6 +52,7 @@ export default function IntentHub() {
   usePageMeta(
     'Choose your path',
     'Find music work, hire musicians and crew, build a show team, book a live act or fill an urgent gap on Verse.',
+    { noindex: true },
   );
   return (
     <div className="min-h-screen bg-slate-950 text-white">

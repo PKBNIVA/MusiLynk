@@ -14,7 +14,7 @@ const DESCRIPTION =
   'Hire verified singers, session players, DJs and sound crew in Mumbai for recording sessions, weddings and gigs, within 24 hours. Musicians join free.';
 
 export default function LandingPage() {
-  usePageMeta(TITLE, DESCRIPTION);
+  usePageMeta(TITLE, DESCRIPTION, { canonicalPath: '/', type: 'website' });
   const [city, setCity] = useState<string>(LAUNCH_CITIES[0]);
   return (
     <div className="min-h-screen bg-slate-950 text-white">

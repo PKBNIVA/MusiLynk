@@ -96,6 +96,7 @@ export default function Pricing() {
   usePageMeta(
     'Pricing',
     'Verse plans for music hiring and booking teams. Professionals build profiles and apply free; paid plans add capacity, seats and trials.',
+    { canonicalPath: '/pricing' },
   );
   const [plans, setPlans] = useState<ApiPlan[]>(FALLBACK_PLANS);
   const [live, setLive] = useState<boolean | null>(null);

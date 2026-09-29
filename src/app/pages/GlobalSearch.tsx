@@ -37,6 +37,7 @@ export default function GlobalSearch() {
   usePageMeta(
     query.trim() ? `Search: ${query.trim().slice(0, 60)}` : 'Search Verse',
     'Search music jobs, professionals, bookable acts and work samples across the Verse network.',
+    { noindex: true },
   );
   const [q, setQ] = useState(query);
   const [recent, setRecent] = useState<string[]>(() => {

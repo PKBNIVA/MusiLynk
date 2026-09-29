@@ -24,6 +24,20 @@ function releaseMeta(): Plugin {
     attrs: { name: 'verse-release', content: release || 'unknown' },
     injectTo: 'head' as const,
   };
+  // Google Search Console's HTML-tag ownership verification, public build only. Empty/unset
+  // (the default until the site is verified) injects nothing.
+  const siteVerification = (process.env.VITE_GOOGLE_SITE_VERIFICATION || '').trim();
+  const publicTags =
+    appTarget === 'admin' || !siteVerification
+      ? [releaseTag]
+      : [
+          releaseTag,
+          {
+            tag: 'meta',
+            attrs: { name: 'google-site-verification', content: siteVerification },
+            injectTo: 'head' as const,
+          },
+        ];
   return {
     name: 'verse-release-meta',
     transformIndexHtml: (html) =>
@@ -35,7 +49,7 @@ function releaseMeta(): Plugin {
               .replace(/<meta name="robots"[^>]*>/, '<meta name="robots" content="noindex, nofollow" />'),
             tags: [releaseTag],
           }
-        : [releaseTag],
+        : publicTags,
   };
 }
 

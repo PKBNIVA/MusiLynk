@@ -24,6 +24,7 @@ import {
   Siren,
 } from 'lucide-react';
 import { EmptyState } from '../components/help/EmptyState';
+import { VouchCard } from '../components/VouchCard';
 import { optionLabel } from '../components/ui/option-labels';
 import type { Job, JobSeekerDashboard } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
@@ -158,6 +159,11 @@ export default function JobSeekerDashboard() {
             </div>
           </CardContent>
         </Card>
+        {user?.verified && (
+          <div className="mb-10">
+            <VouchCard />
+          </div>
+        )}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl font-semibold flex items-center gap-2">

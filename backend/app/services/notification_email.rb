@@ -17,7 +17,10 @@ class NotificationEmail
     "booking_status" => {
       subject: ->(p) { "Booking update: #{p['act']}" },
       heading: ->(_) { "Your booking was updated" },
-      copy: ->(p) { "The booking for #{p['act']} is now #{p['status']}." },
+      copy: ->(p) {
+        base = "The booking for #{p['act']} is now #{p['status']}."
+        p["status"] == "accepted" ? "#{base} If the act cancels, tell us and we'll help you find a replacement through Verse's urgent requests." : base
+      },
       action: "View bookings", path: "/bookings"
     },
     "application_status" => {
@@ -35,7 +38,11 @@ class NotificationEmail
     "urgent_request_alert" => {
       subject: ->(p) { "Urgent: #{p['role']} needed in #{p['city']}" },
       heading: ->(_) { "A hirer needs someone fast" },
-      copy: ->(p) { "#{p['title']} in #{p['city']}. If you're free, respond in one tap before someone else does." },
+      copy: ->(p) {
+        base = "#{p['title']} in #{p['city']}. If you're free, respond in one tap before someone else does."
+        reasons = Array(p["reasons"])
+        reasons.present? ? "#{base} Why you: #{reasons.join(' · ')}." : base
+      },
       action: "See the request", path: "/jobseeker/urgent"
     },
     "early_access_granted" => {
@@ -63,6 +70,24 @@ class NotificationEmail
       heading: ->(p) { "Your Early Access Pro ends in #{p['days']}" },
       copy: ->(p) { "Your free run of Pro on Verse ends on #{p['endsOn']}. After that your account moves to the Free plan unless you subscribe." },
       action: "Manage your plan"
+    },
+    "urgent_request_expiry_warning" => {
+      subject: ->(p) { "Your request expires in 6 hours" },
+      heading: ->(_) { "Your request expires in 6 hours" },
+      copy: ->(p) { "\"#{p['title']}\" expires in 6 hours — mark it filled or close it. Mark filled: #{p['filledLink']} Close: #{p['closeLink']}" },
+      action: "Open your request", path: "/jobseeker/urgent"
+    },
+    "urgent_request_expired" => {
+      subject: ->(p) { "This request has expired" },
+      heading: ->(_) { "This request has expired" },
+      copy: ->(p) { "\"#{p['title']}\" has expired. The hirer didn't confirm a booking through Verse." },
+      action: "See urgent requests", path: "/jobseeker/urgent"
+    },
+    "job_deadline_closed" => {
+      subject: ->(p) { "Your listing for #{p['title']} closed" },
+      heading: ->(_) { "Your listing closed at its deadline" },
+      copy: ->(p) { "Your listing for #{p['title']} closed at its deadline. Reopen with a new date if you're still hiring." },
+      action: "View your listings", path: "/hiring"
     }
   }.freeze
 

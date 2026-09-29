@@ -58,4 +58,22 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     assert_match "/professionals/#{discoverable.id}", response.body
     assert_no_match(/professionals\/#{incomplete.id}</, response.body)
   end
+
+  test "a role x city hire page is only in the sitemap once it has enough real profiles" do
+    get "/sitemap.xml"
+    assert_no_match(%r{/hire/drummer/goa<}, response.body)
+
+    5.times { |i| create_user("Goa Drummer #{i}", "jobseeker") }
+    Profile.where(user_id: User.where("name LIKE 'Goa Drummer%'").select(:user_id))
+      .update_all(headline: "Session drummer", location: "Goa")
+    Rails.cache.clear
+
+    get "/sitemap.xml"
+    assert_match "/hire/drummer/goa", response.body
+  end
+
+  test "the mumbai rates page is only in the sitemap once enough roles have rate data" do
+    get "/sitemap.xml"
+    assert_no_match(%r{/rates/mumbai<}, response.body)
+  end
 end

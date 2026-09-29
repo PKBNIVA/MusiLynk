@@ -36,7 +36,7 @@ class AdminOperationsHardeningTest < ActionDispatch::IntegrationTest
 
   test "rejecting a previously approved verification removes the badge and is audited" do
     request_record = VerificationRequest.create!(user: @studio, kind: "organization", evidence_url: "https://example.com/studio", status: "pending")
-    patch "/api/admin/verifications/#{request_record.id}", params: { status: "approved" }, headers: auth(@token), as: :json
+    patch "/api/admin/verifications/#{request_record.id}", params: { status: "approved", checks: ["organization"] }, headers: auth(@token), as: :json
     assert_response :success
     assert @studio.profile.reload.verified?
 

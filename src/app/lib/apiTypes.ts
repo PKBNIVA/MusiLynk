@@ -68,6 +68,12 @@ export interface AccountUser extends ProfileFields {
   last_login_at?: string | null;
 }
 
+/** ApplicationController#verification_summary: what the Verified badge's tooltip says. */
+export interface VerificationSummary {
+  checks: string[];
+  verifiedAt?: string | null;
+}
+
 /** ApplicationController#public_profile: a professional as other people see them. */
 export interface Professional extends ProfileFields {
   id: string;
@@ -76,6 +82,8 @@ export interface Professional extends ProfileFields {
   demo?: boolean;
   /** TalentController#index only: whether the viewing employer shortlisted them. */
   shortlisted?: boolean;
+  /** Present (non-null) only when verified; see VerifiedBadge. */
+  verification?: VerificationSummary | null;
 }
 
 /** TalentController#compare: a professional with their public work and upcoming availability. */
@@ -773,6 +781,10 @@ export interface UrgentRequest {
   first_notified_at?: string | null;
   founder_notes?: string | null;
   filled_by_id?: string | null;
+  expires_at?: string | null;
+  /** Set only for the viewer's own row when they were notified about this request. */
+  myMatchReasons?: string[];
+  filledByName?: string | null;
 }
 
 /** Admin::UrgentRequestsController#index row: the above plus founder-facing fields. */
@@ -815,6 +827,18 @@ export interface UrgentRequestResponse {
   updated_at?: string;
   name: string;
   headline?: string | null;
+}
+
+/** VouchesController: a vouches row (Vouch#api_json), token omitted. */
+export interface Vouch {
+  id: string;
+  voucher_id: string;
+  vouchee_email: string;
+  vouchee_id?: string | null;
+  status: 'invited' | 'joined' | 'verified';
+  created_at?: string;
+  updated_at?: string;
+  voucherName: string;
 }
 
 /** OrganizationsController#organization_json: an organizations row plus the viewer's membership. */
@@ -955,6 +979,8 @@ export interface AdminVerification {
   email: string;
   role: Role;
   companyName?: string | null;
+  checks?: string[];
+  vouchedByName?: string | null;
 }
 
 /** Admin::ReportsController#index: a reports row plus the reporter's name. */

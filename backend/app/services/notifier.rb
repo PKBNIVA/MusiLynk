@@ -129,11 +129,42 @@ class Notifier
     # "Need someone by tomorrow": a musician was matched and notified about an open urgent
     # request (UrgentMatcher). WhatsApp, when configured and consented, is sent separately
     # (see WhatsappAlertJob); this always does in-app + email.
-    def urgent_request_alert(urgent_request, recipient)
+    def urgent_request_alert(urgent_request, recipient, reasons = [])
+      why = reasons.presence && " Why you: #{reasons.join(' · ')}."
       notify(recipient, kind: "urgent_alert", title: "Urgent: #{urgent_request.role_name} needed in #{urgent_request.city}",
-        link: "/jobseeker/urgent", body: "#{urgent_request.title} — #{urgent_request.city}, #{urgent_request.start_at&.strftime('%d %b, %I:%M %p')}.")
+        link: "/jobseeker/urgent", body: "#{urgent_request.title} — #{urgent_request.city}, #{urgent_request.start_at&.strftime('%d %b, %I:%M %p')}.#{why}")
       email(recipient, "urgent_request_alert", title: urgent_request.title, role: urgent_request.role_name, city: urgent_request.city,
-        startAt: urgent_request.start_at&.iso8601)
+        startAt: urgent_request.start_at&.iso8601, reasons: reasons.presence)
+    end
+
+    # 6 hours before an open, responded-to urgent request expires: nudge the hirer with
+    # one-click links to mark it filled or close it (UrgentRequestsSweepJob).
+    def urgent_request_expiry_warning(urgent_request, filled_link:, close_link:)
+      notify(urgent_request.requester, kind: "urgent_expiry_warning", title: "Your request expires in 6 hours",
+        link: "/urgent-requests", body: "\"#{urgent_request.title}\" expires in 6 hours — mark it filled or close it.")
+      email(urgent_request.requester, "urgent_request_expiry_warning", title: urgent_request.title, filledLink: filled_link, closeLink: close_link)
+    end
+
+    # At expiry: tell every musician who responded, since the hirer never confirmed a booking.
+    def urgent_request_expired(urgent_request, recipient)
+      notify(recipient, kind: "urgent_expired", title: "This request has expired",
+        link: "/jobseeker/urgent", body: "\"#{urgent_request.title}\" has expired. The hirer didn't confirm a booking through Verse.")
+      email(recipient, "urgent_request_expired", title: urgent_request.title)
+    end
+
+    # A published job automatically closed because its application deadline passed
+    # (JobsDeadlineSweepJob).
+    def job_deadline_closed(job)
+      notify(job.employer, kind: "job_deadline_closed", title: "Your listing closed at its deadline",
+        link: "/hiring", body: "Your listing for #{job.title} closed at its deadline. Reopen with a new date if you're still hiring.")
+      email(job.employer, "job_deadline_closed", title: job.title)
+    end
+
+    # "<Name> vouched for you on Verse": sent to the invitee's email, whether or not they have
+    # an account yet.
+    def vouch_invite(vouch, join_link:)
+      return unless EmailDelivery.configured?
+      EmailDeliveryJob.enqueue_link_with_name(template: "vouch_invite", link: join_link, email: vouch.vouchee_email, name: vouch.voucher.name)
     end
 
     # Admin::UsersController#grant_early_access just switched this employer onto Early Access Pro.

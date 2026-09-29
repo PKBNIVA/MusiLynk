@@ -19,6 +19,9 @@ default: &default
     recent_activity_within_days: 30
   # A request with no responses this long after posting is flagged red on the admin funnel.
   no_response_after_minutes: 60
+  # "Requests never go silent": how long an open request stays live before UrgentRequestsSweepJob
+  # expires it (with a warning email 6 hours before expiry). Set on create as expires_at.
+  expire_after_hours: 48
 
 development:
   <<: *default

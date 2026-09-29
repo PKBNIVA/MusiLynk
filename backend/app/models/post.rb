@@ -3,17 +3,24 @@
 # created_by_user_id is always the real person who wrote it, kept for audit and
 # moderation even when the post is made as a Page.
 class Post < ApplicationRecord
-  AUTHOR_TYPES = %w[user organization act].freeze
-  KINDS = %w[update performance release gig looking_for job_share portfolio_share].freeze
+  # "system" is the platform's own author (Post::SYSTEM_AUTHOR_ID) — StageSystemPostsJob and
+  # FastResponderWeekJob post as it; created_by_user_id is nil for those posts.
+  AUTHOR_TYPES = %w[user organization act system].freeze
+  KINDS = %w[update performance release gig looking_for job_share portfolio_share system event].freeze
   VISIBILITIES = %w[public followers].freeze
   STATUSES = %w[active hidden deleted].freeze
   MEDIA_TYPES = %w[image audio video].freeze
+  # What a system post announces (Post#system_kind); used for aggregation/idempotency, not display.
+  SYSTEM_KINDS = %w[welcome welcome_aggregate verified urgent_filled weekly_roundup fastest_responders].freeze
   BODY_LIMIT = 3_000
   MEDIA_LIMIT = 10
   HASHTAG_PATTERN = /#([a-z0-9_]{2,50})/i
   TRENDING_WINDOW = 72.hours
+  SYSTEM_AUTHOR_ID = "verse".freeze
+  SYSTEM_AUTHOR_NAME = "Verse".freeze
+  SYSTEM_AVATAR = "/verse-mark.svg".freeze
 
-  belongs_to :created_by, class_name: "User", foreign_key: :created_by_user_id
+  belongs_to :created_by, class_name: "User", foreign_key: :created_by_user_id, optional: true
   belongs_to :shared_portfolio_item, class_name: "PortfolioItem", foreign_key: :shared_portfolio_item_id, optional: true
   belongs_to :shared_job, class_name: "Job", foreign_key: :shared_job_id, optional: true
   belongs_to :reshared_post, class_name: "Post", foreign_key: :reshared_post_id, optional: true
@@ -25,12 +32,14 @@ class Post < ApplicationRecord
 
   validates :author_type, inclusion: { in: AUTHOR_TYPES }
   validates :author_id, presence: true
-  validates :created_by_user_id, presence: true
+  validates :created_by_user_id, presence: true, unless: -> { author_type == "system" }
   validates :kind, inclusion: { in: KINDS }
   validates :visibility, inclusion: { in: VISIBILITIES }
   validates :status, inclusion: { in: STATUSES }
   validates :body, length: { maximum: BODY_LIMIT }, allow_nil: true
   validates :link_url, safe_http_url: true, allow_blank: true
+  validates :system_kind, inclusion: { in: SYSTEM_KINDS }, if: -> { kind == "system" }
+  validates :event_title, :event_starts_at, :event_venue, presence: true, if: -> { kind == "event" }
   # These only make sense at creation time: the shared portfolio item, job or original post
   # can legitimately disappear later (deleted, closed, taken down) — the FK on those columns
   # is ON DELETE SET NULL for exactly that reason, and the post then renders an "unavailable"
@@ -45,6 +54,15 @@ class Post < ApplicationRecord
 
   scope :visible, -> { where(status: "active") }
   scope :by_author, ->(type, id) { where(author_type: type, author_id: id) }
+  scope :pinned, -> { where("pinned_until IS NOT NULL AND pinned_until > ?", Time.current) }
+  # Pinned-and-current posts first (most recently pinned first), then everything else by recency —
+  # the ordering the Stage feed and StageSystemPostsJob rely on to show the weekly pinned post on top.
+  scope :pinned_first, -> { order(Arel.sql("(pinned_until IS NOT NULL AND pinned_until > NOW()) DESC"), created_at: :desc, id: :desc) }
+  scope :upcoming_events, ->(city: nil) {
+    scope = where(kind: "event").where("event_starts_at >= ?", Time.current).visible
+    scope = scope.where(city: city) if city.present?
+    scope.order(featured: :desc, event_starts_at: :asc)
+  }
 
   def self.extract_hashtags(body)
     body.to_s.scan(HASHTAG_PATTERN).flatten.map(&:downcase).uniq
@@ -56,11 +74,13 @@ class Post < ApplicationRecord
     case author_type
     when "organization" then Organization.find_by(id: author_id)
     when "act" then Act.find_by(id: author_id)
+    when "system" then nil
     else User.find_by(id: author_id)
     end
   end
 
   def author_name
+    return SYSTEM_AUTHOR_NAME if author_type == "system"
     record = author_record
     return record&.name if record
     created_by&.name
@@ -68,11 +88,12 @@ class Post < ApplicationRecord
 
   def author_verified?
     case author_type
-    when "organization" then false
-    when "act" then false
+    when "organization", "act", "system" then false
     else created_by&.profile&.verified || false
     end
   end
+
+  def pinned? = pinned_until.present? && pinned_until > Time.current
 
   def active? = status == "active"
   def deleted? = status == "deleted"
@@ -86,7 +107,7 @@ class Post < ApplicationRecord
   def api_json(viewer_user_id: nil, applauded_post_ids: Set.new)
     {
       id: id,
-      author: { type: author_type, id: author_id, name: author_name, avatar: author_avatar, verified: author_verified? },
+      author: { type: author_type, id: author_id, name: author_name, avatar: author_avatar, verified: author_verified?, system: author_type == "system" },
       kind: kind,
       body: body,
       media: Array(media),
@@ -101,9 +122,33 @@ class Post < ApplicationRecord
       commentCount: comment_count,
       reshareCount: reshare_count,
       applauded: applauded_post_ids.include?(id),
+      pinned: pinned?,
+      pinnedUntil: pinned_until,
+      event: event_json,
       createdAt: created_at,
       updatedAt: updated_at
     }
+  end
+
+  def event_json
+    return nil unless kind == "event"
+    { title: event_title, startsAt: event_starts_at, venue: event_venue, city: city, link: link_url, featured: featured }
+  end
+
+  # ICS ("iCalendar") text for this event post's calendar-download link.
+  def to_ics
+    return nil unless kind == "event"
+    dtstamp = created_at.utc.strftime("%Y%m%dT%H%M%SZ")
+    dtstart = event_starts_at.utc.strftime("%Y%m%dT%H%M%SZ")
+    lines = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Verse//Stage Events//EN", "BEGIN:VEVENT",
+      "UID:#{id}@verse", "DTSTAMP:#{dtstamp}", "DTSTART:#{dtstart}",
+      "SUMMARY:#{ics_escape(event_title)}", "LOCATION:#{ics_escape([event_venue, city].compact.join(', '))}"
+    ]
+    lines << "DESCRIPTION:#{ics_escape(body)}" if body.present?
+    lines << "URL:#{ics_escape(link_url)}" if link_url.present?
+    lines << "END:VEVENT" << "END:VCALENDAR"
+    lines.join("\r\n")
   end
 
   # A post that shared something keeps its `shared_*_id`/`reshared_post_id` for its own
@@ -130,15 +175,17 @@ class Post < ApplicationRecord
   def unavailable(type) = { type:, unavailable: true }
 
   def author_avatar
-    nil
+    author_type == "system" ? SYSTEM_AVATAR : nil
   end
+
+  def ics_escape(text) = text.to_s.gsub(/([,;\\])/, '\\\\\1').gsub("\n", "\\n")
 
   def extract_hashtags
     self.hashtags = self.class.extract_hashtags(body)
   end
 
   def body_or_share_present
-    return if body.present? || shared_portfolio_item_id.present? || shared_job_id.present? || reshared_post_id.present?
+    return if kind == "event" || body.present? || shared_portfolio_item_id.present? || shared_job_id.present? || reshared_post_id.present?
     errors.add(:body, "or a shared item is required")
   end
 

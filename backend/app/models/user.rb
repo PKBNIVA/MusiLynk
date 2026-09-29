@@ -28,6 +28,7 @@ class User < ApplicationRecord
   has_many :blocked_by, class_name: "UserBlock", foreign_key: :blocked_id, dependent: :delete_all
   has_many :subscriptions, dependent: :destroy
   has_many :billing_attempts, dependent: :destroy
+  has_many :auth_connections, as: :owner, dependent: :destroy
   has_many :vouches, foreign_key: :voucher_id, dependent: :destroy
   belongs_to :vouched_by, class_name: "User", optional: true
 
@@ -49,6 +50,12 @@ class User < ApplicationRecord
 
   def profileComplete = profile_complete
   def emailVerified = email_verified
+
+  # False for an account that has never had a password the person themselves chose (created,
+  # or later signed into only, via Google or an emailed code): AccountController#change_password
+  # and AuthController's Google/connection paths use this to keep at least one real sign-in
+  # method and to give a clearer message than "incorrect password".
+  def password_set? = password_set_at.present?
 
   private
 

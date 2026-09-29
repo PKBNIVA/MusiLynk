@@ -40,6 +40,17 @@ Rails.application.configure do
       class: "BillingRemindersJob",
       description: "Email trial/renewal/Early Access Pro ending reminders, each sent at most once"
     },
+    lifecycle_emails: {
+      cron: "0 * * * *",
+      class: "LifecycleEmailsJob",
+      description: "Send the day-N onboarding sequence email to musicians and hirers whose condition still holds"
+    },
+    weekly_digest: {
+      # Tuesday 09:30 IST = 04:00 UTC.
+      cron: "0 4 * * 2",
+      class: "WeeklyDigestJob",
+      description: "Send the weekly 'This week on Verse' digest"
+    },
     urgent_requests_sweep: {
       cron: "*/30 * * * *",
       class: "UrgentRequestsSweepJob",
@@ -49,6 +60,22 @@ Rails.application.configure do
       cron: "13 * * * *",
       class: "JobsDeadlineSweepJob",
       description: "Close published jobs past their application deadline and notify the hirer"
+    },
+    stage_system_posts: {
+      cron: "0 * * * *",
+      class: "StageSystemPostsJob",
+      description: "Post welcomes, verifications, urgent fills and the Monday roundup to The Stage as Verse"
+    },
+    review_prompt_sweep: {
+      cron: "12 * * * *",
+      class: "ReviewPromptSweepJob",
+      description: "Prompt both parties to review each other after an urgent fill or booking completion, and send the one 3-day reminder"
+    },
+    fast_responder_week: {
+      # Monday 00:20 IST — after the week just ended, before that day's own urgent traffic.
+      cron: "50 18 * * 0",
+      class: "FastResponderWeekJob",
+      description: "Award the weekly fast-responder badges per city and post the leaderboard to The Stage"
     }
   }
   # classify_portfolio_item is launch-disabled (see config/ai_pricing.yml `launch:`), so the cron

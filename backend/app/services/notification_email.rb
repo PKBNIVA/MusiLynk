@@ -91,6 +91,18 @@ class NotificationEmail
       heading: ->(_) { "Your listing closed at its deadline" },
       copy: ->(p) { "Your listing for #{p['title']} closed at its deadline. Reopen with a new date if you're still hiring." },
       action: "View your listings", path: "/hiring"
+    },
+    "review_prompt" => {
+      subject: ->(p) { p["reminder"] == "true" ? "Still time to review #{p['name']}" : "How did it go with #{p['name']}?" },
+      heading: ->(p) { p["reminder"] == "true" ? "A quick reminder" : "Leave a review" },
+      copy: ->(p) { "Leave a quick review for #{p['name']} — it helps other musicians and hirers on Verse." },
+      action: "Write a review", path: "/reviews"
+    },
+    "verification_approved" => {
+      subject: ->(_) { "You're verified on Verse" },
+      heading: ->(_) { "You're verified on Verse" },
+      copy: ->(_) { "Your profile now shows the Verified badge. Share it on Instagram or WhatsApp to reach more work." },
+      action: "Share your badge", path: "/profile"
     }
   }.freeze
 
@@ -98,8 +110,13 @@ class NotificationEmail
   # holder), never to someone who turned notification emails off, and never to an address
   # the provider reported as bounced, complaining or unsubscribed (EmailSuppression).
   # Transactional emails (sign-in codes, verification, password reset) do not go through this class.
-  def self.deliverable_to?(user)
+  # `category` narrows delivery to one of Profile::EMAIL_PREFERENCE_CATEGORIES (digest,
+  # lifecycle, requests, product) for the lifecycle/digest/milestone emails that offer that
+  # granular opt-out (LifecycleMailer). Left nil for the transactional templates in this
+  # class, which only the master switch (email_notifications) can turn off.
+  def self.deliverable_to?(user, category: nil)
     EmailDelivery.configured? && user.email.present? && user.email_verified? && user.status == "active" && opted_in?(user) &&
+      (category.nil? || user.profile.nil? || user.profile.email_category_enabled?(category)) &&
       !EmailSuppression.blocks_notifications?(user.email) && !EmailDelivery.skip_reserved?(user.email)
   end
 

@@ -8,6 +8,7 @@ import { Field, FormError } from '../form/Field';
 import { PasswordChecklist } from '../PasswordChecklist';
 import { CODE_LENGTH, CodeStep, focusField, useResendCooldown } from '../auth/CodeStep';
 import { apiPost, getSignInMethods, requestSignInCode } from '../../lib/api';
+import { GoogleButton } from '../auth/GoogleButton';
 import { useAuth, type User } from '../../lib/authContext';
 import { errorCode, errorMessage, errorStatus } from '../../lib/errors';
 import { useSubmitOnce } from '../../lib/formErrors';
@@ -45,6 +46,7 @@ export function AccountStep({
   const [method, setMethod] = useState<'code' | 'password'>('code');
   const [codesAvailable, setCodesAvailable] = useState(true);
   const [passwordAvailable, setPasswordAvailable] = useState(true);
+  const [googleAvailable, setGoogleAvailable] = useState(false);
   const [codeStep, setCodeStep] = useState(false);
   const [code, setCode] = useState('');
   const [debugCode, setDebugCode] = useState<string | undefined>();
@@ -70,6 +72,7 @@ export function AccountStep({
           setPasswordAvailable(false);
           setMethod('code');
         }
+        if (methods.providers?.google) setGoogleAvailable(true);
       })
       .catch(() => {
         /* both paths stay offered; each reports its own error */
@@ -233,6 +236,7 @@ export function AccountStep({
   const signInPath = `/auth/${role}`;
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4" aria-busy={loading}>
+      {googleAvailable && <GoogleButton intent="signin" role={role} consent={consent} disabled={!consent} />}
       <Field id="join-name" label="Your name" error={errors.name}>
         <Input
           autoComplete="name"

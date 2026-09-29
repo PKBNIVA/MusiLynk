@@ -18,6 +18,21 @@ type FunnelSummary = {
   retentionWeek1: number | null;
 };
 
+// GET /api/admin/emails (Admin::EmailsController#show, backed by LifecycleEmailQueries):
+// counts sent per lifecycle/digest/milestone key, and opt-out rates from profiles.
+type EmailsSummary = {
+  windowDays: number;
+  sentByKey: { key: string; count: number }[];
+  optOutRates: { masterOff: number; categories: Record<string, number> };
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  digest: 'Weekly digest',
+  lifecycle: 'Getting started tips',
+  requests: 'Urgent requests',
+  product: 'Milestones',
+};
+
 const STEP_LABELS: Record<string, string> = {
   landing_view: 'Landing view',
   path_chosen: 'Path chosen',
@@ -31,14 +46,19 @@ const WINDOWS = [7, 30] as const;
 export default function FunnelTab() {
   const [days, setDays] = useState<(typeof WINDOWS)[number]>(7);
   const [data, setData] = useState<FunnelSummary | null>(null);
+  const [emails, setEmails] = useState<EmailsSummary | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   const load = () => {
     setLoading(true);
-    apiGet<FunnelSummary>(`/admin/funnel?days=${days}`)
-      .then((d) => {
+    Promise.all([
+      apiGet<FunnelSummary>(`/admin/funnel?days=${days}`),
+      apiGet<EmailsSummary>(`/admin/emails?days=${days}`),
+    ])
+      .then(([d, e]) => {
         setData(d);
+        setEmails(e);
         setError('');
       })
       .catch((e: unknown) => setError(errorMessage(e, 'Unable to load the funnel.')))
@@ -145,6 +165,43 @@ export default function FunnelTab() {
                 </div>
               </CardContent>
             </Card>
+            {emails && (
+              <Card className="bg-white/[.05] border-white/10 xl:col-span-2">
+                <CardHeader>
+                  <CardTitle>
+                    <h2>Emails</h2>
+                  </CardTitle>
+                  <p className="text-sm text-slate-400">
+                    Lifecycle, digest and milestone emails sent in this window, and opt-out rates. Read-only.
+                  </p>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold text-slate-300">Sent per key</div>
+                    {emails.sentByKey.map((row) => (
+                      <div key={row.key} className="flex justify-between text-sm border-b border-white/10 pb-1">
+                        <span className="text-slate-400">{row.key}</span>
+                        <span data-testid={`emails-sent-${row.key}`}>{row.count}</span>
+                      </div>
+                    ))}
+                    {!emails.sentByKey.length && <Empty text="No lifecycle emails sent in this window." />}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold text-slate-300">Opt-out rates</div>
+                    <div className="flex justify-between text-sm border-b border-white/10 pb-1">
+                      <span className="text-slate-400">All emails (master switch off)</span>
+                      <span data-testid="emails-opt-out-master">{emails.optOutRates.masterOff}%</span>
+                    </div>
+                    {Object.entries(emails.optOutRates.categories).map(([category, rate]) => (
+                      <div key={category} className="flex justify-between text-sm border-b border-white/10 pb-1">
+                        <span className="text-slate-400">{CATEGORY_LABELS[category] || category}</span>
+                        <span data-testid={`emails-opt-out-${category}`}>{rate}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </Panel>

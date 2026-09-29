@@ -44,6 +44,42 @@ class Notifier
       job = application.job
       notify(job.employer, kind: "application", title: "New application", link: "/hiring/applicants",
         body: "#{application.candidate.name} applied to #{job.title}.")
+      milestone_first_application(job.employer, application)
+    end
+
+    # Milestone: this hirer's first application, ever, across any of their listings.
+    def milestone_first_application(employer, application)
+      return unless employer && Application.joins(:job).where(jobs: { employer_id: employer.id }).count == 1
+      return unless LifecycleEmail.record!(employer, "milestone_hirer_first_application")
+
+      LifecycleEmailDeliveryJob.perform_later(employer.id, "milestone_hirer_first_application",
+        candidate: application.candidate.name, job: application.job.title)
+    end
+
+    # Milestone: a musician's first response to an urgent request, ever. `minutes` is how
+    # long after the request was posted they responded.
+    def milestone_first_urgent_response(user, urgent_request)
+      return unless LifecycleEmail.record!(user, "milestone_musician_first_response")
+
+      minutes = ((Time.current - urgent_request.created_at) / 60).round
+      LifecycleEmailDeliveryJob.perform_later(user.id, "milestone_musician_first_response", minutes:)
+    end
+
+    # Milestone: a hirer's 5th urgent request filled through Verse.
+    def milestone_5th_filled_request(requester)
+      return unless requester && requester.urgent_requests.where(status: "filled").count == 5
+      return unless LifecycleEmail.record!(requester, "milestone_hirer_5th_filled_request")
+
+      LifecycleEmailDeliveryJob.perform_later(requester.id, "milestone_hirer_5th_filled_request")
+    end
+
+    # Milestone: a profile crossing 100 views (product_events `profile_view`, deduped by the
+    # caller). Fires once, exactly at 100, so it never double-sends as views keep climbing.
+    def milestone_profile_100_views(user, view_count)
+      return unless view_count == 100
+      return unless LifecycleEmail.record!(user, "milestone_profile_100_views")
+
+      LifecycleEmailDeliveryJob.perform_later(user.id, "milestone_profile_100_views")
     end
 
     def application_status(application)
@@ -173,6 +209,24 @@ class Notifier
       notify(subscription.user, kind: "early_access_granted", title: "Your Early Access Pro is active",
         link: "/employer/billing", body: "No card needed. Pro features are unlocked on Verse until #{until_date}.")
       email(subscription.user, "early_access_granted", until: until_date)
+    end
+
+    # "How did it go with <name>?" — an urgent request was filled or a booking completed
+    # (ReviewPromptSweepJob); reminder: true is the single 3-day nudge if it's still unwritten.
+    def review_prompt(prompt, reminder: false)
+      title = reminder ? "Still time to review #{prompt.counterpart_name}" : "How did it go with #{prompt.counterpart_name}?"
+      link = "/reviews?employerId=#{prompt.counterpart_user_id}"
+      notify(prompt.user, kind: "review_prompt", title:, link:,
+        body: "Leave a quick review for #{prompt.counterpart_name} — it helps other musicians and hirers on Verse.")
+      email(prompt.user, "review_prompt", name: prompt.counterpart_name, path: link, reminder: reminder.to_s)
+    end
+
+    # The "share your badge" nudge, sent alongside the existing verification-approved
+    # notification once the profile is verified (Admin::VerificationsController#update).
+    def verification_approved(user)
+      notify(user, kind: "verification", title: "You're verified on Verse",
+        link: "/profile", body: "Your profile now shows the Verified badge. Share it on Instagram or WhatsApp to reach more work.")
+      email(user, "verification_approved", profileUrl: "#{FrontendUrl.base}/professionals/#{user.id}")
     end
 
     private

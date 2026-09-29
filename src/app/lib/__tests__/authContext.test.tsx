@@ -207,6 +207,51 @@ describe('AuthProvider', () => {
     expect(auth).toMatchObject({ user: null, loading: false });
   });
 
+  it('trades the one-time code from a Google redirect for a session and cleans the URL', async () => {
+    const original = window.location.href;
+    window.history.replaceState({}, '', '/jobseeker?auth=google&code=abc123&foo=bar');
+    try {
+      fetchMock.mockResolvedValueOnce(jsonResponse({ accessToken: 'google-tok', user: asha }));
+      fetchMock.mockResolvedValueOnce(jsonResponse({ user: asha }));
+      await mount();
+      await settle();
+      expect(fetchMock.mock.calls[0][0]).toBe('/api/auth/exchange');
+      expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ code: 'abc123' });
+      expect(auth).toMatchObject({ user: asha, isAuthenticated: true });
+      expect(window.location.search).toBe('?foo=bar');
+    } finally {
+      window.history.replaceState({}, '', original);
+    }
+  });
+
+  it('stays signed out when the exchange code is invalid or expired', async () => {
+    const original = window.location.href;
+    window.history.replaceState({}, '', '/jobseeker?auth=google&code=stale');
+    try {
+      fetchMock.mockResolvedValueOnce(jsonResponse({ error: 'expired' }, 401));
+      await mount();
+      await settle();
+      expect(modules.api.hasAccessToken()).toBe(false);
+      expect(auth.user).toBeNull();
+      expect(window.location.search).toBe('');
+    } finally {
+      window.history.replaceState({}, '', original);
+    }
+  });
+
+  it('ignores code and token query params without auth=google', async () => {
+    const original = window.location.href;
+    window.history.replaceState({}, '', '/jobseeker?code=x&token=y');
+    try {
+      await mount();
+      await settle();
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(modules.api.hasAccessToken()).toBe(false);
+    } finally {
+      window.history.replaceState({}, '', original);
+    }
+  });
+
   it('exposes setUser for profile edits', async () => {
     await mount();
     await settle();

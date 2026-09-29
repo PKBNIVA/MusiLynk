@@ -39,7 +39,11 @@ module Admin
         end
         audit!("admin.verification.status", request_record, status: request_record.status, checks: request_record.checks)
       end
-      Notification.create!(user: request_record.user, kind: "verification", title: "Verification update", body: "Your verification request was #{params[:status]}.")
+      if params[:status] == "approved"
+        Notifier.verification_approved(request_record.user)
+      else
+        Notification.create!(user: request_record.user, kind: "verification", title: "Verification update", body: "Your verification request was #{params[:status]}.")
+      end
       render json: { ok: true }
     end
   end

@@ -113,11 +113,14 @@ export function previewTitle(preview: LinkPreview) {
 /** The sign-up answers the API applies to a new account (see Onboarding::Starter). */
 export interface StarterPayload {
   roles?: string[];
+  genres?: string[];
+  instruments?: string[];
+  credits?: Array<string | { text: string; source_url?: string }>;
   city?: string;
   yearsExperience?: number;
   headline?: string;
   bio?: string;
-  links?: Array<{ url: string; title?: string; thumbnail?: string }>;
+  links?: Array<{ url: string; title?: string; thumbnail?: string; caption?: string }>;
   hirerKind?: HirerKind;
   companyName?: string;
 }
@@ -131,6 +134,9 @@ export interface StarterResult {
 export function compactStarter(starter: StarterPayload): StarterPayload {
   const out: StarterPayload = {};
   if (starter.roles?.length) out.roles = starter.roles;
+  if (starter.genres?.length) out.genres = starter.genres;
+  if (starter.instruments?.length) out.instruments = starter.instruments;
+  if (starter.credits?.length) out.credits = starter.credits;
   if (starter.city?.trim()) out.city = starter.city.trim();
   if (typeof starter.yearsExperience === 'number') out.yearsExperience = starter.yearsExperience;
   if (starter.headline?.trim()) out.headline = starter.headline.trim();
@@ -143,11 +149,15 @@ export function compactStarter(starter: StarterPayload): StarterPayload {
 
 export const hasStarter = (starter: StarterPayload) => Object.keys(compactStarter(starter)).length > 0;
 
-/** Links as the API takes them: the preview's title and thumbnail only when it found them. */
-export function starterLinks(previews: LinkPreview[]): StarterPayload['links'] {
+/**
+ * Links as the API takes them: the preview's title and thumbnail only when it found them, plus
+ * a caption when a drafted item ("Use this" on the review card) gave one for that URL.
+ */
+export function starterLinks(previews: LinkPreview[], captions: Record<string, string> = {}): StarterPayload['links'] {
   return previews.map((preview) => ({
     url: preview.url,
     ...(preview.title ? { title: preview.title } : {}),
     ...(preview.thumbnail ? { thumbnail: preview.thumbnail } : {}),
+    ...(captions[preview.url] ? { caption: captions[preview.url] } : {}),
   }));
 }

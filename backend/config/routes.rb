@@ -5,6 +5,13 @@ Rails.application.routes.draw do
   get "share/acts/:id", to: "share_pages#act"
   get "share/p/:slug", to: "share_pages#portfolio"
 
+  # Public "I'm verified on Verse" story/landscape cards for Instagram/WhatsApp sharing
+  # (ShareCardsController). Served without the /api scope like the other crawler/share pages,
+  # cached at the edge for 24h, and rendered as SVG — see ShareCard for why (no headless
+  # browser or ImageMagick at runtime).
+  get "share-cards/verified/:user_id.:format", to: "share_cards#verified", constraints: { format: /svg|png/ }
+  get "share-cards/verified/:user_id/landscape.:format", to: "share_cards#landscape", constraints: { format: /svg|png/ }
+
   scope :api do
     get "health", to: "health#show"
     get "live", to: "health#show"
@@ -95,6 +102,13 @@ Rails.application.routes.draw do
       get "urgent-requests/:id/candidates", to: "urgent_requests#candidates"
       post "urgent-requests/:id/notify", to: "urgent_requests#notify"
       patch "urgent-requests/:id", to: "urgent_requests#update"
+      resources :stage_posts, path: "stage-posts", only: %i[index destroy] do
+        member do
+          post :pin
+          post :unpin
+          post :feature
+        end
+      end
     end
 
     resources :portfolio, only: %i[index create update destroy], controller: "portfolio"
@@ -221,6 +235,7 @@ Rails.application.routes.draw do
     end
     namespace :stage do
       get "feed", to: "feed#index"
+      get "events", to: "events#index"
       get "authors/:type/:authorId/posts", to: "posts#by_author"
       get "authors/:type/:id/followers", to: "follows#followers"
       get "authors/:type/:id/following", to: "follows#following"
@@ -232,6 +247,7 @@ Rails.application.routes.draw do
         member do
           post :applause, to: "applause#create"
           delete :applause, to: "applause#destroy"
+          get :ics, to: "events#ics"
         end
         resources :comments, only: %i[index create], controller: "post_comments"
       end

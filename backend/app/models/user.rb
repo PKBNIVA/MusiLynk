@@ -30,6 +30,8 @@ class User < ApplicationRecord
   has_many :billing_attempts, dependent: :destroy
   has_many :auth_connections, as: :owner, dependent: :destroy
   has_many :vouches, foreign_key: :voucher_id, dependent: :destroy
+  # A newly verified phone changes a pending verification request's evidence score.
+  after_commit -> { Verification::RescoreJob.for_user(id) }, if: -> { saved_change_to_phone_verified_at? && phone_verified_at.present? }
   belongs_to :vouched_by, class_name: "User", optional: true
 
   enum :role, { jobseeker: "jobseeker", employer: "employer", admin: "admin" }, validate: true

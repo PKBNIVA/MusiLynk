@@ -175,6 +175,15 @@ class Notifier
       email(subscription.user, "early_access_granted", until: until_date)
     end
 
+    # Verification::Evaluate scored a request below the summary threshold: one nudge, listing what
+    # would help (only the components still missing).
+    def verification_needs_more_proof(user, missing)
+      tips = missing.presence || ["add links to your best work"]
+      body = "Add more proof to get verified faster: #{tips.join('; ')}."
+      notify(user, kind: "verification", title: "Add more proof to get verified faster", link: "/profile", body:)
+      email(user, "verification_more_proof", tips: tips.join("; "))
+    end
+
     private
 
     def notify(user, **attributes)

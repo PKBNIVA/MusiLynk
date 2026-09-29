@@ -83,6 +83,12 @@ class NotificationEmail
       copy: ->(p) { "\"#{p['title']}\" has expired. The hirer didn't confirm a booking through Verse." },
       action: "See urgent requests", path: "/jobseeker/urgent"
     },
+    "verification_more_proof" => {
+      subject: ->(_) { "Add more proof to get verified faster" },
+      heading: ->(_) { "Add more proof to get verified faster" },
+      copy: ->(p) { "We received your verification request and need a little more to go on. What would help: #{p['tips']}." },
+      action: "Update your profile", path: "/profile"
+    },
     "job_deadline_closed" => {
       subject: ->(p) { "Your listing for #{p['title']} closed" },
       heading: ->(_) { "Your listing closed at its deadline" },

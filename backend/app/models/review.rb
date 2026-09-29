@@ -5,6 +5,7 @@ class Review < ApplicationRecord
   validates :author_id, uniqueness: { scope: :employer_id, message: "has already reviewed this employer" }
   validates :status, inclusion: { in: %w[pending published rejected] }
   validate :author_and_employer_are_different
+  after_commit -> { Verification::RescoreJob.for_user(employer_id) }
 
   private
 

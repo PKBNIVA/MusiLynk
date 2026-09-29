@@ -45,6 +45,15 @@ class EmailDelivery
       action: nil,
       footer: "If you didn't request this, ignore this email: nothing changes without the code. If you did not start this, change your Verse password now."
     },
+    # data: { link: sign-in methods page }. Sent when Google sign-in is linked to an
+    # existing account by matching a verified email (GoogleSignIn#signin!).
+    "google_connected" => {
+      subject: "Google sign-in was added to your Verse account",
+      heading: "Google sign-in was added",
+      copy: "You can now sign in to Verse with Google. Manage your sign-in methods any time from your account settings.",
+      action: "Manage sign-in methods",
+      footer: "If you did not do this, sign in and remove it from your sign-in methods, or contact support."
+    },
     # data: { detail: new address }. Sent to the previous address once the change is done.
     "account_email_changed" => {
       subject: "Your Verse email was changed",

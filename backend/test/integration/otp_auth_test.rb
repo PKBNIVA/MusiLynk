@@ -278,12 +278,13 @@ class OtpAuthTest < ActionDispatch::IntegrationTest
 
   test "sign-in methods report whether emailed codes can be delivered" do
     production = ActiveSupport::EnvironmentInquirer.new("production")
+    providers = { "google" => false, "whatsapp" => false }
     with_env(NO_PROVIDER_ENV) { Rails.stub(:env, production) { get "/api/auth/methods" } }
     assert_response :success
-    assert_equal({ "signInCodes" => false, "password" => true, "emailDelivery" => false }, response.parsed_body)
+    assert_equal({ "signInCodes" => false, "password" => true, "emailDelivery" => false, "providers" => providers }, response.parsed_body)
 
     with_env(PROVIDER_ENV) { Rails.stub(:env, production) { get "/api/auth/methods" } }
-    assert_equal({ "signInCodes" => true, "password" => true, "emailDelivery" => true }, response.parsed_body)
+    assert_equal({ "signInCodes" => true, "password" => true, "emailDelivery" => true, "providers" => providers }, response.parsed_body)
 
     with_env(NO_PROVIDER_ENV) { get "/api/auth/methods" }
     assert response.parsed_body["signInCodes"], "outside production the on-screen debug code stands in for email"

@@ -22,6 +22,8 @@ export const EVENT_NAMES = [
   'path_chosen',
   'signup_started',
   'signup_completed',
+  'auth_google_start',
+  'auth_google_success',
   'profile_link_added',
   'job_posted',
   'urgent_request_submitted',

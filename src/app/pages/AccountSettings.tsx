@@ -1,14 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { KeyRound, Mail, MessageCircle, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { KeyRound, Link2, Mail, MessageCircle, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 import { PasswordChecklist } from '../components/PasswordChecklist';
-import { apiPatch, apiPost } from '../lib/api';
+import { GoogleButton } from '../components/auth/GoogleButton';
+import { apiPatch, apiPost, disconnectAuthConnection, getSignInMethods, type AuthConnectionSummary } from '../lib/api';
 import { useAuth, type User } from '../lib/authContext';
 import { errorCode, errorMessage } from '../lib/errors';
 import { checkPasswordStrength } from '../lib/passwordStrength';
@@ -46,6 +57,7 @@ export default function AccountSettings() {
         {user && <EmailCard user={user} onSaved={setUser} />}
         {user?.role === 'jobseeker' && <WhatsAppCard user={user} />}
         {user && <PasswordCard user={user} />}
+        {user && <SignInMethodsCard />}
       </main>
     </div>
   );
@@ -389,6 +401,91 @@ function PasswordCard({ user }: { user: User }) {
           </Button>
         </form>
       </CardContent>
+    </Card>
+  );
+}
+
+/** Google (and, later, other providers) as an alternate sign-in method: connect, or
+ * disconnect with a confirm dialog. Hidden entirely when Google sign-in is not configured. */
+function SignInMethodsCard() {
+  const [googleAvailable, setGoogleAvailable] = useState(false);
+  const [connections, setConnections] = useState<AuthConnectionSummary[]>([]);
+  const [pendingRemove, setPendingRemove] = useState<AuthConnectionSummary | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = () => {
+    getSignInMethods()
+      .then((methods) => {
+        setGoogleAvailable(Boolean(methods.providers?.google));
+        setConnections(methods.connections ?? []);
+      })
+      .catch(() => {
+        /* the card just stays hidden/empty; nothing else on the page depends on it */
+      });
+  };
+  useEffect(load, []);
+
+  const google = connections.find((c) => c.provider === 'google');
+
+  async function disconnect() {
+    if (!pendingRemove || busy) return;
+    setBusy(true);
+    try {
+      await disconnectAuthConnection(pendingRemove.id);
+      toast.success('Google disconnected');
+      setPendingRemove(null);
+      load();
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Could not disconnect. Try again.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!googleAvailable && connections.length === 0) return null;
+
+  return (
+    <Card className="bg-white/[.03] border-white/10">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Link2 size={18} className="text-violet-300" aria-hidden="true" />
+          Sign-in methods
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.02] p-4">
+          <div>
+            <div className="font-medium">Google</div>
+            <div className="text-sm text-slate-400">
+              {google ? `Connected as ${google.email ?? google.displayName ?? 'your Google account'}` : 'Not connected'}
+            </div>
+          </div>
+          {google ? (
+            <Button variant="outline" onClick={() => setPendingRemove(google)}>
+              Disconnect
+            </Button>
+          ) : googleAvailable ? (
+            <GoogleButton intent="connect" showDivider={false} />
+          ) : null}
+        </div>
+      </CardContent>
+
+      <AlertDialog open={Boolean(pendingRemove)} onOpenChange={(open) => !open && setPendingRemove(null)}>
+        <AlertDialogContent className="bg-slate-900 text-white border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect Google?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              You will no longer be able to sign in to Verse with this Google account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-slate-900">Keep it</AlertDialogCancel>
+            <AlertDialogAction className="bg-rose-600 hover:bg-rose-500" onClick={() => void disconnect()}>
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

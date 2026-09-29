@@ -893,9 +893,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_090100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "email_notifications", default: true, null: false
-    t.jsonb "email_preferences", default: {"digest"=>true, "product"=>true, "requests"=>true, "lifecycle"=>true}, null: false
     t.string "phone_e164"
     t.datetime "whatsapp_consented_at"
+    t.jsonb "email_preferences", default: {"digest"=>true, "product"=>true, "requests"=>true, "lifecycle"=>true}, null: false
     t.index "((roles)::text) gin_trgm_ops", name: "index_profiles_on_roles_text_trgm", using: :gin
     t.index "((skills)::text) gin_trgm_ops", name: "index_profiles_on_skills_text_trgm", using: :gin
     t.index ["bio"], name: "index_profiles_on_bio", opclass: :gin_trgm_ops, using: :gin

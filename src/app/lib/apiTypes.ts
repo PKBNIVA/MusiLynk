@@ -926,12 +926,17 @@ export interface AdminStats {
   paidDeposits: number;
   activeSubscriptions: number;
   trialingSubscriptions: number;
+  /** Subscriptions ever granted Early Access Pro (never freed back up on revoke) vs. the configured seat count. */
+  earlyAccessGranted: number;
+  earlyAccessSeats: number;
 }
 
 /** Admin::UsersController#index: public_user plus the sign-up time. */
 export interface AdminUser extends AccountUser {
   createdAt: string;
   synthetic_batch?: string | null;
+  /** Set only while an early_access subscription is active; null once it ends or is revoked. */
+  earlyAccessUntil?: string | null;
 }
 
 /** Admin::VerificationsController#index: a verification_requests row plus the requester. */

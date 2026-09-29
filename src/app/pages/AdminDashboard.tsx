@@ -413,6 +413,11 @@ export default function AdminDashboard() {
                   bookings: meta.bookings,
                 }}
                 onPage={loadPage}
+                earlyAccess={
+                  typeof stats.earlyAccessGranted === 'number' && typeof stats.earlyAccessSeats === 'number'
+                    ? { granted: stats.earlyAccessGranted, seats: stats.earlyAccessSeats }
+                    : undefined
+                }
               />
             </Suspense>
           </TabsContent>

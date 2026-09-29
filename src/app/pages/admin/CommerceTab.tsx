@@ -109,6 +109,7 @@ export default function CommerceTab({
   actions,
   metas,
   onPage,
+  earlyAccess,
 }: {
   attempts: BillingAttempt[];
   billingEvents: BillingEventSummary[];
@@ -120,6 +121,7 @@ export default function CommerceTab({
   actions: AdminActions;
   metas: { attempts?: PageMeta; billingEvents?: PageMeta; subscriptions?: PageMeta; bookings?: PageMeta };
   onPage: (source: 'attempts' | 'billingEvents' | 'subscriptions' | 'bookings', page: number) => void;
+  earlyAccess?: { granted: number; seats: number };
 }) {
   const { busy, act } = actions;
   return (
@@ -127,7 +129,11 @@ export default function CommerceTab({
       <AdminPageHeader
         icon={CreditCard}
         title="Commerce"
-        description="Billing attempts, webhook events, subscriptions and bookings — mostly read-only, one repair action."
+        description={
+          earlyAccess
+            ? `Billing attempts, webhook events, subscriptions and bookings. Early Access Pro: ${earlyAccess.granted} of ${earlyAccess.seats} granted.`
+            : 'Billing attempts, webhook events, subscriptions and bookings — mostly read-only, one repair action.'
+        }
       />
       <HowToCallout storageKey="commerce">
         Only <b>Billing attempts</b> can be acted on.{' '}

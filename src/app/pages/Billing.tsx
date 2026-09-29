@@ -19,13 +19,12 @@ import {
 import {
   AlertTriangle,
   Check,
-  Copy,
+  ClipboardCheck,
   CreditCard,
   FlaskConical,
   MessageCircle,
   ShieldCheck,
   Sparkles,
-  Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
@@ -181,7 +180,7 @@ function ReferralCard() {
               {referral.code}
             </code>
             <Button variant="outline" size="sm" onClick={() => void copy()}>
-              <Copy size={14} aria-hidden="true" className="mr-1.5" />
+              <ClipboardCheck size={14} aria-hidden="true" className="mr-1.5" />
               Copy
             </Button>
             <Button variant="outline" size="sm" asChild>
@@ -435,7 +434,7 @@ export default function Billing() {
                   </p>
                   {summary.promo && (
                     <p className="text-sm text-emerald-300 mt-2 flex items-center gap-1.5" data-testid="billing-promo">
-                      <Tag size={14} aria-hidden="true" />
+                      <Sparkles size={14} aria-hidden="true" />
                       {describePromo(summary.promo)}
                     </p>
                   )}
@@ -472,7 +471,7 @@ export default function Billing() {
             {annualAvailable && <IntervalToggle value={interval} onChange={setInterval} />}
             {promoCode && (
               <span className="text-sm text-slate-300 flex items-center gap-1.5" data-testid="billing-code-note">
-                <Tag size={14} aria-hidden="true" className="text-violet-300" />
+                <Sparkles size={14} aria-hidden="true" className="text-violet-300" />
                 Code <b>{promoCode}</b> is applied at checkout
               </span>
             )}

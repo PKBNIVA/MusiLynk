@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CheckCircle2, CircleAlert, Loader2, Tag } from 'lucide-react';
+import { AlertTriangle, Check, Sparkles } from 'lucide-react';
 import { ApiError, apiPost } from '../lib/api';
 import type { BillingInterval, Plan, PromoValidation } from '../lib/apiTypes';
 import { describeEffect, normaliseCode, storeCode } from '../lib/promo';
@@ -111,7 +111,7 @@ export function PromoCodeField({
   return (
     <div className="mt-4 mx-auto max-w-md text-left" data-testid="promo-field">
       <Label htmlFor="promo-code" className="text-sm text-slate-300 flex items-center gap-1.5">
-        <Tag size={14} aria-hidden="true" className="text-violet-300" />
+        <Sparkles size={14} aria-hidden="true" className="text-violet-300" />
         Promo or referral code
       </Label>
       <Input
@@ -136,12 +136,7 @@ export function PromoCodeField({
         }}
       />
       <div className="mt-2 space-y-1 text-sm min-h-5" role="status" aria-live="polite" data-testid="promo-result">
-        {status.state === 'checking' && (
-          <p className="flex items-center gap-1.5 text-slate-400">
-            <Loader2 size={14} aria-hidden="true" className="motion-safe:animate-spin" />
-            Checking code…
-          </p>
-        )}
+        {status.state === 'checking' && <p className="text-slate-400">Checking code…</p>}
         {status.state === 'signedOut' && (
           <p className="text-slate-300">Sign in and we'll check this code. It's saved for checkout.</p>
         )}
@@ -153,12 +148,12 @@ export function PromoCodeField({
           seen.add(key);
           return result.valid ? (
             <p key={plan.code} className="flex items-start gap-1.5 text-emerald-300">
-              <CheckCircle2 size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+              <Check size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
               {text}
             </p>
           ) : (
             <p key={plan.code} className="flex items-start gap-1.5 text-rose-300">
-              <CircleAlert size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+              <AlertTriangle size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
               {text}
             </p>
           );

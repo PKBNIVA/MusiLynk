@@ -132,11 +132,13 @@ never reachable through `/api/ai/suggest` and never listed in `tasks`.
 
 ## Guardrails
 
-- **Enabled only when** `ENV["ANTHROPIC_API_KEY"]` is present and `ENV["AI_ASSIST_ENABLED"] !=
-  "false"`.
-- **Models**: `ENV["AI_MODEL"]` (default `claude-haiku-4-5-20251001`) for short tasks;
-  `ENV["AI_MODEL_LONG"]` (default `claude-sonnet-5`) for `job_description`, `cover_letter` and
-  `resume_summary`.
+- **Enabled only when** the selected provider's key is present (`OPENAI_API_KEY` for `openai`,
+  `ANTHROPIC_API_KEY` for `anthropic`) and `ENV["AI_ASSIST_ENABLED"] != "false"`.
+- **Provider and model**: `provider:` in `config/ai_pricing.yml` (default `openai`), overridden by
+  `ENV["AI_PROVIDER"]`. Each provider (`AiAssist::Providers::OpenAi` / `::Anthropic`, behind
+  `AiAssist::Providers::Base#complete`) has its model and per-1M-token prices under `providers:`;
+  `ENV["OPENAI_MODEL"]` / `ENV["AI_MODEL"]` override them. One model everywhere; long tasks only
+  get a bigger output cap.
 - **Per-user rate limits**: 30/hour and 150/day on `/api/ai/suggest` (`429 RATE_LIMITED`,
   `Retry-After` set).
 - **Global daily budget**: `ENV["AI_DAILY_REQUEST_CAP"]` (default 2000) shared across every user,

@@ -32,6 +32,17 @@ class AiControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "status follows the selected provider's key" do
+    with_env("AI_PROVIDER" => "openai", "OPENAI_API_KEY" => nil, "ANTHROPIC_API_KEY" => "sk-ant") do
+      get "/api/ai/status"
+      assert_equal false, response.parsed_body.fetch("enabled")
+    end
+    with_env("AI_PROVIDER" => "openai", "OPENAI_API_KEY" => "sk-openai-test") do
+      get "/api/ai/status"
+      assert_equal true, response.parsed_body.fetch("enabled")
+    end
+  end
+
   test "status reports enabled when a key is present" do
     with_env("ANTHROPIC_API_KEY" => "sk-test") do
       get "/api/ai/status"

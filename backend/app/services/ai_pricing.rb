@@ -17,6 +17,18 @@ class AiPricing
   def self.task_costs = config.fetch(:task_costs)
   def self.long_tasks = config.fetch(:long_tasks).map(&:to_s)
   def self.model_pricing = config.fetch(:model_pricing)
+
+  PROVIDER_NAMES = %w[openai anthropic].freeze
+
+  # Selected LLM provider: ENV["AI_PROVIDER"] if valid, else config `provider:`.
+  def self.provider
+    env = ENV["AI_PROVIDER"].to_s.strip.downcase
+    return env if PROVIDER_NAMES.include?(env)
+
+    config.fetch(:provider).to_s
+  end
+
+  def self.provider_config(name = provider) = config.fetch(:providers).fetch(name.to_sym)
   def self.budgets = config.fetch(:budgets)
   def self.output_caps = config.fetch(:output_caps)
   def self.cache_ttl = config.fetch(:cache_ttl_hours).hours
@@ -50,13 +62,16 @@ class AiPricing
 
   def self.long_task?(task) = long_tasks.include?(task.to_s)
 
-  # Estimated INR cost of one API call from its reported token usage.
-  def self.estimate_cost_inr(input_tokens:, output_tokens:, batch: false)
-    pricing = model_pricing
-    usd = (input_tokens.to_i / 1_000_000.0) * pricing.fetch(:input_per_mtok_usd) +
-      (output_tokens.to_i / 1_000_000.0) * pricing.fetch(:output_per_mtok_usd)
-    usd *= pricing.fetch(:batch_discount) if batch
-    (usd * pricing.fetch(:usd_to_inr)).round(4)
+  # Estimated INR cost of one API call from its reported token usage. `input_tokens` is the
+  # total input (cached included); the cached part is billed at the provider's cached rate.
+  def self.estimate_cost_inr(input_tokens:, output_tokens:, cached_input_tokens: 0, batch: false, provider: self.provider)
+    rates = provider_config(provider)
+    cached = [cached_input_tokens.to_i, input_tokens.to_i].min
+    usd = ((input_tokens.to_i - cached) / 1_000_000.0) * rates.fetch(:input_per_mtok_usd) +
+      (cached / 1_000_000.0) * rates.fetch(:cached_input_per_mtok_usd) +
+      (output_tokens.to_i / 1_000_000.0) * rates.fetch(:output_per_mtok_usd)
+    usd *= model_pricing.fetch(:batch_discount) if batch
+    (usd * model_pricing.fetch(:usd_to_inr)).round(4)
   end
 
   def self.public_catalogue

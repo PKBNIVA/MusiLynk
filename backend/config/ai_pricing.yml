@@ -52,7 +52,7 @@ default: &default
     classify_portfolio_item: 1
     profile_from_links: 1
 
-  # Long-form tasks that get the higher output cap (still Haiku only).
+  # Long-form tasks that get the higher output cap (same model, bigger output cap).
   long_tasks:
     - job_description
     - cover_letter
@@ -61,11 +61,33 @@ default: &default
     - tailor_resume
     - profile_from_links
 
-  # Anthropic list pricing, USD per million tokens, plus the INR conversion used to estimate
-  # spend. batch_discount applies to any call placed through the Message Batches API.
+  # LLM provider, selected by config, not code. ENV["AI_PROVIDER"] (openai|anthropic) overrides
+  # this per environment. The selected provider's key must be set (OPENAI_API_KEY for openai,
+  # ANTHROPIC_API_KEY for anthropic) or AI is reported disabled and every caller falls back to
+  # its deterministic path.
+  provider: openai
+
+  # Per-provider model + list pricing, USD per million tokens. ENV["OPENAI_MODEL"] overrides the
+  # openai model; ENV["AI_MODEL"] overrides the anthropic one. Cached input is billed at the
+  # provider's cached rate (OpenAI automatic prompt caching; Anthropic cache reads).
+  # OpenAI ids/prices from developers.openai.com (model page for gpt-5.6-luna); fallback option
+  # if Luna is ever unavailable: gpt-5.4-mini at 0.75 / 0.075 / 4.50.
+  providers:
+    openai:
+      model: gpt-5.6-luna
+      input_per_mtok_usd: 0.20
+      cached_input_per_mtok_usd: 0.02
+      output_per_mtok_usd: 1.20
+    anthropic:
+      model: claude-haiku-4-5-20251001
+      input_per_mtok_usd: 1.0
+      cached_input_per_mtok_usd: 0.10
+      output_per_mtok_usd: 5.0
+
+  # Provider-independent: batch_discount applies to any call placed through the Anthropic
+  # Message Batches API (only used by the disabled classify_portfolio_item queue), and the INR
+  # conversion used to estimate spend.
   model_pricing:
-    input_per_mtok_usd: 1.0
-    output_per_mtok_usd: 5.0
     batch_discount: 0.5
     usd_to_inr: 85.0
 
@@ -122,6 +144,9 @@ development:
 
 test:
   <<: *default
+  # The suite's stubbed AI HTTP clients speak Anthropic's wire format and set ANTHROPIC_API_KEY;
+  # provider selection (default openai, AI_PROVIDER override) is covered in ai_providers_test.rb.
+  provider: anthropic
 
 production:
   <<: *default

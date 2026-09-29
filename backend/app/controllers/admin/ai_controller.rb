@@ -10,6 +10,9 @@ module Admin
         .map { |(account_type, account_id), inr| { accountType: account_type, accountId: account_id, spendInr: inr } }
 
       render json: {
+        provider: AiPricing.provider,
+        model: AiAssist.model_name,
+        enabled: AiAssist.enabled?,
         totalSpendInr: AiSpendGuard.total_spend_inr,
         freeTierSpendInr: AiSpendGuard.free_tier_spend_inr,
         freeTierBudgetInr: AiPricing.budgets.fetch(:free_tier_monthly_budget_inr),

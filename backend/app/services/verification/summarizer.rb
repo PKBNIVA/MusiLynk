@@ -59,7 +59,7 @@ module Verification
       AiCreditLedger.create!(
         account_type: "user", account_id: @request.user_id, delta: 0, reason: "usage", task: TASK,
         period: AiCredits.current_period, tokens_in: result[:inputTokens], tokens_out: result[:outputTokens],
-        cost_inr: AiPricing.estimate_cost_inr(input_tokens: result[:inputTokens], output_tokens: result[:outputTokens]),
+        cost_inr: AiPricing.estimate_cost_inr(input_tokens: result[:inputTokens], output_tokens: result[:outputTokens], cached_input_tokens: result[:cachedInputTokens]),
         metadata: { "tier" => "admin", "source" => "system" }
       )
     end

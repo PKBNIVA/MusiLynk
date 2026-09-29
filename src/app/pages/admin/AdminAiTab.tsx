@@ -9,6 +9,9 @@ import { AdminPageHeader, HowToCallout } from './ui';
 
 // GET /api/admin/ai/costs (Admin::AiController#costs) — see backend/docs/ai-assist.md.
 type AiCosts = {
+  provider: string;
+  model: string;
+  enabled: boolean;
   totalSpendInr: number;
   freeTierSpendInr: number;
   freeTierBudgetInr: number;
@@ -80,6 +83,13 @@ export default function AdminAiTab() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
+                {costs.provider && (
+                  <p className="text-sm text-slate-400">
+                    Provider: <b className="text-slate-200">{costs.provider}</b> · Model:{' '}
+                    <b className="text-slate-200">{costs.model}</b>
+                    {costs.enabled === false && <span className="text-rose-300"> · disabled (API key not set)</span>}
+                  </p>
+                )}
                 <div className="grid sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <div className="text-slate-400">Total spend</div>

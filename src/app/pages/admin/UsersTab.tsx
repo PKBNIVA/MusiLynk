@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { ShieldCheck, Ban, Undo2, Gift, Search, ChevronLeft, ChevronRight, Users as UsersIcon } from 'lucide-react';
-import { apiGet, apiPatch } from '../../lib/api';
+import {
+  ShieldCheck,
+  Ban,
+  Undo2,
+  Gift,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Users as UsersIcon,
+  Sparkles,
+} from 'lucide-react';
+import { apiGet, apiPatch, apiPost, apiDelete } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
@@ -163,6 +173,11 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
                 <Badge className={`mt-2 ${STATUS_BADGE[u.status] ?? 'bg-white/10 text-slate-300'}`}>
                   {STATUS_LABEL[u.status] ?? u.status}
                 </Badge>
+                {u.earlyAccessUntil && (
+                  <Badge className="mt-2 ml-2 bg-violet-500/15 text-violet-200">
+                    Early Access until {date(u.earlyAccessUntil)}
+                  </Badge>
+                )}
               </div>
               {u.role !== 'admin' && (
                 <div className="flex flex-wrap gap-2 shrink-0">
@@ -176,6 +191,54 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
                     <Gift aria-hidden="true" size={15} className="mr-1" />
                     Grant plan
                   </Button>
+                  {u.role === 'employer' &&
+                    (u.earlyAccessUntil ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!!busy}
+                        onClick={() =>
+                          setConfirm({
+                            title: `Revoke Early Access Pro for ${u.name}?`,
+                            description: `${u.email} moves back to the Free plan immediately. This seat is not returned to the pool.`,
+                            confirmLabel: 'Revoke Early Access',
+                            destructive: true,
+                            run: () =>
+                              act(
+                                `early-access:${u.id}`,
+                                () => apiDelete(`/admin/users/${u.id}/early-access`),
+                                'Early Access Pro revoked',
+                              ).then(() => load(page)),
+                          })
+                        }
+                      >
+                        <Sparkles aria-hidden="true" size={15} className="mr-1" />
+                        Revoke Early Access
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!!busy}
+                        title="Grant a free 90-day run of Pro. No card needed."
+                        onClick={() =>
+                          setConfirm({
+                            title: `Grant Early Access Pro to ${u.name}?`,
+                            description: `${u.email} gets Pro features for free, no card needed, until the grant ends. We'll email them the confirmation and reminders before it ends.`,
+                            confirmLabel: 'Grant Early Access Pro',
+                            run: () =>
+                              act(
+                                `early-access:${u.id}`,
+                                () => apiPost(`/admin/users/${u.id}/early-access`),
+                                'Early Access Pro granted',
+                              ).then(() => load(page)),
+                          })
+                        }
+                      >
+                        <Sparkles aria-hidden="true" size={15} className="mr-1" />
+                        Grant Early Access Pro
+                      </Button>
+                    ))}
                   {u.status === 'active' ? (
                     <Button
                       size="sm"

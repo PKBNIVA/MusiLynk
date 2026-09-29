@@ -98,6 +98,8 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/admin/users/lookup?email=nobody@example.com", :admin, { keys: %w[exists diagnosis] }],
     [:post, "/api/admin/users/{user}/revoke-sessions", :admin, { missing: :user }],
     [:post, "/api/admin/users/{user}/grant-plan", :admin, { ok: [201], params: { planCode: "pro" }, missing: :user, bad: { planCode: "platinum" }, bad_status: [400] }],
+    [:post, "/api/admin/users/{employer}/early-access", :admin, { ok: [201], missing: :employer }],
+    [:delete, "/api/admin/users/{employer}/early-access", :admin, { ok: [404], missing: :employer, note: "the matrix employer never holds a prior grant, so revoke always answers not-found here; the happy path is in AdminEarlyAccessTest" }],
     [:get, "/api/admin/jobs", :admin, { keys: %w[jobs] }],
     [:patch, "/api/admin/jobs/{job}", :admin, { params: { status: "published" }, missing: :job, bad: { status: "draft" }, bad_status: [400] }],
     [:put, "/api/admin/jobs/{job}", :admin, { params: { status: "closed" }, missing: :job }],
@@ -291,6 +293,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/billing/subscription", :any, { keys: %w[subscription plan] }],
     [:post, "/api/billing/checkout", :talent, { ok: [200, 201], params: { planCode: "pro" }, bad: { planCode: "platinum" }, bad_status: [400] }],
     [:post, "/api/billing/cancel", :any, { ok: [200, 404] }],
+    [:get, "/api/billing/cancel-link?t=not-a-token", :any, { ok: [404], note: "a valid token is covered in BillingEarlyAccessTest" }],
     [:post, "/api/billing/webhook/razorpay", :public, { ok: [401, 503], note: "unsigned webhook is refused" }],
 
     # Email one-time codes: the request answer is identical for known and unknown addresses.

@@ -12,7 +12,9 @@ module Admin
         acceptedBookings: BookingRequest.where(status: "accepted").count,
         paidDeposits: BookingPayment.where(status: "paid", kind: "deposit").count,
         activeSubscriptions: Subscription.where(status: %w[active trialing]).where.not(plan_code: "free").count,
-        trialingSubscriptions: Subscription.where(status: "trialing").count
+        trialingSubscriptions: Subscription.where(status: "trialing").count,
+        earlyAccessGranted: Subscription.where(early_access: true).count,
+        earlyAccessSeats: BillingConfig.early_access_seats
       } }
     end
   end

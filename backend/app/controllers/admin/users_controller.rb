@@ -14,7 +14,8 @@ module Admin
         scope = scope.where("users.name ILIKE :like OR users.email ILIKE :like OR users.id = :id", like: like, id: q)
       end
       rows, meta = admin_paginate(scope)
-      render json: { users: rows.map { public_user(_1).merge("createdAt" => _1.created_at) } }.merge(meta)
+      early_access_until = Subscription.where(user_id: rows.map(&:id), status: "early_access").pluck(:user_id, :trial_ends_at).to_h
+      render json: { users: rows.map { public_user(_1).merge("createdAt" => _1.created_at, "earlyAccessUntil" => early_access_until[_1.id]) } }.merge(meta)
     end
 
     def update
@@ -88,6 +89,38 @@ module Admin
       subscription = Subscription.create!(user:, plan_code: params[:planCode], provider: "internal", status: "active", current_period_start: Time.current, current_period_end: days.to_i.clamp(1, 366).days.from_now)
       audit!("admin.plan.grant", subscription, planCode: subscription.plan_code)
       render json: { id: subscription.id }, status: :created
+    end
+
+    # Early Access Pro (config/billing.yml `early_access`): grants the first `seats` employer
+    # accounts a free run of Pro for `days` days, no card required. Employer/hirer accounts only,
+    # never a paying customer, and never past the configured seat count — a seat, once granted, is
+    # never freed back up even if later revoked (see the `early_access` column on Subscription).
+    def grant_early_access
+      return render_error("Early access grants are turned off.", :service_unavailable) unless BillingConfig.early_access_enabled?
+      user = User.find(params[:id])
+      return render_error("Early Access Pro can only be granted to employer accounts.", :unprocessable_content) unless user.employer?
+
+      seats_taken = Subscription.where(early_access: true).count
+      return render_error("All #{BillingConfig.early_access_seats} Early Access Pro seats have been granted.", :conflict, "EARLY_ACCESS_SEATS_EXHAUSTED") if seats_taken >= BillingConfig.early_access_seats
+
+      paid_mandate = Subscription.where(user:, status: %w[active trialing], provider: "razorpay").where.not(provider_subscription_id: nil).exists?
+      return render_error("This account already has an active paid subscription.", :conflict, "ALREADY_SUBSCRIBED") if paid_mandate
+
+      days = BillingConfig.early_access_days
+      subscription = Subscription.create!(user:, plan_code: "pro", provider: "internal", status: "early_access",
+        early_access: true, trial_started_at: Time.current, trial_ends_at: days.days.from_now)
+      audit!("admin.early_access.grant", subscription, seatsTaken: seats_taken + 1, seats: BillingConfig.early_access_seats)
+      Notifier.early_access_granted(subscription)
+      render json: { id: subscription.id, trialEndsAt: subscription.trial_ends_at }, status: :created
+    end
+
+    def revoke_early_access
+      subscription = Subscription.where(user_id: params[:id], status: "early_access").order(created_at: :desc).first
+      return render_error("This account has no active Early Access Pro grant.", :not_found) unless subscription
+
+      subscription.update!(status: "cancelled")
+      audit!("admin.early_access.revoke", subscription)
+      render json: { ok: true }
     end
 
     private

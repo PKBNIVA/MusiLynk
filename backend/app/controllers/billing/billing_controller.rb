@@ -35,6 +35,18 @@ module Billing
                      paymentMode: RazorpayConfig.payment_mode }
     end
 
+    # Verifies a one-click cancel link's token (BillingRemindersJob / NotificationEmail) for the
+    # signed-in user, without cancelling anything. The billing page calls this when it loads with
+    # `?cancel=1&t=...` so it can open the existing cancel dialog, pre-focused, only for a real,
+    # unexpired token that names this account (see src/app/pages/Billing.tsx).
+    def verify_cancel_link
+      return unless authenticate!
+      sub = BillingCancelToken.subscription_for(params[:t], current_user)
+      return render_error("This cancel link is invalid or has expired.", :not_found) unless sub
+
+      render json: { ok: true, subscriptionId: sub.id }
+    end
+
     def checkout
       return unless authenticate!("jobseeker", "employer")
       code = params[:planCode]; return render_error("Invalid plan", :bad_request) unless PLANS.key?(code) && code != "free"
@@ -174,12 +186,13 @@ module Billing
       when "active" then scheduled ? nil : sub.current_period_end
       end
       access_ends = case sub.status
-      when "trialing" then sub.trial_ends_at
+      when "trialing", "early_access" then sub.trial_ends_at
       when "active" then scheduled ? sub.current_period_end : nil
       end
       { status:, planCode: sub.plan_code, planName: PLANS.dig(sub.plan_code, :name) || sub.plan_code, provider: sub.provider,
         trialEndsAt: sub.trial_ends_at, currentPeriodStart: sub.current_period_start, currentPeriodEnd: sub.current_period_end,
-        nextChargeAt: next_charge, accessEndsAt: access_ends, cancelAtPeriodEnd: sub.cancel_at_period_end, monthlyAmount: PLANS.dig(sub.plan_code, :monthly) }
+        nextChargeAt: next_charge, accessEndsAt: access_ends, cancelAtPeriodEnd: sub.cancel_at_period_end, monthlyAmount: PLANS.dig(sub.plan_code, :monthly),
+        earlyAccess: sub.status == "early_access" ? { until: sub.trial_ends_at } : nil }
     end
 
     # Subscription charges recorded from signed webhooks (newest first). Amounts are Razorpay paise.
@@ -289,9 +302,9 @@ module Billing
     # A Razorpay subscription that never received a provider id cannot be authorised or paid
     # (its create failed or is awaiting reconciliation), so it is not shown as the current plan.
     def current_subscription
-      Subscription.where(user: current_user, status: %w[active trialing pending past_due])
+      Subscription.where(user: current_user, status: %w[active trialing pending past_due early_access])
         .where.not(provider: "razorpay", status: "pending", provider_subscription_id: nil)
-        .order(Arel.sql("CASE status WHEN 'active' THEN 0 WHEN 'trialing' THEN 1 WHEN 'past_due' THEN 2 ELSE 3 END"), created_at: :desc).first
+        .order(Arel.sql("CASE status WHEN 'active' THEN 0 WHEN 'trialing' THEN 1 WHEN 'early_access' THEN 1 WHEN 'past_due' THEN 2 ELSE 3 END"), created_at: :desc).first
     end
     def effective_plan(_sub = nil) = Entitlements.for(current_user).plan_code
   end

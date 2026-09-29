@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet, apiPost } from '../../lib/api';
 import { trackProfileView } from '../../lib/analytics';
-import { MapPin, ShieldCheck, Flag } from 'lucide-react';
+import { MapPin, ShieldCheck, Flag, Zap } from 'lucide-react';
 import { WorkSamplePlayer } from '../../components/WorkSamplePlayer';
 import { ReportDialog } from '../../components/ReportDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
@@ -102,6 +102,22 @@ export default function PublicProfile() {
               )}
             </div>
             <p className="text-xl text-violet-300 mt-2">{c.headline}</p>
+            {c.fastResponderBadge && (
+              <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-1 text-xs text-amber-200">
+                <Zap aria-hidden="true" size={12} />
+                Fast responder this week
+              </p>
+            )}
+            {(c.reviewsCount ?? 0) > 0 && (
+              <p className="mt-2 text-sm text-slate-300">
+                {c.reviewsAverage?.toFixed(1)} average · {c.reviewsCount} {c.reviewsCount === 1 ? 'review' : 'reviews'}
+              </p>
+            )}
+            {c.responseTimeMinutes != null && (
+              <p className="mt-1 text-sm text-slate-400">
+                Response time: usually within {c.responseTimeMinutes} minutes
+              </p>
+            )}
             {c.location && (
               <p className="text-slate-400 mt-3 flex">
                 <MapPin size={17} className="mr-2" />

@@ -79,7 +79,7 @@ class ProfilesController < ApplicationController
     source = params.permit(:headline, :bio, :phone, :location, :experience, :website, :portfolioUrl, :availability,
       :companyName, :companyWebsite, :companySize, :companyDescription, :yearsExperience, :travelRadiusKm,
       :travelsNationally, :travelsInternationally, :remoteRecording, :sightReading, :passportReady,
-      :hourlyRate, :sessionRate, :showRate, :tourDayRate, :dayRate, :currency,
+      :hourlyRate, :sessionRate, :showRate, :tourDayRate, :dayRate, :currency, :shareVerificationPublicly,
       skills: [], genres: [], instruments: [], languages: [], credits: [], openTo: [], roles: [], gear: [], software: [])
     source.to_h.transform_keys { _1.underscore }.slice(*Profile.column_names)
   end

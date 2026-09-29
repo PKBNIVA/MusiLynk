@@ -31,6 +31,9 @@ function post(overrides: Record<string, unknown> = {}) {
     commentCount: 1,
     reshareCount: 0,
     applauded: false,
+    pinned: false,
+    pinnedUntil: null,
+    event: null,
     createdAt: '2026-09-28T10:00:00Z',
     updatedAt: '2026-09-28T10:00:00Z',
     ...overrides,
@@ -49,6 +52,7 @@ async function goToStage(
       'GET /api/ai/status': AI_DISABLED,
       'GET /api/acts/me': { body: { acts: [] } },
       'GET /api/organizations': { body: { organizations: [] } },
+      'GET /api/stage/events': { body: { city: null, events: [] } },
       ...routes,
     },
     SELF,
@@ -314,5 +318,49 @@ test.describe('The Stage', () => {
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 2);
+  });
+
+  test('the pinned Monday system post leads the feed, above a newer post', async ({ page }) => {
+    const pinnedRoundup = post({
+      id: 'post_roundup',
+      kind: 'system',
+      author: { type: 'system', id: 'verse', name: 'Verse', avatar: null, system: true },
+      body: "This week: who's looking, who's free. Comment with your roles and free dates.",
+      pinned: true,
+      pinnedUntil: '2026-10-05T04:30:00Z',
+      createdAt: '2026-09-28T04:30:00Z',
+    });
+    const newer = post({ id: 'post_newer', body: 'Just landed a new gig!', createdAt: '2026-09-29T09:00:00Z' });
+    await goToStage(page, {
+      'GET /api/stage/feed': { body: { posts: [pinnedRoundup, newer], nextCursor: null } },
+    });
+    const posts = page.locator('article');
+    await expect(posts.first()).toContainText('Pinned');
+    await expect(posts.first()).toContainText("This week: who's looking");
+    await expect(posts.nth(1)).toContainText('Just landed a new gig!');
+  });
+
+  test('the upcoming events strip shows the next events and offers an ICS download', async ({ page }) => {
+    const event = post({
+      id: 'post_event',
+      kind: 'event',
+      body: null,
+      city: 'Mumbai',
+      event: {
+        title: 'Open Mic Night',
+        startsAt: '2026-10-05T13:30:00Z',
+        venue: 'The Attic',
+        city: 'Mumbai',
+        link: null,
+        featured: false,
+      },
+    });
+    await goToStage(page, {
+      'GET /api/stage/events': { body: { city: 'Mumbai', events: [event] } },
+      'GET /api/stage/feed': { body: { posts: [], nextCursor: null } },
+    });
+    await expect(page.getByRole('heading', { name: 'Upcoming in Mumbai' })).toBeVisible();
+    await expect(page.getByText('Open Mic Night')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'ICS' })).toHaveAttribute('href', /\/stage\/posts\/post_event\/ics/);
   });
 });

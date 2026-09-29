@@ -33,6 +33,8 @@ export const EVENT_NAMES = [
   'booking_deposit_paid',
   'route_change',
   'profile_view',
+  'share_card_download',
+  'share_whatsapp',
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 

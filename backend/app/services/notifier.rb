@@ -211,6 +211,24 @@ class Notifier
       email(subscription.user, "early_access_granted", until: until_date)
     end
 
+    # "How did it go with <name>?" — an urgent request was filled or a booking completed
+    # (ReviewPromptSweepJob); reminder: true is the single 3-day nudge if it's still unwritten.
+    def review_prompt(prompt, reminder: false)
+      title = reminder ? "Still time to review #{prompt.counterpart_name}" : "How did it go with #{prompt.counterpart_name}?"
+      link = "/reviews?employerId=#{prompt.counterpart_user_id}"
+      notify(prompt.user, kind: "review_prompt", title:, link:,
+        body: "Leave a quick review for #{prompt.counterpart_name} — it helps other musicians and hirers on Verse.")
+      email(prompt.user, "review_prompt", name: prompt.counterpart_name, path: link, reminder: reminder.to_s)
+    end
+
+    # The "share your badge" nudge, sent alongside the existing verification-approved
+    # notification once the profile is verified (Admin::VerificationsController#update).
+    def verification_approved(user)
+      notify(user, kind: "verification", title: "You're verified on Verse",
+        link: "/profile", body: "Your profile now shows the Verified badge. Share it on Instagram or WhatsApp to reach more work.")
+      email(user, "verification_approved", profileUrl: "#{FrontendUrl.base}/professionals/#{user.id}")
+    end
+
     private
 
     def notify(user, **attributes)

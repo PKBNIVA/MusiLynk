@@ -54,6 +54,7 @@ function publicRoutes(): RouteObject[] {
   const LegalPage = L(() => import('./pages/public/LegalPage'));
   const UrgentRequests = L(() => import('./pages/UrgentRequests'));
   const UrgentHire = L(() => import('./pages/UrgentHire'));
+  const UrgentAction = L(() => import('./pages/UrgentAction'));
   const Availability = L(() => import('./pages/Availability'));
   const VerifyEmail = L(() => import('./pages/VerifyEmail'));
   const Unsubscribe = L(() => import('./pages/Unsubscribe'));
@@ -328,6 +329,15 @@ function publicRoutes(): RouteObject[] {
       element: (
         <S>
           <UrgentHire />
+        </S>
+      ),
+    },
+    {
+      // The one-click "mark filled"/"close" link from the expiry-warning email.
+      path: '/urgent/:id',
+      element: (
+        <S>
+          <UrgentAction />
         </S>
       ),
     },

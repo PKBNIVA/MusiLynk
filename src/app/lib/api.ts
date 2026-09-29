@@ -54,7 +54,7 @@ function writeStored(kind: StoreKind, key: string, value: string | null) {
 
 let legacyTokenChecked = false;
 
-function readToken() {
+export function readToken() {
   const token = readStored('local', TOKEN_KEY);
   if (token || legacyTokenChecked) return token;
   // Sessions created before the token moved to localStorage live in this tab's
@@ -185,7 +185,7 @@ function wait(ms: number, signal?: AbortSignal | null) {
   });
 }
 
-async function fetchWithTimeout(url: string, options: ApiOptions) {
+export async function fetchWithTimeout(url: string, options: ApiOptions) {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, signal: callerSignal, ...fetchOptions } = options;
   const controller = new AbortController();
   const abortFromCaller = () => controller.abort(callerSignal?.reason);
@@ -370,22 +370,6 @@ export function consumeReturnTo() {
   const path = readStored('session', RETURN_TO_KEY);
   writeStored('session', RETURN_TO_KEY, null);
   return path;
-}
-
-/** GET a file (a CSV export) with the signed-in token; a failure is an ApiError with the API's message. */
-export async function apiDownload(path: string): Promise<Blob> {
-  const headers = new Headers();
-  const token = readToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-  const response = await fetchWithTimeout(`${API_BASE}${path}`, {
-    method: 'GET',
-    headers,
-    credentials: 'omit',
-    timeoutMs: 30_000,
-  });
-  if (response.ok) return response.blob();
-  const body = (await response.json().catch(() => ({}))) as ApiErrorBody;
-  throw new ApiError(body.error || `Download failed (${response.status})`, response.status, body.code);
 }
 
 export const apiGet = <T = unknown>(path: string, options: ApiOptions = {}) =>

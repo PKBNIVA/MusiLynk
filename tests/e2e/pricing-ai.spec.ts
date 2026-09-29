@@ -49,6 +49,69 @@ test('Pricing shows the plans and one line about free AI help, with no credits t
   );
 });
 
+test('Pricing has a monthly/annual toggle and validates a code inline', async ({ page }) => {
+  const paid = (code: string, name: string, monthly: number, annual: number) => ({
+    code,
+    name,
+    monthly,
+    annual,
+    trialDays: 14,
+    activePosts: 10,
+    seats: 2,
+    shortlist: 250,
+    bookings: 20,
+  });
+  const validations: unknown[] = [];
+  await page.route('**/api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
+    if (path === '/me') return json(route, { error: 'Authentication required' }, 401);
+    if (path === '/billing/plans')
+      return json(route, {
+        annualAvailable: true,
+        plans: [
+          { ...paid('free', 'Free', 0, 0), trialDays: 0 },
+          paid('pro', 'Pro', 2499, 24990),
+          paid('studio', 'Studio', 5999, 59990),
+        ],
+      });
+    if (path === '/billing/codes/validate') {
+      const body = route.request().postDataJSON() as { code: string; planCode: string; interval: string };
+      validations.push(body);
+      const effect = { percentOff: 20, durationPeriods: 3, trialDays: null, earlyAccessDays: null };
+      return body.code === 'MUMBAI50'
+        ? json(route, { valid: true, kind: 'discount_percent', effect, message: 'Code applied.' })
+        : json(route, { valid: false, reason: 'unknown', kind: null, effect: {}, message: "That code isn't valid." });
+    }
+    return json(route, {});
+  });
+
+  await page.goto('/pricing');
+  const plans = page.getByTestId('pricing-plans');
+  await expect(plans).toContainText('₹2,499');
+  await expect(page.getByTestId('flat-fee-note')).toBeVisible();
+
+  await page.getByRole('radio', { name: /Annual/ }).click();
+  await expect(plans).toContainText('₹24,990');
+  await expect(page.getByTestId('annual-line-pro')).toHaveText('₹24,990/yr · ₹2,082/mo · 2 months free');
+  await page.getByRole('radio', { name: 'Monthly' }).click();
+  await expect(plans).toContainText('₹5,999');
+
+  await page.getByRole('button', { name: 'Have a code?' }).click();
+  const field = page.getByLabel('Promo or referral code');
+  await field.fill('nope');
+  await field.blur();
+  await expect(page.getByTestId('promo-result')).toContainText("That code isn't valid.");
+  await field.fill('mumbai50');
+  await field.press('Enter');
+  await expect(page.getByTestId('promo-result')).toContainText('Pro at ₹1,999/month for 3 months');
+  expect(validations).toContainEqual({ code: 'MUMBAI50', planCode: 'pro', interval: 'monthly' });
+
+  const axeResult = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  expect(axeResult.violations, axeResult.violations.map((v) => `${v.impact}: ${v.id} — ${v.help}`).join('\n')).toEqual(
+    [],
+  );
+});
+
 test('Pricing still renders the hirer plans if /billing/plans fails to load', async ({ page }) => {
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Download, Plus, Search, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
-import { apiDownload, apiGet, apiPatch, apiPost } from '../../lib/api';
+import { apiGet, apiPatch, apiPost } from '../../lib/api';
+import { apiDownload } from '../../lib/download';
 import { errorMessage } from '../../lib/errors';
 import type { AdminPromoCode, AdminPromoProgramme, AdminPromoRedemption, PromoKind } from '../../lib/apiTypes';
 import { Badge } from '../../components/ui/badge';

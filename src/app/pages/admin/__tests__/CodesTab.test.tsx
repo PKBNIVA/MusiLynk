@@ -3,7 +3,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CodesTab, { effectText, previewCode } from '../CodesTab';
-import { apiDownload, apiGet, apiPatch, apiPost } from '../../../lib/api';
+import { apiGet, apiPatch, apiPost } from '../../../lib/api';
+import { apiDownload } from '../../../lib/download';
 import type { AdminPromoCode, AdminPromoProgramme } from '../../../lib/apiTypes';
 import type { AdminActions, Confirm } from '../shared';
 
@@ -14,8 +15,8 @@ vi.mock('../../../lib/api', async (importOriginal) => ({
   apiGet: vi.fn(),
   apiPost: vi.fn(),
   apiPatch: vi.fn(),
-  apiDownload: vi.fn(),
 }));
+vi.mock('../../../lib/download', () => ({ apiDownload: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 // Radix Select needs pointer-capture APIs jsdom lacks; a plain stand-in keeps these tests about the tab.
 vi.mock('../ui', async (importOriginal) => ({

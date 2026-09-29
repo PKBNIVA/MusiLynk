@@ -175,8 +175,11 @@ test('hitting the plan limit keeps the opportunity as a draft and links to plans
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
   await page.getByRole('button', { name: 'Next: Screening & review' }).click();
   await page.getByRole('button', { name: 'Submit for review' }).click();
-  await expect(page.getByText(/saved as a draft/)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'View plans' })).toBeVisible();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toContainText('Your plan allows 1 active opportunity.');
+  await expect(dialog).toContainText('We saved this opportunity as a draft.');
+  await dialog.getByRole('button', { name: 'See plans' }).click();
+  await expect(page).toHaveURL(/\/employer\/billing$/);
   expect(
     calls
       .filter((c) => c.method === 'POST' && c.path === '/jobs')

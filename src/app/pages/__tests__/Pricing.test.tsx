@@ -10,6 +10,11 @@ vi.mock('../../lib/api', () => ({
   apiGet: vi.fn().mockRejectedValue(new Error('offline in test')),
 }));
 
+// PublicNav reads the session; this test is about the page copy, so present a signed-out visitor.
+vi.mock('../../lib/authContext', () => ({
+  useAuth: () => ({ status: 'signedOut', user: null, loading: false, isAuthenticated: false, logout: vi.fn() }),
+}));
+
 let container: HTMLDivElement;
 let root: Root;
 

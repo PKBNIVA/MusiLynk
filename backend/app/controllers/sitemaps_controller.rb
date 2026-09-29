@@ -36,6 +36,8 @@ class SitemapsController < ActionController::API
     talent_scope.find_each { |user| entries << { loc: "#{base}/professionals/#{user.id}", lastmod: user.updated_at } }
     act_scope.find_each { |act| entries << { loc: "#{base}/acts/#{act.id}", lastmod: act.updated_at } }
     portfolio_scope.each { |portfolio| entries << { loc: "#{base}/p/#{portfolio.slug}", lastmod: portfolio.updated_at } }
+    indexable_hire_pages.each { |role_slug, city_slug| entries << { loc: "#{base}/hire/#{role_slug}/#{city_slug}", changefreq: "weekly" } }
+    indexable_rates_pages.each { |city_slug| entries << { loc: "#{base}/rates/#{city_slug}", changefreq: "weekly" } }
 
     if entries.length > MAX_URLS
       Rails.logger.warn({ event: "sitemap_url_cap_exceeded", total: entries.length, cap: MAX_URLS }.to_json)
@@ -56,6 +58,26 @@ class SitemapsController < ActionController::API
   # Mirrors Portfolios#public_show's `publicly_readable?` check, without a per-row query when possible.
   def portfolio_scope
     Portfolio.with_owner.select(&:publicly_readable?)
+  end
+
+  # Role x city hire pages worth crawling: only the ones with enough real profiles to be worth
+  # ranking (HirePagesController's own threshold). Cached inside this action's 1-hour cache, so
+  # the underlying counts are computed once an hour, same as a single hire page.
+  def indexable_hire_pages
+    Seo::Pages.city_slugs.flat_map do |city_slug|
+      city_name = Seo::Pages.city_name(city_slug)
+      Seo::Pages.roles.filter_map do |role_slug, role_label|
+        count = Seo::HireStats.counts_for(role_label, city_name)[:professionals]
+        [role_slug, city_slug] if count >= HirePagesController::INDEXABLE_MIN_PROFESSIONALS
+      end
+    end
+  end
+
+  def indexable_rates_pages
+    Seo::Pages.city_slugs.select do |city_slug|
+      city_name = Seo::Pages.city_name(city_slug)
+      Seo::Rates.for_city(city_name).values.count(&:hasData) >= RatesController::INDEXABLE_MIN_ROLES_WITH_DATA
+    end
   end
 
   def render_urlset(entries)

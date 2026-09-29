@@ -1,7 +1,7 @@
 # AI credit purchases: one-time top-ups and the Verse AI Plus subscription. Entirely separate
-# from Billing::BillingController's plan catalogue (only an `aiCredits` field was added there);
-# every purchase endpoint here answers 503 until AI_BILLING_ENABLED is "true", so nothing can
-# charge a real card until Razorpay is actually configured for this product.
+# from Billing::BillingController's plan catalogue; every purchase endpoint here answers 503
+# until AI_BILLING_ENABLED is "true", so nothing can charge a real card until Razorpay is
+# actually configured for this product.
 module Ai
   class BillingController < ApplicationController
     def self.enabled? = ENV["AI_BILLING_ENABLED"] == "true"

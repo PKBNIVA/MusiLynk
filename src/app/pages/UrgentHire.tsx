@@ -40,8 +40,10 @@ export default function UrgentHire() {
   const navigate = useNavigate();
   const location = useLocation();
   const [confirmed, setConfirmed] = useState<Confirmed | null>((location.state as LocationState)?.confirmed || null);
-  const [roles, setRoles] = useState<string[]>([]),
-    [city, setCity] = useState(['Mumbai']),
+  // A hire page's "Post an urgent request" CTA prefills the role and city it was already showing.
+  const prefill = new URLSearchParams(location.search);
+  const [roles, setRoles] = useState<string[]>(prefill.get('role') ? [prefill.get('role') as string] : []),
+    [city, setCity] = useState(prefill.get('city') ? [prefill.get('city') as string] : ['Mumbai']),
     [venue, setVenue] = useState(''),
     [startAt, setStartAt] = useState(defaultStartAt()),
     [budgetMin, setBudgetMin] = useState(''),

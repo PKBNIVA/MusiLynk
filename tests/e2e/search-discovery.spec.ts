@@ -148,8 +148,24 @@ test('a corrected misspelling is announced and an empty search suggests the fix 
   await expect(page).toHaveURL(/\/music-jobs$/);
 });
 
-test('a landing role link opens a labelled, removable role filter (SRCH-01)', async ({ page }) => {
+test('a landing role link opens a hire page whose "browse all" link opens a labelled, removable role filter (SRCH-01)', async ({
+  page,
+}) => {
   const calls = await mockApi(page, null, {
+    '/api/public/hire-pages/popular-searches': () => ({
+      items: [{ role: { slug: 'drummer', label: 'Drummer' }, city: { slug: 'mumbai', name: 'Mumbai' }, count: 10 }],
+    }),
+    '/api/public/hire-pages/drummer/mumbai': () => ({
+      role: { slug: 'drummer', label: 'Drummer' },
+      city: { slug: 'mumbai', name: 'Mumbai' },
+      counts: { professionals: 10, verified: 4, availableThisWeek: 2 },
+      featured: [],
+      relatedRoles: [],
+      nearbyCities: [],
+      indexable: true,
+      ratesPath: '/rates/mumbai',
+      faq: [{ question: 'Q', answer: 'A' }],
+    }),
     '/api/public/talent': (url) => ({
       talent: url.searchParams.get('role') ? [pro(1)] : [pro(1), pro(2)],
       total: url.searchParams.get('role') ? 1 : 2,
@@ -157,9 +173,12 @@ test('a landing role link opens a labelled, removable role filter (SRCH-01)', as
       ...(url.searchParams.get('role') ? { role: { key: 'performer', label: 'Artists & performers' } } : {}),
     }),
   });
-  // The landing page links role × city searches into the directory (the label comes from the API).
+  // The landing page links role × city searches into a hire page, whose "browse all" link opens
+  // the directory with the same role and city (the label comes from the API).
   await page.goto('/');
   await page.getByRole('link', { name: 'Hire a drummer in Mumbai' }).click();
+  await expect(page).toHaveURL(/\/hire\/drummer\/mumbai$/);
+  await page.getByRole('link', { name: 'Browse all drummers in Mumbai' }).click();
   await expect(page).toHaveURL(/\/music-professionals\?role=drummer/);
   const chip = page.getByTestId('role-filter');
   await expect(chip).toContainText('Showing: Artists & performers');

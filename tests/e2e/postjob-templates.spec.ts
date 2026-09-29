@@ -53,8 +53,8 @@ test('picking a template prefills title, description and screening questions', a
   await expect(page.getByLabel('Title')).toHaveValue('Session musician for a studio recording');
   await expect(page.getByLabel(/^Description/)).toContainText('We are recording');
 
-  await page.getByLabel('Location').fill('Mumbai');
-  await page.getByLabel('Location').press('Enter');
+  await page.getByRole('combobox', { name: 'Location' }).fill('Mumbai');
+  await page.getByRole('combobox', { name: 'Location' }).press('Enter');
   await page.getByRole('button', { name: 'Next: Details' }).click();
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
   await page.getByRole('button', { name: 'Next: Screening & review' }).click();

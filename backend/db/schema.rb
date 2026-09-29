@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_090100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -668,6 +668,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
     t.index ["source_table", "record_id"], name: "index_legacy_function_area_backups_on_record", unique: true
   end
 
+  create_table "lifecycle_emails", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.string "key", null: false
+    t.datetime "sent_at", null: false
+    t.datetime "created_at", null: false
+    t.index ["user_id", "key"], name: "index_lifecycle_emails_on_user_id_and_key", unique: true
+  end
+
   create_table "messages", id: :string, force: :cascade do |t|
     t.string "conversation_id", null: false
     t.string "sender_id", null: false
@@ -885,6 +893,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "email_notifications", default: true, null: false
+    t.jsonb "email_preferences", default: {"digest"=>true, "product"=>true, "requests"=>true, "lifecycle"=>true}, null: false
     t.string "phone_e164"
     t.datetime "whatsapp_consented_at"
     t.index "((roles)::text) gin_trgm_ops", name: "index_profiles_on_roles_text_trgm", using: :gin
@@ -1251,6 +1260,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_163400) do
   add_foreign_key "job_alert_deliveries", "notifications", on_delete: :nullify
   add_foreign_key "job_alerts", "users"
   add_foreign_key "jobs", "users", column: "employer_id"
+  add_foreign_key "lifecycle_emails", "users", on_delete: :cascade
   add_foreign_key "messages", "conversations"
   add_foreign_key "messages", "users", column: "sender_id"
   add_foreign_key "notifications", "users"

@@ -1,13 +1,16 @@
 import { useEffect, useId, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
-import { Field, FormDialog } from './booking/BookingDialogs';
+import { Field, FormDialog, textareaClass } from './booking/BookingDialogs';
 import { errorMessage } from '../lib/errors';
 
 // Accessible replacements for the window.prompt calls on the profile page.
 
 const inputClass =
   'w-full h-11 rounded-xl bg-slate-900 border border-white/10 px-3 text-sm aria-[invalid=true]:border-rose-400';
+
+export const VERIFICATION_NOTE_MAX = 2_000;
+const NOTE_COUNTER_THRESHOLD = 1_800;
 
 /** Same rule as the backend's SafeHttpUrlValidator: http(s), a host, and no user:password part. */
 export function evidenceUrlError(value: string): string {
@@ -34,10 +37,11 @@ export function VerificationRequestDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Resolve to close the dialog; throw to keep it open and show the error inside it. */
-  onSubmit: (evidenceUrl: string) => Promise<unknown>;
+  onSubmit: (evidenceUrl: string, note: string) => Promise<unknown>;
 }) {
   const id = useId();
   const [url, setUrl] = useState('');
+  const [note, setNote] = useState('');
   const [invalid, setInvalid] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -45,10 +49,13 @@ export function VerificationRequestDialog({
   useEffect(() => {
     if (open) {
       setUrl('');
+      setNote('');
       setInvalid('');
       setError('');
     }
   }, [open]);
+
+  const noteTooLong = note.length > VERIFICATION_NOTE_MAX;
 
   async function submit() {
     const problem = evidenceUrlError(url);
@@ -57,10 +64,15 @@ export function VerificationRequestDialog({
       document.getElementById(`${id}-url`)?.focus();
       return;
     }
+    if (noteTooLong) {
+      setError(`Keep your note under ${VERIFICATION_NOTE_MAX.toLocaleString()} characters.`);
+      document.getElementById(`${id}-note`)?.focus();
+      return;
+    }
     setBusy(true);
     setError('');
     try {
-      await onSubmit(url.trim());
+      await onSubmit(url.trim(), note.trim());
       onOpenChange(false);
     } catch (e: unknown) {
       setError(errorMessage(e, 'Unable to send your request. Try again.'));
@@ -104,6 +116,23 @@ export function VerificationRequestDialog({
         {invalid && (
           <p id={`${id}-url-error`} className="text-sm text-rose-300">
             {invalid}
+          </p>
+        )}
+      </Field>
+      <Field label="Anything the reviewer should know (optional)" htmlFor={`${id}-note`}>
+        <textarea
+          id={`${id}-note`}
+          value={note}
+          placeholder="e.g. which band or studio the proof shows, or another way to confirm your work"
+          maxLength={VERIFICATION_NOTE_MAX}
+          onChange={(e) => setNote(e.target.value)}
+          aria-invalid={noteTooLong ? true : undefined}
+          aria-describedby={note.length > NOTE_COUNTER_THRESHOLD ? `${id}-note-count` : undefined}
+          className={textareaClass}
+        />
+        {note.length > NOTE_COUNTER_THRESHOLD && (
+          <p id={`${id}-note-count`} className={noteTooLong ? 'text-sm text-rose-300' : 'text-sm text-slate-400'}>
+            {note.length.toLocaleString()} / {VERIFICATION_NOTE_MAX.toLocaleString()}
           </p>
         )}
       </Field>

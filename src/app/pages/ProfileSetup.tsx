@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -13,6 +13,7 @@ import {
   ArrowRight,
   ClipboardCheck,
   Eye,
+  ExternalLink,
   MailCheck,
   Music,
   Save,
@@ -214,11 +215,11 @@ export default function ProfileSetup() {
       }
     });
   }
-  async function verify(evidenceUrl: string) {
+  async function verify(evidenceUrl: string, note: string) {
     await apiPost('/verification-requests', {
       kind: 'professional',
       evidenceUrl,
-      note: 'Professional verification request',
+      ...(note ? { note } : {}),
     });
     toast.success('Verification request submitted for review');
   }
@@ -344,6 +345,14 @@ export default function ProfileSetup() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap items-center">
+            {f.profileComplete && f.id && (
+              <Button variant="ghost" size="sm" asChild>
+                <Link to={`/professionals/${f.id}`} target="_blank" rel="noopener">
+                  View public profile
+                  <ExternalLink aria-hidden="true" size={14} className="ml-2" />
+                </Link>
+              </Button>
+            )}
             <AiCreditsBadge />
             {f.emailVerified ? (
               <Badge className="bg-sky-500/15 text-sky-300">

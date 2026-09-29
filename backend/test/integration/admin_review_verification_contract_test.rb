@@ -43,9 +43,11 @@ class AdminReviewVerificationContractTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
     assert_equal "INVALID_VERIFICATION_KIND", response.parsed_body.fetch("code")
 
-    post "/api/verification-requests", params: { kind: "professional", evidenceUrl: "https://example.com/artist" }, headers: auth(session_for(professional)), as: :json
+    post "/api/verification-requests", params: { kind: "professional", evidenceUrl: "https://example.com/artist", note: "Credits are on my label's artist page." }, headers: auth(session_for(professional)), as: :json
     assert_response :created
-    assert_equal "professional", VerificationRequest.find(response.parsed_body.fetch("id")).kind
+    created = VerificationRequest.find(response.parsed_body.fetch("id"))
+    assert_equal "professional", created.kind
+    assert_equal "Credits are on my label's artist page.", created.note
 
     post "/api/verification-requests", params: { kind: "organization", evidenceUrl: "https://example.com/studio" }, headers: auth(session_for(organization)), as: :json
     assert_response :created

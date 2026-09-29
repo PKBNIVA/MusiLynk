@@ -78,6 +78,27 @@ class UrgentMatcherTest < ActiveSupport::TestCase
     assert_equal admin.id, record.notified_by_admin_id
   end
 
+  test "score reasons match the scoring inputs: role, city and verified" do
+    candidate = create_musician("Reasoned", city: "Mumbai", roles: ["Drummer"], verified: true)
+    ranked = UrgentMatcher.call(@request)
+    match = ranked.find { _1.user.id == candidate.id }
+    assert_equal ["Plays Drummer", "In Mumbai", "Verified"], match.reasons
+  end
+
+  test "recent activity reason appears only when the candidate was recently active" do
+    candidate = create_musician("Active", city: "Mumbai", roles: ["Drummer"])
+    Session.create!(user: candidate, token_digest: SecureRandom.hex(20), last_seen_at: 1.day.ago, expires_at: 1.day.from_now)
+    match = UrgentMatcher.call(@request).find { _1.user.id == candidate.id }
+    assert_includes match.reasons, "Active in the last 30 days"
+  end
+
+  test "notify! persists the reasons on the notification row" do
+    create_musician("Aria", city: "Mumbai", roles: ["Drummer"], verified: true)
+    UrgentMatcher.notify!(@request)
+    record = UrgentRequestNotification.find_by(urgent_request: @request, channel: "in_app")
+    assert_includes record.reasons, "Plays Drummer"
+  end
+
   private
 
   def create_user(name, email, role)

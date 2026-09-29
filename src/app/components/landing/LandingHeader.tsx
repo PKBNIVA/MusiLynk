@@ -34,6 +34,7 @@ export function LandingFooter() {
   const links = [
     ['How Verse works', '/guide'],
     ['Pricing', '/pricing'],
+    ['Musician rates in Mumbai', '/rates/mumbai'],
     ['Safety', '/safety'],
     ['Privacy', '/privacy'],
     ['Terms', '/terms'],

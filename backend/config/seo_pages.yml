@@ -1,0 +1,36 @@
+# Fixed lists behind the role x city "hire" pages and the per-city rates page (Seo::Pages).
+# Role terms mirror src/app/lib/landing.ts's HIRE_ROLES (the landing page's own "Hire a drummer in
+# Mumbai" links) so a hire page and its landing link always agree on the slug and label.
+roles:
+  drummer: Drummer
+  guitarist: Guitarist
+  bassist: Bassist
+  keyboard-player: Keyboard player
+  singer: Singer
+  tabla-player: Tabla player
+  dhol-player: Dhol player
+  violinist: Violinist
+  saxophonist: Saxophonist
+  dj: DJ
+  sound-engineer: Sound engineer
+  music-producer: Music producer
+
+# City slug => display name. The launch city (Mumbai) is listed first so ranked lists that
+# should favor it can just take cities in this order.
+cities:
+  mumbai: Mumbai
+  delhi: Delhi
+  gurgaon: Gurgaon
+  noida: Noida
+  bengaluru: Bengaluru
+  pune: Pune
+  hyderabad: Hyderabad
+  chennai: Chennai
+  kolkata: Kolkata
+  goa: Goa
+  ahmedabad: Ahmedabad
+  jaipur: Jaipur
+  chandigarh: Chandigarh
+  kochi: Kochi
+  lucknow: Lucknow
+  indore: Indore

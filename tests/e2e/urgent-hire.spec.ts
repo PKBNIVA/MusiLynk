@@ -60,9 +60,9 @@ test('signed-out hirer fills the urgent form, signs up, and lands on the confirm
   await page.goto('/urgent');
   await expect(page.getByRole('heading', { name: /Find a verified musician/ })).toBeVisible();
 
-  // City defaults to Mumbai as a chip already; only the role needs to be entered and committed
-  // (AutocompleteInput turns free text into a chip on Enter when no suggestion is picked).
-  await expect(page.getByRole('listitem').filter({ hasText: 'Mumbai' })).toBeVisible();
+  // City defaults to Mumbai already; only the role needs to be entered and committed
+  // (AutocompleteInput commits free text on Enter/blur when no suggestion is picked).
+  await expect(page.getByRole('combobox', { name: 'City' })).toHaveValue('Mumbai');
   await page.getByRole('combobox', { name: 'Role needed' }).fill('Drummer');
   await page.getByRole('combobox', { name: 'Role needed' }).press('Enter');
   const dateField = page.locator('#urgent-start');

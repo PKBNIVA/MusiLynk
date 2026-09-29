@@ -9,10 +9,12 @@ class JobListPagingTest < ActionDispatch::IntegrationTest
     @other.create_profile!(company_name: "Other Studio", verified: false)
   end
 
-  test "defaults to 30 per page, walks every job exactly once, and keeps featured jobs first" do
+  test "defaults to 30 per page, walks every job exactly once, newest published first (V-16)" do
     base = Time.utc(2026, 9, 1, 12)
-    # Several share a created_at so the cursor must break ties on id.
-    ids = Array.new(65) { |i| job!(created_at: base - (i / 3).minutes, featured: i % 20 == 0).id }
+    # Several share a published_at so the cursor must break ties on id. Featured no longer
+    # jumps the queue for browsing: only published_at (then id) decides the order.
+    jobs = Array.new(65) { |i| job!(published_at: base - (i / 3).minutes, featured: i % 20 == 0) }
+    ids = jobs.map(&:id)
 
     get "/api/jobs"
     assert_response :success
@@ -20,7 +22,10 @@ class JobListPagingTest < ActionDispatch::IntegrationTest
     assert_equal JobsController::PAGE_SIZE, first["jobs"].length
     assert_equal 65, first["total"]
     assert first["nextCursor"].present?
-    assert first["jobs"].first(4).all? { _1["featured"] }, "featured jobs lead the first page"
+    newest = jobs.max_by { |j| [j.published_at, j.id] }
+    assert_equal newest.id, first["jobs"].first["id"], "the most recently published job leads the first page"
+    published_ats = first["jobs"].pluck("published_at")
+    assert_equal published_ats, published_ats.sort.reverse, "the page is sorted newest-published first"
 
     seen = first["jobs"].pluck("id")
     cursor = first["nextCursor"]
@@ -36,6 +41,48 @@ class JobListPagingTest < ActionDispatch::IntegrationTest
     assert_equal 3, pages
     assert_equal ids.sort, seen.sort
     assert_equal seen.uniq, seen, "no job is repeated across pages"
+  end
+
+  test "page 2 has no duplicates and no gaps across 30 fixtures sharing a published_at" do
+    base = Time.utc(2026, 9, 5, 9)
+    ids = Array.new(30) { job!(published_at: base).id }
+
+    get "/api/jobs", params: { limit: 15 }
+    first_page = response.parsed_body
+    assert_equal 15, first_page["jobs"].length
+    assert first_page["nextCursor"].present?
+
+    get "/api/jobs", params: { limit: 15, cursor: first_page["nextCursor"] }
+    second_page = response.parsed_body
+    assert_equal 15, second_page["jobs"].length
+    assert_nil second_page["nextCursor"]
+
+    combined = first_page["jobs"].pluck("id") + second_page["jobs"].pluck("id")
+    assert_equal ids.sort, combined.sort, "every fixture appears exactly once across the two pages"
+    assert_equal combined.uniq, combined, "no id is duplicated between page 1 and page 2"
+  end
+
+  test "a job published after the page-1 fetch does not break page-2 continuity" do
+    base = Time.utc(2026, 9, 10, 12)
+    older = Array.new(20) { |i| job!(published_at: base - (i + 1).minutes).id }
+
+    get "/api/jobs", params: { limit: 10 }
+    first_page = response.parsed_body
+    assert_equal 10, first_page["jobs"].length
+    page_one_ids = first_page["jobs"].pluck("id")
+
+    # A newer job is published while the visitor is still on page 1: it sorts before the cursor
+    # position, so it must not appear on page 2 and must not push an already-seen job back onto
+    # it either.
+    fresh = job!(published_at: base + 1.minute).id
+
+    get "/api/jobs", params: { limit: 10, cursor: first_page["nextCursor"] }
+    second_page = response.parsed_body
+    page_two_ids = second_page["jobs"].pluck("id")
+
+    assert_not_includes page_two_ids, fresh
+    assert_empty page_one_ids & page_two_ids, "no job repeats across pages after a newer one is published"
+    assert_equal (older - page_one_ids).sort, page_two_ids.sort
   end
 
   test "limit is honoured, clamped to 1..MAX_PAGE_SIZE, and unreadable values use the default" do
@@ -125,9 +172,9 @@ class JobListPagingTest < ActionDispatch::IntegrationTest
 
   private
 
-  def job!(created_at: Time.current, featured: false, title: "Paged drummer", employer: @employer)
+  def job!(created_at: Time.current, published_at: created_at, featured: false, title: "Paged drummer", employer: @employer)
     Job.create!(employer:, title:, company: employer.name, location: "Pune", kind: "Contract", genre: "Pop", featured:,
                 description: "A paid engagement with clear terms, a fixed schedule, agreed fees and a written contract.",
-                status: "published", published_at: created_at, created_at:)
+                status: "published", published_at:, created_at:)
   end
 end

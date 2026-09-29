@@ -10,6 +10,13 @@ class JobsController < ApplicationController
   PAGE_SIZE = 30
   MAX_PAGE_SIZE = 100
   LIST_ORDER = ["jobs.featured DESC", "jobs.created_at DESC", "jobs.id DESC"].freeze
+  # Newest-first browsing (no search query): V-16. Kept apart from LIST_ORDER, which still breaks
+  # ties for search relevance ranking.
+  BROWSE_ORDER = ["jobs.published_at DESC NULLS LAST", "jobs.id DESC"].freeze
+  # NULL-safe sentinel so the keyset comparison below matches "NULLS LAST" for a job that
+  # (defensively) has no published_at; a published job is given one when it is approved, so this
+  # only guards against that invariant ever slipping.
+  BROWSE_SENTINEL = "-infinity"
   LOCATION_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["jobs.location"])
 
   def index
@@ -18,8 +25,9 @@ class JobsController < ApplicationController
       return render_error("Search filter \"#{bad}\" must be a single text value.", :bad_request, "INVALID_FILTER")
     end
     limit = page_size
-    # `id` breaks ties so the order (and so the cursor) is total.
-    jobs = Job.published.with_applications_count.with_posted_as.includes(employer: :profile).order(*LIST_ORDER.map { Arel.sql(_1) })
+    # Each branch below sets its own order (BROWSE_ORDER for browsing, LIST_ORDER as the
+    # relevance tiebreak for search), so this relation starts unordered.
+    jobs = Job.published.with_applications_count.with_posted_as.includes(employer: :profile)
     # Same rule as talent: non-demo synthetic QA batches are only listed to synthetic viewers.
     jobs = SyntheticQa::Demo.publicly_listed(jobs.joins(:employer)) unless current_user&.synthetic_batch.present?
     jobs = Search::Query.new(params[:location]).filter(jobs, LOCATION_FIELDS)
@@ -30,11 +38,17 @@ class JobsController < ApplicationController
 
     query = Search::Query.new(params[:q])
     if query.blank? && !query.inert?
-      # Browsing: keyset cursor over (featured, created_at, id).
+      # Browsing: newest first, keyset cursor over (published_at, id) (V-16).
+      jobs = jobs.reorder(*BROWSE_ORDER.map { Arel.sql(_1) })
       after = decode_cursor(params[:cursor])
       return render_error("This list position is no longer valid. Start the search again.", :bad_request, "INVALID_CURSOR") if after == false
       total = jobs.except(:select, :order, :includes).count
-      jobs = jobs.where("(jobs.featured, jobs.created_at, jobs.id) < (?, ?, ?)", *after) if after
+      if after
+        jobs = jobs.where(
+          "(COALESCE(jobs.published_at, timestamp '#{BROWSE_SENTINEL}'), jobs.id) < (COALESCE(?, timestamp '#{BROWSE_SENTINEL}'), ?)",
+          *after,
+        )
+      end
       page = jobs.limit(limit + 1).to_a
       more = page.length > limit
       page = page.first(limit)
@@ -201,17 +215,18 @@ class JobsController < ApplicationController
     PAGE_SIZE
   end
 
-  # Opaque to clients: the sort key of the last job on the page.
+  # Opaque to clients: the browse order's sort key (published_at, id) of the last job on the
+  # page. published_at is nil only for a published job that (defensively) never got one.
   def encode_cursor(job)
-    Base64.urlsafe_encode64([job.featured, job.created_at.utc.iso8601(6), job.id].to_json, padding: false)
+    Base64.urlsafe_encode64([job.published_at&.utc&.iso8601(6), job.id].to_json, padding: false)
   end
 
-  # nil without a cursor, false when it cannot be read, else [featured, created_at, id].
+  # nil without a cursor, false when it cannot be read, else [published_at, id].
   def decode_cursor(raw)
     return nil if raw.blank?
-    featured, created_at, id = JSON.parse(Base64.urlsafe_decode64(raw.to_s))
-    return false unless [true, false].include?(featured) && created_at.is_a?(String) && id.is_a?(String) && id.present?
-    [featured, Time.iso8601(created_at), id]
+    published_at, id = JSON.parse(Base64.urlsafe_decode64(raw.to_s))
+    return false unless (published_at.nil? || published_at.is_a?(String)) && id.is_a?(String) && id.present?
+    [published_at && Time.iso8601(published_at), id]
   rescue ArgumentError, JSON::ParserError, TypeError
     false
   end

@@ -32,7 +32,7 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "callback signs in a brand-new user, sets the session and redirects with auth=google" do
+  test "callback signs in a brand-new user, mints a one-time exchange code (never a session token) and redirects with auth=google" do
     stub_google_flow(email: "newmusician@example.com", email_verified: true) do |code, verifier|
       with_env(ENV_KEYS) do
         state = start_state(intent: "signin", role: "jobseeker", consent: true)
@@ -41,13 +41,46 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
     end
     assert_response :redirect
     assert_includes response.location, "auth=google"
-    assert_includes response.location, "token="
+    assert_includes response.location, "code="
+    # The Location header never carries a session token, only the opaque exchange code:
+    # a 48-byte urlsafe-base64 session token and a 32-byte one are different lengths, but
+    # what matters is there is no `token=` param at all on this redirect.
+    assert_no_match(/[?&]token=/, response.location)
+
     user = User.find_by(email: "newmusician@example.com")
     assert user
     assert user.email_verified?
     assert_nil user.password_set_at
     assert AuthConnection.exists?(owner: user, provider: "google")
     assert AuditLog.exists?(actor: user, action: "auth.register")
+    assert_equal 0, user.sessions.count, "no session exists until the code is exchanged"
+
+    exchange_code = URI.decode_www_form(URI.parse(response.location).query).to_h["code"]
+    post "/api/auth/exchange", params: { code: exchange_code }, as: :json
+    assert_response :success
+    assert_equal user.id, response.parsed_body.dig("user", "id")
+    assert response.parsed_body["accessToken"].present?
+    assert_equal 1, user.sessions.count
+
+    # Single-use: the same code cannot be exchanged again.
+    post "/api/auth/exchange", params: { code: exchange_code }, as: :json
+    assert_response :unauthorized
+    assert_equal "EXCHANGE_INVALID", response.parsed_body["code"]
+  end
+
+  test "an exchange code expires after 60 seconds" do
+    user = User.create!(name: "Expiring", email: "expiring@example.com", password: PASSWORD, role: "jobseeker", status: "active")
+    code = AuthExchangeCode.issue!(user)
+    travel 61.seconds do
+      post "/api/auth/exchange", params: { code: }, as: :json
+    end
+    assert_response :unauthorized
+    assert_equal "EXCHANGE_INVALID", response.parsed_body["code"]
+  end
+
+  test "exchange refuses a code that was never issued" do
+    post "/api/auth/exchange", params: { code: "not-a-real-code" }, as: :json
+    assert_response :unauthorized
   end
 
   test "callback with no role for a brand-new user sends the frontend to choose a role" do

@@ -182,6 +182,26 @@ class AuthController < ApplicationController
     render json: result
   end
 
+  # POST /api/auth/exchange {code} -> same shape as /auth/login. Redeems the single-use,
+  # 60-second code GoogleAuthController#callback minted (see AuthExchangeCode) for the
+  # real session token — a full-page OAuth redirect can never carry that token itself.
+  def exchange
+    user = AuthExchangeCode.redeem!(params[:code])
+    return render_error("This sign-in link has expired or was already used.", :unauthorized, "EXCHANGE_INVALID") unless user
+    return render_error("This account is not active.", :forbidden) unless user.active?
+    token = sign_in(user)
+    render json: { user: public_user(user), accessToken: token }
+  end
+
+  # POST /api/auth/connect-ticket (signed in) -> {ticket, expiresIn}. A single-use,
+  # 5-minute ticket GoogleAuthController#start/#callback use to identify the linking
+  # user for intent=connect, so the OAuth start URL never carries a bearer token either.
+  def connect_ticket
+    return unless authenticate!
+    ticket = GoogleConnectTicket.issue!(current_user)
+    render json: { ticket:, expiresIn: GoogleConnectTicket::TTL.to_i }
+  end
+
   # DELETE /api/auth/connections/:id — the signed-in user disconnecting one of their own
   # third-party sign-in methods. Refused (422) when it is the only sign-in method they have
   # and they have never set a password (see User#password_set?).

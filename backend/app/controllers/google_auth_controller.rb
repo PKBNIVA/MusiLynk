@@ -5,26 +5,29 @@
 # There is no cookie/session middleware in this API-only app (see ApplicationController):
 # the state Google echoes back is a signed, short-lived token (Rails' message_verifier) that
 # carries everything the callback needs (a CSRF nonce, the PKCE verifier, intent, role,
-# return_to and — for intent=connect — which signed-in user is linking). Nothing is stored
-# server-side, so "verifying state" is exactly verifying that signature and its expiry.
+# return_to and — for intent=connect — a single-use ticket identifying who is linking, see
+# GoogleConnectTicket). Nothing is stored server-side beyond that ticket, so "verifying
+# state" is exactly verifying that signature and its expiry.
 #
-# Since there is also no session cookie to carry the result of a full-page redirect, the
-# callback hands the frontend the new session's bearer token as a query parameter on the
-# final redirect (`&token=`), the same way an emailed sign-in link already carries a secret
-# in its query string; the frontend stores it exactly like a normal login response.
+# A full-page redirect cannot set an Authorization header, so neither direction of this
+# flow ever puts a bearer session token in a URL (it would leak via browser history, a
+# Referer header or a hosting provider's request logs): #start reads a one-time
+# GoogleConnectTicket instead of a token for intent=connect, and #callback hands the
+# frontend a one-time AuthExchangeCode, which POST /api/auth/exchange trades for the real
+# session token exactly like a normal login response — never the token itself.
 class GoogleAuthController < ApplicationController
   STATE_PURPOSE = :google_oauth_state
   STATE_TTL = 10.minutes
   DEFAULT_RETURN_TO = { "jobseeker" => "/jobseeker", "employer" => "/employer" }.freeze
   JOIN_PATH = { "jobseeker" => "/join/musician", "employer" => "/join/hiring" }.freeze
 
-  # GET /auth/google/start?intent=signin|connect&role=&return_to=&consent=1&token=
+  # GET /auth/google/start?intent=signin|connect&role=&return_to=&consent=1&ticket=
+  # `ticket` (intent=connect only) comes from POST /api/auth/connect-ticket.
   def start
     return render json: { error: "disabled" }, status: :not_found unless GoogleOauth.enabled?
 
     intent = params[:intent] == "connect" ? "connect" : "signin"
-    owner_user = intent == "connect" ? user_from_query_token : nil
-    return render json: { error: "disabled" }, status: :not_found if intent == "connect" && owner_user.nil?
+    return render json: { error: "disabled" }, status: :not_found if intent == "connect" && !GoogleConnectTicket.valid?(params[:ticket])
 
     verifier = SecureRandom.urlsafe_base64(32)
     challenge = Digest::SHA256.base64digest(verifier).tr("+/", "-_").delete("=")
@@ -33,7 +36,7 @@ class GoogleAuthController < ApplicationController
       "role" => %w[jobseeker employer].include?(params[:role]) ? params[:role] : nil,
       "return_to" => safe_return_to(params[:return_to]),
       "consent" => ActiveModel::Type::Boolean.new.cast(params[:consent]) == true,
-      "owner_user_id" => owner_user&.id
+      "ticket" => intent == "connect" ? params[:ticket] : nil
     }, purpose: STATE_PURPOSE, expires_in: STATE_TTL)
 
     redirect_to GoogleOauth.authorize_url(state:, code_challenge: challenge), allow_other_host: true
@@ -53,7 +56,7 @@ class GoogleAuthController < ApplicationController
       return redirect_with_error("provider_error", payload)
     end
 
-    owner_user = payload["owner_user_id"] && User.find_by(id: payload["owner_user_id"])
+    owner_user = payload["intent"] == "connect" ? GoogleConnectTicket.redeem!(payload["ticket"]) : nil
     return redirect_with_error("disabled", payload) if payload["intent"] == "connect" && owner_user.nil?
 
     result = GoogleSignIn.call(claims:, intent: payload["intent"], role: payload["role"], owner_user:, consent: payload["consent"])
@@ -64,8 +67,8 @@ class GoogleAuthController < ApplicationController
     notify_linked(result.user) if result.notify_linked
     audit_google_sign_in(result, payload)
     result.user.update!(last_login_at: Time.current)
-    token = sign_in(result.user)
-    redirect_to success_url(result, payload, token), allow_other_host: true
+    code = AuthExchangeCode.issue!(result.user)
+    redirect_to success_url(result, payload, code), allow_other_host: true
   end
 
   private
@@ -80,23 +83,8 @@ class GoogleAuthController < ApplicationController
     nil
   end
 
-  # For intent=connect, the frontend's full-page navigation carries the already-signed-in
-  # user's bearer token as a query parameter (there is no cookie to carry it instead).
-  def user_from_query_token
-    token = params[:token]
-    return nil if token.blank?
-    session = Session.active.find_by(token_digest: digest(token))
-    session&.user
-  end
-
   def safe_return_to(value)
     value.is_a?(String) && value.start_with?("/") && !value.start_with?("//") ? value.first(500) : nil
-  end
-
-  def sign_in(user)
-    raw = SecureRandom.urlsafe_base64(48)
-    Session.start!(user, token_digest: digest(raw), user_agent: request.user_agent)
-    raw
   end
 
   def notify_linked(user)
@@ -118,9 +106,9 @@ class GoogleAuthController < ApplicationController
     DEFAULT_RETURN_TO.fetch(role, "/jobseeker")
   end
 
-  def success_url(result, payload, token)
+  def success_url(result, payload, code)
     return_to = payload["return_to"] || default_return_to(result.user.role, result.created && !result.user.profile_complete)
-    "#{frontend_url}#{return_to}?auth=google&token=#{CGI.escape(token)}"
+    "#{frontend_url}#{return_to}?auth=google&code=#{CGI.escape(code)}"
   end
 
   def redirect_to_choose_role(payload)

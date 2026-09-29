@@ -22,6 +22,8 @@ Rails.application.routes.draw do
     post "auth/phone-otp/verify", to: "auth#phone_otp_verify"
     post "auth/second-factor", to: "auth#second_factor"
     get "auth/methods", to: "auth#sign_in_methods"
+    post "auth/exchange", to: "auth#exchange"
+    post "auth/connect-ticket", to: "auth#connect_ticket"
     delete "auth/connections/:id", to: "auth#destroy_connection"
     get "me", to: "auth#me"
     get "me/identities", to: "identities#index"

@@ -32,6 +32,15 @@ class Job < ApplicationRecord
   # applications(job_id, candidate_id) index) so listings never load application rows.
   scope :with_posted_as, -> { preload(:posted_as_organization, :posted_as_act) }
   scope :posted_as, ->(type, id) { where(posted_as_type: type, posted_as_id: id) }
+  # Public listing only ("stale listings" complaint): a hirer who signed in more than 90 days
+  # ago is unlikely to reply, so their otherwise-published jobs are hidden from the open
+  # /music-jobs feed even though the listing itself stays reachable at its direct URL. A hirer
+  # who has never signed in again since registering (last_login_at nil) is not treated as
+  # inactive — there is no evidence either way, so their listing is not penalized.
+  HIRER_INACTIVE_AFTER = 90.days
+  scope :from_active_hirers, -> {
+    joins(:employer).where("users.last_login_at IS NULL OR users.last_login_at >= ?", HIRER_INACTIVE_AFTER.ago)
+  }
 
   scope :with_applications_count, -> {
     select(arel_table[Arel.star], "(SELECT COUNT(*) FROM applications WHERE applications.job_id = jobs.id) AS applications_total")

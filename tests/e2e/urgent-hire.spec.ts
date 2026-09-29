@@ -141,3 +141,45 @@ test('musician sees an open urgent request and responds in one tap', async ({ pa
   await expect(page.getByText('Availability sent')).toBeVisible();
   expect(state.responded).toHaveLength(1);
 });
+
+test('musician sees status chips, match reasons, and the filled / chosen messages', async ({ page }) => {
+  const musician = {
+    id: 'user-musician-1',
+    name: 'Ready Musician',
+    email: 'musician@example.invalid',
+    role: 'jobseeker',
+    status: 'active',
+    profileComplete: true,
+  };
+  const requests = [
+    { ...musicianRequest, id: 'a', title: 'Open gig', myMatchReasons: ['Plays Bassist', 'In Mumbai'] },
+    {
+      ...musicianRequest,
+      id: 'b',
+      title: 'Filled gig',
+      status: 'filled',
+      myResponse: true,
+      filled_by_id: 'someone-else',
+    },
+    { ...musicianRequest, id: 'c', title: 'Chosen gig', status: 'filled', myResponse: true, filled_by_id: musician.id },
+    { ...musicianRequest, id: 'd', title: 'Expired gig', status: 'expired' },
+    { ...musicianRequest, id: 'e', title: 'Closed gig', status: 'closed' },
+  ];
+  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-musician-token'));
+  await page.route('**/api/**', (route) => {
+    const { pathname } = new URL(route.request().url());
+    if (pathname.endsWith('/me')) return json(route, { user: musician });
+    if (pathname === '/api/urgent-requests') return json(route, { requests });
+    return json(route, {});
+  });
+
+  await page.goto('/jobseeker/urgent');
+  await expect(page.getByText('Open gig')).toBeVisible();
+  await expect(page.getByText('Why you: Plays Bassist · In Mumbai')).toBeVisible();
+  const chips = page.getByTestId('urgent-status-chip');
+  await expect(chips.filter({ hasText: 'Filled' })).toHaveCount(2);
+  await expect(chips.filter({ hasText: 'Expired' })).toHaveCount(1);
+  await expect(chips.filter({ hasText: 'Closed' })).toHaveCount(1);
+  await expect(page.getByText('Filled — thanks for responding')).toBeVisible();
+  await expect(page.getByText('You were chosen')).toBeVisible();
+});

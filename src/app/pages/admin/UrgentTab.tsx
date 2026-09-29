@@ -17,6 +17,7 @@ import type { AdminUrgentRequest, UrgentCandidate, UrgentFunnel } from '../../li
 const STATUS_OPTIONS = [
   { value: 'open', label: 'Open' },
   { value: 'filled', label: 'Filled' },
+  { value: 'closed', label: 'Closed' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'expired', label: 'Expired' },
   { value: 'all', label: 'All' },
@@ -24,6 +25,14 @@ const STATUS_OPTIONS = [
 
 const relativeAge = (minutes: number) =>
   minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+
+// The countdown shown next to an open request: "expires in 5h 12m" / "expired".
+function expiryCountdown(expiresAt?: string | null) {
+  if (!expiresAt) return null;
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return 'expired';
+  return `expires in ${relativeAge(Math.round(ms / 60000))}`;
+}
 
 function FunnelBar({ funnel }: { funnel: UrgentFunnel }) {
   const cells: { label: string; value: number }[] = [
@@ -185,6 +194,9 @@ export default function UrgentTab() {
                           </Badge>
                         )}
                         <span className="text-xs text-slate-500">Age {relativeAge(r.ageMinutes)}</span>
+                        {r.status === 'open' && expiryCountdown(r.expires_at) && (
+                          <span className="text-xs text-amber-400">{expiryCountdown(r.expires_at)}</span>
+                        )}
                       </div>
                       <h3 className="font-semibold mt-1.5">{r.title}</h3>
                       <p className="text-sm text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">

@@ -43,9 +43,11 @@ class AdminReviewVerificationContractTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
     assert_equal "INVALID_VERIFICATION_KIND", response.parsed_body.fetch("code")
 
-    post "/api/verification-requests", params: { kind: "professional", evidenceUrl: "https://example.com/artist" }, headers: auth(session_for(professional)), as: :json
+    post "/api/verification-requests", params: { kind: "professional", evidenceUrl: "https://example.com/artist", note: "Credits are on my label's artist page." }, headers: auth(session_for(professional)), as: :json
     assert_response :created
-    assert_equal "professional", VerificationRequest.find(response.parsed_body.fetch("id")).kind
+    created = VerificationRequest.find(response.parsed_body.fetch("id"))
+    assert_equal "professional", created.kind
+    assert_equal "Credits are on my label's artist page.", created.note
 
     post "/api/verification-requests", params: { kind: "organization", evidenceUrl: "https://example.com/studio" }, headers: auth(session_for(organization)), as: :json
     assert_response :created
@@ -59,13 +61,14 @@ class AdminReviewVerificationContractTest < ActionDispatch::IntegrationTest
     approved = VerificationRequest.create!(user: artist, kind: "professional", evidence_url: "https://example.com/artist", status: "pending")
     rejected = VerificationRequest.create!(user: studio, kind: "organization", evidence_url: "https://example.com/studio", status: "pending")
 
-    patch "/api/admin/verifications/#{approved.id}", params: { status: "approved" }, headers: auth(session_for(admin)), as: :json
+    patch "/api/admin/verifications/#{approved.id}", params: { status: "approved", checks: ["identity", "work_links"] }, headers: auth(session_for(admin)), as: :json
     assert_response :success
     approved.reload
     assert_equal "approved", approved.status
     assert_equal admin, approved.reviewed_by
     assert approved.reviewed_at.present?
     assert artist.profile.reload.verified
+    assert_equal ["identity", "work_links"], approved.checks
 
     patch "/api/admin/verifications/#{rejected.id}", params: { status: "rejected" }, headers: auth(session_for(admin)), as: :json
     assert_response :success

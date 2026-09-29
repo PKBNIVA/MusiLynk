@@ -82,6 +82,7 @@ export default function Guide() {
   usePageMeta(
     'How to use Verse',
     'Step-by-step guides for music professionals, hiring teams, bands and event bookers on Verse.',
+    { canonicalPath: '/guide' },
   );
   return (
     <div className="min-h-screen bg-slate-950 text-white">

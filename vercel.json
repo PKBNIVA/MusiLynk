@@ -4,6 +4,27 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "https://verse-music-platform-production.up.railway.app/sitemap.xml" },
+    {
+      "source": "/opportunities/:id",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot).*" }],
+      "destination": "https://verse-music-platform-production.up.railway.app/share/opportunities/:id"
+    },
+    {
+      "source": "/professionals/:id",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot).*" }],
+      "destination": "https://verse-music-platform-production.up.railway.app/share/professionals/:id"
+    },
+    {
+      "source": "/acts/:id",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot).*" }],
+      "destination": "https://verse-music-platform-production.up.railway.app/share/acts/:id"
+    },
+    {
+      "source": "/p/:slug",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot).*" }],
+      "destination": "https://verse-music-platform-production.up.railway.app/share/p/:slug"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

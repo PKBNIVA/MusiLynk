@@ -4,6 +4,12 @@ Rails.application.routes.draw do
   get "auth/google/start", to: "google_auth#start"
   get "auth/google/callback", to: "google_auth#callback"
 
+  get "sitemap.xml", to: "sitemaps#show"
+  get "share/opportunities/:id", to: "share_pages#job"
+  get "share/professionals/:id", to: "share_pages#professional"
+  get "share/acts/:id", to: "share_pages#act"
+  get "share/p/:slug", to: "share_pages#portfolio"
+
   scope :api do
     get "health", to: "health#show"
     get "live", to: "health#show"
@@ -161,6 +167,9 @@ Rails.application.routes.draw do
     delete "uploads/:id", to: "uploads#destroy", as: :upload
     get "public/talent", to: "talent#public_index"
     get "public/talent/:id", to: "talent#public_show"
+    get "public/hire-pages/popular-searches", to: "hire_pages#popular_searches"
+    get "public/hire-pages/:role/:city", to: "hire_pages#show"
+    get "public/rates/:city", to: "rates#show"
     get "candidates", to: "talent#index"
     get "candidates/compare/list", to: "talent#compare"
     get "candidates/:id", to: "talent#show"
@@ -204,8 +213,10 @@ Rails.application.routes.draw do
       member do
         post :respond
         get :responses
+        get "token-action", to: "urgent_requests#action_from_token"
       end
     end
+    resources :vouches, only: %i[index create]
     resources :talent_folders, path: "talent-folders", only: %i[index show create destroy] do
       member { post "candidates/:candidateId", to: "talent_folders#add_candidate" }
     end

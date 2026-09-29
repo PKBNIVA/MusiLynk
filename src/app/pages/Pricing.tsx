@@ -96,6 +96,7 @@ export default function Pricing() {
   usePageMeta(
     'Pricing',
     'Verse plans for music hiring and booking teams. Professionals build profiles and apply free; paid plans add capacity, seats and trials.',
+    { canonicalPath: '/pricing' },
   );
   const [plans, setPlans] = useState<ApiPlan[]>(FALLBACK_PLANS);
   const [live, setLive] = useState<boolean | null>(null);
@@ -176,6 +177,15 @@ export default function Pricing() {
             );
           })}
         </div>
+        <Card className="mt-6 bg-amber-500/[.05] border-amber-400/15" data-testid="flat-fee-note">
+          <CardContent className="p-6 text-sm text-slate-300 space-y-2">
+            <p>
+              One flat fee. No commission on your bookings. A ₹5 lakh wedding band booked through a commission agency
+              costs ₹75,000–₹1,00,000 in fees; on Verse it costs your monthly plan.
+            </p>
+            <p>Cancel any time. We email you three days before your trial ends and before every renewal.</p>
+          </CardContent>
+        </Card>
         <p
           className="text-center text-sm text-slate-400 mt-4 flex items-center justify-center gap-1.5"
           data-testid="ai-help-note"

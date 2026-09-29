@@ -24,7 +24,6 @@ class AuthController < ApplicationController
   PHONE_OTP_UNAVAILABLE_MESSAGE = "WhatsApp sign-in codes are temporarily unavailable.".freeze
   PHONE_OTP_REQUEST_MESSAGE = "If this number can be used on Verse, a 6-digit code is on its way on WhatsApp. It expires in 10 minutes.".freeze
   PHONE_OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
-  PRODUCTION_FRONTEND_URL = "https://verse-music-platform.vercel.app".freeze
   # Admin password sign-in needs a second step: a code emailed to the admin.
   SECOND_FACTOR_PURPOSE = :admin_second_factor
   SECOND_FACTOR_CHALLENGES_PER_EMAIL = 5
@@ -85,10 +84,15 @@ class AuthController < ApplicationController
       return render_error(starter.errors.values.flatten.to_sentence, :unprocessable_content, "VALIDATION_FAILED", fields: starter.errors)
     end
 
+    # A vouch link (/join/musician?vouch=<token>) stamps the new account so the admin
+    # verification queue can flag and sort it (see Vouch, Admin::VerificationsController#index).
+    vouch = Vouch.find_by(token: params[:vouch], status: "invited") if params[:vouch].present?
+
     user, created = User.transaction do
       account = User.create!(name: params[:name], email: params[:email], password: params[:password], role:, status: :active,
-        consented_at: consent_given? ? Time.current : nil, password_set_at: Time.current)
+        consented_at: consent_given? ? Time.current : nil, vouched_by_id: vouch&.voucher_id, password_set_at: Time.current)
       account.create_profile!
+      vouch&.update!(status: "joined", vouchee_id: account.id)
       [account, starter.apply!(account)]
     end
     token = sign_in(user)
@@ -580,12 +584,5 @@ class AuthController < ApplicationController
     { queued: false, delivered: false, reason: "delivery error" }
   end
 
-  def frontend_url
-    configured = ENV["FRONTEND_URL"].to_s.strip.sub(%r{/+\z}, "")
-    return configured if configured.present?
-    return "http://localhost:5173" unless Rails.env.production?
-
-    Rails.logger.error({ event: "frontend_url_missing", fallback: PRODUCTION_FRONTEND_URL }.to_json)
-    PRODUCTION_FRONTEND_URL
-  end
+  def frontend_url = FrontendUrl.base
 end

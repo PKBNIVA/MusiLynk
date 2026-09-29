@@ -11,6 +11,13 @@ import { apiGet } from '../../lib/api';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import { formatRates, pageJobsPath, type Portfolio } from '../../lib/showcase';
 
+/** ProfilePage structured data for a public portfolio. */
+function profilePageJsonLd(p: Portfolio, slug: string) {
+  const person: Record<string, unknown> = { '@type': 'Person', name: p.ownerName || p.title };
+  if (p.bio) person.description = p.bio;
+  return { '@context': 'https://schema.org', '@type': 'ProfilePage', mainEntity: person, url: `/p/${slug}` };
+}
+
 /** Where "Contact" goes for each kind of owner. */
 function contact(p: Portfolio) {
   if (p.ownerType === 'act')
@@ -57,6 +64,12 @@ export default function PublicPortfolio() {
   usePageMeta(
     p ? `${p.ownerName || p.title} — ${p.headline || p.title}` : undefined,
     p ? p.bio || `${p.title} by ${p.ownerName} on Verse${p.city ? `, ${p.city}` : ''}.` : undefined,
+    {
+      canonicalPath: `/p/${slug}`,
+      type: 'website',
+      image: p?.items?.[0]?.item?.thumbnailUrl || undefined,
+      jsonLd: p ? profilePageJsonLd(p, slug) : undefined,
+    },
   );
   if (loading || error || !p)
     return (

@@ -14,6 +14,7 @@ class EmailDeliveryJob < ApplicationJob
 
   LINK_PURPOSE = :email_delivery_link
   RECIPIENT_PURPOSE = :email_delivery_recipient
+  NAME_PURPOSE = :email_delivery_name
   CODE_TEMPLATES = %w[sign_in_code admin_email_change account_email_change].freeze
   # Security notices carry a detail (e.g. the new address) instead of a secret.
   NOTICE_TEMPLATES = %w[admin_email_changed account_email_changed].freeze
@@ -43,6 +44,12 @@ class EmailDeliveryJob < ApplicationJob
     perform_later(nil, template, seal(detail.to_s), seal(email, purpose: RECIPIENT_PURPOSE))
   end
 
+  # Sends a link email to an explicit address (no account required yet), with an extra
+  # display value (e.g. the voucher's name for "vouch_invite") merged into the template data.
+  def self.enqueue_link_with_name(template:, link:, email:, name:)
+    perform_later(nil, template, seal(link), seal(email, purpose: RECIPIENT_PURPOSE), seal(name, purpose: NAME_PURPOSE))
+  end
+
   def self.seal(value, purpose: LINK_PURPOSE, expires_in: 1.day) = encryptor.encrypt_and_sign(value, purpose:, expires_in:)
 
   def self.unseal(sealed, purpose: LINK_PURPOSE) = encryptor.decrypt_and_verify(sealed, purpose:)
@@ -51,7 +58,7 @@ class EmailDeliveryJob < ApplicationJob
     ActiveSupport::MessageEncryptor.new(Rails.application.key_generator.generate_key("email-delivery-job-link", 32))
   end
 
-  def perform(user_id, template, sealed_link, sealed_email = nil)
+  def perform(user_id, template, sealed_link, sealed_email = nil, sealed_name = nil)
     to = recipient_for(user_id, sealed_email)
     return log_skip("recipient_missing", template) if to.blank?
 
@@ -62,6 +69,7 @@ class EmailDeliveryJob < ApplicationJob
     elsif NOTICE_TEMPLATES.include?(template) then { detail: secret }
     else { link: secret }
     end
+    data[:name] = self.class.unseal(sealed_name, purpose: NAME_PURPOSE) if sealed_name.present?
     result = EmailDelivery.call(to:, template:, data:, raise_errors: true)
     raise ProviderUnavailable, "email provider returned #{result[:status]}" if result[:status].to_i >= 500
 

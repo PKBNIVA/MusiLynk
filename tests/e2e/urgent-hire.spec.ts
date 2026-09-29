@@ -60,9 +60,9 @@ test('signed-out hirer fills the urgent form, signs up, and lands on the confirm
   await page.goto('/urgent');
   await expect(page.getByRole('heading', { name: /Find a verified musician/ })).toBeVisible();
 
-  // City defaults to Mumbai as a chip already; only the role needs to be entered and committed
-  // (AutocompleteInput turns free text into a chip on Enter when no suggestion is picked).
-  await expect(page.getByRole('listitem').filter({ hasText: 'Mumbai' })).toBeVisible();
+  // City defaults to Mumbai already; only the role needs to be entered and committed
+  // (AutocompleteInput commits free text on Enter/blur when no suggestion is picked).
+  await expect(page.getByRole('combobox', { name: 'City' })).toHaveValue('Mumbai');
   await page.getByRole('combobox', { name: 'Role needed' }).fill('Drummer');
   await page.getByRole('combobox', { name: 'Role needed' }).press('Enter');
   const dateField = page.locator('#urgent-start');
@@ -140,4 +140,46 @@ test('musician sees an open urgent request and responds in one tap', async ({ pa
 
   await expect(page.getByText('Availability sent')).toBeVisible();
   expect(state.responded).toHaveLength(1);
+});
+
+test('musician sees status chips, match reasons, and the filled / chosen messages', async ({ page }) => {
+  const musician = {
+    id: 'user-musician-1',
+    name: 'Ready Musician',
+    email: 'musician@example.invalid',
+    role: 'jobseeker',
+    status: 'active',
+    profileComplete: true,
+  };
+  const requests = [
+    { ...musicianRequest, id: 'a', title: 'Open gig', myMatchReasons: ['Plays Bassist', 'In Mumbai'] },
+    {
+      ...musicianRequest,
+      id: 'b',
+      title: 'Filled gig',
+      status: 'filled',
+      myResponse: true,
+      filled_by_id: 'someone-else',
+    },
+    { ...musicianRequest, id: 'c', title: 'Chosen gig', status: 'filled', myResponse: true, filled_by_id: musician.id },
+    { ...musicianRequest, id: 'd', title: 'Expired gig', status: 'expired' },
+    { ...musicianRequest, id: 'e', title: 'Closed gig', status: 'closed' },
+  ];
+  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-musician-token'));
+  await page.route('**/api/**', (route) => {
+    const { pathname } = new URL(route.request().url());
+    if (pathname.endsWith('/me')) return json(route, { user: musician });
+    if (pathname === '/api/urgent-requests') return json(route, { requests });
+    return json(route, {});
+  });
+
+  await page.goto('/jobseeker/urgent');
+  await expect(page.getByText('Open gig')).toBeVisible();
+  await expect(page.getByText('Why you: Plays Bassist · In Mumbai')).toBeVisible();
+  const chips = page.getByTestId('urgent-status-chip');
+  await expect(chips.filter({ hasText: 'Filled' })).toHaveCount(2);
+  await expect(chips.filter({ hasText: 'Expired' })).toHaveCount(1);
+  await expect(chips.filter({ hasText: 'Closed' })).toHaveCount(1);
+  await expect(page.getByText('Filled — thanks for responding')).toBeVisible();
+  await expect(page.getByText('You were chosen')).toBeVisible();
 });

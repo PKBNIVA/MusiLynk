@@ -16,6 +16,7 @@ class UrgentConfig
   def self.notify_count = matcher.fetch(:notify_count)
   def self.recent_activity_within = matcher.fetch(:recent_activity_within_days).days
   def self.no_response_after = config.fetch(:no_response_after_minutes).minutes
+  def self.expire_after = config.fetch(:expire_after_hours).hours
   def self.quiet_hours = config.fetch(:quiet_hours)
 
   # Whether `time` (default: now) falls inside the configured quiet-hours window in its

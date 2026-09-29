@@ -122,8 +122,5 @@ class GoogleAuthController < ApplicationController
     redirect_to "#{frontend_url}#{base}?auth_error=#{code}", allow_other_host: true
   end
 
-  def frontend_url
-    configured = ENV["FRONTEND_URL"].to_s.strip.sub(%r{/+\z}, "")
-    configured.presence || (Rails.env.production? ? AuthController::PRODUCTION_FRONTEND_URL : "http://localhost:5173")
-  end
+  def frontend_url = FrontendUrl.base
 end

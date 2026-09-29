@@ -49,7 +49,15 @@ export interface SignupCalls {
   starters: Record<string, unknown>[];
 }
 
-export async function mockSignupApi(page: Page, opts: { stats?: Record<string, unknown> } = {}) {
+const DEFAULT_POPULAR_SEARCHES = [
+  { role: { slug: 'drummer', label: 'Drummer' }, city: { slug: 'mumbai', name: 'Mumbai' }, count: 40 },
+  { role: { slug: 'dj', label: 'DJ' }, city: { slug: 'mumbai', name: 'Mumbai' }, count: 35 },
+];
+
+export async function mockSignupApi(
+  page: Page,
+  opts: { stats?: Record<string, unknown>; popularSearches?: Record<string, unknown>[] } = {},
+) {
   const calls: SignupCalls = { previews: [], registers: [], codeRequests: [], starters: [] };
   let account: Record<string, unknown> | null = null;
   let links: Array<Record<string, string>> = [];
@@ -78,6 +86,8 @@ export async function mockSignupApi(page: Page, opts: { stats?: Record<string, u
       return account ? json(200, { user: account }) : json(401, { error: 'Authentication required' });
     if (path === '/api/auth/methods') return json(200, { signInCodes: true, password: true, emailDelivery: false });
     if (path === '/api/public/stats') return json(200, opts.stats ?? {});
+    if (path === '/api/public/hire-pages/popular-searches')
+      return json(200, { items: opts.popularSearches ?? DEFAULT_POPULAR_SEARCHES });
     if (path === '/api/ai/status') return json(200, { enabled: false, tasks: [] });
     if (path === '/api/ai/autocomplete') return json(200, { suggestions: [] });
     if (path === '/api/link-previews' && method === 'POST') {

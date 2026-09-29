@@ -102,8 +102,8 @@ test('Posting as: an organization identity can be chosen for this job and review
   await chooseOption(page.getByLabel('Posting as'), 'Bright Sound Studio');
 
   await page.getByLabel('Title').fill('Session guitarist');
-  await page.getByLabel('Location').fill('Mumbai');
-  await page.getByLabel('Location').press('Enter');
+  await page.getByRole('combobox', { name: 'Location' }).fill('Mumbai');
+  await page.getByRole('combobox', { name: 'Location' }).press('Enter');
   await page.getByRole('button', { name: 'Next: Details' }).click();
   await page.getByLabel(/^Description/).fill('Record layered guitar parts across three sessions with the composer.');
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();

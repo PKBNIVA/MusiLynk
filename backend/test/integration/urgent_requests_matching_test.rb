@@ -54,6 +54,54 @@ class UrgentRequestsMatchingTest < ActionDispatch::IntegrationTest
     assert_equal "filled", item.status
   end
 
+  test "create sets an expires_at from urgent.yml's expire_after_hours" do
+    post "/api/urgent-requests", params: { title: "Drummer needed", roleName: "Drummer", city: "Mumbai",
+      startAt: 1.day.from_now.iso8601 }, headers: auth(@hirer), as: :json
+    assert_response :created
+    item = UrgentRequest.find(response.parsed_body.fetch("id"))
+    assert_in_delta (item.created_at + UrgentConfig.expire_after).to_i, item.expires_at.to_i, 2
+  end
+
+  test "the hirer can close their request with the new closed status" do
+    item = UrgentRequest.create!(requester: @hirer, title: "Drummer needed", role_name: "Drummer", city: "Mumbai",
+      start_at: 1.day.from_now, currency: "INR", status: "open")
+
+    patch "/api/urgent-requests/#{item.id}", params: { status: "closed" }, headers: auth(@hirer), as: :json
+    assert_response :success
+    assert_equal "closed", item.reload.status
+  end
+
+  test "the one-click token link marks a request filled without a session" do
+    item = UrgentRequest.create!(requester: @hirer, title: "Drummer needed", role_name: "Drummer", city: "Mumbai",
+      start_at: 1.day.from_now, currency: "INR", status: "open")
+    token = UrgentActionToken.generate(item, "filled")
+
+    get "/api/urgent-requests/#{item.id}/token-action", params: { action: "filled", t: token }
+    assert_response :success
+    assert_equal "filled", item.reload.status
+  end
+
+  test "the one-click token link rejects a tampered or unknown token" do
+    item = UrgentRequest.create!(requester: @hirer, title: "Drummer needed", role_name: "Drummer", city: "Mumbai",
+      start_at: 1.day.from_now, currency: "INR", status: "open")
+
+    get "/api/urgent-requests/#{item.id}/token-action", params: { action: "close", t: "not-a-real-token" }
+    assert_response :unprocessable_content
+    assert_equal "open", item.reload.status
+  end
+
+  test "the one-click token link cannot be reused across a different request" do
+    item = UrgentRequest.create!(requester: @hirer, title: "Drummer needed", role_name: "Drummer", city: "Mumbai",
+      start_at: 1.day.from_now, currency: "INR", status: "open")
+    other_item = UrgentRequest.create!(requester: @hirer, title: "Bassist needed", role_name: "Bassist", city: "Mumbai",
+      start_at: 1.day.from_now, currency: "INR", status: "open")
+    token = UrgentActionToken.generate(item, "close")
+
+    get "/api/urgent-requests/#{other_item.id}/token-action", params: { action: "close", t: token }
+    assert_response :unprocessable_content
+    assert_equal "open", other_item.reload.status
+  end
+
   private
 
   def create_user(name, email, role)

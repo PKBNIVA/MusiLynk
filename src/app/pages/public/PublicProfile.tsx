@@ -11,9 +11,25 @@ import { apiGet, apiPost } from '../../lib/api';
 import { MapPin, ShieldCheck, Flag } from 'lucide-react';
 import { WorkSamplePlayer } from '../../components/WorkSamplePlayer';
 import { ReportDialog } from '../../components/ReportDialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
+import { verifiedBadgeCopy } from '../../components/VerifiedBadge';
 import { useAuth } from '../../lib/authContext';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { PortfolioItem, Professional } from '../../lib/apiTypes';
+
+/** Person structured data for a public professional profile. */
+function personJsonLd(p: Professional, id?: string) {
+  const ld: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: p.name,
+    url: `/professionals/${id}`,
+  };
+  if (p.headline) ld.jobTitle = p.headline;
+  if (p.location) ld.address = { '@type': 'PostalAddress', addressLocality: p.location };
+  if (p.bio) ld.description = p.bio;
+  return ld;
+}
 
 export default function PublicProfile() {
   const { id } = useParams();
@@ -45,6 +61,7 @@ export default function PublicProfile() {
   usePageMeta(
     p?.name && `${p.name}${p.headline ? ` — ${p.headline}` : ''}`,
     p ? p.bio || `${p.name} on Verse${p.location ? `, ${p.location}` : ''}.` : undefined,
+    { canonicalPath: `/professionals/${id}`, type: 'profile', jsonLd: p ? personJsonLd(p, id) : undefined },
   );
   if (loading || error || !p)
     return (
@@ -67,7 +84,18 @@ export default function PublicProfile() {
             <div className="flex items-center gap-3">
               <h1 className="text-4xl md:text-5xl font-bold break-words">{c.name}</h1>
               <DemoBadge show={c.demo} />
-              {c.verified && <ShieldCheck className="text-emerald-300" aria-label="Verified professional" />}
+              {c.verified && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ShieldCheck
+                      className="text-emerald-300"
+                      aria-label={verifiedBadgeCopy(c.verification)}
+                      tabIndex={0}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>{verifiedBadgeCopy(c.verification)}</TooltipContent>
+                </Tooltip>
+              )}
             </div>
             <p className="text-xl text-violet-300 mt-2">{c.headline}</p>
             {c.location && (

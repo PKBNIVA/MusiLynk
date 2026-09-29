@@ -29,6 +29,8 @@ class User < ApplicationRecord
   has_many :subscriptions, dependent: :destroy
   has_many :billing_attempts, dependent: :destroy
   has_many :auth_connections, as: :owner, dependent: :destroy
+  has_many :vouches, foreign_key: :voucher_id, dependent: :destroy
+  belongs_to :vouched_by, class_name: "User", optional: true
 
   enum :role, { jobseeker: "jobseeker", employer: "employer", admin: "admin" }, validate: true
   enum :status, { active: "active", suspended: "suspended", pending: "pending", deleted: "deleted" }, validate: true

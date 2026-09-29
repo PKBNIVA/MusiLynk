@@ -282,7 +282,9 @@ test('signing in, then a full page load on the public jobs list shows the signed
   // A full page load, not client-side navigation: the stored token must be re-verified before
   // the header settles on the signed-in variant.
   await page.goto('/music-jobs');
-  await expect(page.getByTestId('account-menu')).toBeVisible();
+  // Viewport-independent: the desktop account menu is hidden on phones, so assert through the
+  // apply CTA and the absence of the signed-out "Join Verse" control.
   await expect(page.getByRole('link', { name: 'Apply' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Join Verse' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Sign in to apply' })).toHaveCount(0);
 });

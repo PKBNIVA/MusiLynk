@@ -106,8 +106,8 @@ test('a 402 plan limit on publish opens the plan-limit dialog instead of a toast
   await page.goto('/employer/post-job');
 
   await page.getByRole('button', { name: 'Studio session' }).click();
-  await page.getByLabel('Location').fill('Mumbai');
-  await page.getByLabel('Location').press('Enter');
+  await page.getByRole('combobox', { name: 'Location' }).fill('Mumbai');
+  await page.getByRole('combobox', { name: 'Location' }).press('Enter');
   await page.getByRole('button', { name: 'Next: Details' }).click();
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
   await page.getByRole('button', { name: 'Next: Screening & review' }).click();

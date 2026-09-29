@@ -25,7 +25,7 @@ class EarlyAccessGrant
   # lock so two concurrent grants can never both take the last seat.
   def self.call(user:)
     Subscription.transaction do
-      ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{LOCK_KEY})")
+      ActiveRecord::Base.lease_connection.execute("SELECT pg_advisory_xact_lock(#{LOCK_KEY})")
       refusal = refusal_for(user)
       return [nil, refusal] if refusal
 

@@ -288,6 +288,8 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     # WhatsApp phone codes are dark (no WHATSAPP_* env in test), so both answer 503.
     [:post, "/api/auth/phone-otp/request", :public, { ok: [503], params: { phone: "+919812345678" } }],
     [:post, "/api/auth/phone-otp/verify", :public, { ok: [401], params: { phone: "+919812345678", code: "000000" } }],
+    [:post, "/api/auth/exchange", :public, { ok: [401], params: { code: "not-a-real-code" } }],
+    [:post, "/api/auth/connect-ticket", :any, { ok: [200], keys: %w[ticket expiresIn] }],
     # Each matrix user is created with exactly one auth connection and no chosen password
     # (see ApiMatrixWorld), so disconnecting it is refused (rule d: never remove the last
     # sign-in method) — the real, exercised behaviour, not a stand-in for it.

@@ -137,26 +137,29 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
     assert_includes response.location, "auth_error=provider_error"
   end
 
-  test "connect intent links Google to the signed-in user, and reconnecting elsewhere is refused" do
+  test "connect intent uses a one-time ticket (never a bearer token) to link Google, and reconnecting elsewhere is refused" do
     owner = User.create!(name: "Owner", email: "owner@example.com", password: PASSWORD, role: "jobseeker", status: "active")
-    token = session_for(owner)
+    ticket = fetch_ticket(owner)
 
     stub_google_flow(email: "owner-google@example.com", email_verified: true, sub: "sub-connect") do |code|
       with_env(ENV_KEYS) do
-        get "/auth/google/start?intent=connect&token=#{token}"
+        get "/auth/google/start?intent=connect&ticket=#{ticket}"
+        assert_no_match(/token=/, response.location)
         state = URI.decode_www_form(URI.parse(response.location).query).to_h["state"]
         get "/auth/google/callback?code=#{code}&state=#{state}"
       end
     end
     assert_response :redirect
     assert_includes response.location, "auth=google"
+    assert_no_match(/[?&]token=/, response.location)
     assert AuthConnection.exists?(owner: owner, provider: "google", provider_uid: "sub-connect")
+    assert_not GoogleConnectTicket.valid?(ticket), "the callback consumes the ticket"
 
     other = User.create!(name: "Other", email: "other@example.com", password: PASSWORD, role: "jobseeker", status: "active")
-    other_token = session_for(other)
+    other_ticket = fetch_ticket(other)
     stub_google_flow(email: "owner-google@example.com", email_verified: true, sub: "sub-connect") do |code|
       with_env(ENV_KEYS) do
-        get "/auth/google/start?intent=connect&token=#{other_token}"
+        get "/auth/google/start?intent=connect&ticket=#{other_ticket}"
         state = URI.decode_www_form(URI.parse(response.location).query).to_h["state"]
         get "/auth/google/callback?code=#{code}&state=#{state}"
       end
@@ -164,12 +167,45 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
     assert_includes response.location, "auth_error=connected_elsewhere"
   end
 
+  test "connect start refuses a missing, unknown or already-used ticket" do
+    user = User.create!(name: "Ticketed", email: "ticketed@example.com", password: PASSWORD, role: "jobseeker", status: "active")
+    with_env(ENV_KEYS) do
+      get "/auth/google/start?intent=connect"
+      assert_response :not_found
+      get "/auth/google/start?intent=connect&ticket=bogus"
+      assert_response :not_found
+      ticket = fetch_ticket(user)
+      GoogleConnectTicket.redeem!(ticket)
+      get "/auth/google/start?intent=connect&ticket=#{ticket}"
+      assert_response :not_found
+    end
+  end
+
+  test "connect ticket requires sign-in, is single-use, expires after 5 minutes and stays bound to its user" do
+    post "/api/auth/connect-ticket", as: :json
+    assert_response :unauthorized
+
+    a = User.create!(name: "Ann", email: "ann@example.com", password: PASSWORD, role: "jobseeker", status: "active")
+    b = User.create!(name: "Bob", email: "bob@example.com", password: PASSWORD, role: "jobseeker", status: "active")
+    ta = fetch_ticket(a)
+    tb = fetch_ticket(b)
+    assert_not_equal ta, tb
+    assert_equal b, GoogleConnectTicket.redeem!(tb), "a ticket resolves only to the user it was issued for"
+    assert_nil GoogleConnectTicket.redeem!(tb), "single use"
+    assert_equal a, GoogleConnectTicket.redeem!(ta), "redeeming one ticket leaves the other intact"
+
+    expiring = fetch_ticket(a)
+    travel 5.minutes + 1.second do
+      assert_nil GoogleConnectTicket.redeem!(expiring)
+    end
+  end
+
   private
 
-  def start_state(intent:, role:, return_to: nil, consent: false, owner_user_id: nil)
+  def start_state(intent:, role:, return_to: nil, consent: false, ticket: nil)
     Rails.application.message_verifier("google-oauth-state").generate(
       { "csrf" => "x", "verifier" => "verifier-value", "intent" => intent, "role" => role,
-        "return_to" => return_to, "consent" => consent, "owner_user_id" => owner_user_id },
+        "return_to" => return_to, "consent" => consent, "ticket" => ticket },
       purpose: :google_oauth_state, expires_in: 10.minutes
     )
   end
@@ -189,6 +225,12 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
     yield "fake-code"
   ensure
     GoogleOauth.define_singleton_method(:exchange_code, original_exchange)
+  end
+
+  def fetch_ticket(user)
+    post "/api/auth/connect-ticket", headers: { "Authorization" => "Bearer #{session_for(user)}" }, as: :json
+    assert_response :success
+    response.parsed_body["ticket"]
   end
 
   def session_for(user)

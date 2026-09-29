@@ -417,6 +417,8 @@ export interface SignInMethods {
   connections?: AuthConnectionSummary[];
 }
 export const getSignInMethods = () => apiGet<SignInMethods>('/auth/methods');
+/** A single-use, 5-minute ticket identifying the signed-in user for intent=connect. */
+export const requestGoogleConnectTicket = () => apiPost<{ ticket: string; expiresIn: number }>('/auth/connect-ticket');
 export const disconnectAuthConnection = (id: string) => apiDelete(`/auth/connections/${id}`);
 
 /**
@@ -431,18 +433,17 @@ export interface GoogleStartOptions {
   role?: 'jobseeker' | 'employer';
   returnTo?: string;
   consent?: boolean;
+  /** intent=connect only: a one-time ticket from requestGoogleConnectTicket (never the bearer token). */
+  ticket?: string;
 }
 /** Builds the URL for "Continue with Google"; the caller navigates the browser to it directly
  * (window.location.href = …), it is never fetched. See GoogleAuthController#start. */
-export function googleStartUrl({ intent, role, returnTo, consent }: GoogleStartOptions): string {
+export function googleStartUrl({ intent, role, returnTo, consent, ticket }: GoogleStartOptions): string {
   const params = new URLSearchParams({ intent });
   if (role) params.set('role', role);
   if (returnTo) params.set('return_to', returnTo);
   if (consent) params.set('consent', '1');
-  if (intent === 'connect') {
-    const token = readToken();
-    if (token) params.set('token', token);
-  }
+  if (intent === 'connect' && ticket) params.set('ticket', ticket);
   return `${apiOrigin()}/auth/google/start?${params.toString()}`;
 }
 

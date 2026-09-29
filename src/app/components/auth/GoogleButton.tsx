@@ -1,5 +1,6 @@
 import { Button } from '../ui/button';
-import { googleStartUrl } from '../../lib/api';
+import { toast } from 'sonner';
+import { googleStartUrl, requestGoogleConnectTicket } from '../../lib/api';
 import { track } from '../../lib/analytics';
 
 /**
@@ -25,8 +26,17 @@ export function GoogleButton({
   /** False on the account settings "Connect" row, which is not above an email form. */
   showDivider?: boolean;
 }) {
-  const go = () => {
+  const go = async () => {
     track('auth_google_start', { intent, role: role ?? null });
+    if (intent === 'connect') {
+      try {
+        const { ticket } = await requestGoogleConnectTicket();
+        window.location.href = googleStartUrl({ intent, role, returnTo, consent, ticket });
+      } catch {
+        toast.error('Could not start connecting Google. Try again.');
+      }
+      return;
+    }
     window.location.href = googleStartUrl({ intent, role, returnTo, consent });
   };
 
@@ -36,7 +46,7 @@ export function GoogleButton({
         type="button"
         variant="outline"
         disabled={disabled}
-        onClick={go}
+        onClick={() => void go()}
         className={
           showDivider ? 'w-full gap-2.5 border-white/15 bg-white/[.04] text-white hover:bg-white/[.09]' : 'gap-2.5'
         }

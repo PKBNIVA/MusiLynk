@@ -114,15 +114,22 @@ describe('googleStartUrl', () => {
     expect(url.searchParams.has('token')).toBe(false);
   });
 
-  it('sets consent=1 only when asked, and carries the session token for intent=connect', async () => {
+  it('sets consent=1 only when asked, and never puts a bearer token in the URL', async () => {
     const { googleStartUrl, setAccessToken } = await loadApi();
     setAccessToken('tok-abc');
     const signin = new URL(googleStartUrl({ intent: 'signin', consent: true }));
     expect(signin.searchParams.get('consent')).toBe('1');
-    expect(signin.searchParams.has('token')).toBe(false);
+    const connect = new URL(googleStartUrl({ intent: 'connect', ticket: 'tix-1' }));
+    expect(connect.searchParams.get('ticket')).toBe('tix-1');
+    expect(connect.toString()).not.toContain('tok-abc');
+    expect(connect.searchParams.has('token')).toBe(false);
+  });
 
-    const connect = new URL(googleStartUrl({ intent: 'connect' }));
-    expect(connect.searchParams.get('token')).toBe('tok-abc');
+  it('requests a connect ticket over the API', async () => {
+    const { requestGoogleConnectTicket } = await loadApi();
+    fetchMock.mockResolvedValue(jsonResponse({ ticket: 't1', expiresIn: 300 }));
+    await requestGoogleConnectTicket();
+    expect(lastRequest()).toMatchObject({ url: '/api/auth/connect-ticket', init: { method: 'POST' } });
   });
 });
 

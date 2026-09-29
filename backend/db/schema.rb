@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_170300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -193,6 +193,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
     t.index ["actor_id"], name: "index_audit_logs_on_actor_id"
   end
 
+  create_table "auth_connections", id: :string, force: :cascade do |t|
+    t.string "owner_type", null: false
+    t.string "owner_id", null: false
+    t.string "provider", null: false
+    t.string "provider_uid", null: false
+    t.citext "email"
+    t.boolean "email_verified", default: false, null: false
+    t.string "display_name"
+    t.string "avatar_url"
+    t.text "access_token"
+    t.text "refresh_token"
+    t.jsonb "scopes", default: [], null: false
+    t.datetime "expires_at"
+    t.jsonb "raw", default: {}, null: false
+    t.datetime "last_synced_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["owner_type", "owner_id"], name: "index_auth_connections_on_owner"
+    t.index ["provider", "provider_uid"], name: "index_auth_connections_on_provider_and_uid", unique: true
+  end
+
   create_table "availability_windows", id: :string, force: :cascade do |t|
     t.string "user_id", null: false
     t.datetime "start_at", null: false
@@ -203,6 +224,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["user_id"], name: "index_availability_windows_on_user_id"
+  end
+
+  create_table "badges", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.string "kind", null: false
+    t.string "awarded_for", null: false
+    t.string "city"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["kind", "awarded_for"], name: "index_badges_on_kind_and_awarded_for"
+    t.index ["user_id", "kind", "awarded_for"], name: "index_badges_on_user_kind_period", unique: true
   end
 
   create_table "band_project_roles", id: :string, force: :cascade do |t|
@@ -678,6 +710,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
     t.index ["source_table", "record_id"], name: "index_legacy_function_area_backups_on_record", unique: true
   end
 
+  create_table "lifecycle_emails", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.string "key", null: false
+    t.datetime "sent_at", null: false
+    t.datetime "created_at", null: false
+    t.index ["user_id", "key"], name: "index_lifecycle_emails_on_user_id_and_key", unique: true
+  end
+
   create_table "messages", id: :string, force: :cascade do |t|
     t.string "conversation_id", null: false
     t.string "sender_id", null: false
@@ -728,6 +768,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["owner_id"], name: "index_organizations_on_owner_id"
+  end
+
+  create_table "phone_otps", id: :string, force: :cascade do |t|
+    t.citext "phone", null: false
+    t.string "code_digest", null: false
+    t.string "pending_name"
+    t.string "pending_role"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.datetime "pending_consented_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_phone_otps_on_expires_at"
+    t.index ["phone", "created_at"], name: "index_phone_otps_on_phone_and_created_at"
   end
 
   create_table "portfolio_items", id: :string, force: :cascade do |t|
@@ -813,7 +868,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
   create_table "posts", id: :string, force: :cascade do |t|
     t.string "author_type", null: false
     t.string "author_id", null: false
-    t.string "created_by_user_id", null: false
+    t.string "created_by_user_id"
     t.string "kind", default: "update", null: false
     t.text "body"
     t.jsonb "media", default: [], null: false
@@ -831,15 +886,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
     t.integer "reshare_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "system_kind"
+    t.string "system_ref"
+    t.datetime "pinned_until"
+    t.string "event_title"
+    t.datetime "event_starts_at"
+    t.string "event_venue"
+    t.boolean "featured", default: false, null: false
     t.index ["author_type", "author_id", "created_at"], name: "index_posts_on_author_type_and_author_id_and_created_at"
     t.index ["created_at", "id"], name: "index_posts_on_created_at_and_id"
     t.index ["created_by_user_id"], name: "index_posts_on_created_by_user_id"
+    t.index ["event_starts_at"], name: "index_posts_on_event_starts_at"
     t.index ["genres"], name: "index_posts_on_genres", using: :gin
     t.index ["hashtags"], name: "index_posts_on_hashtags", using: :gin
+    t.index ["pinned_until"], name: "index_posts_on_pinned_until"
     t.index ["reshared_post_id"], name: "index_posts_on_reshared_post_id"
     t.index ["shared_job_id"], name: "index_posts_on_shared_job_id"
     t.index ["shared_portfolio_item_id"], name: "index_posts_on_shared_portfolio_item_id"
     t.index ["status"], name: "index_posts_on_status"
+    t.index ["system_ref"], name: "index_posts_on_system_ref", unique: true
   end
 
   create_table "product_events", id: :string, force: :cascade do |t|
@@ -897,6 +962,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
     t.boolean "email_notifications", default: true, null: false
     t.string "phone_e164"
     t.datetime "whatsapp_consented_at"
+    t.jsonb "email_preferences", default: {"digest"=>true, "product"=>true, "requests"=>true, "lifecycle"=>true}, null: false
+    t.boolean "share_verification_publicly", default: true, null: false
     t.index "((roles)::text) gin_trgm_ops", name: "index_profiles_on_roles_text_trgm", using: :gin
     t.index "((skills)::text) gin_trgm_ops", name: "index_profiles_on_skills_text_trgm", using: :gin
     t.index ["bio"], name: "index_profiles_on_bio", opclass: :gin_trgm_ops, using: :gin
@@ -981,6 +1048,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
     t.index ["upload_id"], name: "index_resumes_on_upload_id"
     t.index ["user_id"], name: "index_resumes_on_user_id"
     t.index ["user_id"], name: "index_resumes_one_default_per_user", unique: true, where: "is_default"
+  end
+
+  create_table "review_prompts", id: :string, force: :cascade do |t|
+    t.string "source_type", null: false
+    t.string "source_id", null: false
+    t.string "user_id", null: false
+    t.string "counterpart_user_id", null: false
+    t.string "counterpart_name", null: false
+    t.datetime "notified_at"
+    t.datetime "reminded_at"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["source_type", "source_id", "user_id"], name: "index_review_prompts_on_source_and_user", unique: true
+    t.index ["user_id"], name: "index_review_prompts_on_user_id"
   end
 
   create_table "reviews", id: :string, force: :cascade do |t|
@@ -1210,8 +1292,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
     t.string "synthetic_batch"
     t.datetime "consented_at"
     t.string "vouched_by_id"
+    t.citext "phone"
+    t.datetime "phone_verified_at"
+    t.datetime "password_set_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["name"], name: "index_users_on_name", opclass: :gin_trgm_ops, using: :gin
+    t.index ["phone"], name: "index_users_on_phone", unique: true, where: "(phone IS NOT NULL)"
     t.index ["synthetic_batch"], name: "index_users_on_synthetic_batch", where: "(synthetic_batch IS NOT NULL)"
     t.index ["vouched_by_id"], name: "index_users_on_vouched_by_id"
   end
@@ -1257,6 +1343,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
   add_foreign_key "applications", "users", column: "candidate_id"
   add_foreign_key "audit_logs", "users", column: "actor_id"
   add_foreign_key "availability_windows", "users"
+  add_foreign_key "badges", "users"
   add_foreign_key "band_project_roles", "band_projects"
   add_foreign_key "band_project_roles", "jobs", column: "opportunity_id"
   add_foreign_key "band_projects", "users", column: "owner_id"
@@ -1284,6 +1371,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
   add_foreign_key "job_alert_deliveries", "notifications", on_delete: :nullify
   add_foreign_key "job_alerts", "users"
   add_foreign_key "jobs", "users", column: "employer_id"
+  add_foreign_key "lifecycle_emails", "users", on_delete: :cascade
   add_foreign_key "messages", "conversations"
   add_foreign_key "messages", "users", column: "sender_id"
   add_foreign_key "notifications", "users"
@@ -1310,6 +1398,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
   add_foreign_key "reports", "users", column: "resolved_by_id"
   add_foreign_key "resumes", "uploads", on_delete: :nullify
   add_foreign_key "resumes", "users"
+  add_foreign_key "review_prompts", "users"
+  add_foreign_key "review_prompts", "users", column: "counterpart_user_id"
   add_foreign_key "reviews", "users", column: "author_id"
   add_foreign_key "reviews", "users", column: "employer_id"
   add_foreign_key "saved_jobs", "jobs"

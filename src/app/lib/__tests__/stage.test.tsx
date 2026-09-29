@@ -156,7 +156,17 @@ describe('authorPath', () => {
 describe('POST_KIND_LABEL', () => {
   it('has a label for every documented post kind', () => {
     expect(Object.keys(POST_KIND_LABEL).sort()).toEqual(
-      ['gig', 'job_share', 'looking_for', 'performance', 'portfolio_share', 'release', 'update'].sort(),
+      [
+        'event',
+        'gig',
+        'job_share',
+        'looking_for',
+        'performance',
+        'portfolio_share',
+        'release',
+        'system',
+        'update',
+      ].sort(),
     );
   });
 });

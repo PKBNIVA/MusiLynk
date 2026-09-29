@@ -86,7 +86,9 @@ class AccountErasure
     id = @user.id
     @user.sessions.delete_all
     @user.email_tokens.delete_all
+    @user.auth_connections.destroy_all
     SignInCode.where(email: @user.email).delete_all
+    PhoneOtp.where(phone: @user.phone).delete_all if @user.phone
     @user.saved_jobs.delete_all
     @user.job_alerts.destroy_all
     @user.notifications.delete_all
@@ -172,6 +174,8 @@ class AccountErasure
       profile_complete: false,
       email_verified: false,
       last_login_at: nil,
+      phone: nil,
+      phone_verified_at: nil,
       updated_at: Time.current
     )
   end

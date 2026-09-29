@@ -17,6 +17,8 @@ import {
   Flag,
   Pencil,
   Trash2,
+  Pin,
+  CalendarDays,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
@@ -39,6 +41,7 @@ import {
   deletePost,
   embedPreviewFor,
   fetchComments,
+  icsUrlFor,
   isOwnedByActor,
   splitHashtags,
   mediaUrlFor,
@@ -62,6 +65,8 @@ const KIND_ICON: Record<PostKind, typeof Music2> = {
   looking_for: Search,
   job_share: Briefcase,
   portfolio_share: Music2,
+  system: Sparkles,
+  event: CalendarDays,
 };
 
 export interface PostCardProps {
@@ -182,6 +187,12 @@ export function PostCard({ post, onChanged, onDeleted }: PostCardProps) {
       aria-labelledby={`stage-post-${post.id}-author`}
       className="verse-surface rounded-2xl border border-white/10 bg-white/[.035] p-4 md:p-5"
     >
+      {post.pinned && (
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-violet-300">
+          <Pin aria-hidden="true" size={12} />
+          Pinned
+        </p>
+      )}
       <header className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar className="size-10">
@@ -198,6 +209,11 @@ export function PostCard({ post, onChanged, onDeleted }: PostCardProps) {
               </Link>
               {post.author.verified && (
                 <ShieldCheck aria-hidden="true" size={14} className="shrink-0 text-emerald-400" />
+              )}
+              {post.author.system && (
+                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-slate-400">
+                  Verse
+                </span>
               )}
             </p>
             <p className="flex items-center gap-1.5 text-xs text-slate-400">
@@ -247,6 +263,8 @@ export function PostCard({ post, onChanged, onDeleted }: PostCardProps) {
           </p>
         )
       )}
+
+      {post.event && <EventDetails event={post.event} postId={post.id} />}
 
       {post.media.length > 0 && <MediaGrid media={post.media} />}
 
@@ -517,6 +535,25 @@ function Linkify({ text }: { text: string }) {
         ),
       )}
     </>
+  );
+}
+
+function EventDetails({ event, postId }: { event: NonNullable<StagePost['event']>; postId: string }) {
+  const when = event.startsAt ? formatDateTime(event.startsAt) : null;
+  return (
+    <div className="mt-3 rounded-xl border border-white/10 bg-white/[.03] p-3.5">
+      <p className="flex items-center gap-1.5 text-xs text-slate-400">
+        <CalendarDays aria-hidden="true" size={14} />
+        Event
+      </p>
+      {event.title && <p className="mt-1 font-semibold text-white">{event.title}</p>}
+      <p className="mt-1 text-sm text-slate-300">{[when, event.venue, event.city].filter(Boolean).join(' · ')}</p>
+      <div className="mt-2">
+        <Button asChild variant="outline" size="sm" className="border-white/15 text-slate-200">
+          <a href={icsUrlFor(postId)}>Add to calendar</a>
+        </Button>
+      </div>
+    </div>
   );
 }
 

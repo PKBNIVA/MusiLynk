@@ -1,7 +1,7 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';
-import { ArrowLeft, ArrowRight, Building2, KeyRound, Link2, Mic2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Building2, KeyRound, Link2, Mic2, Sparkles } from 'lucide-react';
 import { usePageMeta } from '../components/PageMeta';
 import { SkipLink } from '../components/SkipLink';
 import { BrandMark } from '../components/BrandMark';
@@ -12,9 +12,11 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { ChoiceChips } from '../components/join/ChoiceChips';
 import { WorkLinks, type WorkLink } from '../components/join/WorkLinks';
+import { DraftingSkeleton } from '../components/join/DraftingSkeleton';
 import { AccountStep } from '../components/join/AccountStep';
 import { useAuth, type User } from '../lib/authContext';
 import { consumeReturnTo } from '../lib/api';
+import { errorMessage } from '../lib/errors';
 import { submitUrgentDraft } from '../lib/urgentDraft';
 import { toast } from 'sonner';
 import {
@@ -26,6 +28,9 @@ import {
   type StarterPayload,
 } from '../lib/onboarding';
 import { buildBio, buildHeadline, yearsOf } from '../lib/profileTemplates';
+import { draftFromLinks, type DraftResult, type ProfileDraft } from '../lib/linkImport';
+
+const ProfileDraftReview = lazy(() => import('../components/join/ProfileDraftReview'));
 
 /**
  * The two-minute sign-up. Musicians: what you do and where, links to your work, then an
@@ -167,18 +172,55 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
   const [links, setLinks] = useState<WorkLink[]>([]);
   const [years, setYears] = useState('');
   const [errors, setErrors] = useState<{ roles?: string; city?: string; years?: string }>({});
+  // "Draft my profile from these links": drafting is the in-flight request; draftResult is the
+  // review card's data once it answers; appliedDraft is what "Use this" left behind (headline,
+  // bio, genres, instruments and credits — the rest is folded straight into roles/city/years/
+  // captions above). Nothing here is saved until the account is actually created.
+  const [drafting, setDrafting] = useState(false);
+  const [draftResult, setDraftResult] = useState<DraftResult | null>(null);
+  const [appliedDraft, setAppliedDraft] = useState<ProfileDraft | null>(null);
+  const [captions, setCaptions] = useState<Record<string, string>>({});
   const allRoles = [...roles, ...otherRoles.filter((role) => !roles.includes(role))];
   const facts = { roles: allRoles, city: city[0], years };
+
+  const runDraft = async () => {
+    setDrafting(true);
+    try {
+      setDraftResult(await draftFromLinks(links.map((link) => link.url)));
+    } catch (caught) {
+      toast.error(errorMessage(caught, 'Couldn’t draft a profile from those links. Try again.'));
+    } finally {
+      setDrafting(false);
+    }
+  };
+  const useDraft = (draft: ProfileDraft) => {
+    setAppliedDraft(draft);
+    if (draft.roles.length) setOtherRoles((current) => Array.from(new Set([...current, ...draft.roles])));
+    if (draft.city) setCity([draft.city]);
+    if (draft.yearsExperience != null) setYears(String(draft.yearsExperience));
+    const nextCaptions: Record<string, string> = {};
+    draft.items.forEach((item) => {
+      if (item.caption) nextCaptions[item.url] = item.caption;
+    });
+    setCaptions(nextCaptions);
+    setDraftResult(null);
+  };
 
   const starter = (): StarterPayload => {
     const yearsValue = yearsOf(years);
     return {
       roles: allRoles,
+      genres: appliedDraft?.genres ?? [],
+      instruments: appliedDraft?.instruments ?? [],
+      credits: appliedDraft?.credits ?? [],
       city: city[0],
       ...(yearsValue === null ? {} : { yearsExperience: yearsValue }),
-      headline: buildHeadline(facts),
-      bio: buildBio(facts),
-      links: starterLinks(links.map((link) => link.preview)),
+      headline: appliedDraft?.headline || buildHeadline(facts),
+      bio: appliedDraft?.bio || buildBio(facts),
+      links: starterLinks(
+        links.map((link) => link.preview),
+        captions,
+      ),
     };
   };
 
@@ -203,7 +245,7 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
     goTo(2);
   };
   const later = () => goTo(2);
-  const headline = buildHeadline(facts);
+  const headline = appliedDraft?.headline || buildHeadline(facts);
 
   const steps: FormStep[] = [
     {
@@ -267,6 +309,24 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
       content: (
         <form onSubmit={nextFromWork} noValidate className="space-y-6">
           <WorkLinks links={links} onChange={setLinks} />
+          {links.length > 0 && !draftResult && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={runDraft}
+              disabled={drafting}
+              className="border-violet-400/40 text-violet-100"
+            >
+              <Sparkles aria-hidden="true" size={16} />
+              Draft my profile from these links
+            </Button>
+          )}
+          {drafting && <DraftingSkeleton />}
+          {draftResult && (
+            <Suspense fallback={<DraftingSkeleton />}>
+              <ProfileDraftReview result={draftResult} onUse={useDraft} onSkip={() => setDraftResult(null)} />
+            </Suspense>
+          )}
           <Field id="join-years" label="Years of experience" optional error={errors.years} className="max-w-48">
             <Input
               type="number"

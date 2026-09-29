@@ -64,6 +64,8 @@ describe('PublicNav', () => {
         }),
     );
     mount();
+    // The Google exchange-code check runs first; let it hand over to the /me call.
+    await settle();
     // Still loading: neither the signed-out nor the signed-in controls have appeared yet.
     expect(container.querySelector('[data-testid="account-menu"]')).toBeNull();
     expect(container.textContent).not.toContain('Join Verse');

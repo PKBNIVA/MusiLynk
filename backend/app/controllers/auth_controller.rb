@@ -20,6 +20,10 @@ class AuthController < ApplicationController
   OTP_REQUEST_MESSAGE = "If this email can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.".freeze
   OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
   EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so Verse can no longer send to it. Use a different email address, or sign in with your password.".freeze
+  PASSWORDLESS_LOGIN_MESSAGE = "Use Google to sign in, or set a password from your email.".freeze
+  PHONE_OTP_UNAVAILABLE_MESSAGE = "WhatsApp sign-in codes are temporarily unavailable.".freeze
+  PHONE_OTP_REQUEST_MESSAGE = "If this number can be used on Verse, a 6-digit code is on its way on WhatsApp. It expires in 10 minutes.".freeze
+  PHONE_OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
   # Admin password sign-in needs a second step: a code emailed to the admin.
   SECOND_FACTOR_PURPOSE = :admin_second_factor
   SECOND_FACTOR_CHALLENGES_PER_EMAIL = 5
@@ -86,7 +90,7 @@ class AuthController < ApplicationController
 
     user, created = User.transaction do
       account = User.create!(name: params[:name], email: params[:email], password: params[:password], role:, status: :active,
-        consented_at: consent_given? ? Time.current : nil, vouched_by_id: vouch&.voucher_id)
+        consented_at: consent_given? ? Time.current : nil, vouched_by_id: vouch&.voucher_id, password_set_at: Time.current)
       account.create_profile!
       vouch&.update!(status: "joined", vouchee_id: account.id)
       [account, starter.apply!(account)]
@@ -110,6 +114,9 @@ class AuthController < ApplicationController
     user = User.find_by(email:)
     unless user&.authenticate(params[:password])
       record_failure!("login-failure", scopes, period: LOGIN_FAILURE_PERIOD)
+      if user && !user.password_set? && user.auth_connections.any?
+        return render_error(PASSWORDLESS_LOGIN_MESSAGE, :unauthorized, "USE_CONNECTED_SIGN_IN")
+      end
       return render_error("Incorrect email or password.", :unauthorized)
     end
     return render_error("This account is not active.", :forbidden) unless user.active?
@@ -170,9 +177,108 @@ class AuthController < ApplicationController
   # a sign-up code (the account is created on verify); any other address gets an
   # unusable placeholder row so the work done per request is the same.
   # GET /auth/methods -> which sign-in paths work right now, so the sign-in page never
-  # offers an emailed code (or a reset link) that cannot be delivered.
+  # offers an emailed code (or a reset link) that cannot be delivered; also which third-party
+  # providers are configured, and (when signed in) the caller's connected accounts.
   def sign_in_methods
-    render json: { signInCodes: sign_in_codes_available?, password: password_login_enabled?, emailDelivery: EmailDelivery.configured? }
+    result = { signInCodes: sign_in_codes_available?, password: password_login_enabled?, emailDelivery: EmailDelivery.configured?,
+      providers: { google: GoogleOauth.enabled?, whatsapp: WhatsappOtp.enabled? } }
+    result[:connections] = current_user.auth_connections.order(:created_at).map(&:as_summary) if current_user
+    render json: result
+  end
+
+  # POST /api/auth/exchange {code} -> same shape as /auth/login. Redeems the single-use,
+  # 60-second code GoogleAuthController#callback minted (see AuthExchangeCode) for the
+  # real session token — a full-page OAuth redirect can never carry that token itself.
+  def exchange
+    user = AuthExchangeCode.redeem!(params[:code])
+    return render_error("This sign-in link has expired or was already used.", :unauthorized, "EXCHANGE_INVALID") unless user
+    return render_error("This account is not active.", :forbidden) unless user.active?
+    token = sign_in(user)
+    render json: { user: public_user(user), accessToken: token }
+  end
+
+  # POST /api/auth/connect-ticket (signed in) -> {ticket, expiresIn}. A single-use,
+  # 5-minute ticket GoogleAuthController#start/#callback use to identify the linking
+  # user for intent=connect, so the OAuth start URL never carries a bearer token either.
+  def connect_ticket
+    return unless authenticate!
+    ticket = GoogleConnectTicket.issue!(current_user)
+    render json: { ticket:, expiresIn: GoogleConnectTicket::TTL.to_i }
+  end
+
+  # DELETE /api/auth/connections/:id — the signed-in user disconnecting one of their own
+  # third-party sign-in methods. Refused (422) when it is the only sign-in method they have
+  # and they have never set a password (see User#password_set?).
+  def destroy_connection
+    return unless authenticate!
+    connection = current_user.auth_connections.find_by(id: params[:id])
+    return render_error("Not found", :not_found) unless connection
+    if !current_user.password_set? && current_user.auth_connections.count <= 1
+      return render_error("Set a password, or connect another sign-in method, before disconnecting your only one.",
+        :unprocessable_content, "LAST_SIGN_IN_METHOD")
+    end
+    GoogleOauth.revoke(connection.access_token) if connection.provider == "google"
+    connection.destroy!
+    audit!("auth.connection_removed", current_user, { provider: connection.provider })
+    render json: { ok: true }
+  end
+
+  # POST /api/auth/phone-otp/request {phone} — WhatsApp equivalent of /auth/otp/request.
+  # Dark until WhatsappOtp.enabled?. Signed in: sends a code to prove control of `phone`
+  # before it is added to the account (see #phone_otp_verify). Signed out: sends a code only
+  # when `phone` already belongs to a user with a *verified* phone (a sign-in code) — a
+  # phone is never linked to a new account, and an unverified stored phone is never a
+  # sign-in method, so the response otherwise looks identical either way.
+  def phone_otp_request
+    return render_error(PHONE_OTP_UNAVAILABLE_MESSAGE, :service_unavailable, "OTP_UNAVAILABLE") unless WhatsappOtp.enabled?
+    phone = normalized_phone
+    return render_error("Enter a valid phone number.", :unprocessable_content, "INVALID_PHONE") unless phone
+
+    scopes = { phone: [phone, OTP_REQUESTS_PER_EMAIL], ip: [request.remote_ip, OTP_REQUESTS_PER_IP] }
+    return if failure_budget_exhausted?("phone-otp-request", scopes, period: OTP_REQUEST_PERIOD)
+    record_failure!("phone-otp-request", scopes, period: OTP_REQUEST_PERIOD)
+
+    signed_in_user = current_user
+    signed_out_match = signed_in_user.nil? && User.where(phone:).where.not(phone_verified_at: nil).exists?
+    _record, code = PhoneOtp.issue!(phone:)
+    queue_phone_otp(phone:, code:) if signed_in_user || signed_out_match
+
+    result = { ok: true, message: PHONE_OTP_REQUEST_MESSAGE, expiresIn: PhoneOtp::LIFETIME.to_i }
+    result[:debugCode] = code unless Rails.env.production?
+    render json: result
+  end
+
+  # POST /api/auth/phone-otp/verify {phone, code}. Signed in: attaches and verifies `phone`
+  # on the current account. Signed out: signs in the user whose verified phone this is,
+  # exactly like /auth/otp/verify.
+  def phone_otp_verify
+    phone = normalized_phone
+    ip_scope = { ip: [request.remote_ip, OTP_VERIFY_FAILURES_PER_IP] }
+    return if failure_budget_exhausted?("phone-otp-verify-failure", ip_scope, period: OTP_VERIFY_FAILURE_PERIOD)
+    return render_error(PHONE_OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID") unless phone
+
+    candidate = PhoneOtp.latest_usable_for(phone)
+    matched = candidate && consume_code(candidate, params[:code])
+    unless matched
+      record_failure!("phone-otp-verify-failure", ip_scope, period: OTP_VERIFY_FAILURE_PERIOD)
+      return render_error(PHONE_OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID")
+    end
+
+    if current_user
+      return render_error("Another account already uses that number.", :conflict) if User.where.not(id: current_user.id).exists?(phone:)
+      current_user.update!(phone:, phone_verified_at: Time.current)
+      audit!("auth.phone_connected", current_user)
+      return render json: { ok: true, user: public_user(current_user) }
+    end
+
+    user = User.where(phone:).where.not(phone_verified_at: nil).first
+    return render_error(PHONE_OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID") unless user
+    return render_error("This account is not active.", :forbidden) unless user.active?
+
+    user.update!(last_login_at: Time.current)
+    token = sign_in(user)
+    audit!("auth.login", user, { method: "whatsapp_code" })
+    render json: { user: public_user(user), accessToken: token }
   end
 
   def otp_request
@@ -297,7 +403,7 @@ class AuthController < ApplicationController
 
     token.with_lock do
       return render_error(RESET_TOKEN_INVALID_MESSAGE, :bad_request, "TOKEN_INVALID") if token.used_at? || token.expires_at <= Time.current
-      user.update!(password: params[:password])
+      user.update!(password: params[:password], password_set_at: Time.current)
       token.update!(used_at: Time.current)
       user.sessions.delete_all
       user.email_tokens.usable("reset_password").update_all(used_at: Time.current)
@@ -329,6 +435,13 @@ class AuthController < ApplicationController
   end
 
   def normalized_email = params[:email].to_s.strip.downcase
+
+  # E.164; India (+91) is assumed for a 10-digit number with no country code, per the WP.
+  def normalized_phone
+    raw = params[:phone].to_s.strip.gsub(/[\s-]/, "")
+    raw = "+91#{raw}" if raw.match?(/\A[6-9]\d{9}\z/)
+    raw if raw.match?(/\A\+[1-9]\d{7,14}\z/)
+  end
 
   # Sign-up consent (Terms and Privacy Policy). Older clients send no `consent` at all and keep
   # working; a client that asks and gets "no" is refused, so an account never starts without it.
@@ -400,6 +513,13 @@ class AuthController < ApplicationController
     # Registered by another path since the code was sent; the verifier still
     # proved control of the inbox, so sign in to that account.
     [User.find_by(email: code.email), false]
+  end
+
+  def queue_phone_otp(phone:, code:)
+    WhatsappOtp.send_code(phone:, code:)
+  rescue StandardError => error
+    Rails.logger.error({ event: "whatsapp_otp_enqueue_failed", error: error.class.name }.to_json)
+    ErrorReporter.capture(error, tags: { source: "whatsapp_otp_enqueue_failed" })
   end
 
   def queue_sign_in_code(user:, email:, code:)

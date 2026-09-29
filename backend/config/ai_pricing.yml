@@ -50,6 +50,7 @@ default: &default
     draft_portfolio: 3
     tailor_resume: 3
     classify_portfolio_item: 1
+    profile_from_links: 1
 
   # Long-form tasks that get the higher output cap (still Haiku only).
   long_tasks:
@@ -58,6 +59,7 @@ default: &default
     - resume_summary
     - draft_portfolio
     - tailor_resume
+    - profile_from_links
 
   # Anthropic list pricing, USD per million tokens, plus the INR conversion used to estimate
   # spend. batch_discount applies to any call placed through the Message Batches API.
@@ -99,6 +101,14 @@ default: &default
     classification_max_tokens: 200
 
   cache_ttl_hours: 24
+
+  # Link import's AI drafting task (LinkImport::ProfileDraft, task profile_from_links): its own
+  # budget line, separate from budgets.hard_monthly_budget_inr above — enforced by
+  # LinkImport::Budget off the same ai_credit_ledgers "usage" rows the rest of AI cost control
+  # uses. Its per-account/anonymous run limits (3 lifetime signed-in, 1 anonymous per throttle
+  # IP) are fixed in code (LinkImport::Budget), the same way this file's own launch limits are
+  # the only numbers that gate reachability rather than spend.
+  profile_import_monthly_budget_inr: 1000
 
 development:
   <<: *default

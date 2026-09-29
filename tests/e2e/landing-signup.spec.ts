@@ -208,6 +208,55 @@ test.describe('musician sign-up', () => {
     await expect(page).toHaveURL(/\/jobseeker$/);
   });
 
+  test('drafting a profile from pasted links shows a review card with sources, and Use this fills the sign-up', async ({
+    page,
+  }) => {
+    await mockSignupApi(page);
+    await page.route('**/api/link-import/draft', (route) =>
+      route.fulfill({
+        json: {
+          sources: [
+            {
+              provider: 'youtube',
+              kind: 'video',
+              label: 'YouTube',
+              url: YOUTUBE,
+              title: 'Live set',
+              author: null,
+              thumbnail: null,
+            },
+          ],
+          draft: {
+            headline: 'Session drummer in Mumbai',
+            bio: 'I play drums for sessions.',
+            roles: ['Artists & performers'],
+            genres: [],
+            instruments: [],
+            city: 'Mumbai',
+            yearsExperience: 6,
+            credits: [],
+            items: [{ url: YOUTUBE, title: 'Live set', caption: 'Live at a sangeet' }],
+          },
+          aiUsed: false,
+          provenance: { headline: YOUTUBE },
+        },
+      }),
+    );
+    await page.goto('/join/musician');
+    await page.getByRole('button', { name: 'Drummer', exact: true }).click();
+    await page.getByRole('button', { name: 'Next: your work' }).click();
+    await page.getByLabel('Paste links to your work').fill(YOUTUBE);
+    await page.getByLabel('Paste links to your work').press('Enter');
+    await page.getByRole('button', { name: 'Draft my profile from these links' }).click();
+    await expect(page.getByText('We drafted this from your links. Fix anything wrong.')).toBeVisible();
+    await expect(page.getByText('Drafted from your links without AI')).toBeVisible();
+    await expect(page.getByText('from YouTube').first()).toBeVisible();
+    await page.getByTestId('draft-use').click();
+    await expect(page.getByTestId('draft-review-card')).toHaveCount(0);
+    await expect(page.getByTestId('headline-preview')).toContainText('Session drummer in Mumbai');
+    await expect(page.getByLabel(/Years of experience/)).toHaveValue('6');
+  });
+
   test('the account needs the Terms and Privacy box ticked', async ({ page }) => {
     const calls = await mockSignupApi(page);
     await page.goto('/join/musician');

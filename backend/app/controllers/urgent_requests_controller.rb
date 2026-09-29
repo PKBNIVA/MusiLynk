@@ -43,6 +43,7 @@ class UrgentRequestsController < ApplicationController
     return render_error("Rate must be a whole number of 0 or more.", :unprocessable_content) if rate && !rate.to_s.match?(/\A\d{1,9}\z/)
     UrgentRequestResponse.upsert({ urgent_request_id: item.id, user_id: current_user.id, message: params[:message].to_s.strip.presence, rate: rate&.to_i, status: "available", created_at: Time.current, updated_at: Time.current }, unique_by: :idx_urgent_response_unique)
     Notification.create!(user: item.requester, kind: "urgent_response", title: "Availability response", body: "#{current_user.name} responded to #{item.title}.", link: "/urgent-requests")
+    Notifier.milestone_first_urgent_response(current_user, item)
     render json: { ok: true }, status: :created
   end
 
@@ -56,6 +57,7 @@ class UrgentRequestsController < ApplicationController
     if params[:status] == "filled" && params[:filledByUserId].present?
       return render_error("Only someone who responded can be marked as filling this request.", :unprocessable_content) unless item.urgent_request_responses.exists?(user_id: params[:filledByUserId])
       item.update!(status: "filled", filled_by_id: params[:filledByUserId])
+      Notifier.milestone_5th_filled_request(current_user)
     else
       item.update!(status: params[:status])
     end

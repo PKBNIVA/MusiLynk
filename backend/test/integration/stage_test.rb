@@ -462,6 +462,69 @@ class StageTest < ActionDispatch::IntegrationTest
     assert_operator queries, :<, 20, "feed should not N+1 per post"
   end
 
+  # ---- System posts, pinning and events -------------------------------------------------------
+
+  test "a pinned post leads the feed even when everything else is newer" do
+    old_pinned = Post.create!(author_type: "user", author_id: @bob.id, created_by_user_id: @bob.id, body: "Old but pinned",
+      visibility: "public", pinned_until: 1.day.from_now)
+    old_pinned.update_column(:created_at, 3.days.ago)
+    Post.create!(author_type: "user", author_id: @bob.id, created_by_user_id: @bob.id, body: "Brand new", visibility: "public")
+
+    get "/api/stage/feed", headers: auth(@alice)
+    assert_response :success
+    assert_equal old_pinned.id, response.parsed_body["posts"].first["id"]
+  end
+
+  test "an unpinned or expired-pin post does not lead the feed" do
+    Post.create!(author_type: "user", author_id: @bob.id, created_by_user_id: @bob.id, body: "Expired pin",
+      visibility: "public", pinned_until: 1.day.ago)
+    newest = Post.create!(author_type: "user", author_id: @bob.id, created_by_user_id: @bob.id, body: "Newest", visibility: "public")
+
+    get "/api/stage/feed", headers: auth(@alice)
+    assert_response :success
+    assert_equal newest.id, response.parsed_body["posts"].first["id"]
+  end
+
+  test "a system post renders with the Verse author and is not editable by anyone" do
+    post = Post.create!(author_type: "system", author_id: Post::SYSTEM_AUTHOR_ID, kind: "system", system_kind: "welcome",
+      body: "Welcome someone")
+
+    get "/api/stage/posts/#{post.id}", headers: auth(@alice)
+    assert_response :success
+    author = response.parsed_body["post"]["author"]
+    assert_equal "Verse", author["name"]
+    assert author["system"]
+
+    delete "/api/stage/posts/#{post.id}", headers: auth(@alice), as: :json
+    assert_response :forbidden
+  end
+
+  test "a verified musician can post an event, and it appears in the upcoming events strip and as ICS" do
+    @alice.profile.update!(verified: true)
+    post "/api/stage/posts",
+      params: { kind: "event", eventTitle: "Open Mic Night", eventStartsAt: 3.days.from_now.iso8601, eventVenue: "The Attic", city: "Mumbai" },
+      headers: auth(@alice), as: :json
+    assert_response :created
+    event_id = response.parsed_body["id"]
+
+    get "/api/stage/events?city=Mumbai", headers: auth(@bob)
+    assert_response :success
+    assert_equal [event_id], response.parsed_body["events"].map { _1["id"] }
+
+    get "/api/stage/posts/#{event_id}/ics"
+    assert_response :success
+    assert_equal "text/calendar", response.media_type
+    assert_includes response.body, "SUMMARY:Open Mic Night"
+  end
+
+  test "an unverified musician cannot post an event" do
+    post "/api/stage/posts",
+      params: { kind: "event", eventTitle: "Open Mic Night", eventStartsAt: 3.days.from_now.iso8601, eventVenue: "The Attic", city: "Mumbai" },
+      headers: auth(@bob), as: :json
+    assert_response :forbidden
+    assert_equal "NOT_VERIFIED", response.parsed_body["code"]
+  end
+
   private
 
   def with_real_cache

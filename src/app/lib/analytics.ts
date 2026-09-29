@@ -22,6 +22,8 @@ export const EVENT_NAMES = [
   'path_chosen',
   'signup_started',
   'signup_completed',
+  'auth_google_start',
+  'auth_google_success',
   'profile_link_added',
   'job_posted',
   'urgent_request_submitted',
@@ -30,6 +32,9 @@ export const EVENT_NAMES = [
   'booking_quote_accepted',
   'booking_deposit_paid',
   'route_change',
+  'profile_view',
+  'share_card_download',
+  'share_whatsapp',
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 
@@ -235,6 +240,23 @@ export function trackBookingQuoteAccepted(props?: EventProps): void {
 
 export function trackBookingDepositPaid(props?: EventProps): void {
   track('booking_deposit_paid', props);
+}
+
+const VIEWED_PROFILES_KEY = 'verse_viewed_profiles';
+
+/** Fires once per profile per session (sessionStorage-deduped): a repeat mount of the same
+ * PublicProfile page, or a re-render, never double-counts a view. Feeds the "New: N views this
+ * week" digest line and the 100-views milestone email (see Notifier.milestone_profile_100_views). */
+export function trackProfileView(profileId: string): void {
+  if (!profileId) return;
+  try {
+    const seen: string[] = JSON.parse(sessionStorage.getItem(VIEWED_PROFILES_KEY) || '[]');
+    if (seen.includes(profileId)) return;
+    sessionStorage.setItem(VIEWED_PROFILES_KEY, JSON.stringify([...seen, profileId].slice(-200)));
+  } catch {
+    // Private browsing or blocked storage: fall through and track anyway rather than lose the event.
+  }
+  track('profile_view', { profileId });
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -94,6 +94,43 @@ describe('api() requests', () => {
     await getSignInMethods();
     expect(lastRequest()).toMatchObject({ url: '/api/auth/methods', init: { method: 'GET' } });
   });
+
+  it('disconnects an auth connection', async () => {
+    const { disconnectAuthConnection } = await loadApi();
+    fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+    await disconnectAuthConnection('conn_1');
+    expect(lastRequest()).toMatchObject({ url: '/api/auth/connections/conn_1', init: { method: 'DELETE' } });
+  });
+});
+
+describe('googleStartUrl', () => {
+  it('builds a signin URL against the API origin, without a token', async () => {
+    const { googleStartUrl } = await loadApi();
+    const url = new URL(googleStartUrl({ intent: 'signin', role: 'jobseeker', returnTo: '/jobseeker/profile' }));
+    expect(url.pathname).toBe('/auth/google/start');
+    expect(url.searchParams.get('intent')).toBe('signin');
+    expect(url.searchParams.get('role')).toBe('jobseeker');
+    expect(url.searchParams.get('return_to')).toBe('/jobseeker/profile');
+    expect(url.searchParams.has('token')).toBe(false);
+  });
+
+  it('sets consent=1 only when asked, and never puts a bearer token in the URL', async () => {
+    const { googleStartUrl, setAccessToken } = await loadApi();
+    setAccessToken('tok-abc');
+    const signin = new URL(googleStartUrl({ intent: 'signin', consent: true }));
+    expect(signin.searchParams.get('consent')).toBe('1');
+    const connect = new URL(googleStartUrl({ intent: 'connect', ticket: 'tix-1' }));
+    expect(connect.searchParams.get('ticket')).toBe('tix-1');
+    expect(connect.toString()).not.toContain('tok-abc');
+    expect(connect.searchParams.has('token')).toBe(false);
+  });
+
+  it('requests a connect ticket over the API', async () => {
+    const { requestGoogleConnectTicket } = await loadApi();
+    fetchMock.mockResolvedValue(jsonResponse({ ticket: 't1', expiresIn: 300 }));
+    await requestGoogleConnectTicket();
+    expect(lastRequest()).toMatchObject({ url: '/api/auth/connect-ticket', init: { method: 'POST' } });
+  });
 });
 
 describe('api() error mapping', () => {

@@ -16,6 +16,7 @@ class TalentFoldersController < ApplicationController
     folder = TalentFolder.where(owner: current_user).find(params[:id])
     # Profiles that stopped being discoverable (suspended, hidden, incomplete) drop out of folders.
     members = folder.talent_folder_members.where(candidate_id: User.discoverable_talent.select(:id)).includes(candidate: :profile).limit(LIST_LIMIT)
+    prime_profile_stats(members.map(&:candidate))
     render json: { folder:, candidates: members.map { public_profile(_1.candidate).merge(note: _1.note) } }
   end
   def add_candidate

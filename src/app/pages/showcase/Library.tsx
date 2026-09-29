@@ -12,6 +12,7 @@ import {
   Filter,
   Inbox,
   Layers,
+  Link2,
   Pencil,
   Plus,
   Search,
@@ -49,6 +50,7 @@ import { errorMessage } from '../../lib/errors';
 import { useActingAsKey } from '../../lib/actingAs';
 import { announceSuggestionsChanged, syncSummary, type Portfolio, type Suggestion } from '../../lib/showcase';
 import type { MediaMetadata, PortfolioItem } from '../../lib/apiTypes';
+import { LinkImportDialog } from '../../components/showcase/LinkImportDialog';
 
 const KINDS = [
   { value: 'audio', label: 'Audio / track' },
@@ -131,6 +133,7 @@ export default function Library() {
   const [upload, setUpload] = useState<{ name: string; pct: number } | null>(null);
   const [result, setResult] = useState<{ title: string; text: string; pending: number } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PortfolioItem | null>(null);
+  const [linkImportOpen, setLinkImportOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState('');
   const [facet, setFacet] = useState('');
@@ -516,6 +519,10 @@ export default function Library() {
               Portfolios
             </Link>
           </Button>
+          <Button variant="outline" onClick={() => setLinkImportOpen(true)}>
+            <Link2 size={16} aria-hidden="true" />
+            Add from a link
+          </Button>
           <Button onClick={startAdd}>
             <Plus size={16} aria-hidden="true" />
             Add work
@@ -523,6 +530,14 @@ export default function Library() {
         </>
       }
     >
+      <LinkImportDialog
+        open={linkImportOpen}
+        onOpenChange={setLinkImportOpen}
+        onImported={(imported) => {
+          setItems((list) => [...imported, ...(list || [])]);
+          void loadPortfolios();
+        }}
+      />
       {result && (
         <div
           role="status"

@@ -151,7 +151,7 @@ module LinkImport
       cleaned = validate_ai_output(parsed, valid_urls)
       return nil unless cleaned
 
-      cost_inr = AiPricing.estimate_cost_inr(input_tokens: response[:inputTokens], output_tokens: response[:outputTokens])
+      cost_inr = AiPricing.estimate_cost_inr(input_tokens: response[:inputTokens], output_tokens: response[:outputTokens], cached_input_tokens: response[:cachedInputTokens])
       user ? Budget.record_spend!(user, cost_inr:) : Budget.record_anonymous!(identity[:anonymous_ip])
       cleaned
     rescue AiAssist::Error, JSON::ParserError, StandardError => e

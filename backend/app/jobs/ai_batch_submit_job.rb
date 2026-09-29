@@ -14,7 +14,10 @@ class AiBatchSubmitJob < ApplicationJob
   # `AiBatchSubmitJob.perform_now` (a console, a stray enqueue) submits nothing new either. Rows
   # already submitted before the task was disabled are still polled and ingested, since that
   # costs nothing further and just finishes work already paid for.
-  def self.disabled? = !AiPricing.task_enabled?("classify_portfolio_item")
+  #
+  # The Message Batches queue is Anthropic-only: with any other provider selected nothing new is
+  # submitted (the task is launch-disabled anyway); already-submitted batches are still ingested.
+  def self.disabled? = !AiPricing.task_enabled?("classify_portfolio_item") || AiPricing.provider != "anthropic"
 
   def perform(now = Time.current, client: nil)
     @client = client || BatchClient.new

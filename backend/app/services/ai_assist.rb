@@ -1,43 +1,46 @@
-require "net/http"
-require "uri"
 require "rails-html-sanitizer"
 
-# Calls the Anthropic Messages API on behalf of one of the fixed AiAssist::Tasks templates.
+# Runs one of the fixed AiAssist::Tasks templates through the configured LLM provider
+# (AiAssist::Providers::OpenAi by default, ::Anthropic as a config fallback; see
+# config/ai_pricing.yml `provider:` and ENV["AI_PROVIDER"]).
 #
 # The client never sends a raw prompt: it sends a `task` key and a structured `context` hash.
 # This service resolves the task to its server-side system prompt and prompt template, calls
-# Anthropic, and returns plain, length-capped text. Model output is always treated as untrusted
-# text — never HTML, never executed, never trusted for facts.
+# the provider, and returns plain, length-capped text. Model output is always treated as
+# untrusted text — never HTML, never executed, never trusted for facts.
 #
-# Disabled (`enabled?` false) whenever ANTHROPIC_API_KEY is blank or AI_ASSIST_ENABLED == "false".
-# Nothing here ever logs a prompt, an API key or user-authored text: only task, latency, token
-# counts and status.
+# Disabled (`enabled?` false) whenever the selected provider's key (OPENAI_API_KEY or
+# ANTHROPIC_API_KEY) is blank or AI_ASSIST_ENABLED == "false".
+# Nothing here ever logs a prompt, an API key or user-authored text: only task, provider,
+# latency, token counts and status.
 class AiAssist
   class Error < StandardError
-    attr_reader :code
+    attr_reader :code, :http_status
 
-    def initialize(message, code:)
+    def initialize(message, code:, status: nil)
       super(message)
       @code = code
+      @http_status = status
     end
   end
 
-  API_URL = "https://api.anthropic.com/v1/messages".freeze
-  ANTHROPIC_VERSION = "2023-06-01".freeze
-  # Haiku only, everywhere: it is the only model any AiAssist task uses. ENV["AI_MODEL"] can
-  # still override it (e.g. to pin a dated snapshot), but there is no separate "long" model —
-  # long tasks get a bigger output cap (AiPricing.output_caps), never a bigger model.
+  # Pre-provider constants, kept for callers and specs; the Anthropic provider owns them now.
   DEFAULT_MODEL = "claude-haiku-4-5-20251001".freeze
-  OPEN_TIMEOUT = 5
-  READ_TIMEOUT = 20
+
+  PROVIDERS = {
+    "openai" => "AiAssist::Providers::OpenAi",
+    "anthropic" => "AiAssist::Providers::Anthropic"
+  }.freeze
+
+  def self.provider_name = AiPricing.provider
+
+  def self.provider_class = PROVIDERS.fetch(provider_name).constantize
 
   def self.enabled?
-    ENV["ANTHROPIC_API_KEY"].to_s.strip.present? && ENV["AI_ASSIST_ENABLED"] != "false"
+    provider_class.enabled? && ENV["AI_ASSIST_ENABLED"] != "false"
   end
 
-  def self.model_name
-    ENV["AI_MODEL"].presence || DEFAULT_MODEL
-  end
+  def self.model_name = provider_class.model_name
 
   # Launch mode: only the tasks AiPricing.enabled_tasks lists right now (see
   # config/ai_pricing.yml `launch:`). `known_task?` is the full registry, independent of that —
@@ -69,7 +72,7 @@ class AiAssist
     @client = client
   end
 
-  # Returns { suggestion:, task:, model: } or raises AiAssist::Error with a friendly message and code.
+  # Returns { suggestion:, task:, model:, ... } or raises AiAssist::Error with a friendly message and code.
   def suggest(task:, context:)
     raise Error.new("AI assist is not enabled right now.", code: "AI_DISABLED") unless self.class.enabled?
 
@@ -78,92 +81,52 @@ class AiAssist
 
     clean_context = AiAssist::Tasks.validate!(spec, context)
     user_prompt = spec.build_prompt(clean_context)
-    model = self.class.model_name
     max_tokens = self.class.max_tokens_for(task)
+    schema = AiAssist::Tasks::JSON_SCHEMAS[task.to_s]
 
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     begin
-      status, raw_body = call_anthropic(model:, system_prompt: spec.system_prompt, user_prompt:, max_tokens:)
-    rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error, IOError, SocketError, Errno::ECONNREFUSED => e
-      log(task:, status: "timeout", latency_ms: elapsed_ms(started))
-      raise Error.new("The AI assistant is taking too long. Try again in a moment.", code: "AI_TIMEOUT")
+      result = provider.complete(system: spec.system_prompt, messages: [{ role: "user", content: user_prompt }],
+        max_output_tokens: max_tokens, json_schema: schema && { name: schema.name, schema: schema.schema })
+    rescue Error => e
+      log(task:, status: failure_status(e), latency_ms: elapsed_ms(started))
+      raise
     end
 
-    unless status == 200
-      log(task:, status: "upstream_error_#{status}", latency_ms: elapsed_ms(started))
-      raise Error.new("The AI assistant is unavailable right now.", code: "AI_UPSTREAM_ERROR")
+    if result.refused
+      log(task:, status: "refused", latency_ms: elapsed_ms(started), input_tokens: result.input_tokens, output_tokens: result.output_tokens)
+      raise Error.new("The AI assistant couldn't help with that.", code: "AI_REFUSED")
     end
 
-    text, usage = extract_text_and_usage(raw_body)
-    log(task:, status: "ok", latency_ms: elapsed_ms(started), input_tokens: usage[:input], output_tokens: usage[:output])
+    log(task:, status: "ok", latency_ms: elapsed_ms(started), input_tokens: result.input_tokens, output_tokens: result.output_tokens,
+      cached_input_tokens: result.cached_input_tokens)
 
-    { suggestion: sanitize_output(text, spec.max_output_chars), task: task.to_s, model:,
-      inputTokens: usage[:input], outputTokens: usage[:output] }
+    text = schema&.render && result.parsed_json.is_a?(Hash) ? schema.render.call(result.parsed_json) : result.text
+    { suggestion: sanitize_output(text, spec.max_output_chars), task: task.to_s, model: result.model, provider: self.class.provider_name,
+      inputTokens: result.input_tokens, cachedInputTokens: result.cached_input_tokens, outputTokens: result.output_tokens }
   end
 
   # Raw single-call helper for services with their own system prompt (AiPortfolioItemClassifier)
   # rather than one of the fixed AiAssist::Tasks templates. Returns { text:, usage: }.
   def suggest_raw(model:, system_prompt:, user_prompt:, max_tokens:)
-    status, raw_body = call_anthropic(model:, system_prompt:, user_prompt:, max_tokens:)
-    raise Error.new("The AI assistant is unavailable right now.", code: "AI_UPSTREAM_ERROR") unless status == 200
+    result = provider(model:).complete(system: system_prompt, messages: [{ role: "user", content: user_prompt }], max_output_tokens: max_tokens)
+    raise Error.new("The AI assistant couldn't help with that.", code: "AI_REFUSED") if result.refused
 
-    text, usage = extract_text_and_usage(raw_body)
-    { text:, usage: }
-  rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error, IOError, SocketError, Errno::ECONNREFUSED
-    raise Error.new("The AI assistant is taking too long. Try again in a moment.", code: "AI_TIMEOUT")
+    { text: result.text, usage: { input: result.input_tokens, cached_input: result.cached_input_tokens, output: result.output_tokens } }
   end
 
   private
 
+  def provider(model: nil) = self.class.provider_class.new(client: @client, model:)
+
   def elapsed_ms(started) = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round(1)
 
-  def call_anthropic(model:, system_prompt:, user_prompt:, max_tokens:)
-    payload = {
-      model:, max_tokens:, system: system_prompt,
-      messages: [{ role: "user", content: user_prompt }]
-    }.to_json
-
-    if @client
-      @client.post(API_URL, headers: request_headers, body: payload, open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT)
-    else
-      perform_http_post(payload)
+  def failure_status(error)
+    case error.code
+    when "AI_TIMEOUT" then "timeout"
+    when "AI_UPSTREAM_ERROR" then "upstream_error_#{error.http_status}"
+    else error.code.downcase
     end
-  end
-
-  def request_headers
-    {
-      "content-type" => "application/json",
-      "anthropic-version" => ANTHROPIC_VERSION,
-      "x-api-key" => ENV["ANTHROPIC_API_KEY"].to_s
-    }
-  end
-
-  def perform_http_post(payload)
-    uri = URI.parse(API_URL)
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.open_timeout = OPEN_TIMEOUT
-    http.read_timeout = READ_TIMEOUT
-    request = Net::HTTP::Post.new(uri.request_uri, request_headers)
-    request.body = payload
-    response = http.request(request)
-    [response.code.to_i, response.body]
-  end
-
-  # Anthropic's Messages API shape: { content: [{ type: "text", text: "..." }], usage: { input_tokens:, output_tokens: } }.
-  # Any deviation (malformed JSON, missing keys, wrong types) is treated as a malformed response.
-  def extract_text_and_usage(raw_body)
-    parsed = JSON.parse(raw_body.to_s)
-    blocks = parsed.fetch("content")
-    raise Error.new("The AI assistant returned something unexpected.", code: "AI_MALFORMED_RESPONSE") unless blocks.is_a?(Array)
-
-    text = blocks.select { _1.is_a?(Hash) && _1["type"] == "text" }.map { _1["text"].to_s }.join
-    raise Error.new("The AI assistant returned an empty suggestion.", code: "AI_MALFORMED_RESPONSE") if text.strip.empty?
-
-    usage = parsed["usage"].is_a?(Hash) ? parsed["usage"] : {}
-    [text, { input: usage["input_tokens"], output: usage["output_tokens"] }]
-  rescue JSON::ParserError, KeyError, TypeError, NoMethodError
-    raise Error.new("The AI assistant returned something unexpected.", code: "AI_MALFORMED_RESPONSE")
   end
 
   def sanitize_output(text, max_chars)
@@ -173,10 +136,10 @@ class AiAssist
 
   # Structured, non-sensitive only: task, latency, token counts, status. Never the prompt, the
   # context, the model's text or the API key.
-  def log(task:, status:, latency_ms:, input_tokens: nil, output_tokens: nil)
+  def log(task:, status:, latency_ms:, input_tokens: nil, output_tokens: nil, cached_input_tokens: nil)
     Rails.logger.info({
-      event: "ai_assist", task: task.to_s, status:, latencyMs: latency_ms,
-      inputTokens: input_tokens, outputTokens: output_tokens
+      event: "ai_assist", task: task.to_s, provider: self.class.provider_name, status:, latencyMs: latency_ms,
+      inputTokens: input_tokens, cachedInputTokens: cached_input_tokens, outputTokens: output_tokens
     }.compact.to_json)
   end
 end

@@ -157,6 +157,9 @@ Rails.application.routes.draw do
     delete "uploads/:id", to: "uploads#destroy", as: :upload
     get "public/talent", to: "talent#public_index"
     get "public/talent/:id", to: "talent#public_show"
+    get "public/hire-pages/popular-searches", to: "hire_pages#popular_searches"
+    get "public/hire-pages/:role/:city", to: "hire_pages#show"
+    get "public/rates/:city", to: "rates#show"
     get "candidates", to: "talent#index"
     get "candidates/compare/list", to: "talent#compare"
     get "candidates/:id", to: "talent#show"

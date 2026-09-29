@@ -3,12 +3,17 @@
 #   resume. Accepting pins it there.
 # - kind "tags": add the payload's values (tags, roles, genres, instruments) to the target work
 #   sample. Accepting updates the item, which may then join portfolios by their rules.
+# - kind "profile_fields": propose a new headline/bio (from LinkImport::ProfileDraft, applied via
+#   POST /api/library/import) when the person already has one of their own — accepting fills it
+#   in only if it is *still* blank, so nothing here ever overwrites what someone wrote themselves.
+#   Target and subject are both the same profile: there is no separate "subject" for a profile
+#   text suggestion, and self-referencing keeps the (target, subject, kind) row unique per person.
 # There is one row per (target, subject, kind), so a rejected suggestion is never raised again.
 class ShowcaseSuggestion < ApplicationRecord
-  KINDS = %w[include tags].freeze
+  KINDS = %w[include tags profile_fields].freeze
   STATUSES = %w[pending accepted rejected obsolete].freeze
-  TARGET_TYPES = %w[portfolio resume portfolio_item].freeze
-  SUBJECT_TYPES = %w[portfolio_item career_entry].freeze
+  TARGET_TYPES = %w[portfolio resume portfolio_item profile].freeze
+  SUBJECT_TYPES = %w[portfolio_item career_entry profile].freeze
   TAG_FACETS = %w[tags roles genres instruments].freeze
 
   attribute :payload, :json, default: -> { {} }
@@ -40,11 +45,16 @@ class ShowcaseSuggestion < ApplicationRecord
                 when "portfolio" then Portfolio.find_by(id: target_id)
                 when "resume" then Resume.find_by(id: target_id)
                 when "portfolio_item" then PortfolioItem.find_by(id: target_id)
+                when "profile" then Profile.find_by(user_id: target_id)
                 end
   end
 
   def subject
-    @subject ||= subject_type == "career_entry" ? CareerEntry.find_by(id: subject_id) : PortfolioItem.find_by(id: subject_id)
+    @subject ||= case subject_type
+                 when "career_entry" then CareerEntry.find_by(id: subject_id)
+                 when "profile" then Profile.find_by(user_id: subject_id)
+                 else PortfolioItem.find_by(id: subject_id)
+                 end
   end
 
   # Applies the change. Returns false (and marks it obsolete) when its target or subject is gone.
@@ -56,7 +66,11 @@ class ShowcaseSuggestion < ApplicationRecord
         update!(status: "obsolete", resolved_at: Time.current)
         return false
       end
-      kind == "tags" ? apply_tags : apply_include
+      case kind
+      when "tags" then apply_tags
+      when "profile_fields" then apply_profile_fields
+      else apply_include
+      end
       update!(status: "accepted", resolved_at: Time.current)
     end
     true
@@ -98,6 +112,18 @@ class ShowcaseSuggestion < ApplicationRecord
     case record
     when Portfolio, Resume, PortfolioItem then record.title
     when CareerEntry then record.label
+    when Profile then record.headline.presence || "Profile"
     end
+  end
+
+  # Accepting never overwrites text the person has since written themselves — only fills in a
+  # field that is still blank at the moment of acceptance.
+  def apply_profile_fields
+    profile = target
+    profile.lock!
+    changes = {}
+    changes[:headline] = payload["headline"].to_s.truncate(160) if profile.headline.blank? && payload["headline"].present?
+    changes[:bio] = payload["bio"].to_s.truncate(2_000) if profile.bio.blank? && payload["bio"].present?
+    profile.update!(changes) if changes.any?
   end
 end

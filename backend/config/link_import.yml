@@ -1,0 +1,32 @@
+# Hosts that LinkImport::Resolver will fetch and scrape for a generic profile/work page (title,
+# meta description, og:*, twitter:*, and JSON-LD Person/MusicGroup). Every fetch still goes
+# through LinkImport::SafeFetch (https only, DNS pinned and validated, no private/loopback
+# addresses, redirects re-validated, 1 MB body cap) — this list only decides which public hosts
+# we bother scraping at launch.
+#
+# NOTE(security review pending): this allowlist is deliberately narrow while link import is new.
+# Once SafeFetch has run in production for a while without incident, this opens to any https
+# host (the code already treats an unlisted host as a plain link, never an error) — until then,
+# only the hosts below, plus whichever host a signed-in person has already told us is their own
+# website (profile.website or profile.portfolio_url), are fetched for a generic page.
+allowlisted_hosts:
+  - bandcamp.com
+  - music.apple.com
+  - jiosaavn.com
+  - gaana.com
+  - wedmegood.com
+  - starclinch.com
+  - justdial.com
+  - instagram.com
+
+# Link-in-bio hosts: their public page is fetched once (never recursively) and every distinct
+# outbound https link found in it is resolved as its own preview, depth 1, up to 15 links.
+link_in_bio_hosts:
+  - linktr.ee
+  - beacons.ai
+  - bio.link
+  - lnk.bio
+  - linkin.bio
+  - taplink.cc
+  - solo.to
+  - carrd.co

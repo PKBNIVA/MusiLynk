@@ -211,6 +211,24 @@ class TwoMinuteSignupTest < ActionDispatch::IntegrationTest
     assert_equal ["Guitarist"], user.profile.reload.roles
   end
 
+  test "the starter accepts a drafted profile's genres, instruments, credits and item captions in one request" do
+    code = request_code("drafted-new@example.com", name: "Drafted Musician", role: "jobseeker", consent: true)
+    post "/api/auth/otp/verify", params: { email: "drafted-new@example.com", code: }, as: :json
+    token = response.parsed_body["accessToken"]
+
+    post "/api/onboarding/starter", params: {
+      roles: ["Guitarist"], genres: ["Indie"], instruments: ["Acoustic Guitar"], credits: [{ text: "Toured with a famous band" }],
+      links: [{ url: YOUTUBE, title: "Live session", caption: "Recorded live in Mumbai" }]
+    }, headers: auth(token), as: :json
+
+    assert_response :success
+    user = User.find_by!(email: "drafted-new@example.com")
+    assert_equal ["Indie"], user.profile.genres
+    assert_equal ["Acoustic Guitar"], user.profile.instruments
+    assert_equal ["Toured with a famous band"], user.profile.credits
+    assert_equal "Recorded live in Mumbai", user.portfolio_items.first.description
+  end
+
   test "a sign-up code request that declines consent is refused; sign-in codes never need it" do
     with_env(NO_PROVIDER_ENV) do
       post "/api/auth/otp/request", params: { email: "no-consent@example.com", name: "No Consent", role: "jobseeker", consent: false }, as: :json

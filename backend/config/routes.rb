@@ -44,6 +44,8 @@ Rails.application.routes.draw do
     post "profile/whatsapp-consent", to: "profiles#whatsapp_consent"
     post "onboarding/starter", to: "onboarding#starter"
     post "link-previews", to: "link_previews#create"
+    post "link-import/draft", to: "link_import#draft"
+    post "library/import", to: "library_imports#create"
     get "public/stats", to: "public_stats#show"
 
     resources :jobs, only: %i[index show create] do

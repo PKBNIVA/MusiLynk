@@ -1083,7 +1083,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_060100) do
     t.index ["provider_subscription_id"], name: "index_subscriptions_on_provider_subscription_id", unique: true, where: "(provider_subscription_id IS NOT NULL)"
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
     t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying, 'razorpay'::character varying]::text[])", name: "subscriptions_provider_valid"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'trialing'::character varying, 'active'::character varying, 'past_due'::character varying, 'cancelled'::character varying, 'early_access'::character varying]::text[])", name: "subscriptions_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'trialing'::character varying::text, 'active'::character varying::text, 'past_due'::character varying::text, 'cancelled'::character varying::text, 'early_access'::character varying::text])", name: "subscriptions_status_valid"
   end
 
   create_table "talent_folder_members", id: false, force: :cascade do |t|

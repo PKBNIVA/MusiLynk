@@ -56,6 +56,8 @@ Rails.application.routes.draw do
         member do
           post :grant_plan, path: "grant-plan"
           post :revoke_sessions, path: "revoke-sessions"
+          post :grant_early_access, path: "early-access"
+          delete :revoke_early_access, path: "early-access"
         end
       end
       resources :jobs, only: %i[index update]
@@ -230,6 +232,7 @@ Rails.application.routes.draw do
       get :subscription, to: "billing#subscription"
       post :checkout, to: "billing#checkout"
       post :cancel, to: "billing#cancel"
+      get "cancel-link", to: "billing#verify_cancel_link"
       post "webhook/razorpay", to: "billing#razorpay_webhook"
     end
     # Local Razorpay simulator (RAZORPAY_SIMULATOR=true, test key, never production).

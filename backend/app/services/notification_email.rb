@@ -38,6 +38,32 @@ class NotificationEmail
       heading: ->(_) { "A hirer needs someone fast" },
       copy: ->(p) { "#{p['title']} in #{p['city']}. If you're free, respond in one tap before someone else does." },
       action: "See the request", path: "/jobseeker/urgent"
+    },
+    "early_access_granted" => {
+      subject: ->(p) { "Your Early Access Pro is active until #{p['until']}" },
+      heading: ->(_) { "Your Early Access Pro is active" },
+      copy: ->(p) { "No card needed. Pro features are unlocked on Verse until #{p['until']}. We'll email you 7 days and 1 day before it ends." },
+      action: "Open your billing page", path: "/employer/billing"
+    },
+    # trial/renewal/early-access lifecycle reminders (BillingRemindersJob). Their `path` is
+    # already the full one-click cancel URL (see NotificationEmail.render), not a relative path.
+    "trial_ending_soon" => {
+      subject: ->(_) { "Your Pro trial ends in 3 days" },
+      heading: ->(_) { "Your free trial ends in 3 days" },
+      copy: ->(p) { "Your Pro trial ends on #{p['endsOn']}. Unless you cancel before then, your first charge happens automatically and your plan continues as Pro." },
+      action: "Manage your plan"
+    },
+    "plan_renewing_soon" => {
+      subject: ->(_) { "Your Verse plan renews in 3 days" },
+      heading: ->(_) { "Your plan renews in 3 days" },
+      copy: ->(p) { "Your #{p['planName']} plan renews on #{p['renewsOn']} for #{p['amount']}. Cancel any time before then if you don't want to be charged." },
+      action: "Cancel or manage billing"
+    },
+    "early_access_ending" => {
+      subject: ->(p) { "Your Early Access Pro ends in #{p['days']}" },
+      heading: ->(p) { "Your Early Access Pro ends in #{p['days']}" },
+      copy: ->(p) { "Your free run of Pro on Verse ends on #{p['endsOn']}. After that your account moves to the Free plan unless you subscribe." },
+      action: "Manage your plan"
     }
   }.freeze
 
@@ -57,7 +83,10 @@ class NotificationEmail
   def self.render(template, params, user)
     spec = TEMPLATES.fetch(template)
     params = params.to_h.stringify_keys
-    link = "#{frontend_url}#{workspace(user)}#{params['path'].presence || spec[:path]}"
+    path = params["path"].presence || spec[:path]
+    # A lifecycle reminder's `path` is already the full one-click cancel URL
+    # (BillingRemindersJob), never a relative in-app path — use it as-is.
+    link = path.to_s.start_with?("http") ? path : "#{frontend_url}#{workspace(user)}#{path}"
     subject = spec[:subject].call(params).squish.first(150)
     heading = spec[:heading].call(params)
     copy = spec[:copy].call(params)

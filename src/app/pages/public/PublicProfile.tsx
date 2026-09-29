@@ -12,7 +12,7 @@ import { MapPin, ShieldCheck, Flag } from 'lucide-react';
 import { WorkSamplePlayer } from '../../components/WorkSamplePlayer';
 import { ReportDialog } from '../../components/ReportDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
-import { verifiedBadgeCopy } from '../../components/VerifiedBadge';
+import { VerifiedBadge, verifiedBadgeCopy } from '../../components/VerifiedBadge';
 import { useAuth } from '../../lib/authContext';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { PortfolioItem, Professional } from '../../lib/apiTypes';
@@ -95,6 +95,9 @@ export default function PublicProfile() {
                   </TooltipTrigger>
                   <TooltipContent>{verifiedBadgeCopy(c.verification)}</TooltipContent>
                 </Tooltip>
+              )}
+              {c.verified && c.verificationTier === 'verified_pro' && (
+                <VerifiedBadge verification={c.verification} tier={c.verificationTier} />
               )}
             </div>
             <p className="text-xl text-violet-300 mt-2">{c.headline}</p>

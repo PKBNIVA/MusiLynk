@@ -334,7 +334,7 @@ export default function AdminDashboard() {
           <TabsContent value="verification" className="space-y-3 mt-5">
             <Suspense fallback={null}>
               <VerificationTab
-                verifications={pendingVerifications}
+                verifications={verifications}
                 error={errors.verifications}
                 loading={loading}
                 retry={retry}

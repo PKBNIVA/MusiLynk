@@ -28,6 +28,7 @@ import {
   FolderPlus,
   Folder,
 } from 'lucide-react';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import { WorkSamplePlayer } from '../components/WorkSamplePlayer';
 import { Label } from '../components/ui/label';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
@@ -215,6 +216,13 @@ export default function CandidateSearch() {
               </label>
               <label className="flex items-center gap-2 text-sm text-slate-300">
                 <Checkbox
+                  checked={f.verified === 'pro'}
+                  onCheckedChange={(v) => update({ verified: v ? 'pro' : '' })}
+                />
+                Verified Pro
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <Checkbox
                   checked={f.remoteRecording === 'true'}
                   onCheckedChange={(v) => update({ remoteRecording: v ? 'true' : '' })}
                 />
@@ -317,6 +325,9 @@ export default function CandidateSearch() {
                           <div className="flex items-center gap-2">
                             <h2 className="text-xl font-semibold">{c.name}</h2>
                             {c.verified && <ShieldCheck size={17} className="text-emerald-300" />}
+                            {c.verificationTier === 'verified_pro' && (
+                              <VerifiedBadge verification={c.verification} tier={c.verificationTier} />
+                            )}
                           </div>
                           <p className="text-violet-300">{c.headline || 'Music professional'}</p>
                         </div>

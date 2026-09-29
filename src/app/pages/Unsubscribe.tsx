@@ -5,11 +5,13 @@ import { PublicNav } from '../components/PublicNav';
 import { Button } from '../components/ui/button';
 import { apiPost } from '../lib/api';
 import { errorStatus } from '../lib/errors';
+import { usePageMeta } from '../components/PageMeta';
 
 type State = 'working' | 'done' | 'invalid' | 'error';
 
 /** Target of the "Turn off these emails" link in notification emails. No sign-in: the signed token names the account. */
 export default function Unsubscribe() {
+  usePageMeta('Unsubscribe', 'Turn off Verse notification emails.', { noindex: true });
   const [search] = useSearchParams();
   const token = search.get('token') || '';
   const [state, setState] = useState<State>(token ? 'working' : 'invalid');

@@ -46,6 +46,7 @@ export default function SiteMapPage() {
   usePageMeta(
     'Site map',
     'Every public area of Verse: music jobs, professionals, bookable acts, guides, pricing, trust and legal pages.',
+    { canonicalPath: '/sitemap' },
   );
   return (
     <div className="min-h-screen bg-slate-950 text-white">

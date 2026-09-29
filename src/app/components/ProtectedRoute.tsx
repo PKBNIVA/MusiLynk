@@ -48,6 +48,25 @@ export function ProtectedRoute({ roles, children }: { roles: Role[]; children: R
     const home = IS_ADMIN_SITE || user.role === 'admin' ? '/' : user.role === 'employer' ? '/employer' : '/jobseeker';
     return <WrongRoleRedirect home={home} roles={roles} />;
   }
+  return <AuthenticatedShell>{children}</AuthenticatedShell>;
+}
+
+/** Every signed-in workspace (/jobseeker, /employer) is kept out of search results while it's
+ * mounted; the robots tag is restored to whatever it was when the visitor leaves. */
+function AuthenticatedShell({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    let tag = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (!tag) {
+      tag = document.createElement('meta');
+      tag.name = 'robots';
+      document.head.appendChild(tag);
+    }
+    const previous = tag.content;
+    tag.content = 'noindex, nofollow';
+    return () => {
+      tag.content = previous;
+    };
+  }, []);
   return <>{children}</>;
 }
 

@@ -25,6 +25,7 @@ export default function PublicTalent() {
   usePageMeta(
     'Find musicians & music professionals',
     'Search singers, instrumentalists, composers, engineers, technical directors, tour crew and managers on Verse.',
+    { canonicalPath: '/music-professionals', type: 'website' },
   );
   // Filters live in the URL; each change is a history entry, so Back undoes it.
   const { values, query, update, clear } = useUrlFilters(FILTERS);

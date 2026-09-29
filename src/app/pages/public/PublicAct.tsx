@@ -14,6 +14,19 @@ import { useAuth } from '../../lib/authContext';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { Act } from '../../lib/apiTypes';
 
+/** MusicGroup structured data for a public act. */
+function musicGroupJsonLd(a: Act, id?: string) {
+  const ld: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'MusicGroup',
+    name: a.name,
+    description: [a.tagline, a.bio].filter(Boolean).join(' '),
+    url: `/acts/${id}`,
+  };
+  if (a.genres?.length) ld.genre = a.genres;
+  return ld;
+}
+
 export default function PublicAct() {
   const { id } = useParams(),
     { user } = useAuth();
@@ -40,6 +53,7 @@ export default function PublicAct() {
   usePageMeta(
     a?.name && `${a.name} — book ${a.act_type || 'live act'}`,
     a ? [a.tagline, a.bio].filter(Boolean).join(' ') || `Request a quote from ${a.name} on Verse.` : undefined,
+    { canonicalPath: `/acts/${id}`, type: 'website', jsonLd: a ? musicGroupJsonLd(a, id) : undefined },
   );
   if (loading || error || !a)
     return (

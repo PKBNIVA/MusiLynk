@@ -29,7 +29,9 @@ class FastResponderWeekJob < ApplicationJob
   # city on the urgent request (a responder's own reach spans cities, but the leaderboard is
   # local — "fastest responders in Mumbai" — because that is what the hiring city cares about).
   def response_times_by_city(week_start, week_end)
+    # Synthetic QA and demo accounts never earn a badge or appear on the leaderboard.
     rows = UrgentRequestResponse.joins(:urgent_request, :user)
+      .where(users: { synthetic_batch: nil }).where(urgent_requests: { requester_id: User.organic.select(:id) })
       .where(created_at: week_start...week_end)
       .pluck("urgent_requests.city", "urgent_request_responses.user_id", "users.name",
         Arel.sql("EXTRACT(EPOCH FROM (urgent_request_responses.created_at - urgent_requests.created_at)) / 60.0"))

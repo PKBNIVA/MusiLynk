@@ -19,7 +19,8 @@ class ReviewPromptSweepJob < ApplicationJob
   private
 
   def prompt_filled_urgent_requests(now)
-    UrgentRequest.where(status: "filled", updated_at: LOOKBACK.ago..now).find_each do |request|
+    UrgentRequest.where(requester_id: User.organic.select(:id), filled_by_id: User.organic.select(:id))
+      .where(status: "filled", updated_at: LOOKBACK.ago..now).find_each do |request|
       filled_by = request.filled_by
       next unless filled_by
       create_pair!(source_type: "urgent_request", source_id: request.id,
@@ -29,8 +30,9 @@ class ReviewPromptSweepJob < ApplicationJob
   end
 
   def prompt_completed_bookings(now)
-    completed = BookingRequest.where(status: "completed", updated_at: LOOKBACK.ago..now)
-    past_event = BookingRequest.where(status: "accepted").where("event_date IS NOT NULL AND event_date <= ?", now)
+    organic = BookingRequest.where(requester_id: User.organic.select(:id), act_id: Act.where(owner_id: User.organic.select(:id)).select(:id))
+    completed = organic.where(status: "completed", updated_at: LOOKBACK.ago..now)
+    past_event = organic.where(status: "accepted").where("event_date IS NOT NULL AND event_date <= ?", now)
     (completed.to_a + past_event.to_a).uniq(&:id).each do |booking|
       owner = booking.act.owner
       create_pair!(source_type: "booking_request", source_id: booking.id,
@@ -54,7 +56,7 @@ class ReviewPromptSweepJob < ApplicationJob
   end
 
   def send_reminders(now)
-    ReviewPrompt.due_for_reminder.find_each do |prompt|
+    ReviewPrompt.due_for_reminder.where(user_id: User.organic.select(:id)).find_each do |prompt|
       Notifier.review_prompt(prompt, reminder: true)
       prompt.update!(reminded_at: now)
     end

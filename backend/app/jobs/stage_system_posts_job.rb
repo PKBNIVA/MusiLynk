@@ -23,7 +23,7 @@ class StageSystemPostsJob < ApplicationJob
   private
 
   def post_welcomes(bucket_start, bucket_end)
-    users = User.jobseeker.where(profile_complete: true, updated_at: bucket_start...bucket_end).includes(:profile)
+    users = User.organic.jobseeker.where(profile_complete: true, updated_at: bucket_start...bucket_end).includes(:profile)
     return if users.empty?
 
     if users.size > WELCOME_AGGREGATE_THRESHOLD
@@ -43,14 +43,15 @@ class StageSystemPostsJob < ApplicationJob
   end
 
   def post_verifications(bucket_start, bucket_end)
-    Profile.joins(:user).where(verified: true, share_verification_publicly: true, updated_at: bucket_start...bucket_end).find_each do |profile|
+    Profile.joins(:user).where(users: { synthetic_batch: nil })
+      .where(verified: true, share_verification_publicly: true, updated_at: bucket_start...bucket_end).find_each do |profile|
       create_system_post!(ref: "verified:#{profile.user_id}", system_kind: "verified", city: profile.location,
         body: "#{profile.user.name} is now Verified")
     end
   end
 
   def post_urgent_fills(bucket_start, bucket_end)
-    UrgentRequest.where(status: "filled", updated_at: bucket_start...bucket_end).find_each do |request|
+    UrgentRequest.where(requester_id: User.organic.select(:id)).where(status: "filled", updated_at: bucket_start...bucket_end).find_each do |request|
       hours = [((request.updated_at - request.created_at) / 3600.0).round, 1].max
       create_system_post!(ref: "urgent_filled:#{request.id}", system_kind: "urgent_filled", city: request.city,
         body: "A #{request.role_name} request in #{request.city} was filled in #{hours} #{'hour'.pluralize(hours)}")

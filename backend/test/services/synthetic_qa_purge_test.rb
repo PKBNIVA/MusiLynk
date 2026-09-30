@@ -35,7 +35,7 @@ class SyntheticQaPurgeTest < ActiveSupport::TestCase
     real = add_real_interactions
     add_platform_rows(user_ids, real)
 
-    assert_equal 5, Post.where(author_type: "system").count
+    assert_equal 6, Post.where(author_type: "system").count
     result = SyntheticQa::BatchCleanup.call(batch: BATCH)
 
     assert_equal 150, result.users_removed
@@ -97,9 +97,13 @@ class SyntheticQaPurgeTest < ActiveSupport::TestCase
       body: "#{musician.name} is now Verified", visibility: "public", status: "active")
     Post.create!(author_type: "system", author_id: Post::SYSTEM_AUTHOR_ID, kind: "system", system_kind: "fastest_responders", system_ref: "fastest_responders:Mumbai:2026-W39",
       body: "Fastest responders in Mumbai this week: #{musician.name}, Someone Else", visibility: "public", status: "active")
-    filled = UrgentRequest.where(requester_id: hirer.id).first || UrgentRequest.where(status: "filled").first
-    Post.create!(author_type: "system", author_id: Post::SYSTEM_AUTHOR_ID, kind: "system", system_kind: "urgent_filled", system_ref: "urgent_filled:#{filled.id}",
-      body: "A Singer request in Mumbai was filled in 2 hours", visibility: "public", status: "active")
+    # One fill post for a demo hirer's request and one for the real hirer's request that a demo account
+    # filled: the purge closes the latter again, so its "was filled" post must go too.
+    demo_request = UrgentRequest.where(requester_id: User.synthetic(BATCH).select(:id)).order(:id).first
+    [demo_request, real.fetch(:request)].each do |filled|
+      Post.create!(author_type: "system", author_id: Post::SYSTEM_AUTHOR_ID, kind: "system", system_kind: "urgent_filled", system_ref: "urgent_filled:#{filled.id}",
+        body: "A Singer request in Mumbai was filled in 2 hours", visibility: "public", status: "active")
+    end
     Post.create!(author_type: "system", author_id: Post::SYSTEM_AUTHOR_ID, kind: "system", system_kind: "weekly_roundup", system_ref: "weekly_roundup:2026-09-28",
       body: "This week: who's looking, who's free.", visibility: "public", status: "active")
   end

@@ -101,7 +101,7 @@ function describe(job: Job) {
       count(r.posts) ? `${count(r.posts)} Stage posts` : '',
       count(r.reviews) ? `${count(r.reviews)} reviews` : '',
     ].filter(Boolean);
-    return `Demo data created: ${count(r.jobseekers)} artists, ${count(r.employers)} employers, ${count(r.jobs)} opportunities and ${count(r.bookings)} bookings${extras.length ? `, plus ${extras.join(', ')}` : ''}.`;
+    return `Demo data created: ${count(r.jobseekers)} musicians, ${count(r.employers)} hirers, ${count(r.jobs)} opportunities and ${count(r.bookings)} bookings${extras.length ? `, plus ${extras.join(', ')}` : ''}.`;
   }
   return `Demo data deleted: ${count(r.usersRemoved)} demo accounts and ${count(r.recordsRemoved)} records removed.`;
 }
@@ -126,6 +126,7 @@ export default function DemoDataPanel() {
     [submitting, setSubmitting] = useState(false),
     [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [tracked, setTracked] = useState<string>();
+  const [clicked, setClicked] = useState<string>();
   const announced = useRef<Set<string>>(new Set());
   const load = useCallback(async () => {
     try {
@@ -174,7 +175,10 @@ export default function DemoDataPanel() {
       setSubmitting(false);
     }
   };
-  const create = (size: string) => start(() => apiPost<{ jobId: string }>('/admin/demo-data', { size }));
+  const create = (size: string) => {
+    setClicked(size);
+    return start(() => apiPost<{ jobId: string }>('/admin/demo-data', { size }));
+  };
   const confirmDelete = () => {
     const target = deleteTarget;
     setDeleteTarget(null);
@@ -195,6 +199,9 @@ export default function DemoDataPanel() {
       ? undefined
       : trackedJob || latest;
   const elapsed = useElapsed(shown);
+  // Only the preset that is actually being seeded spins; the others just stay disabled.
+  const spinningSize =
+    active(shown) && shown?.kind === 'seed' ? (shown.id === 'pending' ? clicked : shown.size) : undefined;
   const sizes = data?.sizes || FALLBACK_SIZES;
   const showcaseBatch = data?.showcaseBatch || SHOWCASE_BATCH;
   const showcaseExists = demoBatches.some((b) => b.name === showcaseBatch);
@@ -218,7 +225,7 @@ export default function DemoDataPanel() {
           Demo data
         </CardTitle>
         <p className="text-sm text-slate-400">
-          Fill the live site with sample artists, hirers, opportunities, acts and bookings. Everything shows a “Demo”
+          Fill the live site with sample musicians, hirers, opportunities, acts and bookings. Everything shows a “Demo”
           badge publicly, no one can sign in to these accounts, and each batch can be deleted in one click.
         </p>
       </CardHeader>
@@ -277,11 +284,11 @@ export default function DemoDataPanel() {
                     title={blocked || undefined}
                     data-testid={`preset-${key}`}
                   >
-                    {busy && !blocked ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                    {spinningSize === key ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                     {label(key)} ({total(size)})
                   </Button>
                   <p className="text-xs text-slate-300">
-                    {size.artists} artists · {size.employers} employers
+                    {size.artists} musicians · {size.employers} hirers
                   </p>
                   <p className="text-xs text-slate-500">{blocked || PRESET_NOTE[key] || 'Generated sample accounts'}</p>
                 </div>
@@ -344,7 +351,7 @@ export default function DemoDataPanel() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-slate-300">
-                        {b.artists} artists · {b.employers} employers
+                        {b.artists} musicians · {b.employers} hirers
                       </span>
                       <Button
                         variant="outline"

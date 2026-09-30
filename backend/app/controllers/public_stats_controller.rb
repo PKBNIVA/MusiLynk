@@ -1,7 +1,8 @@
 # GET /api/public/stats — counts for the landing page: verified professionals, the cities they work
 # from, and open opportunities. The top-level numbers are organic: synthetic QA and demo accounts are
 # never counted, so the landing counters are never inflated. `listed` repeats the same numbers as a
-# visitor browsing the directory would find them (badged demo accounts included). Cached for five
+# visitor browsing the directory would find them (badged demo accounts included); no page reads it yet,
+# it is there for a directory-side counter so the landing numbers never have to change. Cached for five
 # minutes.
 class PublicStatsController < ApplicationController
   CACHE_TTL = 5.minutes

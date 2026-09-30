@@ -173,9 +173,9 @@ test('admin creates demo data, sees progress and deletes it all after confirming
   await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', /queued|running/);
   await expect(panel.getByRole('button', { name: /^Small/ })).toBeDisabled();
   await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', 'succeeded', { timeout: 10_000 });
-  await expect(panel.getByTestId('demo-job-status')).toContainText('20 artists, 8 employers');
+  await expect(panel.getByTestId('demo-job-status')).toContainText('20 musicians, 8 hirers');
   await expect(panel.getByTestId('demo-batches')).toContainText('demo-20260926-1000');
-  await expect(panel.getByTestId('demo-batches')).toContainText('20 artists · 8 employers');
+  await expect(panel.getByTestId('demo-batches')).toContainText('20 musicians · 8 hirers');
   expect(api.state.requests).toContain('POST /api/admin/demo-data {"size":"small"}');
 
   await panel.getByRole('button', { name: 'Delete all demo data' }).click();
@@ -213,7 +213,7 @@ test('the showcase preset seeds once, and one batch can be deleted after confirm
   await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', /queued|running/);
   await expect(panel.getByTestId('demo-job-progress')).toBeVisible();
   await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', 'succeeded', { timeout: 10_000 });
-  await expect(panel.getByTestId('demo-job-status')).toContainText('110 artists, 40 employers, 45 opportunities');
+  await expect(panel.getByTestId('demo-job-status')).toContainText('110 musicians, 40 hirers, 45 opportunities');
   await expect(panel.getByTestId('demo-job-status')).toContainText('12 acts, 40 Stage posts, 12 reviews');
   expect(api.state.requests).toContain('POST /api/admin/demo-data {"size":"showcase"}');
   await expect(panel.getByTestId('demo-batches')).toContainText('demo-showcase');

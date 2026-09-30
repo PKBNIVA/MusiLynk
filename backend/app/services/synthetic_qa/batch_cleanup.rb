@@ -112,7 +112,9 @@ module SyntheticQa
         .or(UrgentRequestNotification.where(notified_by_admin_id: user_ids)), "urgent_request_notifications")
       remove(UrgentRequestResponse.where(urgent_request_id: ids[:urgent_requests]).or(UrgentRequestResponse.where(user_id: user_ids)), "urgent_request_responses")
       # A real hirer's request that a demo account "filled" stays, but no longer points at the demo account.
-      @counts["urgent_requests_released"] += UrgentRequest.where(filled_by_id: user_ids).where.not(id: ids[:urgent_requests]).update_all(filled_by_id: nil, status: "closed")
+      released = UrgentRequest.where(filled_by_id: user_ids).where.not(id: ids[:urgent_requests])
+      ids[:released_requests] = released.pluck(:id)
+      @counts["urgent_requests_released"] += released.update_all(filled_by_id: nil, status: "closed")
       remove(TalentFolderMember.where(talent_folder_id: ids[:folders]).or(TalentFolderMember.where(candidate_id: user_ids)), "talent_folder_members")
       remove(TalentShortlist.where(employer_id: user_ids).or(TalentShortlist.where(candidate_id: user_ids)), "talent_shortlists")
       remove(SavedJob.where(user_id: user_ids).or(SavedJob.where(job_id: ids[:jobs])), "saved_jobs")
@@ -142,10 +144,11 @@ module SyntheticQa
       remove(Badge.where(user_id: user_ids), "badges")
     end
 
-    # Welcome and verified posts are keyed by user id, urgent-fill posts by request id; the weekly
+    # Welcome and verified posts are keyed by user id, urgent-fill posts by request id (including a real
+    # hirer's request a demo account filled, which is closed again, so "was filled" would be false); the weekly
     # leaderboard names people in its text. All are posted as the platform's "system" author.
     def system_posts_naming(user_ids, ids)
-      refs = user_ids.flat_map { ["welcome:#{_1}", "verified:#{_1}"] } + ids[:urgent_requests].map { "urgent_filled:#{_1}" }
+      refs = user_ids.flat_map { ["welcome:#{_1}", "verified:#{_1}"] } + (ids[:urgent_requests] + ids.fetch(:released_requests, [])).map { "urgent_filled:#{_1}" }
       names = User.where(id: user_ids).pluck(:name)
       scope = Post.where(author_type: "system", system_ref: refs)
       named = names.each_slice(200).map do |slice|

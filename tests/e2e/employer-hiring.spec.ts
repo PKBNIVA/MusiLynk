@@ -331,5 +331,6 @@ test('jobseekers who hire see and manage their own opportunities on the post pag
     'href',
     '/jobseeker/hiring/post?edit=job-draft',
   );
+  await page.keyboard.press('Escape');
   await expect(card.getByRole('button', { name: 'Submit for review' })).toBeVisible();
 });

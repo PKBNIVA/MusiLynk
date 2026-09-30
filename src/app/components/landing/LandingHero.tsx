@@ -138,11 +138,11 @@ function ExampleProfile() {
             <PlayChipButton key={sample.id} sample={sample} onOpen={() => {}} />
           ))}
         </div>
-        <div aria-hidden="true" className="mt-4 flex h-8 items-end gap-1.5" data-testid="example-waveform">
+        <div aria-hidden="true" className="mt-4 flex h-10 items-end gap-2" data-testid="example-waveform">
           {[40, 75, 55, 100, 65, 85].map((h, i) => (
             <span
               key={i}
-              className="w-full rounded-sm bg-gradient-to-t from-fuchsia-500/60 to-violet-400/60"
+              className="w-2 rounded-full bg-gradient-to-t from-fuchsia-500/60 to-violet-400/60"
               style={{ height: `${h}%` }}
             />
           ))}
@@ -157,9 +157,9 @@ function ExampleProfile() {
 
 // Static demo samples for the example card. They look like the real play chips but do nothing.
 const DEMO_SAMPLES: PortfolioItem[] = [
-  ['Live at a sangeet, Bandra', 'https://www.youtube.com/watch?v=demo1'],
-  ['Studio session, Marathi single', 'https://soundcloud.com/demo/marathi-single'],
-  ['Drums on a 30-second ad jingle', 'https://open.spotify.com/track/demo3'],
+  ['Live at a sangeet, Bandra', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
+  ['Studio session, Marathi single', 'https://soundcloud.com/verse-demo/marathi-single'],
+  ['Drums on a 30-second ad jingle', 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC'],
 ].map(([title, url], i) => ({ id: `demo-${i}`, kind: 'link', type: 'link', title, url }));
 
 // The chips are a picture of the real thing, not controls: keep them out of the tab order.

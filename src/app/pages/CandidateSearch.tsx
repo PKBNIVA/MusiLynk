@@ -289,7 +289,7 @@ export default function CandidateSearch() {
                     </div>
                   )}
                   <div className="mt-4 flex items-center gap-2">
-                    <Button size="sm" className="flex-1" onClick={() => message(c)}>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => message(c)}>
                       <MessageSquare size={16} className="mr-2" />
                       Message
                     </Button>

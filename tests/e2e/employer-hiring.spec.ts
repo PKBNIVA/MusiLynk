@@ -106,7 +106,8 @@ test('a saved draft can be reopened from the dashboard, edited and submitted for
   await page.goto('/employer');
   const card = page.getByTestId('pipeline-job').filter({ hasText: 'Session guitarist' });
   await expect(card).toContainText('Draft');
-  await card.getByRole('link', { name: 'Edit Session guitarist' }).click();
+  await card.getByRole('button', { name: 'More actions for Session guitarist' }).click();
+  await page.getByRole('menuitem', { name: 'Edit Session guitarist' }).click();
 
   await expect(page).toHaveURL(/\/employer\/post-job\?edit=job-draft$/);
   await expect(page.getByLabel('Title')).toHaveValue('Session guitarist');
@@ -324,7 +325,8 @@ test('jobseekers who hire see and manage their own opportunities on the post pag
   );
   await page.goto('/jobseeker/hiring/post');
   const card = page.getByTestId('pipeline-job').filter({ hasText: 'Session guitarist' });
-  await expect(card.getByRole('link', { name: 'Edit Session guitarist' })).toHaveAttribute(
+  await card.getByRole('button', { name: 'More actions for Session guitarist' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Edit Session guitarist' })).toHaveAttribute(
     'href',
     '/jobseeker/hiring/post?edit=job-draft',
   );

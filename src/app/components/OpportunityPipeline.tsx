@@ -5,6 +5,10 @@ import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ApiError, apiGet, apiPatch } from '../lib/api';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { FormatGlyph } from './kit/FormatGlyph';
+import { Info, MoreHorizontal } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { FormDialog } from './HiringDialog';
 import { errorMessage } from '../lib/errors';
 import type { Job } from '../lib/apiTypes';
@@ -37,11 +41,14 @@ export function OpportunityPipeline({
   reloadKey = 0,
   onChanged,
   emptyHint,
+  emptySlot,
 }: {
   role?: string;
   reloadKey?: number;
   onChanged?: () => void;
   emptyHint?: string;
+  /** Replaces the default empty box (the dashboard shows two choice cards instead). */
+  emptySlot?: ReactNode;
 }) {
   const nav = useNavigate();
   const seeker = role === 'jobseeker';
@@ -111,6 +118,7 @@ export function OpportunityPipeline({
         </CardContent>
       </Card>
     );
+  if (!jobs.length && emptySlot) return <>{emptySlot}</>;
   if (!jobs.length)
     return (
       <Card className="bg-white/[.035] border-white/10">
@@ -133,32 +141,37 @@ export function OpportunityPipeline({
         return (
           <Card key={j.id} className="bg-white/[.055] border-white/10" data-testid="pipeline-job">
             <CardContent className="p-5 flex flex-col md:flex-row justify-between gap-4 md:items-center">
-              <div className="min-w-0">
-                <div className="flex flex-wrap gap-2 items-center">
-                  <Badge variant="secondary">{j.opportunity_kind}</Badge>
-                  <h3 className="font-semibold text-lg break-words">{j.title}</h3>
-                  <Badge className={statusClass[j.status] || ''}>{jobStatusLabel[j.status] || j.status}</Badge>
+              <div className="flex min-w-0 items-start gap-3">
+                <FormatGlyph kind={j.opportunity_kind} size={24} className="mt-0.5" />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <h3 className="font-semibold text-lg break-words">{j.title}</h3>
+                    <Badge className={statusClass[j.status] || ''}>{jobStatusLabel[j.status] || j.status}</Badge>
+                    <Badge variant="secondary" data-testid="pipeline-applicants">
+                      {applications} applicant{applications === 1 ? '' : 's'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-slate-400 mt-2">
+                    {[j.opportunity_kind, j.location || 'Location to be added', j.workplace]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                  {j.moderation_note && (
+                    <p
+                      className={`mt-2 flex items-start gap-1.5 text-xs ${j.status === 'rejected' ? 'text-amber-300' : 'text-slate-400'}`}
+                    >
+                      <Info aria-hidden="true" size={13} className="mt-0.5 shrink-0" />
+                      <span>Review note: {j.moderation_note}</span>
+                    </p>
+                  )}
                 </div>
-                <p className="text-sm text-slate-400 mt-2">
-                  {[j.location || 'Location to be added', j.workplace].filter(Boolean).join(' · ')} · {applications}{' '}
-                  application{applications === 1 ? '' : 's'}
-                </p>
-                {j.moderation_note && <p className="text-xs text-amber-300 mt-2">Review note: {j.moderation_note}</p>}
               </div>
-              <div className="flex flex-wrap gap-2 md:justify-end">
-                {applications > 0 && (
+              <div className="flex items-center gap-2 md:justify-end">
+                {applications > 0 ? (
                   <Button size="sm" variant="secondary" asChild>
                     <Link to={`${applicantsBase}?jobId=${encodeURIComponent(j.id)}`}>Review applicants</Link>
                   </Button>
-                )}
-                {j.status !== 'closed' && (
-                  <Button size="sm" variant="outline" asChild>
-                    <Link to={`${editBase}?edit=${encodeURIComponent(j.id)}`} aria-label={`Edit ${j.title}`}>
-                      Edit
-                    </Link>
-                  </Button>
-                )}
-                {j.status === 'draft' && allowed.includes('pending') && (
+                ) : j.status === 'draft' && allowed.includes('pending') ? (
                   <Button
                     size="sm"
                     disabled={!!busy}
@@ -167,8 +180,7 @@ export function OpportunityPipeline({
                   >
                     Submit for review
                   </Button>
-                )}
-                {j.status === 'closed' && allowed.includes('pending') && (
+                ) : j.status === 'closed' && allowed.includes('pending') ? (
                   <Button
                     size="sm"
                     disabled={!!busy}
@@ -177,18 +189,45 @@ export function OpportunityPipeline({
                   >
                     Reopen
                   </Button>
-                )}
-                {j.status !== 'closed' && allowed.includes('closed') && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={!!busy}
-                    onClick={() => setClosing(j)}
-                    aria-label={`Close ${j.title}`}
-                  >
-                    Close
-                  </Button>
-                )}
+                ) : null}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="ghost" aria-label={`More actions for ${j.title}`}>
+                      <MoreHorizontal aria-hidden="true" size={18} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {applications > 0 && j.status === 'draft' && allowed.includes('pending') && (
+                      <DropdownMenuItem disabled={!!busy} onSelect={() => move(j, 'pending', 'Submitted for review')}>
+                        Submit for review
+                      </DropdownMenuItem>
+                    )}
+                    {applications > 0 && j.status === 'closed' && allowed.includes('pending') && (
+                      <DropdownMenuItem
+                        disabled={!!busy}
+                        onSelect={() => move(j, 'pending', 'Reopened and submitted for review')}
+                      >
+                        Reopen
+                      </DropdownMenuItem>
+                    )}
+                    {j.status !== 'closed' && (
+                      <DropdownMenuItem asChild>
+                        <Link to={`${editBase}?edit=${encodeURIComponent(j.id)}`} aria-label={`Edit ${j.title}`}>
+                          Edit
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {j.status !== 'closed' && allowed.includes('closed') && (
+                      <DropdownMenuItem
+                        disabled={!!busy}
+                        onSelect={() => setClosing(j)}
+                        aria-label={`Close ${j.title}`}
+                      >
+                        Close
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </CardContent>
           </Card>

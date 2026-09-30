@@ -14,7 +14,7 @@ class TalentController < ApplicationController
   end
 
   def public_show
-    candidate = public_scope.find(params[:id])
+    candidate = listing_scope.find(params[:id])
     render json: { professional: public_profile(candidate), portfolio: candidate.portfolio_items.where(visibility: "public").order(featured: :desc, sort_order: :asc).map(&:api_json) }
   end
 
@@ -27,7 +27,7 @@ class TalentController < ApplicationController
 
   def show
     return unless authenticate!("jobseeker", "employer")
-    candidate = public_scope.find(params[:id])
+    candidate = listing_scope.find(params[:id])
     RecentActivity.create!(user: current_user, kind: "profile_view", entity_id: candidate.id, label: candidate.name)
     render json: { candidate: public_profile(candidate), portfolio: candidate.portfolio_items.where(visibility: "public").map(&:api_json) }
   end

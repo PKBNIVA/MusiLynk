@@ -32,7 +32,7 @@ class SitemapsController < ActionController::API
     base = FrontendUrl.base
     entries = []
     STATIC_PAGES.each { |path, freq| entries << { loc: "#{base}#{path}", changefreq: freq } }
-    Job.published.find_each { |job| entries << { loc: "#{base}/opportunities/#{job.id}", lastmod: job.updated_at } }
+    Job.published.joins(:employer).merge(User.organic).find_each { |job| entries << { loc: "#{base}/opportunities/#{job.id}", lastmod: job.updated_at } }
     talent_scope.find_each { |user| entries << { loc: "#{base}/professionals/#{user.id}", lastmod: user.updated_at } }
     act_scope.find_each { |act| entries << { loc: "#{base}/acts/#{act.id}", lastmod: act.updated_at } }
     portfolio_scope.each { |portfolio| entries << { loc: "#{base}/p/#{portfolio.slug}", lastmod: portfolio.updated_at } }
@@ -47,17 +47,20 @@ class SitemapsController < ActionController::API
     render_urlset(entries)
   end
 
+  # Demo and QA accounts are shown to people browsing the site but never to search engines:
+  # every scope below is limited to organic (non-synthetic) owners.
   def talent_scope
-    User.discoverable_talent
+    User.discoverable_talent.organic
   end
 
   def act_scope
-    Act.where(status: "active")
+    Act.where(status: "active").joins(:owner).merge(User.organic)
   end
 
   # Mirrors Portfolios#public_show's `publicly_readable?` check, without a per-row query when possible.
   def portfolio_scope
-    Portfolio.with_owner.select(&:publicly_readable?)
+    synthetic_owners = User.where.not(synthetic_batch: nil).pluck(:id).to_set
+    Portfolio.with_owner.select { _1.publicly_readable? && !synthetic_owners.include?(_1.library_user_id) }
   end
 
   # Role x city hire pages worth crawling: only the ones with enough real profiles to be worth

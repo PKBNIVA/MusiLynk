@@ -17,3 +17,4 @@ backend/storage/
 backend/coverage/
 coverage/
 dist-admin/
+dist-*/

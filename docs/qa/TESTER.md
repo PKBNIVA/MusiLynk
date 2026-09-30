@@ -84,9 +84,10 @@ is tested by rendering the real pages in Vitest, under `src/app/**/__tests__/`.
 
 ## 4. CI
 
-`.github/workflows/rails-and-web.yml` runs the `frontend`, `rails` (tests plus a schema
-drift check), `security` (Brakeman, bundler-audit, npm audit) and `integrated-journeys`
-jobs on every pull request. `.github/workflows/qa-agent.yml` runs the mocked browser suite
+`.github/workflows/rails-and-web.yml` runs the `frontend` (npm audit, typecheck, lint,
+format, build, bundle budget, public/admin split, `test:all`, unit tests), `rails` (tests
+plus a schema drift check and `zeitwerk:check`), `security` (Brakeman, bundler-audit) and
+`integrated-journeys` jobs on every pull request. `.github/workflows/qa-agent.yml` runs the mocked browser suite
 on pull requests and the live synthetic checks on a schedule.
 
 ## What automation cannot prove

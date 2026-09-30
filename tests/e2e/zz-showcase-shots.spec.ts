@@ -1,8 +1,9 @@
+import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { signInShowcase } from './support/showcase-fixtures';
 
-const OUT =
-  '/tmp/claude-0/-home-user-verse-music-platform/75cf3a6a-808f-50f4-83a6-511d9459f29e/scratchpad/design/showcase';
+// Screenshots land in $SHOTS_DIR (default: .qa-stack/shots in the repo, which is git-ignored).
+const OUT = join(process.env.SHOTS_DIR ?? '.qa-stack/shots', 'showcase');
 test.skip(!process.env.SHOWCASE_SHOTS, 'Screenshots on demand only.');
 
 const shot = async (page: Page, name: string, fullPage = true) => {

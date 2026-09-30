@@ -45,7 +45,11 @@ messaging, account export and deletion, and rate limits. Job and model tests sit
   **Verse QA Agent** workflow (`.github/workflows/qa-agent.yml`) runs the live checks nightly
   and on demand.
 
-`npm run test:all` runs the frontend source smoke tests in `tests/frontend-*.mjs`.
+`npm run test:all` runs the Node smoke tests in `tests/frontend-*.mjs`: the API client, monitoring
+and web-vitals modules, the bundle-budget script, a scan for native browser dialogs, and the built
+bundle in `dist/` (Sentry, toasts and the confirm dialog must stay out of the first paint), so run
+`npm run build` first. Page behaviour (failed requests, retries, empty states, optimistic updates)
+is tested by rendering the real pages in Vitest, under `src/app/**/__tests__/`.
 
 ### Running Playwright on a shared machine
 

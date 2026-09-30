@@ -12,7 +12,7 @@
   "rewrites": [
     {
       "source": "/api/og/:type/:id",
-      "destination": "/api/og?type=:type&id=:id"
+      "destination": "/og-default.png"
     },
     {
       "source": "/sitemap.xml",

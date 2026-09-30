@@ -1,3 +1,8 @@
+// NOT DEPLOYED YET. Vercel rejected this file as an edge function at deploy time ("The Edge Function
+// api/og is referencing unsupported modules: @vercel: module": the builder ships it unbundled, with the
+// dynamic import of @vercel/og left as a bare specifier), and a rejected function fails the whole site
+// deploy. It lives outside api/ until it is rebuilt as a bundled function; meanwhile vercel.json answers
+// /api/og/:type/:id with the static /og-default.png so every share link still has a valid image.
 // Open Graph image for a share link: GET /api/og?type=professional|opportunity|act&id=<id>, reached as
 // /api/og/<type>/<id>.png through the rewrite in vercel.json. Draws a 1200x630 PNG from the same public
 // JSON the site itself reads (avatar or generated art, name, role, city, "from ₹", Verified) and falls

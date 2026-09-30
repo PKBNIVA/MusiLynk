@@ -12,7 +12,7 @@ import {
   professionalCard,
   respond,
   safePhotoUrl,
-} from '../../api/og.ts';
+} from '../../edge/og.ts';
 
 const text = (node) =>
   typeof node === 'string'

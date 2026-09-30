@@ -11,8 +11,8 @@ export default function LandingBelowFold({ city }: { city: string }) {
   return (
     <>
       <NowOnVerse city={city} />
-      <HowItWorks />
       <LiveProof />
+      <HowItWorks />
       <TrustStrip />
       <PopularSearches />
       <section aria-labelledby="final-title" className="px-4 pb-20 sm:px-6">

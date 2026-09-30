@@ -37,7 +37,10 @@ test.describe('landing page', () => {
     expect(await page.locator('select#landing-city').count()).toBe(0);
     await city.click();
     await expect(page.getByRole('option', { name: 'Mumbai' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('option', { name: 'Delhi, Bengaluru, Pune, Goa coming' })).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByRole('option', { name: 'Delhi, Bengaluru, Pune, Goa coming' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     await page.keyboard.press('Escape');
     await page
       .getByTestId('hero-paths')
@@ -72,12 +75,13 @@ test.describe('landing page', () => {
     await expect(section.getByRole('heading', { name: 'Hear verified players' })).toBeHidden();
   });
 
-  test('live proof shows real counts only once they are meaningful', async ({ page }) => {
+  test('the promise strip is always there; real counts join it only once they are meaningful', async ({ page }) => {
     await mockSignupApi(page, {
       stats: { verifiedProfiles: 142, cities: 1, openOpportunities: 30, urgentRequests: 4 },
     });
     await page.goto('/');
     const proof = page.getByTestId('live-proof');
+    await expect(proof.getByTestId('promise-strip')).toContainText('Verified by the Verse team');
     await expect(proof.getByRole('heading', { name: 'On Verse right now' })).toBeVisible();
     await expect(proof).toContainText('142');
     await expect(proof).toContainText('verified musicians and crew');
@@ -85,11 +89,17 @@ test.describe('landing page', () => {
     await expect(proof).not.toContainText('cities');
   });
 
-  test('with nothing meaningful to count, the page shows what Verse promises instead', async ({ page }) => {
+  test('with nothing meaningful to count, only the promises show and no number is invented', async ({ page }) => {
     await mockSignupApi(page, { stats: { verifiedProfiles: 3, cities: 1, openOpportunities: 0 } });
     await page.goto('/');
     const proof = page.getByTestId('live-proof');
-    await expect(proof.getByRole('heading', { name: 'What you can count on' })).toBeVisible();
+    const strip = proof.getByTestId('promise-strip');
+    await expect(strip.getByRole('listitem')).toHaveText([
+      'Verified by the Verse team',
+      'Reply within 2 hours, 9 am–11 pm IST',
+      'Free to post · musicians never pay',
+    ]);
+    await expect(proof.getByRole('heading', { name: 'On Verse right now' })).toHaveCount(0);
     await expect(proof).not.toContainText(/\b3\b/);
   });
 

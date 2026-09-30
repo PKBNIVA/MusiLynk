@@ -12,12 +12,34 @@ class UrgentRequestsMatchingTest < ActionDispatch::IntegrationTest
 
   test "create matches and notifies, and returns the response-time promise" do
     post "/api/urgent-requests", params: { title: "Drummer needed", roleName: "Drummer", city: "Mumbai",
-      startAt: 1.day.from_now.iso8601 }, headers: auth(@hirer), as: :json
+      startAt: 1.day.from_now.iso8601, budgetMin: 5_000, budgetMax: 10_000, note: "Two sets, gear provided." }, headers: auth(@hirer), as: :json
     assert_response :created
     body = response.parsed_body
     assert_equal 1, body["notifiedCount"]
     assert_equal UrgentConfig.response_time_promise, body["responseTimePromise"]
     assert Notification.exists?(user: @musician, kind: "urgent_alert")
+  end
+
+  test "create needs role, when, city, a budget band and a note, and reports every gap at once" do
+    post "/api/urgent-requests", params: { roleName: "Drummer" }, headers: auth(@hirer), as: :json
+    assert_response :unprocessable_content
+    assert_equal %w[budget city note startAt title], response.parsed_body.fetch("fields").keys.sort
+
+    post "/api/urgent-requests", params: { roleName: "Drummer", city: "Mumbai", startAt: 1.day.ago.iso8601, budgetMax: 5_000, note: "Tonight" }, headers: auth(@hirer), as: :json
+    assert_response :unprocessable_content
+    assert_equal ["startAt"], response.parsed_body.fetch("fields").keys
+    assert_equal 0, UrgentRequest.count
+  end
+
+  test "create writes the title from the role and city, and folds the optional details into the requirements" do
+    post "/api/urgent-requests", params: { roleName: "Drummer", city: "Mumbai", startAt: 1.day.from_now.iso8601, budgetMin: 25_000,
+      note: "Two sets.", venue: "Blue Frog", requirements: "Own kit", instrument: "Drums" }, headers: auth(@hirer), as: :json
+    assert_response :created
+    item = UrgentRequest.find(response.parsed_body.fetch("id"))
+    assert_equal "Drummer needed in Mumbai", item.title
+    assert_equal "Two sets.\nVenue: Blue Frog\nRequirements: Own kit", item.requirements
+    assert_equal "Drums", item.instrument
+    assert_nil item.budget_max
   end
 
   test "show returns the requester's own live status card, not someone else's" do
@@ -56,7 +78,7 @@ class UrgentRequestsMatchingTest < ActionDispatch::IntegrationTest
 
   test "create sets an expires_at from urgent.yml's expire_after_hours" do
     post "/api/urgent-requests", params: { title: "Drummer needed", roleName: "Drummer", city: "Mumbai",
-      startAt: 1.day.from_now.iso8601 }, headers: auth(@hirer), as: :json
+      startAt: 1.day.from_now.iso8601, budgetMin: 5_000, budgetMax: 10_000, note: "Two sets, gear provided." }, headers: auth(@hirer), as: :json
     assert_response :created
     item = UrgentRequest.find(response.parsed_body.fetch("id"))
     assert_in_delta (item.created_at + UrgentConfig.expire_after).to_i, item.expires_at.to_i, 2

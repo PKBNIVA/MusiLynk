@@ -27,6 +27,7 @@ class Job < ApplicationRecord
   validates :compensation_min, :compensation_max, numericality: { greater_than_or_equal_to: 0, less_than: 2**31 }, allow_nil: true
   validate :compensation_range_is_ordered
   validate :screening_questions_are_bounded
+  validate :no_template_placeholders, if: :listed?
 
   # Adds an `applications_total` column computed by a correlated COUNT (served by the
   # applications(job_id, candidate_id) index) so listings never load application rows.
@@ -110,6 +111,17 @@ class Job < ApplicationRecord
   def compensation_range_is_ordered
     return if compensation_min.blank? || compensation_max.blank? || compensation_min <= compensation_max
     errors.add(:compensation_max, "must be at least the minimum")
+  end
+
+  # The post-opportunity templates mark the spots to fill in as {{like this}}. A draft may keep
+  # them, but a listing that is submitted or live must not (J-02).
+  TEMPLATE_PLACEHOLDER = "{{".freeze
+
+  def no_template_placeholders
+    %i[title description requirements].each do |attribute|
+      errors.add(attribute, "still has a {{placeholder}} to replace with real details") if self[attribute].to_s.include?(TEMPLATE_PLACEHOLDER)
+    end
+    errors.add(:screening_questions, "still have a {{placeholder}} to replace with real details") if Array(screening_questions).any? { _1.to_s.include?(TEMPLATE_PLACEHOLDER) }
   end
 
   def screening_questions_are_bounded

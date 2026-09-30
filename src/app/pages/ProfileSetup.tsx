@@ -31,6 +31,7 @@ import { MoreDetails } from '../components/help/MoreDetails';
 import { Checkbox } from '../components/ui/checkbox';
 import { DebugLinkDialog, VerificationRequestDialog } from '../components/VerificationDialogs';
 import { errorMessage } from '../lib/errors';
+import { formatWhen } from '../lib/format';
 import type { AccountUser } from '../lib/apiTypes';
 import { Field, FormError } from '../components/form/Field';
 import {
@@ -1006,7 +1007,7 @@ export default function ProfileSetup() {
                       {f.verified
                         ? 'Your work has been checked. The badge shows on your profile and in search.'
                         : pendingSince
-                          ? `Sent ${new Date(pendingSince).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}. Our team reviews every request; you will hear from us by email.`
+                          ? `Sent ${formatWhen(pendingSince)}. Our team reviews every request; you will hear from us by email.`
                           : 'Share one public link that proves your work. Our team reviews it.'}
                     </p>
                   </div>

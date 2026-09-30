@@ -119,9 +119,9 @@ class Job < ApplicationRecord
 
   def no_template_placeholders
     %i[title description requirements].each do |attribute|
-      errors.add(attribute, "still has a {{placeholder}} to replace with real details") if self[attribute].to_s.include?(TEMPLATE_PLACEHOLDER)
+      errors.add(attribute, "still has a spot left to fill in") if self[attribute].to_s.include?(TEMPLATE_PLACEHOLDER)
     end
-    errors.add(:screening_questions, "still have a {{placeholder}} to replace with real details") if Array(screening_questions).any? { _1.to_s.include?(TEMPLATE_PLACEHOLDER) }
+    errors.add(:screening_questions, "still have a spot left to fill in") if Array(screening_questions).any? { _1.to_s.include?(TEMPLATE_PLACEHOLDER) }
   end
 
   def screening_questions_are_bounded

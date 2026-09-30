@@ -82,7 +82,7 @@ test('a template leaves highlighted placeholders that block submit until replace
   await expect(page.getByLabel(/^Description/)).toBeFocused();
 
   await page.getByRole('button', { name: 'Submit for review' }).click();
-  await expect(page.getByText('Replace each highlighted {{placeholder}} with real details.').first()).toBeVisible();
+  await expect(page.getByText('Fill in each highlighted spot with real details.').first()).toBeVisible();
 
   await page
     .getByLabel(/^Description/)

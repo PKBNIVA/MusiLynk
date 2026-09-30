@@ -32,6 +32,7 @@ export function UrgentRequestFields({
           id={URGENT_IDS.role}
           field="roles"
           label="Role needed"
+          required
           multiple={false}
           values={values.role}
           onChange={(next) => onChange('role', next)}
@@ -48,6 +49,7 @@ export function UrgentRequestFields({
             id={URGENT_IDS.city}
             field="cities"
             label="City"
+            required
             multiple={false}
             values={values.city}
             onChange={(next) => onChange('city', next)}

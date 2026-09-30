@@ -47,6 +47,7 @@ import {
   type JobPostTemplate,
 } from '../components/templates/JobPostTemplates';
 import { trackJobPosted } from '../lib/analytics';
+import { formatDate, formatPay } from '../lib/format';
 import { PostJobPlanLimitDialog } from '../components/PostJobPlanLimitDialog';
 
 /** ActorResolver::Actor#as_json — the identities a person can post an opportunity as. */
@@ -57,6 +58,18 @@ type JobLimits = { activeAllowed: number; activeUsed: number; plan?: string; pla
 // exists yet elsewhere in the app (api.ts has none), so this is scoped to opportunity posting —
 // coordinate with any later global switcher before reusing the key name.
 const POSTED_AS_KEY = 'verse:post-job:posted-as';
+// A draft with no amount cannot say whether the pay is "Not disclosed" or simply not asked yet,
+// so the explicit choice is remembered on this device, per draft.
+const payModeKey = (id: string | number) => `verse:post-job:pay-mode:${id}`;
+function rememberedPayMode(id: string | number | undefined): PayMode | null {
+  if (!id) return null;
+  try {
+    const v = localStorage.getItem(payModeKey(id));
+    return v === 'undisclosed' ? v : null;
+  } catch {
+    return null;
+  }
+}
 
 type JobField =
   | 'title'
@@ -177,7 +190,14 @@ const toForm = (j: Job): JobForm => {
     workplace: j.workplace || blank.workplace,
     salary: text(j.salary),
     // A draft that has not reached the pay step yet has no amount because none was asked for.
-    payMode: j.paid === false ? 'unpaid' : hasAmount || j.status === 'draft' ? 'range' : 'undisclosed',
+    payMode:
+      j.paid === false
+        ? 'unpaid'
+        : hasAmount
+          ? 'range'
+          : j.status === 'draft'
+            ? (rememberedPayMode(j.id) ?? 'range')
+            : 'undisclosed',
     compensationMin: text(j.compensation_min),
     compensationMax: text(j.compensation_max),
     currency: j.currency || blank.currency,
@@ -205,7 +225,7 @@ const lines = (v: string) =>
     .split('\n')
     .map((s) => s.trim())
     .filter(Boolean);
-const PLACEHOLDER_MESSAGE = 'Replace each highlighted {{placeholder}} with real details.';
+const PLACEHOLDER_MESSAGE = 'Fill in each highlighted spot with real details.';
 export default function PostJob() {
   const nav = useNavigate(),
     { user } = useAuth(),
@@ -417,6 +437,15 @@ export default function PostJob() {
               setDraftId(d.id);
             }
           }
+          const savedId = existing || draftRef.current;
+          if (savedId) {
+            try {
+              if (snapshot.payMode === 'undisclosed') localStorage.setItem(payModeKey(savedId), 'undisclosed');
+              else localStorage.removeItem(payModeKey(savedId));
+            } catch {
+              /* best effort only */
+            }
+          }
           setAutosave('saved');
         } catch {
           setAutosave('failed');
@@ -578,7 +607,11 @@ export default function PostJob() {
       : f.payMode === 'undisclosed'
         ? 'Not disclosed'
         : f.compensationMin || f.compensationMax
-          ? `${f.currency} ${[f.compensationMin, f.compensationMax].filter(Boolean).join('–')}${f.compensationPeriod ? ` per ${f.compensationPeriod}` : ''}`
+          ? `${formatPay({
+              currency: f.currency,
+              compensation_min: f.compensationMin,
+              compensation_max: f.compensationMax,
+            })}${f.compensationPeriod ? ` per ${f.compensationPeriod}` : ''}`
           : 'Paid · amount on request';
   const questions = lines(f.screeningQuestions);
   const placeholders = findPlaceholders(f.title, f.description, f.requirements, f.screeningQuestions);
@@ -1061,8 +1094,8 @@ export default function PostJob() {
               <ReviewRow
                 label="Dates"
                 value={[
-                  f.applicationDeadline && `Apply by ${f.applicationDeadline}`,
-                  f.startDate && `starts ${f.startDate}`,
+                  f.applicationDeadline && `Apply by ${formatDate(f.applicationDeadline)}`,
+                  f.startDate && `starts ${formatDate(f.startDate)}`,
                   f.duration,
                 ]
                   .filter(Boolean)

@@ -27,6 +27,7 @@ export const ROUTES = {
   '/guide': ['How to use Verse', 'Step-by-step guides for music professionals, hiring teams, bands and event bookers on Verse.'],
   '/about': ['About Verse', 'Verse connects musicians, bands and hiring teams for gigs, sessions and live bookings across India.'],
   '/safety': ['Trust & Safety', 'How Verse verifies professionals, protects payments and keeps the marketplace safe.'],
+  '/credits': ['Photo credits', 'The photographers and licences behind the pictures on Verse, from Wikimedia Commons under Creative Commons and public-domain terms.'],
   '/contact': ['Contact Verse', 'Get in touch with the Verse team.'],
   '/community-guidelines': ['Community guidelines', 'The standards Verse expects from every musician, band and hiring team on the platform.'],
   '/terms': ['Terms of service', "Verse's terms of service."],

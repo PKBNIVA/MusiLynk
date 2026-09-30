@@ -34,6 +34,31 @@ import { draftFromLinks, type DraftResult, type ProfileDraft } from '../lib/link
 const ProfileDraftReview = lazy(() => import('../components/join/ProfileDraftReview'));
 
 /**
+ * True once per document when this page load is the "Continue with Google" round trip
+ * (GoogleAuthController sends a new account to /join/<role>?auth=google&code=...). authContext
+ * strips those params from the URL as soon as it mounts, before this lazy page renders, so the
+ * document's original navigation URL is read as well. Read once and cleared by
+ * `markGoogleSignupTracked`, so it fires exactly once per Google sign-up.
+ */
+let googleReturnPending: boolean | null = null;
+function googleReturnIsPending(): boolean {
+  if (googleReturnPending === null) {
+    googleReturnPending = false;
+    try {
+      const fromUrl = (search: string) => {
+        const params = new URLSearchParams(search);
+        return params.get('auth') === 'google' && Boolean(params.get('code'));
+      };
+      const entry = performance.getEntriesByType('navigation')[0];
+      googleReturnPending = fromUrl(window.location.search) || (entry ? fromUrl(new URL(entry.name).search) : false);
+    } catch {
+      /* no Performance API: leave it false */
+    }
+  }
+  return googleReturnPending;
+}
+
+/**
  * The two-minute sign-up. Musicians: what you do and where, links to your work, then an
  * account. Hirers: what you are and where, then an account. "Complete my profile later" skips
  * straight to the account on any step; the full profile wizard stays for later.
@@ -46,6 +71,13 @@ export default function Join() {
   // Set once this page starts creating an account, so the signed-in redirect below never races
   // the page's own "welcome" navigation.
   const creating = useRef(false);
+  // A Google sign-up creates the account on the server and comes back signed in, so `finish`
+  // never runs; count it here once the session resolves.
+  useEffect(() => {
+    if (!user || creating.current || !googleReturnIsPending()) return;
+    googleReturnPending = false;
+    trackSignupStep('completed', { role: user.role, method: 'google' });
+  }, [user]);
   if (audience !== 'musician' && audience !== 'hiring') return <Navigate to="/join/musician" replace />;
   if (user && !creating.current)
     return <Navigate to={`/${user.role === 'employer' ? 'employer' : 'jobseeker'}`} replace />;
@@ -150,6 +182,8 @@ function useSignupStarted(role: 'jobseeker' | 'employer') {
   useEffect(() => {
     if (fired.current) return;
     fired.current = true;
+    // A Google return is the tail of a sign-up already started on this page load's predecessor.
+    if (googleReturnIsPending()) return;
     trackSignupStep('started', { role });
   }, [role]);
 }

@@ -41,3 +41,48 @@ test('landing path, join start and account creation are tracked', async ({ page 
   expect(named('signup_started')[0]?.props).toMatchObject({ role: 'employer' });
   expect(named('signup_completed')[0]?.props).toMatchObject({ role: 'employer' });
 });
+
+test('a Google sign-up returning to the join page counts as signup_completed once', async ({ page }) => {
+  await mockSignupApi(page);
+  const events: Array<{ name: string; props: Record<string, unknown> }> = [];
+  let signedIn = false;
+  await page.route('**/api/events', async (route) => {
+    events.push(...(route.request().postDataJSON() as { events: typeof events }).events);
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+  });
+  await page.route('**/api/auth/exchange', async (route) => {
+    signedIn = true;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{"accessToken":"qa-google-token"}' });
+  });
+  await page.route('**/api/me', async (route) => {
+    if (!signedIn)
+      return route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: '{"error":"Authentication required"}',
+      });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user: {
+          id: 'qa-google-user',
+          name: 'Riya Desai',
+          email: 'riya@example.invalid',
+          role: 'jobseeker',
+          status: 'active',
+          profileComplete: false,
+        },
+      }),
+    });
+  });
+
+  // GoogleAuthController redirects a new account to its join page with a one-time code.
+  await page.goto('/join/musician?auth=google&code=one-time-code');
+  await expect(page).toHaveURL(/\/jobseeker/);
+  await expect.poll(() => events.map((event) => event.name), { timeout: 15_000 }).toContain('signup_completed');
+  const named = (name: string) => events.filter((event) => event.name === name);
+  expect(named('signup_completed')).toHaveLength(1);
+  expect(named('signup_completed')[0]?.props).toMatchObject({ role: 'jobseeker', method: 'google' });
+  expect(named('signup_started')).toHaveLength(0);
+});

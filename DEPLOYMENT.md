@@ -523,8 +523,8 @@ bundle exec brakeman --no-pager --exit-on-warn --exit-on-error
 bundle exec bundler-audit check --update
 ```
 
-After any migration, regenerate `db/schema.rb` the way CI does: on an empty database run
-`rm db/schema.rb && bin/rails db:migrate`, and commit the result.
+After any migration, regenerate `db/schema.rb` the way CI does: drop the database,
+delete `db/schema.rb`, run `bin/rails db:create db:migrate`, and commit the result.
 
 CI runs these as the `frontend` (npm audit, typecheck, lint, format, build, bundle budget,
 public/admin split, `test:all`, unit tests), `rails` (an empty-database migration, the

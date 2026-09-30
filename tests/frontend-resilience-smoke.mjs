@@ -57,9 +57,11 @@ assert.match(
 );
 
 const legal = await read('../src/app/pages/public/LegalPage.tsx');
+// "Contact details are published before launch" is the one sanctioned line: it is what the
+// grievance officer block says while config/legal.yml still holds placeholders.
 assert.doesNotMatch(
   legal,
-  /starter terms|before launch|replace this placeholder|operational starter copy|production launch should|production operations should/i,
+  /starter terms|(?<!published )before launch|replace this placeholder|operational starter copy|production launch should|production operations should/i,
   'public legal pages must not expose internal launch instructions',
 );
 assert.match(

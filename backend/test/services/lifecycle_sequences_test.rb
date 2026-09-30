@@ -162,6 +162,24 @@ class LifecycleSequencesTest < ActiveSupport::TestCase
     ENV.delete("SINCE")
   end
 
+  test "lifecycle:release_undelivered with PAIRS releases only the named user and key" do
+    Rails.application.load_tasks unless Rake::Task.task_defined?("lifecycle:release_undelivered")
+    first = create_musician(created_at: 30.days.ago)
+    second = create_musician(created_at: 30.days.ago)
+    burned = LifecycleEmail.create!(user: first, key: "musician_day1_first_link", sent_at: 1.day.ago)
+    delivered = LifecycleEmail.create!(user: second, key: "musician_day1_first_link", sent_at: 1.day.ago)
+
+    ENV["SINCE"] = 3.days.ago.iso8601
+    ENV["PAIRS"] = "#{first.id}:musician_day1_first_link"
+    out, = capture_io { Rake::Task["lifecycle:release_undelivered"].execute }
+    assert_match(/Released 1 /, out)
+    assert_not LifecycleEmail.exists?(burned.id)
+    assert LifecycleEmail.exists?(delivered.id)
+  ensure
+    ENV.delete("SINCE")
+    ENV.delete("PAIRS")
+  end
+
   private
 
   def create_musician(created_at:, last_login_at: nil, city: nil)

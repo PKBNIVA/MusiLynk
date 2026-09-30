@@ -7,7 +7,7 @@ const liveBaseUrl = process.env.QA_BASE_URL?.replace(/\/$/, '');
 // Two runs on one machine (two worktrees, or two agents) must use different bases, e.g.
 // QA_PORT_BASE=4273 and QA_PORT_BASE=4373, or they will reuse each other's servers. Runs that share
 // a base must still be serial: see docs/qa/TESTER.md.
-const portBase = Number(process.env.QA_PORT_BASE ?? 4173);
+const portBase = Number(process.env.QA_PORT_BASE || 4173);
 if (!Number.isInteger(portBase) || portBase < 1024 || portBase > 65_531) {
   throw new Error(`QA_PORT_BASE must be a whole number from 1024 to 65531, got "${process.env.QA_PORT_BASE}".`);
 }

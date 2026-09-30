@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { ArrowRight, MapPin, ShieldCheck } from 'lucide-react';
+import { ArrowRight, MapPin } from 'lucide-react';
 import { DemoBadge } from '../../components/DemoBadge';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
+import { UserAvatar } from '../../components/kit/UserAvatar';
+import { PhotoHeader } from '../../components/landing/PhotoHeader';
+import { ROLE_PHOTOS } from '../../components/landing/photos';
 import { usePageMeta } from '../../components/PageMeta';
 import { PublicNav } from '../../components/PublicNav';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../components/ui/accordion';
 import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
 import { apiGet } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { fromRateText } from '../../lib/landing';
+import { personLines } from '../../lib/personLine';
 import { hireHeading, hireLinkText, hirePagePath } from '../../lib/seoPages';
 import type { Professional } from '../../lib/apiTypes';
 
@@ -86,7 +91,8 @@ export default function HirePage() {
   usePageMeta(title, description, {
     canonicalPath: hirePagePath(role, city),
     type: 'website',
-    noindex: !data || !data.indexable,
+    // Indexable until the API has answered and says otherwise (thin pages); a failed lookup is not a page.
+    noindex: data ? !data.indexable : Boolean(error),
     jsonLd,
   });
 
@@ -120,14 +126,18 @@ function HirePageContent({ data }: { data: HirePageData }) {
 
   return (
     <>
-      <p className="text-xs uppercase tracking-[.22em] text-violet-300">Music professional directory</p>
-      <h1 className="text-4xl md:text-6xl font-bold mt-2">{hireHeading(role.label, city.name)}</h1>
-      <p className="text-slate-400 mt-4 max-w-2xl">
-        Every profile on Verse shows real work you can review. Browse verified {role.label.toLowerCase()}s in{' '}
-        {city.name}, filter by availability, or post an urgent request and hear back within hours.
-      </p>
+      <PhotoHeader
+        photo={ROLE_PHOTOS[role.slug] ?? 'rehearsal-room'}
+        eyebrow="Music professional directory"
+        title={hireHeading(role.label, city.name)}
+      >
+        <p className="max-w-2xl">
+          Every profile on Verse shows real work you can review. Browse verified {role.label.toLowerCase()}s in{' '}
+          {city.name}, filter by availability, or post an urgent request and hear back within hours.
+        </p>
+      </PhotoHeader>
 
-      <dl className="grid grid-cols-3 gap-3 mt-8 max-w-xl" data-testid="hire-stats">
+      <dl className="grid grid-cols-3 gap-3 mt-6 max-w-xl" data-testid="hire-stats">
         <StatTile label="Professionals" value={counts.professionals} />
         <StatTile label="Verified" value={counts.verified} />
         <StatTile label="Available this week" value={counts.availableThisWeek} />
@@ -154,28 +164,7 @@ function HirePageContent({ data }: { data: HirePageData }) {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6" data-testid="featured-grid">
             {featured.map((professional) => (
-              <Link
-                to={`/professionals/${professional.id}`}
-                key={professional.id}
-                className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-              >
-                <Card className="h-full bg-white/[.05] border-white/10 hover:bg-white/[.075]">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold">{professional.name}</h3>
-                      <DemoBadge show={professional.demo} />
-                      {professional.verified && <ShieldCheck size={16} className="text-emerald-300" />}
-                    </div>
-                    <p className="text-violet-300 mt-1 text-sm">{professional.headline || 'Music professional'}</p>
-                    {professional.location && (
-                      <p className="flex text-xs text-slate-400 mt-2">
-                        <MapPin size={13} className="mr-1" />
-                        {professional.location}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
+              <PersonCard key={professional.id} professional={professional} />
             ))}
           </div>
         </section>
@@ -246,5 +235,46 @@ function StatTile({ label, value }: { label: string; value: number }) {
       <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
       <dd className="text-2xl font-black mt-1">{value.toLocaleString('en-IN')}</dd>
     </div>
+  );
+}
+
+type Featured = Professional & { photoUrl?: string | null };
+
+function PersonCard({ professional }: { professional: Featured }) {
+  const line = personLines(professional);
+  const from = fromRateText(professional);
+  return (
+    <Link
+      to={`/professionals/${professional.id}`}
+      className="flex h-full flex-col gap-3 rounded-xl border border-white/10 bg-white/[.05] p-5 hover:bg-white/[.075] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+    >
+      <span className="flex items-center gap-3">
+        <UserAvatar
+          id={professional.id}
+          name={professional.name}
+          size="lg"
+          photoUrl={professional.photoUrl}
+          demo={professional.demo}
+          genres={professional.genres}
+        />
+        <span className="min-w-0">
+          <span className="block truncate text-lg font-semibold">{professional.name}</span>
+          <span className="block truncate text-sm text-violet-300">{line.primary || 'Music professional'}</span>
+        </span>
+      </span>
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-300">
+        {professional.verified && (
+          <VerifiedBadge verification={professional.verification} tier={professional.verificationTier} />
+        )}
+        <DemoBadge show={professional.demo} />
+        {from && <span className="font-semibold text-white">{from}</span>}
+      </span>
+      {professional.location && (
+        <span className="flex text-xs text-slate-400">
+          <MapPin aria-hidden="true" size={13} className="mr-1" />
+          {professional.location}
+        </span>
+      )}
+    </Link>
   );
 }

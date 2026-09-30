@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Play } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { WorkSamplePlayer, describeWorkSample } from '../WorkSamplePlayer';
+import { WaveformStrip } from '../media/WaveformStrip';
+import { normalizePeaks } from '../../lib/coverArt';
 import type { PortfolioItem } from '../../lib/apiTypes';
 
 const PROVIDERS: Record<string, string> = {
@@ -27,8 +29,9 @@ export function providerOf(sample: Pick<PortfolioItem, 'url' | 'mediaMetadata'>)
   }
 }
 
-/** 32 px pill for one work sample. `onOpen` is called on click; use `PlayChip` for the built-in dialog. */
+/** 32 px pill for one work sample (with a 64-bar waveform when `mediaMetadata.waveform` has peaks). `onOpen` is called on click; use `PlayChip` for the built-in dialog. */
 export function PlayChipButton({ sample, onOpen }: { sample: PortfolioItem; onOpen: () => void }) {
+  const peaks = normalizePeaks(sample.mediaMetadata?.waveform);
   return (
     <button
       type="button"
@@ -42,6 +45,7 @@ export function PlayChipButton({ sample, onOpen }: { sample: PortfolioItem; onOp
         <Play aria-hidden="true" size={13} className="shrink-0 fill-current text-violet-300" />
       )}
       <span className="truncate">{truncateTitle(sample.title)}</span>
+      {peaks && <WaveformStrip peaks={peaks} height={16} className="w-12 shrink-0" />}
       <span className="shrink-0 text-slate-400">{providerOf(sample)}</span>
     </button>
   );

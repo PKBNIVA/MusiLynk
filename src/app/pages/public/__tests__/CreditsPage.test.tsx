@@ -56,6 +56,9 @@ describe('photo credits', () => {
     const base = IMAGE_CREDITS[0];
     expect(creditLine({ ...base, title: 'T', author: 'A', licence: 'CC0', place: '' })).toBe('“T” by A, CC0');
     expect(creditLine({ ...base, title: 'T', author: 'A', licence: 'CC0', place: 'Goa' })).toBe('“T” by A, CC0, Goa');
+    expect(creditLine({ ...base, title: 'Sarod concert (1).JPG', author: 'A', licence: 'CC0', place: '' })).toBe(
+      '“Sarod concert (1)” by A, CC0',
+    );
   });
 });
 

@@ -245,5 +245,5 @@ export const IMAGE_CREDITS: readonly ImageCredit[] = [
 /** `“Title” by Author, licence (place)`, as printed on the credits page. */
 export function creditLine(credit: ImageCredit) {
   const where = credit.place ? `, ${credit.place}` : '';
-  return `“${credit.title}” by ${credit.author}, ${credit.licence}${where}`;
+  return `“${credit.title.replace(/\.(jpe?g|png)$/i, '')}” by ${credit.author}, ${credit.licence}${where}`;
 }

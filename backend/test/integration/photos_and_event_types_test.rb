@@ -71,6 +71,10 @@ class PhotosAndEventTypesTest < ActionDispatch::IntegrationTest
 
     get "/api/public/acts/#{act_id}"
     assert_equal PHOTO, response.parsed_body.dig("act", "photo_url")
+
+    patch "/api/acts/#{act_id}", params: { photoUrl: "" }, headers: auth(token), as: :json
+    assert_response :success
+    assert_nil Act.find(act_id).photo_url
   end
 
   test "the Stage author avatar is the profile photo for people and the photo for acts" do

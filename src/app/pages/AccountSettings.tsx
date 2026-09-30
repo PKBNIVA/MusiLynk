@@ -149,7 +149,7 @@ function PhotoCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }
       await save(stored.url);
       toast.success('Photo updated');
     } catch (err: unknown) {
-      toast.error(errorMessage(err, 'Could not update your photo.'));
+      toast.error(errorMessage(err, 'Could not update your photo. Try a smaller JPEG, PNG or WebP picture.'));
     } finally {
       setBusy(false);
     }
@@ -162,7 +162,7 @@ function PhotoCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }
       await save('');
       toast.success('Photo removed');
     } catch (err: unknown) {
-      toast.error(errorMessage(err, 'Could not remove your photo.'));
+      toast.error(errorMessage(err, 'Could not remove your photo. Check your connection and try again.'));
     } finally {
       setBusy(false);
     }
@@ -191,7 +191,13 @@ function PhotoCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }
               aria-label="Choose a photo"
             />
             <div className="flex flex-wrap gap-2">
-              <Button type="button" disabled={busy} aria-busy={busy} onClick={() => input.current?.click()}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                aria-busy={busy}
+                onClick={() => input.current?.click()}
+              >
                 {busy ? 'Saving…' : user.photoUrl ? 'Change photo' : 'Upload photo'}
               </Button>
               {user.photoUrl && (

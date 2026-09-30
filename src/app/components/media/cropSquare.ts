@@ -7,7 +7,7 @@ function loadImage(file: File): Promise<{ image: HTMLImageElement; revoke: () =>
     image.onload = () => resolve({ image, revoke: () => URL.revokeObjectURL(url) });
     image.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('That file could not be read as an image.'));
+      reject(new Error('That file could not be read as an image. Choose a JPEG, PNG or WebP picture.'));
     };
     image.src = url;
   });

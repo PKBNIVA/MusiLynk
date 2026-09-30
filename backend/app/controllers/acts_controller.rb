@@ -111,6 +111,7 @@ class ActsController < ApplicationController
 
   def act_params
     raw = params.permit(:name, :actType, :tagline, :bio, :city, :lineupSize, :minFee, :maxFee, :currency, :feeBasis, :travelRadiusKm, :travelsNationally, :travelsInternationally, :techRiderUrl, :hospitalityRiderUrl, :promoUrl, :photoUrl, :status, genres: [], languages: [], eventTypes: []).to_h.transform_keys { _1.underscore }
+    raw["photo_url"] = nil if raw.key?("photo_url") && raw["photo_url"].blank?
     raw["currency"] ||= "INR"; raw["fee_basis"] ||= "event"; raw["status"] ||= "active"; raw
   end
 end

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { Navigation } from '../components/Navigation';
+import { PublicNav } from '../components/PublicNav';
+import { PhotoHeader } from '../components/landing/PhotoHeader';
 import { usePageMeta } from '../components/PageMeta';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -14,7 +15,7 @@ import { useAuth } from '../lib/authContext';
 import { saveUrgentDraft, type UrgentDraft } from '../lib/urgentDraft';
 import { defaultUrgentStartAt } from '../lib/landing';
 import { toast } from 'sonner';
-import { CheckCircle2, Clock3, MessageCircle, Siren, Zap } from 'lucide-react';
+import { CheckCircle2, Clock3, MessageCircle, Zap } from 'lucide-react';
 import type { UrgentRequest, UrgentRequestResponse } from '../lib/apiTypes';
 
 type Confirmed = { id: string; notifiedCount: number; responseTimePromise: string };
@@ -108,21 +109,23 @@ export default function UrgentHire() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <Navigation />
-      <main className="max-w-2xl mx-auto px-4 sm:px-5 pt-28 pb-20">
+      <PublicNav />
+      <main className="max-w-2xl mx-auto px-4 sm:px-5 pt-8 pb-20">
         {confirmed ? (
           <StatusCard confirmed={confirmed} onNewRequest={() => setConfirmed(null)} />
         ) : (
           <>
-            <p className="text-xs uppercase tracking-[.22em] text-orange-300 flex items-center gap-2">
-              <Siren size={14} /> Need someone by tomorrow
-            </p>
-            <h1 className="text-3xl sm:text-4xl font-bold mt-2">Find a verified musician, fast.</h1>
-            <p className="text-slate-400 mt-2">
-              Tell us who you need and where. We notify verified musicians nearby right away — most requests get a first
-              response within 2 hours.
-            </p>
-            <Card className="bg-white/[.055] border-white/10 mt-7">
+            <PhotoHeader
+              photo="rehearsal-room"
+              eyebrow="Need someone by tomorrow"
+              title="Find a verified musician, fast."
+            >
+              <p>
+                Tell us who you need and where. We notify verified musicians nearby right away — most requests get a
+                first response within 2 hours.
+              </p>
+            </PhotoHeader>
+            <Card className="bg-white/[.055] border-white/10 mt-6">
               <CardContent className="p-5 sm:p-6 space-y-4">
                 {error && (
                   <p role="alert" className="text-sm text-rose-300">

@@ -128,6 +128,38 @@ test.describe('landing page', () => {
     expect(await page.locator('meta[name="description"]').getAttribute('content')).toMatch(/Mumbai/);
   });
 
+  test('an unknown page offers search and the three ways back in, without printing the path', async ({ page }) => {
+    await mockSignupApi(page);
+    await page.goto('/this-page-does-not-exist');
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Public navigation' })).toBeVisible();
+    await expect(page.locator('main')).not.toContainText('this-page-does-not-exist');
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+    const links = page.getByTestId('not-found-links').getByRole('link');
+    await expect(links).toHaveText([/Hire a musician/, /Find work/, /Book a live act/]);
+    await page.getByRole('searchbox').or(page.getByLabel('Search jobs, people and acts')).last().fill('tabla');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await expect(page).toHaveURL(/\/search\?q=tabla$/);
+  });
+
+  test('the public urgent page uses the public navigation and a photo header', async ({ page }) => {
+    await mockSignupApi(page);
+    await page.goto('/urgent');
+    await expect(page.getByRole('navigation', { name: 'Public navigation' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /Find a verified musician/ })).toBeVisible();
+    await expect(page.getByTestId('photo-header').locator('img')).toHaveAttribute('src', /rehearsal-room-1600\.webp$/);
+  });
+
+  test('pricing has no engineering pill and no annual toggle while annual billing is off', async ({ page }) => {
+    await mockSignupApi(page);
+    await page.goto('/pricing');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Pay for operating capacity');
+    await expect(page.getByText('server-enforced')).toHaveCount(0);
+    await expect(
+      page.getByRole('radio', { name: /annual/i }).or(page.getByRole('button', { name: /annual/i })),
+    ).toHaveCount(0);
+  });
+
   test('old "?mode=register" links land on the two-minute sign-up', async ({ page }) => {
     await mockSignupApi(page);
     await page.goto('/auth/jobseeker?mode=register');

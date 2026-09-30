@@ -76,6 +76,20 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "\"@type\":\"ProfilePage\""
   end
 
+  test "portfolio share page 404s for a synthetic owner and renders for an organic one" do
+    demo = create_user("Share Portfolio Demo", "jobseeker")
+    demo.update!(synthetic_batch: "demo-20260926-1200")
+    real = create_user("Share Portfolio Real", "jobseeker")
+    attrs = ->(user, title) { { owner_type: "user", owner_id: user.id, title:, slug: "share-#{SecureRandom.hex(6)}", visibility: "public" } }
+    demo_portfolio = Portfolio.create!(**attrs.call(demo, "Demo Portfolio"))
+    real_portfolio = Portfolio.create!(**attrs.call(real, "Real Portfolio"))
+
+    get "/share/p/#{real_portfolio.slug}"
+    assert_response :success
+    get "/share/p/#{demo_portfolio.slug}"
+    assert_response :not_found
+  end
+
   test "share pages 404 for demo and hidden synthetic accounts and their jobs and acts" do
     demo = create_user("Share Demo Musician", "jobseeker")
     demo.update!(synthetic_batch: "demo-20260926-1200")

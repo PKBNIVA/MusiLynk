@@ -99,4 +99,16 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     assert_match "/acts/#{real_act.id}", response.body
     [demo.id, qa.id, demo_job.id, demo_act.id].each { assert_no_match(/#{_1}</, response.body) }
   end
+
+  test "portfolios owned by synthetic accounts are not in the sitemap" do
+    real = create_user("Sitemap Portfolio Real", "jobseeker")
+    demo = create_user("Sitemap Portfolio Demo", "jobseeker")
+    demo.update!(synthetic_batch: "demo-20260926-1200")
+    real_portfolio = Portfolio.create!(owner_type: "user", owner_id: real.id, title: "Real", slug: "sm-real-#{SecureRandom.hex(4)}", visibility: "public")
+    demo_portfolio = Portfolio.create!(owner_type: "user", owner_id: demo.id, title: "Demo", slug: "sm-demo-#{SecureRandom.hex(4)}", visibility: "public")
+
+    get "/sitemap.xml"
+    assert_includes response.body, "/p/#{real_portfolio.slug}<"
+    assert_not_includes response.body, "/p/#{demo_portfolio.slug}<"
+  end
 end

@@ -12,6 +12,16 @@ class LifecycleSequences
     new(now).run
   end
 
+  # True when the email may be enqueued: the recipient can actually be emailed (provider
+  # configured, verified address, opted in to the step's category) AND this call is the first to
+  # claim (user, key). Deliverability is checked first so a step is never marked as sent, and so
+  # burned for good, when nothing can be delivered.
+  def self.claim(user, key)
+    return false unless NotificationEmail.deliverable_to?(user, category: LifecycleMailer.step_category(key))
+
+    LifecycleEmail.record!(user, key)
+  end
+
   def initialize(now)
     @now = now
   end
@@ -42,7 +52,7 @@ class LifecycleSequences
             5 => "musician_day5_set_availability", 10 => "musician_day10_add_rates" }.fetch(day)
     users_created_on(day, "jobseeker").find_each do |user|
       next unless yield(user)
-      next unless LifecycleEmail.record!(user, key)
+      next unless self.class.claim(user, key)
 
       LifecycleEmailDeliveryJob.perform_later(user.id, key)
     end
@@ -64,7 +74,7 @@ class LifecycleSequences
 
         count = matching_open_requests_count(user)
         next if count.zero?
-        next unless LifecycleEmail.record!(user, key)
+        next unless self.class.claim(user, key)
 
         LifecycleEmailDeliveryJob.perform_later(user.id, key, { count:, city: user.profile&.location.presence || "your area" })
       end
@@ -84,7 +94,7 @@ class LifecycleSequences
     key = "hirer_day1_post_or_urgent"
     users_created_on(day, "employer").find_each do |user|
       next unless yield(user)
-      next unless LifecycleEmail.record!(user, key)
+      next unless self.class.claim(user, key)
 
       LifecycleEmailDeliveryJob.perform_later(user.id, key)
     end
@@ -106,7 +116,7 @@ class LifecycleSequences
       matches = matching_verified_musicians(city:, role:)
       next if matches.size < 3
 
-      next unless LifecycleEmail.record!(user, key)
+      next unless self.class.claim(user, key)
 
       LifecycleEmailDeliveryJob.perform_later(user.id, key, { city:, role: })
     end
@@ -135,7 +145,7 @@ class LifecycleSequences
       job = user.jobs.where(status: "published").joins(:applications).where(applications: { status: "Applied" })
         .group("jobs.id").order("COUNT(applications.id) DESC").first
       next unless job
-      next unless LifecycleEmail.record!(user, key)
+      next unless self.class.claim(user, key)
 
       count = job.applications.where(status: "Applied").count
       LifecycleEmailDeliveryJob.perform_later(user.id, key, { title: job.title, count: })
@@ -154,7 +164,7 @@ class LifecycleSequences
         city = user.profile&.location
         hours = ResponseTimeStats.median_hours(city:)
         next if hours.nil?
-        next unless LifecycleEmail.record!(user, key)
+        next unless self.class.claim(user, key)
 
         LifecycleEmailDeliveryJob.perform_later(user.id, key, { city: city.presence || "your area", hours: })
       end

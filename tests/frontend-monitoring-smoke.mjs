@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 
 // Node 22 strips TypeScript types natively; both modules are dependency-free at import time.
 const scrub = await import('../src/app/lib/sentryScrub.ts');
@@ -96,16 +95,8 @@ monitoring.reportApiFailure({ status: 503, method: 'GET', path: '/jobs' });
 assert.equal(await monitoring.whenMonitoringReady(), false);
 assert.equal(await monitoring.sendClientTestError(), null);
 
-// --- Wiring --------------------------------------------------------------------------------
-const main = await readFile(new URL('../src/main.tsx', import.meta.url), 'utf8');
-const monitoringSource = await readFile(new URL('../src/app/lib/monitoring.ts', import.meta.url), 'utf8');
-const clientSource = await readFile(new URL('../src/app/lib/sentryClient.ts', import.meta.url), 'utf8');
-assert.match(main, /initMonitoring\(\)/, 'main.tsx starts monitoring');
-assert.doesNotMatch(main, /@sentry/, 'Sentry must not be imported eagerly by the entry point');
-assert.match(monitoringSource, /import\('\.\/sentryClient'\)/, 'Sentry is loaded with a dynamic import');
-// Sentry 11 ignores the old sendDefaultPii option; dataCollection.userInfo is what stops IP inference.
-assert.match(clientSource, /dataCollection:\s*\{\s*userInfo:\s*false\s*\}/);
-assert.match(clientSource, /replaysSessionSampleRate:\s*0/);
-assert.match(clientSource, /replaysOnErrorSampleRate:\s*0/);
+// Wiring (Sentry loads lazily and never from the entry point, the privacy options, the vitals start-up)
+// is asserted where it is observable: src/app/lib/__tests__/{monitoring,sentryClient}.test.ts, the
+// built-bundle checks in frontend-performance-smoke.mjs, and tests/e2e/error-monitoring.spec.ts.
 
 console.log('frontend monitoring smoke: ok');

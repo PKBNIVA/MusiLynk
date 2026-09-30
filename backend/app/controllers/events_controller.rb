@@ -49,7 +49,8 @@ class EventsController < ApplicationController
       user = User.find_by(id: profile_id)
       next unless user
 
-      count = ProductEvent.named("profile_view").where("props->>'profileId' = ?", profile_id).count
+      # The literal name in the SQL is what lets Postgres use the partial index on profileId.
+      count = ProductEvent.where("name = 'profile_view' AND props->>'profileId' = ?", profile_id).count
       Notifier.milestone_profile_100_views(user, count)
     end
   end

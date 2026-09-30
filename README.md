@@ -60,13 +60,16 @@ see the simulator in [DEPLOYMENT.md](DEPLOYMENT.md#local-rehearsal-without-crede
 cd backend
 RAILS_ENV=test DATABASE_URL=postgres://postgres:postgres@localhost:5432/verse_test bin/rails db:prepare
 RAILS_ENV=test DATABASE_URL=postgres://postgres:postgres@localhost:5432/verse_test bin/rails test
-bundle exec brakeman --no-pager --exit-on-warn
+bin/rails zeitwerk:check
+bundle exec brakeman --no-pager --exit-on-warn --exit-on-error
 bundle exec bundler-audit check --update
 
-# Web (from the repository root)
-npm run build
+# Web (from the repository root): the same commands CI runs
+npm run typecheck && npm run lint && npm run format:check
+npm run build && npm run check:bundle && npm run check:split
 npm run test:all            # frontend source smoke tests
 npm run test:unit -- --coverage   # Vitest unit tests for src/app/lib, with a coverage floor
+npm audit --omit=dev --audit-level=high
 npx playwright install chromium
 npm run qa:e2e              # browser tests against a local preview with a mocked API
 ```

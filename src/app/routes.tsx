@@ -338,7 +338,8 @@ function publicRoutes(): RouteObject[] {
       ),
     },
     { path: '/login', element: <Redirect to="/auth/jobseeker" /> },
-    { path: '/signup', element: <Redirect to="/join" /> },
+    { path: '/signup', element: <Redirect to="/join/musician" /> },
+    { path: '/join', element: <Redirect to="/join/musician" /> },
     {
       path: '/auth/:userType',
       element: (

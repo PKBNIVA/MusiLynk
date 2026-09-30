@@ -76,4 +76,39 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     get "/sitemap.xml"
     assert_no_match(%r{/rates/mumbai<}, response.body)
   end
+
+  test "demo and hidden synthetic accounts are never in the sitemap, with their jobs and acts" do
+    real = create_user("Sitemap Real Musician", "jobseeker")
+    demo = create_user("Sitemap Demo Musician", "jobseeker")
+    qa = create_user("Sitemap Qa Musician", "jobseeker")
+    demo.update!(synthetic_batch: "demo-20260926-1200")
+    qa.update!(synthetic_batch: "local-qa")
+    demo_employer = create_user("Sitemap Demo Employer", "employer")
+    demo_employer.update!(synthetic_batch: "demo-20260926-1200")
+    real_job = create_job("published")
+    demo_job = Job.create!(employer: demo_employer, title: "Demo job", company: "Demo Co", location: "Pune", kind: "Contract", genre: "Rock",
+      description: "A properly documented professional opportunity with clear responsibilities and written terms for the session.",
+      status: "published", published_at: Time.current)
+    act_attrs = { act_type: "band", currency: "INR", fee_basis: "event", status: "active" }
+    real_act = Act.create!(owner: real, name: "Real Act", **act_attrs)
+    demo_act = Act.create!(owner: demo, name: "Demo Act", **act_attrs)
+
+    get "/sitemap.xml"
+    assert_match "/professionals/#{real.id}", response.body
+    assert_match "/opportunities/#{real_job.id}", response.body
+    assert_match "/acts/#{real_act.id}", response.body
+    [demo.id, qa.id, demo_job.id, demo_act.id].each { assert_no_match(/#{_1}</, response.body) }
+  end
+
+  test "portfolios owned by synthetic accounts are not in the sitemap" do
+    real = create_user("Sitemap Portfolio Real", "jobseeker")
+    demo = create_user("Sitemap Portfolio Demo", "jobseeker")
+    demo.update!(synthetic_batch: "demo-20260926-1200")
+    real_portfolio = Portfolio.create!(owner_type: "user", owner_id: real.id, title: "Real", slug: "sm-real-#{SecureRandom.hex(4)}", visibility: "public")
+    demo_portfolio = Portfolio.create!(owner_type: "user", owner_id: demo.id, title: "Demo", slug: "sm-demo-#{SecureRandom.hex(4)}", visibility: "public")
+
+    get "/sitemap.xml"
+    assert_includes response.body, "/p/#{real_portfolio.slug}<"
+    assert_not_includes response.body, "/p/#{demo_portfolio.slug}<"
+  end
 end

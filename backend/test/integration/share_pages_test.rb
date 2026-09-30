@@ -75,4 +75,46 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Share Portfolio"
     assert_includes response.body, "\"@type\":\"ProfilePage\""
   end
+
+  test "portfolio share page 404s for a synthetic owner and renders for an organic one" do
+    demo = create_user("Share Portfolio Demo", "jobseeker")
+    demo.update!(synthetic_batch: "demo-20260926-1200")
+    real = create_user("Share Portfolio Real", "jobseeker")
+    attrs = ->(user, title) { { owner_type: "user", owner_id: user.id, title:, slug: "share-#{SecureRandom.hex(6)}", visibility: "public" } }
+    demo_portfolio = Portfolio.create!(**attrs.call(demo, "Demo Portfolio"))
+    real_portfolio = Portfolio.create!(**attrs.call(real, "Real Portfolio"))
+
+    get "/share/p/#{real_portfolio.slug}"
+    assert_response :success
+    get "/share/p/#{demo_portfolio.slug}"
+    assert_response :not_found
+  end
+
+  test "share pages 404 for demo and hidden synthetic accounts and their jobs and acts" do
+    demo = create_user("Share Demo Musician", "jobseeker")
+    demo.update!(synthetic_batch: "demo-20260926-1200")
+    qa = create_user("Share Qa Musician", "jobseeker")
+    qa.update!(synthetic_batch: "local-qa")
+    real = create_user("Share Real Musician", "jobseeker")
+    demo_employer = create_user("Share Demo Employer", "employer")
+    demo_employer.update!(synthetic_batch: "demo-20260926-1200")
+    demo_job = Job.create!(employer: demo_employer, title: "Demo share job", company: "Demo Co", location: "Pune", kind: "Contract", genre: "Rock",
+      description: "A properly documented professional opportunity with clear responsibilities and written terms.", status: "published", published_at: Time.current)
+    act_attrs = { act_type: "band", currency: "INR", fee_basis: "event", status: "active" }
+    demo_act = Act.create!(owner: demo, name: "Demo Share Act", **act_attrs)
+    real_act = Act.create!(owner: real, name: "Real Share Act", **act_attrs)
+
+    get "/share/professionals/#{real.id}"
+    assert_response :success
+    get "/share/acts/#{real_act.id}"
+    assert_response :success
+    get "/share/professionals/#{demo.id}"
+    assert_response :not_found
+    get "/share/professionals/#{qa.id}"
+    assert_response :not_found
+    get "/share/acts/#{demo_act.id}"
+    assert_response :not_found
+    get "/share/opportunities/#{demo_job.id}"
+    assert_response :not_found
+  end
 end

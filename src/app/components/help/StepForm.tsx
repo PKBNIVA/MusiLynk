@@ -121,20 +121,22 @@ export function focusStepHeading(stepId: string) {
 /** A read-only summary row for the review step, with a link back to the step that owns it. */
 export function ReviewRow({ label, value, onEdit }: { label: string; value: ReactNode; onEdit?: () => void }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-white/10 py-2.5 last:border-0">
-      <dt className="w-36 shrink-0 text-sm text-slate-400">{label}</dt>
-      <dd className="min-w-0 flex-1 text-sm text-slate-100 [overflow-wrap:anywhere]">
-        {value || <span className="text-slate-500">Not set</span>}
+    <div className="border-b border-white/10 py-2.5 last:border-0 sm:grid sm:grid-cols-[9rem_1fr] sm:gap-4">
+      <dt className="text-sm text-slate-400">{label}</dt>
+      <dd className="flex min-w-0 items-start justify-between gap-4">
+        <span className="min-w-0 flex-1 text-sm text-slate-100 [overflow-wrap:anywhere]">
+          {value || <span className="text-slate-500">Not set</span>}
+        </span>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="shrink-0 rounded-md px-2 py-0.5 text-xs text-violet-200 hover:bg-violet-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+          >
+            Edit<span className="sr-only"> {label.toLowerCase()}</span>
+          </button>
+        )}
       </dd>
-      {onEdit && (
-        <button
-          type="button"
-          onClick={onEdit}
-          className="shrink-0 rounded-md px-2 py-0.5 text-xs text-violet-200 hover:bg-violet-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-        >
-          Edit<span className="sr-only"> {label.toLowerCase()}</span>
-        </button>
-      )}
     </div>
   );
 }

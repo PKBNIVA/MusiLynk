@@ -63,7 +63,10 @@ export function UrgentRequestFields({
             value={values.budget}
             onValueChange={(next) => onChange('budget', next)}
             placeholder="Choose a budget band"
-            options={BUDGET_BANDS.map((band) => ({ value: band.value, label: band.label, description: null }))}
+            options={[
+              { value: '', label: 'Choose a budget band', description: null },
+              ...BUDGET_BANDS.map((band) => ({ value: band.value, label: band.label, description: null })),
+            ]}
           />
         )}
       </Field>

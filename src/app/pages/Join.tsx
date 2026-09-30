@@ -395,11 +395,11 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
 
 /** What each kind of hirer is looking for, in the words of the choice they make. */
 const HIRING_FOR: Record<HirerKind, string> = {
-  studio: 'Recording and studio sessions',
+  studio: 'Studio sessions',
   event_company: 'Weddings and events',
   band: 'My band or act',
-  label: 'Releases and productions',
-  venue: 'Shows at a venue',
+  label: 'Music releases',
+  venue: 'Venue shows',
   other: 'Something else',
 };
 
@@ -481,11 +481,11 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
       </div>
       <fieldset aria-describedby={errors.kind ? 'join-kind-error' : undefined}>
         <legend className="text-sm font-medium text-slate-200">What do you hire for?</legend>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {HIRER_KINDS.map((option) => (
             <label
               key={option.value}
-              className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/[.03] px-3.5 text-sm text-slate-100 hover:border-white/30 has-[:checked]:border-violet-300/70 has-[:checked]:bg-violet-500/20 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet-300"
+              className="flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border border-white/15 bg-white/[.03] px-3 text-sm leading-tight text-slate-100 hover:border-white/30 has-[:checked]:border-violet-300/70 has-[:checked]:bg-violet-500/20 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet-300"
             >
               <input
                 type="radio"

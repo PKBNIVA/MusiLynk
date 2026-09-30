@@ -1,34 +1,10 @@
-import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+// Auth hydration and navigation unread-count behaviour are asserted by Vitest; this keeps the
+// `npm run test:frontend-bootstrap` entry point and runs those tests.
+import { spawnSync } from 'node:child_process';
 
-const authSource = await readFile(new URL('../src/app/lib/authContext.tsx', import.meta.url), 'utf8');
-const navigationSource = await readFile(new URL('../src/app/components/Navigation.tsx', import.meta.url), 'utf8');
-
-assert.match(
-  authSource,
-  /if\s*\(\s*!hasAccessToken\(\)\s*\)\s*\{[^}]*setLoading\(false\)[^}]*return/s,
-  'anonymous auth hydration must finish without requesting /me',
+const result = spawnSync(
+  'npx',
+  ['vitest', 'run', 'src/app/lib/__tests__/authContext.test.tsx', 'src/app/components/__tests__/Navigation.test.tsx'],
+  { stdio: 'inherit', shell: process.platform === 'win32' },
 );
-assert.match(
-  authSource,
-  /apiGet<\{\s*user:\s*User\s*\}>\('\/me'\)/,
-  'stored sessions must still be validated with /me',
-);
-
-assert.match(
-  navigationSource,
-  /apiGet<UnreadCounts>\('\/notifications\/unread'\)/,
-  'workspace navigation must request the lightweight unread-count endpoint',
-);
-assert.doesNotMatch(
-  navigationSource,
-  /apiGet(<[^>]*>)?\('\/notifications'\)/,
-  'workspace navigation must not download the full notification list',
-);
-assert.match(
-  navigationSource,
-  /apiGet<UnreadCounts>\('\/notifications\/unread'\)[\s\S]*?\},\s*\[\]\s*\)/,
-  'navigation unread loading must not be explicitly coupled to pathname changes',
-);
-
-console.log('frontend bootstrap smoke: ok');
+process.exit(result.status ?? 1);

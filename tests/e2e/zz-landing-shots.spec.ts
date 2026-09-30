@@ -1,9 +1,12 @@
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { mockSignupApi, SOUNDCLOUD, YOUTUBE } from './support/signup-fixtures';
 
 // Design screenshots of the landing page and the two-minute sign-up (mocked API). On demand only.
-const OUT =
-  '/tmp/claude-0/-home-user-verse-music-platform/75cf3a6a-808f-50f4-83a6-511d9459f29e/scratchpad/design/landing';
+// Screenshots land in $SHOTS_DIR (default: .qa-stack/shots in the repo, which is git-ignored).
+// The default is resolved from this file, so it is the repo's .qa-stack/shots from any working directory.
+const OUT = join(process.env.SHOTS_DIR || fileURLToPath(new URL('../../.qa-stack/shots', import.meta.url)), 'landing');
 test.skip(!process.env.LANDING_SHOTS, 'Screenshots on demand only.');
 
 const PASSWORD = 'Harbor-Lantern-4827!';

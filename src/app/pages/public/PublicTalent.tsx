@@ -2,7 +2,9 @@ import { DemoBadge } from '../../components/DemoBadge';
 import { usePageMeta } from '../../components/PageMeta';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { MapPin, Search, ShieldCheck, X, Zap } from 'lucide-react';
+import { Search, ShieldCheck, X, Zap } from 'lucide-react';
+import { UserAvatar } from '../../components/kit/UserAvatar';
+import { FirstSample } from '../../components/talent/FirstSample';
 import { PublicNav } from '../../components/PublicNav';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -13,13 +15,30 @@ import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../../components/Sear
 import { useLatestCallback } from '../../lib/useLatestCallback';
 import { usePagedList, type PageMeta } from '../../lib/usePagedList';
 import { useUrlFilters } from '../../lib/useUrlFilters';
-import { talentRoleLabel, useTaxonomy } from '../../lib/useTaxonomy';
+import { TALENT_ROLES, talentRoleLabel, useTaxonomy } from '../../lib/useTaxonomy';
 import type { Professional } from '../../lib/apiTypes';
 
 type TalentPage = PageMeta & { talent?: Professional[]; role?: { key: string; label: string } };
 const pickTalent = (page: TalentPage) => page.talent;
-const FILTERS = ['q', 'location', 'role'] as const;
+const FILTERS = ['q', 'location', 'role', 'verified'] as const;
 const NOUN = ['professional', 'professionals'] as const;
+
+function Chip({ pressed, onClick, children }: { pressed: boolean; onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={`min-h-9 rounded-full border px-3.5 text-sm ${
+        pressed
+          ? 'border-violet-400 bg-violet-500/20 text-white'
+          : 'border-white/15 bg-white/[.04] text-slate-300 hover:bg-white/[.08]'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function PublicTalent() {
   usePageMeta(
@@ -51,15 +70,23 @@ export default function PublicTalent() {
     if (!update({ q, location })) void load();
   };
   // The API labels free-text roles ("drummer" → "Drummer"); the taxonomy covers the fixed directory keys.
+  const roleChips = (taxonomy?.talentRoles || TALENT_ROLES).slice(0, 8);
   const roleLabel = values.role ? list.first?.role?.label || talentRoleLabel(values.role, taxonomy) : '';
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
       <main className="max-w-6xl mx-auto px-5 py-14">
-        <p className="text-xs uppercase tracking-[.22em] text-violet-300">Music professional directory</p>
-        <h1 className="text-4xl md:text-6xl font-bold mt-2">Find musicians, creators & production professionals</h1>
-        <p className="text-slate-400 mt-4">
-          Search singers, instrumentalists, composers, engineers, technical directors, tour crew, managers and more.
+        <h1 className="text-3xl font-bold">Musicians in {values.location || 'India'}</h1>
+        <p className="mt-2 text-slate-400">
+          {!loading && !error && items.length > 0 && (
+            <>
+              <span data-testid="result-count">
+                {list.total} {list.total === 1 ? 'professional' : 'professionals'}
+              </span>
+              {' · '}
+            </>
+          )}
+          verified badges shown where earned
         </p>
         {roleLabel && (
           <Badge className="mt-4 gap-1 pr-1" variant="secondary" data-testid="role-filter">
@@ -100,11 +127,29 @@ export default function PublicTalent() {
             Search
           </Button>
         </form>
-        {!loading && !error && items.length > 0 && (
-          <p className="text-sm text-slate-400 mt-5" data-testid="result-count">
-            {list.total} {list.total === 1 ? 'professional' : 'professionals'}
-          </p>
-        )}
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filters">
+          {roleChips.map((r) => (
+            <Chip
+              key={r.key}
+              pressed={values.role.toLowerCase() === r.key.toLowerCase()}
+              onClick={() => update({ role: values.role.toLowerCase() === r.key.toLowerCase() ? '' : r.key })}
+            >
+              {r.label}
+            </Chip>
+          ))}
+          <Chip
+            pressed={values.location.toLowerCase() === 'mumbai'}
+            onClick={() => update({ location: values.location.toLowerCase() === 'mumbai' ? '' : 'Mumbai' })}
+          >
+            Mumbai
+          </Chip>
+          <Chip
+            pressed={values.verified === 'true'}
+            onClick={() => update({ verified: values.verified === 'true' ? '' : 'true' })}
+          >
+            Verified only
+          </Chip>
+        </div>
         {!loading && <SearchNotice meta={meta} query={values.q} />}
         {loading ? (
           <p className="text-slate-400 text-center py-16" role="status">
@@ -121,48 +166,53 @@ export default function PublicTalent() {
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
               {items.map((c, index) => (
-                <Link
-                  to={`/professionals/${c.id}`}
+                <Card
                   key={c.id}
                   data-list-item={index}
-                  className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                  tabIndex={-1}
+                  className="relative h-full bg-white/[.05] border-white/10 hover:bg-white/[.075] focus-within:ring-2 focus-within:ring-violet-400"
                 >
-                  <Card className="h-full bg-white/[.05] border-white/10 hover:bg-white/[.075]">
-                    <CardContent className="p-5">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-semibold">{c.name}</h2>
-                        <DemoBadge show={c.demo} />
-                        {c.verified && <ShieldCheck size={16} className="text-emerald-300" />}
-                        {c.fastResponderBadge && (
-                          <Zap size={16} className="text-amber-300" aria-label="Fast responder this week" />
-                        )}
-                      </div>
-                      <p className="text-violet-300 mt-1">{c.headline || 'Music professional'}</p>
-                      {(c.reviewsCount ?? 0) > 0 && (
-                        <p className="text-xs text-slate-400 mt-1">
-                          {c.reviewsAverage?.toFixed(1)} ({c.reviewsCount} {c.reviewsCount === 1 ? 'review' : 'reviews'}
-                          )
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-3">
+                      <UserAvatar id={c.id} name={c.name} size="lg" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h2 className="truncate text-lg font-semibold">
+                            <Link
+                              to={`/professionals/${c.id}`}
+                              className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+                            >
+                              {c.name}
+                            </Link>
+                          </h2>
+                          <DemoBadge show={c.demo} />
+                          {c.verified && (
+                            <ShieldCheck size={16} aria-label="Verified" className="shrink-0 text-emerald-300" />
+                          )}
+                          {c.fastResponderBadge && (
+                            <Zap size={16} className="text-amber-300" aria-label="Fast responder this week" />
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-sm text-slate-300">
+                          {[c.headline || c.roles?.[0] || 'Music professional', c.genres?.slice(0, 2).join(', ')]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </p>
-                      )}
-                      {c.location && (
-                        <p className="flex text-sm text-slate-400 mt-3">
-                          <MapPin size={15} className="mr-1" />
-                          {c.location}
-                        </p>
-                      )}
-                      <p className="text-sm text-slate-300 mt-3 line-clamp-3">
-                        {c.bio || 'Professional profile on Verse.'}
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {[...(c.roles || []), ...(c.instruments || [])].slice(0, 5).map((x: string) => (
-                          <Badge variant="secondary" key={x}>
-                            {x}
-                          </Badge>
-                        ))}
+                        {c.location && <p className="mt-0.5 text-sm text-slate-400">{c.location}</p>}
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                    </div>
+                    <div className="relative z-10 mt-4">
+                      <FirstSample id={c.id} />
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {[...(c.roles || []), ...(c.instruments || [])].slice(0, 3).map((x: string) => (
+                        <Badge variant="secondary" key={x}>
+                          {x}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
             <LoadMore

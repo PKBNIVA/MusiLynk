@@ -1,4 +1,3 @@
-import { DemoBadge } from '../../components/DemoBadge';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
@@ -8,11 +7,9 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
-import { Briefcase, MapPin, ShieldCheck, Wallet, CalendarDays } from 'lucide-react';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { Job } from '../../lib/apiTypes';
-import { formatDate, formatDeadline, formatPay } from '../../lib/format';
-import { PostedBy } from '../../components/showcase/PostedBy';
+import { JobHero } from '../../components/JobHero';
 import { useAuth } from '../../lib/authContext';
 import { ShareToStageButton } from '../../components/stage/ShareToStageButton';
 import { FEATURE_STAGE } from '../../lib/features';
@@ -107,92 +104,62 @@ export default function PublicOpportunity() {
         onRetry={() => void load()}
       />
     );
+  const target = `/jobseeker/jobs/${encodeURIComponent(String(j.id ?? id))}`;
+  // status stays 'loading' briefly on a full page load while the stored session is verified;
+  // holding the button back until then avoids flashing "Sign in to apply" before "Apply" (V-13).
+  const applyButton =
+    status === 'loading' ? null : status === 'signedIn' ? (
+      <Button size="lg" className="w-full" asChild>
+        <Link to={target}>Apply</Link>
+      </Button>
+    ) : (
+      <Button size="lg" className="w-full" asChild>
+        <Link to="/auth/jobseeker" state={{ from: target }}>
+          Sign in to apply
+        </Link>
+      </Button>
+    );
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
-      <main className="max-w-5xl mx-auto px-5 py-12">
-        <Card className="bg-white/[.055] border-white/10">
-          <CardContent className="p-7 md:p-10">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="flex flex-wrap gap-2">
-                <Badge>{j.opportunity_kind}</Badge>
-                <DemoBadge show={j.demo} />
-                {j.employerVerified && (
-                  <Badge className="bg-emerald-500/10 text-emerald-300">
-                    <ShieldCheck size={13} className="mr-1" />
-                    Verified hiring party
-                  </Badge>
+      <main className="max-w-5xl mx-auto px-5 pb-28 pt-12 lg:pb-12">
+        <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
+          <Card className="bg-white/[.055] border-white/10">
+            <CardContent className="p-6 md:p-8">
+              <JobHero
+                job={j}
+                actions={
+                  FEATURE_STAGE && isAuthenticated && <ShareToStageButton kind="job_share" id={j.id} label={j.title} />
+                }
+              />
+              <div className="mt-8 pt-7 border-t border-white/10">
+                <h2 className="text-xl font-semibold">About the opportunity</h2>
+                <p className="whitespace-pre-wrap leading-7 text-slate-300 mt-3">{j.description}</p>
+                {j.requirements && (
+                  <>
+                    <h2 className="text-xl font-semibold mt-8">Requirements</h2>
+                    <p className="whitespace-pre-wrap leading-7 text-slate-300 mt-3">{j.requirements}</p>
+                  </>
                 )}
               </div>
-              {FEATURE_STAGE && isAuthenticated && <ShareToStageButton kind="job_share" id={j.id} label={j.title} />}
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold mt-4 break-words">{j.title}</h1>
-            <p className="text-xl text-violet-300 mt-2">{j.company}</p>
-            <PostedBy postedAs={j.postedAs} className="mt-2" />
-            <div className="grid sm:grid-cols-2 gap-3 mt-7 text-sm text-slate-300">
-              <span className="flex gap-2">
-                <MapPin size={17} />
-                {j.location}
-                {j.workplace ? ` · ${j.workplace.charAt(0).toUpperCase()}${j.workplace.slice(1)}` : ''}
-              </span>
-              {(j.function_area || j.type) && (
-                <span className="flex gap-2">
-                  <Briefcase size={17} />
-                  {j.function_area || j.type}
-                </span>
-              )}
-              <span className="flex gap-2">
-                <Wallet size={17} />
-                {formatPay(j)}
-              </span>
-              <span className="flex gap-2">
-                <CalendarDays size={17} />
-                {formatDeadline(j.application_deadline, { verb: 'Apply by' })}
-              </span>
-              {j.start_date && (
-                <span className="flex gap-2">
-                  <CalendarDays size={17} />
-                  Starts {formatDate(j.start_date)}
-                </span>
-              )}
-            </div>
-            <div className="mt-8 pt-7 border-t border-white/10">
-              <h2 className="text-xl font-semibold">About the opportunity</h2>
-              <p className="whitespace-pre-wrap leading-7 text-slate-300 mt-3">{j.description}</p>
-              {j.requirements && (
-                <>
-                  <h2 className="text-xl font-semibold mt-8">Requirements</h2>
-                  <p className="whitespace-pre-wrap leading-7 text-slate-300 mt-3">{j.requirements}</p>
-                </>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2 mt-7">
-              {j.skills?.map((x: string) => (
-                <Badge key={x} variant="outline">
-                  {x}
-                </Badge>
-              ))}
-            </div>
-            {/* status stays 'loading' briefly on a full page load while the stored session is
-                verified; holding the button back until then avoids flashing "Sign in to apply"
-                before switching to "Apply" (V-13). */}
-            {status !== 'loading' &&
-              (status === 'signedIn' ? (
-                <Button size="lg" className="mt-8" asChild>
-                  <Link to={`/jobseeker/jobs/${encodeURIComponent(String(j.id ?? id))}`}>Apply</Link>
-                </Button>
-              ) : (
-                <Button size="lg" className="mt-8" asChild>
-                  <Link
-                    to="/auth/jobseeker"
-                    state={{ from: `/jobseeker/jobs/${encodeURIComponent(String(j.id ?? id))}` }}
-                  >
-                    Sign in to apply
-                  </Link>
-                </Button>
-              ))}
-          </CardContent>
-        </Card>
+              <div className="flex flex-wrap gap-2 mt-7">
+                {[j.function_area || j.type, ...(j.skills || [])].filter(Boolean).map((x) => (
+                  <Badge key={x} variant="outline">
+                    {x}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <aside className="hidden lg:block">
+            <div className="sticky top-24 rounded-2xl border border-white/10 bg-white/[.055] p-5">{applyButton}</div>
+          </aside>
+        </div>
+        {applyButton && (
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-slate-950/95 p-3 backdrop-blur lg:hidden">
+            {applyButton}
+          </div>
+        )}
         <p className="text-xs text-slate-500 mt-5">
           Never pay private application or audition fees. Verse listings can be reported after sign-in.
         </p>

@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter } from 'react-router';
+import { RouterProvider, createMemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -35,11 +35,6 @@ vi.mock('../../lib/authContext', () => ({
 vi.mock('../../components/Navigation', () => ({ Navigation: () => null }));
 vi.mock('../../components/help/HelpCallout', () => ({ HelpCallout: () => null }));
 vi.mock('../../components/help/MoreDetails', () => ({ MoreDetails: () => null }));
-vi.mock('../../components/help/StepForm', () => ({
-  StepForm: () => null,
-  ReviewRow: () => null,
-  focusStepHeading: () => undefined,
-}));
 vi.mock('../../components/ui/checkbox', () => ({ Checkbox: () => null }));
 vi.mock('../../components/VerificationDialogs', () => ({
   VerificationRequestDialog: () => null,
@@ -75,13 +70,9 @@ async function flush() {
 
 describe('ProfileSetup public profile link (V-12)', () => {
   it('renders a link to the public profile once the profile is complete', async () => {
-    act(() =>
-      root.render(
-        <MemoryRouter>
-          <ProfileSetup />
-        </MemoryRouter>,
-      ),
-    );
+    // useBlocker (the unsaved-changes guard) needs a data router.
+    const router = createMemoryRouter([{ path: '/', element: <ProfileSetup /> }]);
+    act(() => root.render(<RouterProvider router={router} />));
     await flush();
     const link = container.querySelector('a[href="/professionals/user-123"]');
     expect(link).not.toBeNull();

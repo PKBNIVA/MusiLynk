@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';
-import { ArrowLeft, ArrowRight, Building2, KeyRound, Link2, Mic2, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, KeyRound, Link2, Mic2, Sparkles } from 'lucide-react';
 import { usePageMeta } from '../components/PageMeta';
 import { SkipLink } from '../components/SkipLink';
 import { BrandMark } from '../components/BrandMark';
@@ -449,32 +449,47 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
 
 // ---- Hirers --------------------------------------------------------------------------------------
 
-const HIRER_STEPS = ['about', 'account'] as const;
+/** What each kind of hirer is looking for, in the words of the choice they make. */
+const HIRING_FOR: Record<HirerKind, string> = {
+  studio: 'Studio sessions',
+  event_company: 'Weddings and events',
+  band: 'My band or act',
+  label: 'Music releases',
+  venue: 'Venue shows',
+  other: 'Something else',
+};
 
+/**
+ * One screen: organisation, city, what you hire for and email (then Terms and the button), with
+ * the name and the choice of a password under "More". The account is created from here; the
+ * answers become the organisation's Page.
+ */
 function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: User) => void }) {
   usePageMeta(
     'Join to hire musicians and crew',
-    'Studios, event and wedding companies, bands, labels and venues: create a free account in two minutes and find a verified musician in Mumbai within 24 hours.',
+    'Studios, event and wedding companies, bands, labels and venues: create a free account in a minute and find a verified musician in Mumbai within 24 hours.',
     { canonicalPath: '/join/hiring' },
   );
   useSignupStarted('employer');
-  const { step, reached, goTo } = useSteps(HIRER_STEPS);
   const [kind, setKind] = useState<HirerKind | ''>('');
   const [city, setCity] = useState<string[]>([DEFAULT_CITY]);
   const [company, setCompany] = useState('');
-  const [errors, setErrors] = useState<{ kind?: string; city?: string }>({});
-  const nameLabel = HIRER_KINDS.find((option) => option.value === kind)?.nameLabel ?? 'Company or team name';
+  const [errors, setErrors] = useState<{ company?: string; kind?: string; city?: string }>({});
 
-  const next = (event: React.FormEvent) => {
-    event.preventDefault();
+  // The three answers this screen asks for, all needed before an account is made.
+  const validateLead = () => {
     const found = {
-      kind: kind ? undefined : 'Choose the closest match, or “Complete my profile later”.',
+      company: company.trim()
+        ? undefined
+        : 'Enter the name musicians will see: a studio, company, band or your own name.',
       city: city[0]?.trim() ? undefined : 'Tell us the city you hire in.',
+      kind: kind ? undefined : 'Choose what you hire for.',
     };
     setErrors(found);
-    if (found.kind) return document.querySelector<HTMLInputElement>('input[name="hirer-kind"]')?.focus();
-    if (found.city) return document.getElementById('join-hire-city')?.focus();
-    goTo(1);
+    if (found.company) document.getElementById('join-company')?.focus();
+    else if (found.city) document.getElementById('join-hire-city')?.focus();
+    else if (found.kind) document.querySelector<HTMLInputElement>('input[name="hirer-kind"]')?.focus();
+    return !found.company && !found.city && !found.kind;
   };
   const starter = (): StarterPayload => ({
     ...(kind ? { hirerKind: kind } : {}),
@@ -482,96 +497,75 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
     companyName: company,
   });
 
-  const steps: FormStep[] = [
-    {
-      id: HIRER_STEPS[0],
-      title: 'About you',
-      icon: Building2,
-      description: 'So musicians know who they’re talking to.',
-      content: (
-        <form onSubmit={next} noValidate className="space-y-6">
-          <fieldset aria-describedby={errors.kind ? 'join-kind-error' : undefined}>
-            <legend className="text-sm font-medium text-slate-200">What best describes you?</legend>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {HIRER_KINDS.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/[.03] px-3.5 text-sm text-slate-100 hover:border-white/30 has-[:checked]:border-violet-300/70 has-[:checked]:bg-violet-500/20 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet-300"
-                >
-                  <input
-                    type="radio"
-                    name="hirer-kind"
-                    value={option.value}
-                    checked={kind === option.value}
-                    onChange={() => {
-                      setKind(option.value);
-                      setErrors((current) => ({ ...current, kind: undefined }));
-                    }}
-                    className="size-4 shrink-0 accent-violet-500 focus-visible:outline-none"
-                  />
-                  {option.label}
-                </label>
-              ))}
-            </div>
-            {errors.kind && (
-              <p id="join-kind-error" role="alert" className="mt-2 text-sm text-rose-300">
-                {errors.kind}
-              </p>
-            )}
-          </fieldset>
-          <div>
-            <AutocompleteInput
-              id="join-hire-city"
-              field="cities"
-              label="City you hire in"
-              multiple={false}
-              values={city}
-              onChange={(value) => {
-                setCity(value);
-                setErrors((current) => ({ ...current, city: undefined }));
-              }}
-              placeholder="Type to change the city"
-            />
-            {errors.city && (
-              <p role="alert" className="mt-1.5 text-sm text-rose-300">
-                {errors.city}
-              </p>
-            )}
-          </div>
-          <Field
-            id="join-company"
-            label={nameLabel}
-            optional
-            hint="We’ll create its Page on Verse, so you can post work as it."
-          >
-            <Input
-              autoComplete="organization"
-              value={company}
-              maxLength={120}
-              onChange={(event) => setCompany(event.target.value)}
-              className="border-white/15 bg-black/20"
-            />
-          </Field>
-          <StepActions onLater={() => goTo(1)} nextLabel="Next: your account" />
-        </form>
-      ),
-    },
-    {
-      id: HIRER_STEPS[1],
-      title: 'Your account',
-      icon: KeyRound,
-      description: 'Then post what you need, or send an urgent request.',
-      content: (
-        <div>
-          <AccountStep role="employer" starter={starter} onBegin={onStart} onDone={onDone} />
-          <Button type="button" variant="ghost" className="mt-2" onClick={() => goTo(0)}>
-            <ArrowLeft aria-hidden="true" size={16} />
-            Back
-          </Button>
+  const lead = (
+    <>
+      <Field
+        id="join-company"
+        label="Organisation or team name"
+        error={errors.company}
+        hint="We’ll create its Page on Verse, so you can post work as it."
+      >
+        <Input
+          autoComplete="organization"
+          value={company}
+          maxLength={120}
+          onChange={(event) => {
+            setCompany(event.target.value);
+            setErrors((current) => ({ ...current, company: undefined }));
+          }}
+          className="border-white/15 bg-black/20"
+        />
+      </Field>
+      <div>
+        <AutocompleteInput
+          id="join-hire-city"
+          field="cities"
+          label="City you hire in"
+          multiple={false}
+          values={city}
+          onChange={(value) => {
+            setCity(value);
+            setErrors((current) => ({ ...current, city: undefined }));
+          }}
+          placeholder="Type to change the city"
+        />
+        {errors.city && (
+          <p role="alert" className="mt-1.5 text-sm text-rose-300">
+            {errors.city}
+          </p>
+        )}
+      </div>
+      <fieldset aria-describedby={errors.kind ? 'join-kind-error' : undefined}>
+        <legend className="text-sm font-medium text-slate-200">What do you hire for?</legend>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {HIRER_KINDS.map((option) => (
+            <label
+              key={option.value}
+              className="flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border border-white/15 bg-white/[.03] px-3 text-sm leading-tight text-slate-100 hover:border-white/30 has-[:checked]:border-violet-300/70 has-[:checked]:bg-violet-500/20 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet-300"
+            >
+              <input
+                type="radio"
+                name="hirer-kind"
+                value={option.value}
+                checked={kind === option.value}
+                onChange={() => {
+                  setKind(option.value);
+                  setErrors((current) => ({ ...current, kind: undefined }));
+                }}
+                className="size-4 shrink-0 accent-violet-500 focus-visible:outline-none"
+              />
+              {HIRING_FOR[option.value]}
+            </label>
+          ))}
         </div>
-      ),
-    },
-  ];
+        {errors.kind && (
+          <p id="join-kind-error" role="alert" className="mt-2 text-sm text-rose-300">
+            {errors.kind}
+          </p>
+        )}
+      </fieldset>
+    </>
+  );
 
   return (
     <JoinShell
@@ -587,7 +581,16 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
         </>
       }
     >
-      <StepForm steps={steps} current={step} reached={reached} onStepChange={goTo} />
+      <AccountStep
+        role="employer"
+        compact
+        lead={lead}
+        validateLead={validateLead}
+        fallbackName={() => company}
+        starter={starter}
+        onBegin={onStart}
+        onDone={onDone}
+      />
     </JoinShell>
   );
 }

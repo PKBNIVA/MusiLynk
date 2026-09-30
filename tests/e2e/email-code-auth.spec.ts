@@ -148,8 +148,10 @@ test('sign-up by code (on /join) sends name, role and consent and lands on the d
   await page.goto('/auth/employer');
   await page.getByRole('link', { name: 'New to Verse? Join in two minutes' }).click();
   await expect(page).toHaveURL(/\/join\/hiring$/);
-  await page.getByRole('button', { name: 'Complete my profile later' }).click();
-  await page.getByLabel('Your name').fill('QA Studio');
+  await page.getByLabel('Studio sessions').check();
+  await page.getByLabel('Organisation or team name').fill('QA Studio Co');
+  await page.getByRole('button', { name: /More: your name/ }).click();
+  await page.getByLabel('Your name (optional)').fill('QA Studio');
   await page.getByLabel('Email').fill('studio@example.invalid');
   await page.getByLabel(/I agree to the Terms/).check();
   await page.getByRole('button', { name: 'Email me a code' }).click();

@@ -3,20 +3,12 @@
 // (existing account) then calls submitUrgentDraft() once they're signed in. sessionStorage only (never localStorage): the draft is scoped to this tab
 // and this visit, and it's never meant to outlive the browsing session.
 import { apiPost } from './api';
+import type { UrgentRequestBody } from './urgentForm';
 
 const KEY = 'verse_urgent_draft';
 
-export interface UrgentDraft {
-  title: string;
-  roleName: string;
-  city: string;
-  venue?: string;
-  startAt: string;
-  budgetMin?: string;
-  budgetMax?: string;
-  note?: string;
-  genres?: string[];
-}
+/** The request body itself: the form validated before the hop, so it is posted as it was. */
+export type UrgentDraft = UrgentRequestBody;
 
 export function saveUrgentDraft(draft: UrgentDraft) {
   try {
@@ -53,15 +45,6 @@ export interface UrgentConfirmation {
 export async function submitUrgentDraft(): Promise<UrgentConfirmation | null> {
   const draft = consumeUrgentDraft();
   if (!draft) return null;
-  const d = await apiPost<UrgentConfirmation>('/urgent-requests', {
-    title: draft.title,
-    roleName: draft.roleName,
-    city: draft.city,
-    startAt: draft.startAt,
-    budgetMin: draft.budgetMin ? Number(draft.budgetMin) : null,
-    budgetMax: draft.budgetMax ? Number(draft.budgetMax) : null,
-    requirements: [draft.venue && `Venue/studio: ${draft.venue}`, draft.note].filter(Boolean).join('\n') || null,
-    genre: draft.genres?.join(', ') || null,
-  });
+  const d = await apiPost<UrgentConfirmation>('/urgent-requests', draft);
   return { id: d.id, notifiedCount: d.notifiedCount, responseTimePromise: d.responseTimePromise };
 }

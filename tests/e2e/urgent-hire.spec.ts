@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { chooseOption } from './qa-helpers';
 
 // Mocked-API coverage of the "need someone by tomorrow" hirer flow and the musician's
 // one-tap response. The real endpoints are covered by backend/test/integration/
@@ -67,14 +68,16 @@ test('signed-out hirer fills the urgent form, signs up, and lands on the confirm
   await page.getByRole('combobox', { name: 'Role needed' }).press('Enter');
   const dateField = page.locator('#urgent-start');
   await expect(dateField).not.toHaveValue('');
+  // Budget band and a short note are required too; the promise sits under the button.
+  await chooseOption(page.getByLabel('Budget'), '₹5,000 – ₹10,000');
+  await page.getByLabel('Short note').fill('Two sets, gear provided.');
+  await expect(page.getByTestId('urgent-promise')).toContainText('within 2 hours, 9am–11pm IST');
 
   await page.getByRole('button', { name: 'Continue to sign up' }).click();
   // The draft survives the hop through the two-minute hirer sign-up.
   await expect(page).toHaveURL(/\/join\/hiring$/);
-  await page.getByLabel('Recording studio').check();
-  await page.getByLabel('Studio name').fill('New Studio');
-  await page.getByRole('button', { name: 'Next: your account' }).click();
-  await page.getByLabel('Your name').fill('New Studio Owner');
+  await page.getByLabel('Studio sessions').check();
+  await page.getByLabel('Organisation or team name').fill('New Studio');
   await page.getByLabel('Email').fill('studio@example.invalid');
   // The mocked sign-in methods have no email delivery, so the password field is already shown.
   await page.getByLabel('Password', { exact: true }).fill('LongEnoughPass123!');
@@ -87,7 +90,27 @@ test('signed-out hirer fills the urgent form, signs up, and lands on the confirm
   await expect(page.getByText('6', { exact: true })).toBeVisible();
 
   expect(state.urgentRequests).toHaveLength(1);
-  expect(state.urgentRequests[0]).toMatchObject({ roleName: 'Drummer', city: 'Mumbai' });
+  expect(state.urgentRequests[0]).toMatchObject({
+    roleName: 'Drummer',
+    city: 'Mumbai',
+    budgetMin: 5000,
+    budgetMax: 10000,
+    note: 'Two sets, gear provided.',
+  });
+});
+
+test('the urgent form names every missing answer instead of posting half a request', async ({ page }) => {
+  const state = { registered: false, urgentRequests: [] as unknown[] };
+  await mockCommon(page, state);
+  await page.goto('/urgent');
+  await page.getByRole('button', { name: 'Continue to sign up' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Check the role, budget and a short note' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Role needed' })).toBeFocused();
+  await expect(page).toHaveURL(/\/urgent$/);
+  // The optional details stay out of the way until asked for.
+  await expect(page.getByLabel('Venue or studio')).toBeHidden();
+  await page.getByRole('button', { name: 'More details (optional)' }).click();
+  await expect(page.getByLabel('Venue or studio')).toBeVisible();
 });
 
 const musicianRequest = {

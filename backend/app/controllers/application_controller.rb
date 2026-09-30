@@ -170,7 +170,7 @@ class ApplicationController < ActionController::API
   end
 
   # Columns of `users` a signed-in user (or an admin listing users) may see about an account.
-  ACCOUNT_KEYS = %w[id name email role status last_login_at synthetic_batch].freeze
+  ACCOUNT_KEYS = %w[id name email role status last_login_at synthetic_batch consented_at].freeze
   # The whole of what an anonymous visitor sees about a person. An allow-list on purpose: the
   # users table carries consent, phone-verification, vouching and password timestamps that must
   # never reach a public payload, so nothing here is derived from `user.as_json`.

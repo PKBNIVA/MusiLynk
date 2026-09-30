@@ -178,6 +178,7 @@ class ApplicationController < ActionController::API
     headline location experience website portfolioUrl bio skills genres instruments languages credits openTo roles gear software
     companyName companyWebsite companySize companyDescription verified travelsNationally travelsInternationally remoteRecording
     sightReading passportReady yearsExperience travelRadiusKm hourlyRate sessionRate showRate tourDayRate dayRate availability currency
+    photoUrl eventTypes
   ].freeze
 
   def public_user(user)

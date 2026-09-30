@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_090100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -78,6 +78,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_090000) do
     t.boolean "verified", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "photo_url"
     t.index "((genres)::text) gin_trgm_ops", name: "index_acts_on_genres_text_trgm", using: :gin
     t.index ["bio"], name: "index_acts_on_bio", opclass: :gin_trgm_ops, using: :gin
     t.index ["name"], name: "index_acts_on_name", opclass: :gin_trgm_ops, using: :gin
@@ -978,6 +979,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_090000) do
     t.datetime "whatsapp_consented_at"
     t.jsonb "email_preferences", default: {"digest"=>true, "product"=>true, "requests"=>true, "lifecycle"=>true}, null: false
     t.boolean "share_verification_publicly", default: true, null: false
+    t.string "photo_url"
+    t.jsonb "event_types", default: [], null: false
     t.index "((roles)::text) gin_trgm_ops", name: "index_profiles_on_roles_text_trgm", using: :gin
     t.index "((skills)::text) gin_trgm_ops", name: "index_profiles_on_skills_text_trgm", using: :gin
     t.index ["bio"], name: "index_profiles_on_bio", opclass: :gin_trgm_ops, using: :gin

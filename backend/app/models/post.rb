@@ -71,7 +71,8 @@ class Post < ApplicationRecord
   def author_actor = ActorResolver::Actor.new(type: author_type, id: author_id, name: author_name, record: author_record, user: created_by)
 
   def author_record
-    case author_type
+    return @author_record if defined?(@author_record)
+    @author_record = case author_type
     when "organization" then Organization.find_by(id: author_id)
     when "act" then Act.find_by(id: author_id)
     when "system" then nil
@@ -175,7 +176,12 @@ class Post < ApplicationRecord
   def unavailable(type) = { type:, unavailable: true }
 
   def author_avatar
-    author_type == "system" ? SYSTEM_AVATAR : nil
+    return SYSTEM_AVATAR if author_type == "system"
+    case author_type
+    when "organization" then nil
+    when "act" then author_record&.photo_url.presence
+    else created_by&.profile&.photo_url.presence
+    end
   end
 
   def ics_escape(text) = text.to_s.gsub(/([,;\\])/, '\\\\\1').gsub("\n", "\\n")

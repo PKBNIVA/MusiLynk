@@ -20,7 +20,7 @@ import {
   Pin,
   CalendarDays,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { UserAvatar } from '../kit/UserAvatar';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
@@ -195,10 +195,7 @@ export function PostCard({ post, onChanged, onDeleted }: PostCardProps) {
       )}
       <header className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <Avatar className="size-10">
-            {post.author.avatar && <AvatarImage src={post.author.avatar} alt="" />}
-            <AvatarFallback className="bg-violet-500/20 text-violet-200">{post.author.name.charAt(0)}</AvatarFallback>
-          </Avatar>
+          <UserAvatar id={post.author.id} name={post.author.name} photoUrl={post.author.avatar} />
           <div className="min-w-0">
             <p
               id={`stage-post-${post.id}-author`}

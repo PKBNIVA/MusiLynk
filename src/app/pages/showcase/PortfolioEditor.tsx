@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { AiSuggestButton } from '../../components/ai/AiSuggestButton';
 import {
   copyLink,

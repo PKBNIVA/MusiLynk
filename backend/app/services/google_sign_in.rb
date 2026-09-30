@@ -90,5 +90,15 @@ class GoogleSignIn
     connection.raw = @claims.except("sub")
     connection.last_synced_at = Time.current
     connection.save!
+    copy_avatar_to_profile!(connection.owner)
+  end
+
+  # Gives the person a photo from their Google account, but never replaces one they chose
+  # and only accepts an https URL.
+  def copy_avatar_to_profile!(owner)
+    return unless owner.is_a?(User) && avatar_url.to_s.match?(%r{\Ahttps://\S+\z}) && avatar_url.to_s.length <= 500
+    profile = owner.profile || owner.build_profile
+    return if profile.photo_url.present?
+    profile.update(photo_url: avatar_url)
   end
 end

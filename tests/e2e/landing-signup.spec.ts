@@ -103,9 +103,18 @@ test.describe('landing page', () => {
     await expect(proof).not.toContainText(/\b3\b/);
   });
 
-  test('popular searches link into the role × city hire pages, and structured data describes the site', async ({
-    page,
-  }) => {
+  test('the urgent band carries its role and time into the urgent form', async ({ page }) => {
+    await mockSignupApi(page);
+    await page.goto('/');
+    const band = page.getByTestId('urgent-band');
+    await band.getByLabel('Role needed').fill('Tabla player');
+    await band.getByLabel('Date & time').fill('2026-12-01T19:30');
+    await band.getByRole('button', { name: 'Continue' }).click();
+    await expect(page).toHaveURL(/\/urgent\?role=Tabla\+player&city=Mumbai&startAt=2026-12-01T19%3A30$/);
+    await expect(page.locator('#urgent-start')).toHaveValue('2026-12-01T19:30');
+  });
+
+  test('role tiles link the 12 roles into the hire pages, and structured data describes the site', async ({ page }) => {
     await mockSignupApi(page);
     await page.goto('/');
     await expect(page.getByRole('link', { name: 'Hire a drummer in Mumbai' })).toHaveAttribute(
@@ -113,6 +122,7 @@ test.describe('landing page', () => {
       '/hire/drummer/mumbai',
     );
     await expect(page.getByRole('link', { name: 'Hire a DJ in Mumbai' })).toBeVisible();
+    await expect(page.getByTestId('role-tiles').getByRole('link')).toHaveCount(12);
     const data = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent()) ?? '[]');
     expect(data.map((entry: { '@type': string }) => entry['@type'])).toEqual(['Organization', 'WebSite']);
     expect(await page.locator('meta[name="description"]').getAttribute('content')).toMatch(/Mumbai/);

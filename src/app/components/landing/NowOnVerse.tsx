@@ -45,7 +45,7 @@ export function NowOnVerse({ city }: { city: string }) {
         </h2>
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {people
-            ? people.map((person) => <PersonCard key={person.id} person={person} />)
+            ? people.map((person, index) => <PersonCard key={person.id} person={person} hiddenOnPhone={index >= 3} />)
             : Array.from({ length: SHOWN }, (_, index) => (
                 <li
                   key={index}
@@ -59,11 +59,15 @@ export function NowOnVerse({ city }: { city: string }) {
   );
 }
 
-function PersonCard({ person }: { person: Person }) {
+/** `hiddenOnPhone`: the fourth to sixth cards wait for a wider screen so a phone is not six cards long. */
+function PersonCard({ person, hiddenOnPhone }: { person: Person; hiddenOnPhone: boolean }) {
   const line = personLines(person);
   const from = fromRateText(person);
   return (
-    <li className="verse-surface flex flex-col gap-3 rounded-2xl p-4" data-testid="now-card">
+    <li
+      className={`verse-surface flex-col gap-3 rounded-2xl p-4 ${hiddenOnPhone ? 'hidden sm:flex' : 'flex'}`}
+      data-testid="now-card"
+    >
       <Link
         to={`/professionals/${person.id}`}
         className="group flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"

@@ -3,7 +3,8 @@ import { ArrowRight } from 'lucide-react';
 import { HowItWorks } from './HowItWorks';
 import { LiveProof } from './LiveProof';
 import { TrustStrip } from './TrustStrip';
-import { PopularSearches } from './PopularSearches';
+import { RoleTiles } from './RoleTiles';
+import { UrgentBand } from './UrgentBand';
 import { NowOnVerse } from './NowOnVerse';
 
 /** Everything under the hero, loaded as its own chunk after the first paint. */
@@ -13,9 +14,10 @@ export default function LandingBelowFold({ city }: { city: string }) {
       <NowOnVerse city={city} />
       <LiveProof />
       <HowItWorks />
+      <RoleTiles city={city} />
+      <UrgentBand city={city} />
       <TrustStrip />
-      <PopularSearches />
-      <section aria-labelledby="final-title" className="px-4 pb-20 sm:px-6">
+      <section aria-labelledby="final-title" className="px-4 pb-20 pt-16 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 rounded-3xl border border-violet-300/20 bg-gradient-to-br from-fuchsia-500/15 via-violet-500/10 to-teal-400/10 p-6 md:flex-row md:items-center md:justify-between md:p-10">
           <div>
             <h2 id="final-title" className="text-2xl font-black md:text-4xl">

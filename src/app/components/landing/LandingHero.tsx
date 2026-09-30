@@ -25,7 +25,11 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
       className="relative overflow-hidden px-4 pb-12 pt-6 sm:px-6 md:pb-20 md:pt-14"
       data-testid="landing-hero"
     >
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-full lg:w-[42%]">
+      {/* The photo fades into the page with a mask, so it never shows an edge whatever is behind it. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-0 w-full [mask-image:linear-gradient(to_bottom,#000_0%,#000_20%,transparent_85%)] lg:w-[42%] lg:[mask-composite:intersect] lg:[mask-image:linear-gradient(to_right,transparent_0%,#000_45%),linear-gradient(to_top,transparent_0%,#000_22%)]"
+      >
         <Photo
           src={photo.src}
           alt=""
@@ -33,10 +37,8 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
           height={photo.height}
           sizes="(min-width: 1024px) 42vw, 100vw"
           priority
-          className="size-full object-cover object-[35%_50%] opacity-45 lg:opacity-100"
+          className="size-full object-cover object-[35%_50%] opacity-35 lg:opacity-100"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-950/75 to-slate-950 lg:bg-gradient-to-r lg:from-slate-950 lg:via-slate-950/10 lg:to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 hidden h-24 bg-gradient-to-t from-slate-950 to-transparent lg:block" />
       </div>
       <div className="relative mx-auto max-w-6xl">
         <div className="lg:max-w-[56%]">
@@ -60,7 +62,7 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
             Hire a verified musician for your session or gig,{' '}
             <span className="verse-gradient-text">within 24 hours.</span>
           </h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
+          <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
             Singers, session players, DJs and sound crew in {city}: hear their work, then book.
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2" data-testid="hero-paths">

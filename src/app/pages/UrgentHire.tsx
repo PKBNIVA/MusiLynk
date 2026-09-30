@@ -12,18 +12,10 @@ import { apiGet, apiPost } from '../lib/api';
 import { errorMessage } from '../lib/errors';
 import { useAuth } from '../lib/authContext';
 import { saveUrgentDraft, type UrgentDraft } from '../lib/urgentDraft';
+import { defaultUrgentStartAt } from '../lib/landing';
 import { toast } from 'sonner';
 import { CheckCircle2, Clock3, MessageCircle, Siren, Zap } from 'lucide-react';
 import type { UrgentRequest, UrgentRequestResponse } from '../lib/apiTypes';
-
-// Tomorrow, 6pm local: the default "when" for a request titled "need someone by tomorrow".
-function defaultStartAt() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  d.setHours(18, 0, 0, 0);
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0, 16);
-}
 
 type Confirmed = { id: string; notifiedCount: number; responseTimePromise: string };
 // Passed via navigate(..., { state }) either directly (signed-in submit) or after the
@@ -45,7 +37,11 @@ export default function UrgentHire() {
   const [roles, setRoles] = useState<string[]>(prefill.get('role') ? [prefill.get('role') as string] : []),
     [city, setCity] = useState(prefill.get('city') ? [prefill.get('city') as string] : ['Mumbai']),
     [venue, setVenue] = useState(''),
-    [startAt, setStartAt] = useState(defaultStartAt()),
+    [startAt, setStartAt] = useState(() => {
+      // The landing page's "Need someone by tomorrow" band passes its date along.
+      const asked = prefill.get('startAt') || '';
+      return /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(asked) ? asked : defaultUrgentStartAt();
+    }),
     [budgetMin, setBudgetMin] = useState(''),
     [budgetMax, setBudgetMax] = useState(''),
     [note, setNote] = useState(''),

@@ -13,6 +13,7 @@ import type { Created, ConversationCreated, Professional, RecentActivity, Talent
 import { useLatestCallback } from '../lib/useLatestCallback';
 import { Search, BookmarkPlus, BookmarkCheck, MessageSquare, ShieldCheck, FolderPlus, Folder } from 'lucide-react';
 import { VerifiedBadge } from '../components/VerifiedBadge';
+import { personLines } from '../lib/personLine';
 import { UserAvatar } from '../components/kit/UserAvatar';
 import { EmptyState } from '../components/kit/EmptyState';
 import { FirstSample } from '../components/talent/FirstSample';
@@ -263,13 +264,10 @@ export default function CandidateSearch() {
                         )}
                       </div>
                       <p className="mt-0.5 text-sm text-slate-300">
-                        {[
-                          c.headline || c.roles?.[0] || 'Music professional',
-                          c.genres?.slice(0, 2).join(', '),
-                          c.location,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
+                        {(() => {
+                          const line = personLines(c);
+                          return [line.primary || 'Music professional', ...line.secondary.slice(0, 3)].join(' · ');
+                        })()}
                       </p>
                     </div>
                     <Button

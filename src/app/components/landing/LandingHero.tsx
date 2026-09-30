@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { AppSelect, type AppSelectOption } from '../ui/app-select';
 import { useEffect, useState } from 'react';
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, MapPin, Mic2, Zap, type LucideIcon } from 'lucide-react';
+import { personLines } from '../../lib/personLine';
 import { UserAvatar } from '../kit/UserAvatar';
 import { PlayChipButton } from '../kit/PlayChip';
 import { apiGet } from '../../lib/api';
@@ -165,35 +166,50 @@ const DEMO_SAMPLES: PortfolioItem[] = [
 // The chips are a picture of the real thing, not controls: keep them out of the tab order.
 const makeStatic = (el: HTMLElement | null) => el?.setAttribute('inert', '');
 
-/** Six verified people in the chosen city, under the hero buttons. Renders nothing if the request fails. */
+/** Up to six people in the chosen city under the hero buttons. Verified people are preferred and the
+ * caption only says "Verified" when every face shown is. Renders nothing on failure or under 3 people. */
 function VerifiedRow({ city }: { city: string }) {
-  const [people, setPeople] = useState<Professional[]>([]);
+  const [state, setState] = useState<{ people: Professional[]; verified: boolean }>({ people: [], verified: false });
   useEffect(() => {
     let live = true;
-    setPeople([]);
-    apiGet<{ talent?: Professional[] }>(
-      `/public/talent?${new URLSearchParams({ location: city, verified: 'true', limit: '6' })}`,
+    setState({ people: [], verified: false });
+    apiGet<{ talent?: Professional[]; total?: number }>(
+      `/public/talent?${new URLSearchParams({ location: city, limit: '12' })}`,
     )
-      .then((d) => live && setPeople((d.talent || []).slice(0, 6)))
+      .then((d) => {
+        if (!live) return;
+        const all = d.talent || [];
+        const verified = all.filter((p) => p.verified);
+        if (verified.length >= 3) setState({ people: verified.slice(0, 6), verified: true });
+        else if ((d.total ?? all.length) >= 3 && all.length >= 3)
+          setState({ people: all.slice(0, 6), verified: false });
+      })
       .catch(() => {});
     return () => {
       live = false;
     };
   }, [city]);
+  const { people, verified } = state;
   if (!people.length) return null;
   return (
     <div className="mt-5" data-testid="verified-row">
       <ul className="flex flex-wrap gap-x-4 gap-y-2">
-        {people.map((p) => (
-          <li key={p.id} className="flex items-center gap-2">
-            <UserAvatar id={p.id} name={p.name} size="sm" />
-            <span className="text-sm text-slate-200">{p.name.split(' ')[0]}</span>
-          </li>
-        ))}
+        {people.map((p) => {
+          const line = personLines(p);
+          return (
+            <li key={p.id} className="flex items-center gap-2">
+              <UserAvatar id={p.id} name={p.name} size="sm" />
+              <span className="text-sm text-slate-200">
+                {p.name.split(' ')[0]}
+                {line.primary && <span className="sr-only">, {line.primary}</span>}
+              </span>
+            </li>
+          );
+        })}
       </ul>
       <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/[.06] px-2.5 py-1 text-xs text-slate-300">
         <MapPin aria-hidden="true" size={13} className="text-teal-300" />
-        Verified in {city} this week
+        {verified ? `Verified in ${city}` : `Now on Verse in ${city}`}
       </p>
     </div>
   );

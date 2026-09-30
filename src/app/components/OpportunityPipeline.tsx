@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ApiError, apiGet, apiPatch } from '../lib/api';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { optionLabel } from './ui/option-labels';
 import { FormatGlyph } from './kit/FormatGlyph';
 import { Info, MoreHorizontal } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -152,7 +153,11 @@ export function OpportunityPipeline({
                     </Badge>
                   </div>
                   <p className="text-sm text-slate-400 mt-2">
-                    {[j.opportunity_kind, j.location || 'Location to be added', j.workplace]
+                    {[
+                      j.opportunity_kind && optionLabel(j.opportunity_kind),
+                      j.location || 'Location to be added',
+                      j.workplace && optionLabel(j.workplace),
+                    ]
                       .filter(Boolean)
                       .join(' · ')}
                   </p>

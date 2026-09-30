@@ -9,6 +9,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet, apiPost } from '../../lib/api';
 import { trackProfileView } from '../../lib/analytics';
+import { personLines } from '../../lib/personLine';
 import { MapPin, MessageSquare, ShieldCheck, Flag, Zap } from 'lucide-react';
 import { MediaTile } from '../../components/showcase/MediaTile';
 import { PlayChip } from '../../components/kit/PlayChip';
@@ -90,9 +91,7 @@ export default function PublicProfile() {
     c.travelsNationally && 'Travels nationally',
     c.passportReady && 'Passport ready',
   ].filter((x): x is string => Boolean(x));
-  const identity = [[...(c.roles || [])].slice(0, 3).join(', '), (c.genres || []).slice(0, 3).join(', ')]
-    .filter(Boolean)
-    .join(' · ');
+  const heroLine = personLines({ ...c, location: null });
   const longBio = (c.bio || '').length > 200;
   async function message() {
     try {
@@ -149,9 +148,11 @@ export default function PublicProfile() {
                     <VerifiedBadge verification={c.verification} tier={c.verificationTier} />
                   )}
                 </div>
-                {(c.headline || identity) && <p className="mt-1 text-lg text-violet-300">{c.headline || identity}</p>}
+                {heroLine.primary && <p className="mt-1 text-lg text-violet-300">{heroLine.primary}</p>}
                 <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-slate-400">
-                  {c.headline && identity && <span>{identity}</span>}
+                  {heroLine.secondary.filter((x) => x !== c.location).length > 0 && (
+                    <span>{heroLine.secondary.filter((x) => x !== c.location).join(' · ')}</span>
+                  )}
                   {c.location && (
                     <span className="inline-flex items-center">
                       <MapPin size={15} aria-hidden="true" className="mr-1" />

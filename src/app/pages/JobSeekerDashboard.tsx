@@ -111,7 +111,11 @@ export default function JobSeekerDashboard() {
           </div>
         )}
         {tiles.length > 0 && (
-          <section aria-label="Needs you now" className="mb-8 grid gap-3 md:grid-cols-3" data-testid="needs-you-now">
+          <section
+            aria-label="Needs you now"
+            className="mb-8 grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3"
+            data-testid="needs-you-now"
+          >
             {tiles.map((t) => (
               <div
                 key={t.key}

@@ -140,7 +140,7 @@ export function formatPay(job: PayFields, fallback = 'Not disclosed'): string {
   } else {
     return fallback;
   }
-  return job.compensation_period ? `${range} / ${job.compensation_period}` : range;
+  return job.compensation_period ? `${range} / ${job.compensation_period.replace(/^per\s+/i, '')}` : range;
 }
 
 /** "Today 6 pm", "Tomorrow 6:30 pm", otherwise "Sat 14 Nov 6 pm". Empty → `fallback`. */

@@ -3,6 +3,7 @@ import { usePageMeta } from '../../components/PageMeta';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Search, ShieldCheck, X, Zap } from 'lucide-react';
+import { personLines } from '../../lib/personLine';
 import { UserAvatar } from '../../components/kit/UserAvatar';
 import { FirstSample } from '../../components/talent/FirstSample';
 import { PublicNav } from '../../components/PublicNav';
@@ -197,12 +198,19 @@ export default function PublicTalent() {
                             <Zap size={16} className="text-amber-300" aria-label="Fast responder this week" />
                           )}
                         </div>
-                        <p className="mt-0.5 text-sm text-slate-300">
-                          {[c.headline || c.roles?.[0] || 'Music professional', c.genres?.slice(0, 2).join(', ')]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </p>
-                        {c.location && <p className="mt-0.5 text-sm text-slate-400">{c.location}</p>}
+                        {(() => {
+                          const line = personLines(c);
+                          return (
+                            <>
+                              <p className="mt-0.5 text-sm text-slate-300">{line.primary || 'Music professional'}</p>
+                              {line.secondary.length > 0 && (
+                                <p className="mt-0.5 text-sm text-slate-400">
+                                  {line.secondary.slice(0, 3).join(' · ')}
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="relative z-10 mt-4">

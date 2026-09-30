@@ -143,3 +143,12 @@ describe('formatWhen', () => {
     expect(formatWhen('')).toBe('');
   });
 });
+
+describe('formatPay period', () => {
+  it('drops a leading "per " from the period', async () => {
+    const { formatPay } = await import('../format');
+    expect(formatPay({ compensation_min: 15000, compensation_max: 25000, compensation_period: 'per project' })).toBe(
+      '₹15,000–25,000 / project',
+    );
+  });
+});

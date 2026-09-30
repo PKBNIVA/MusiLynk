@@ -1,5 +1,6 @@
 import { ChevronDown, ListOrdered, Mail, MessageCircleQuestion, Sparkles, ThumbsDown } from 'lucide-react';
 import { EmptyState } from '../components/kit/EmptyState';
+import { personLines } from '../lib/personLine';
 import { UserAvatar } from '../components/kit/UserAvatar';
 import { FirstSample } from '../components/talent/FirstSample';
 import { useCallback, useEffect, useState } from 'react';
@@ -478,23 +479,24 @@ export default function EmployerApplications() {
                           </div>
                           {aiRank && <p className="text-xs text-violet-300 mt-1">{aiRank.reason}</p>}
                           <div className="text-sm text-slate-300 mt-1 break-words">
-                            {[
-                              a.headline,
-                              a.genres?.slice(0, 2).join(', '),
-                              a.candidateLocation || 'Location not provided',
-                              yearsLabel(a.experience),
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')}
-                            {EMAIL_VISIBLE_STATUSES.includes(a.status) && a.candidateEmail && (
-                              <>
-                                {' · '}
-                                <a href={`mailto:${a.candidateEmail}`} className="underline hover:text-white">
-                                  {a.candidateEmail}
-                                </a>
-                              </>
-                            )}
+                            {(() => {
+                              const line = personLines({
+                                headline: a.headline,
+                                genres: a.genres,
+                                location: a.candidateLocation || 'Location not provided',
+                              });
+                              return [line.primary, ...line.secondary.slice(0, 3), yearsLabel(a.experience)]
+                                .filter(Boolean)
+                                .join(' · ');
+                            })()}
                           </div>
+                          {EMAIL_VISIBLE_STATUSES.includes(a.status) && a.candidateEmail && (
+                            <div className="text-xs text-slate-400 mt-1 break-all">
+                              <a href={`mailto:${a.candidateEmail}`} className="underline hover:text-white">
+                                {a.candidateEmail}
+                              </a>
+                            </div>
+                          )}
                           <div className="text-slate-400 text-xs mt-1">Applied for {a.jobTitle}</div>
                           {a.status === 'Interview Scheduled' && a.interviewDate && (
                             <div className="text-sm text-emerald-300 mt-1">

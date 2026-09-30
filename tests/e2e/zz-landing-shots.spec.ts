@@ -1,9 +1,12 @@
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { mockSignupApi, SOUNDCLOUD, YOUTUBE } from './support/signup-fixtures';
 
 // Design screenshots of the landing page and the two-minute sign-up (mocked API). On demand only.
-const OUT =
-  '/tmp/claude-0/-home-user-verse-music-platform/75cf3a6a-808f-50f4-83a6-511d9459f29e/scratchpad/design/landing';
+// Screenshots land in $SHOTS_DIR (default: .qa-stack/shots in the repo, which is git-ignored).
+// The default is resolved from this file, so it is the repo's .qa-stack/shots from any working directory.
+const OUT = join(process.env.SHOTS_DIR || fileURLToPath(new URL('../../.qa-stack/shots', import.meta.url)), 'landing');
 test.skip(!process.env.LANDING_SHOTS, 'Screenshots on demand only.');
 
 const PASSWORD = 'Harbor-Lantern-4827!';
@@ -63,15 +66,15 @@ for (const [label, size] of [
     test('hirer sign-up', async ({ page }) => {
       await mockSignupApi(page);
       await page.goto('/join/hiring');
-      await page.getByLabel('Weddings and events').check();
-      await page.getByLabel('Organisation or team name').fill('Shaadi Beats Events');
+      await page.getByLabel('Event or wedding company').check();
+      await page.getByLabel('Company name').fill('Shaadi Beats Events');
+      await shot(page, `08-hirer-step1-${label}`);
+      await page.getByRole('button', { name: 'Next: your account' }).click();
+      await page.getByLabel('Your name').fill('Anita Kulkarni');
       await page.getByLabel('Email').fill('anita@example.invalid');
       await page.getByLabel(/I agree to the Terms/).check();
-      await shot(page, `08-hirer-${label}`);
-      await page.getByRole('button', { name: /More: your name/ }).click();
-      await page.getByLabel('Your name (optional)').fill('Anita Kulkarni');
       await page.evaluate(() => window.scrollTo(0, 0));
-      await shot(page, `09-hirer-more-${label}`);
+      await shot(page, `09-hirer-step2-account-${label}`);
       await page.getByRole('button', { name: 'Use a password instead' }).click();
       await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
       await page.getByRole('button', { name: 'Create my account' }).click();

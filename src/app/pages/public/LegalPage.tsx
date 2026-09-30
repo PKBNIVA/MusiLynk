@@ -17,6 +17,13 @@ type LegalPolicy = {
     businessAddress: string;
     businessState: string;
     grievanceOfficer: { name: string; email: string; address: string };
+    /** Per field: false while config/legal.yml still holds a "[PLACEHOLDER]" (served blank). */
+    configured?: {
+      legalName: boolean;
+      businessAddress: boolean;
+      businessState: boolean;
+      grievanceOfficer: { name: boolean; email: boolean; address: boolean };
+    };
   };
   booking: { feeEnabled: boolean; plainEnglish: string[]; policyVersion: number };
 };
@@ -229,6 +236,26 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
   },
 };
 
+/** The grievance officer's details once they are filled in; until then a neutral line, so the
+ * page never prints "[NAME]" or an empty "Email:". */
+function grievanceOfficerItem(legal: LegalPolicy['legal']): [string, string] {
+  const title = 'Grievance Officer (DPDP Act, 2023) — Draft, pending legal review';
+  const flags = legal.configured?.grievanceOfficer;
+  const officer = legal.grievanceOfficer;
+  if (!flags?.name || !flags.email) {
+    return [
+      title,
+      `Contact details are published before launch. Until then, write to ${SUPPORT_EMAIL} and mark the subject “Data protection”.`,
+    ];
+  }
+  const details = [`Name: ${officer.name}`, `Email: ${officer.email}`];
+  if (flags.address) details.push(`Address: ${officer.address}`);
+  return [
+    title,
+    `${details.join(' · ')}. Contact the Grievance Officer for a data protection complaint under the DPDP Act; other support requests go to ${SUPPORT_EMAIL}.`,
+  ];
+}
+
 /** DPDP grievance officer + booking policy sections, appended to Privacy/Terms only once the
  * live policy has loaded. Both are clearly marked as drafts: this is config rendered as prose,
  * not legal advice, and a lawyer/CA still needs to sign off on the wording (see
@@ -238,16 +265,12 @@ function dynamicItems(key: string, policy: LegalPolicy | null): [string, string]
   // it just shows the static text without the generated sections.
   if (!policy?.legal?.grievanceOfficer || !Array.isArray(policy.booking?.plainEnglish)) return [];
   if (key === 'privacy') {
-    const officer = policy.legal.grievanceOfficer;
     return [
       [
         'Data Protection (DPDP Act, 2023) — Draft, pending legal review',
         'What we collect: account and contact details, professional profile and portfolio data, booking and payment records, and device/session logs. Purpose: to provide the service, process bookings and payments, prevent abuse and meet legal obligations. Consent: creating an account and using booking/payment features is your consent to this processing for those purposes; where a feature asks for separate consent (e.g. optional analytics), it is requested there. Withdrawal: you can withdraw consent for optional processing at any time from account settings, and delete your account entirely (see "Your data and your account" above) — Verse then deletes what the law allows it to delete and keeps only what tax and company law requires.',
       ],
-      [
-        'Grievance Officer (DPDP Act, 2023) — Draft, pending legal review',
-        `Name: ${officer.name} · Email: ${officer.email} · Address: ${officer.address}. Contact the Grievance Officer for a data protection complaint under the DPDP Act; other support requests go to ${SUPPORT_EMAIL}.`,
-      ],
+      grievanceOfficerItem(policy.legal),
     ];
   }
   if (key === 'terms' && policy.booking.plainEnglish.length) {

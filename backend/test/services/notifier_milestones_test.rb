@@ -6,6 +6,12 @@ class NotifierMilestonesTest < ActiveSupport::TestCase
   setup do
     @seq = 0
     clear_enqueued_jobs
+    @previous_webhook = ENV["EMAIL_DELIVERY_WEBHOOK"]
+    ENV["EMAIL_DELIVERY_WEBHOOK"] = "https://email-hook.example.invalid/send"
+  end
+
+  teardown do
+    @previous_webhook.nil? ? ENV.delete("EMAIL_DELIVERY_WEBHOOK") : ENV["EMAIL_DELIVERY_WEBHOOK"] = @previous_webhook
   end
 
   test "milestone_first_application fires once, on the hirer's first application ever" do
@@ -77,7 +83,7 @@ class NotifierMilestonesTest < ActiveSupport::TestCase
   def create_user(role)
     @seq += 1
     User.create!(name: "Milestone User #{@seq}", email: "milestone-#{@seq}-#{SecureRandom.hex(4)}@example.com",
-      password: "StrongPass123!", role:, status: "active")
+      password: "StrongPass123!", role:, status: "active", email_verified: true)
   end
 
   def create_job(employer)

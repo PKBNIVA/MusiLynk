@@ -1,5 +1,8 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
+// The admin preview is the fourth local server (playwright.config.ts): QA_PORT_BASE + 3.
+const portBase = Number(process.env.QA_PORT_BASE || 4173);
+
 // Mocked-API coverage for signing in on the admin site (admin build, admin-desktop project): the
 // password step answers with a challenge, and the code emailed to the admin completes it.
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
@@ -172,7 +175,7 @@ test('an unavailable second step is explained inline and no session starts', asy
   await submitPassword(page);
   await expect(page.getByRole('alert')).toHaveText(message);
   await expect(page.getByLabel('Password', { exact: true })).toBeFocused();
-  await expect(page).toHaveURL(/127\.0\.0\.1:4176\/$/);
+  await expect(page).toHaveURL(`http://127.0.0.1:${portBase + 3}/`);
   expect(await token(page)).toBeNull();
 });
 
@@ -187,7 +190,7 @@ test('a non-admin account is signed out again and told this site is for admins',
 test('a signed-out visit to a console page signs in first and then returns there', async ({ page }) => {
   await mockApi(page);
   await page.goto('/admin/tester');
-  await expect(page).toHaveURL(/127\.0\.0\.1:4176\/$/);
+  await expect(page).toHaveURL(`http://127.0.0.1:${portBase + 3}/`);
   await fillPassword(page);
   await page.getByLabel('Sign-in code').fill(VALID_CODE);
   await expect(page).toHaveURL(/\/admin\/tester$/);

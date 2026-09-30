@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { ArrowLeft, ArrowRight, KeyRound, Link2, Mic2, Sparkles } from 'lucide-react';
@@ -18,6 +18,7 @@ import { useAuth, type User } from '../lib/authContext';
 import { consumeReturnTo } from '../lib/api';
 import { errorMessage } from '../lib/errors';
 import { submitUrgentDraft } from '../lib/urgentDraft';
+import { trackProfileLinkAdded, trackSignupStep } from '../lib/analytics';
 import { toast } from 'sonner';
 import {
   DEFAULT_CITY,
@@ -33,6 +34,31 @@ import { draftFromLinks, type DraftResult, type ProfileDraft } from '../lib/link
 const ProfileDraftReview = lazy(() => import('../components/join/ProfileDraftReview'));
 
 /**
+ * True once per document when this page load is the "Continue with Google" round trip
+ * (GoogleAuthController sends a new account to /join/<role>?auth=google&code=...). authContext
+ * strips those params from the URL as soon as it mounts, before this lazy page renders, so the
+ * document's original navigation URL is read as well. Read once and cleared by
+ * `markGoogleSignupTracked`, so it fires exactly once per Google sign-up.
+ */
+let googleReturnPending: boolean | null = null;
+function googleReturnIsPending(): boolean {
+  if (googleReturnPending === null) {
+    googleReturnPending = false;
+    try {
+      const fromUrl = (search: string) => {
+        const params = new URLSearchParams(search);
+        return params.get('auth') === 'google' && Boolean(params.get('code'));
+      };
+      const entry = performance.getEntriesByType('navigation')[0];
+      googleReturnPending = fromUrl(window.location.search) || (entry ? fromUrl(new URL(entry.name).search) : false);
+    } catch {
+      /* no Performance API: leave it false */
+    }
+  }
+  return googleReturnPending;
+}
+
+/**
  * The two-minute sign-up. Musicians: what you do and where, links to your work, then an
  * account. Hirers: what you are and where, then an account. "Complete my profile later" skips
  * straight to the account on any step; the full profile wizard stays for later.
@@ -45,11 +71,19 @@ export default function Join() {
   // Set once this page starts creating an account, so the signed-in redirect below never races
   // the page's own "welcome" navigation.
   const creating = useRef(false);
+  // A Google sign-up creates the account on the server and comes back signed in, so `finish`
+  // never runs; count it here once the session resolves.
+  useEffect(() => {
+    if (!user || creating.current || !googleReturnIsPending()) return;
+    googleReturnPending = false;
+    trackSignupStep('completed', { role: user.role, method: 'google' });
+  }, [user]);
   if (audience !== 'musician' && audience !== 'hiring') return <Navigate to="/join/musician" replace />;
   if (user && !creating.current)
     return <Navigate to={`/${user.role === 'employer' ? 'employer' : 'jobseeker'}`} replace />;
 
   const finish = async (created: User) => {
+    trackSignupStep('completed', { role: created.role });
     // A hirer who came from /urgent has a draft waiting: post it and show the status card.
     try {
       const confirmed = await submitUrgentDraft();
@@ -142,6 +176,18 @@ function StepActions({ onBack, onLater, nextLabel }: { onBack?: () => void; onLa
   );
 }
 
+/** Fires `signup_started` once when a join flow shows its first step. */
+function useSignupStarted(role: 'jobseeker' | 'employer') {
+  const fired = useRef(false);
+  useEffect(() => {
+    if (fired.current) return;
+    fired.current = true;
+    // A Google return is the tail of a sign-up already started on this page load's predecessor.
+    if (googleReturnIsPending()) return;
+    trackSignupStep('started', { role });
+  }, [role]);
+}
+
 function useSteps(ids: readonly string[]) {
   const [step, setStep] = useState(0);
   const [reached, setReached] = useState(0);
@@ -165,6 +211,7 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
     'Create a verified music portfolio in two minutes: pick your role, paste links to your YouTube, Instagram, SoundCloud or Spotify work, and get booked in Mumbai.',
     { canonicalPath: '/join/musician' },
   );
+  useSignupStarted('jobseeker');
   const { step, reached, goTo } = useSteps(MUSICIAN_STEPS);
   const [roles, setRoles] = useState<string[]>([]);
   const [otherRoles, setOtherRoles] = useState<string[]>([]);
@@ -362,7 +409,16 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
       description: 'Last step. Free for musicians and crew.',
       content: (
         <div>
-          <AccountStep role="jobseeker" starter={starter} onBegin={onStart} onDone={onDone} />
+          <AccountStep
+            role="jobseeker"
+            starter={starter}
+            onBegin={onStart}
+            onDone={(created) => {
+              // The links pasted on this page are saved with the account.
+              links.forEach((link) => trackProfileLinkAdded(link.preview.provider));
+              onDone(created);
+            }}
+          />
           <Button type="button" variant="ghost" className="mt-2" onClick={() => goTo(1)}>
             <ArrowLeft aria-hidden="true" size={16} />
             Back
@@ -414,6 +470,7 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
     'Studios, event and wedding companies, bands, labels and venues: create a free account in a minute and find a verified musician in Mumbai within 24 hours.',
     { canonicalPath: '/join/hiring' },
   );
+  useSignupStarted('employer');
   const [kind, setKind] = useState<HirerKind | ''>('');
   const [city, setCity] = useState<string[]>([DEFAULT_CITY]);
   const [company, setCompany] = useState('');

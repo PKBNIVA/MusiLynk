@@ -499,28 +499,38 @@ The same flows run in `backend/test/integration/razorpay_simulator_flows_test.rb
 
 ## Release gate
 
-Every release must pass:
+Every release must pass exactly what CI runs (`.github/workflows/rails-and-web.yml`). From the
+repository root:
 
 ```bash
 npm ci
 npm audit --omit=dev --audit-level=high
-npm run build
+npm run typecheck && npm run lint && npm run format:check
+npm run build && npm run check:bundle && npm run check:split
 npm run test:all
 npm run test:unit -- --coverage
 npm run qa:e2e
-cd backend
+```
+
+Then, in `backend/` (test database as in the README):
+
+```bash
 bundle install
 bin/rails db:prepare
 bin/rails test
 bin/rails zeitwerk:check
-bundle exec brakeman --no-pager --exit-on-warn
+bundle exec brakeman --no-pager --exit-on-warn --exit-on-error
 bundle exec bundler-audit check --update
 ```
 
-CI (`.github/workflows/rails-and-web.yml`) runs these as the `frontend`, `rails`, `security`
-and `integrated-journeys` jobs. The `rails` job also migrates an empty database and fails if
-`backend/db/schema.rb` differs from the committed file. `npm run test:all` runs only the
-frontend source smoke tests; the legacy Node server and its tests were removed.
+After any migration, regenerate `db/schema.rb` the way CI does: drop the database,
+delete `db/schema.rb`, run `bin/rails db:create db:migrate`, and commit the result.
+
+CI runs these as the `frontend` (npm audit, typecheck, lint, format, build, bundle budget,
+public/admin split, `test:all`, unit tests), `rails` (an empty-database migration, the
+`db/schema.rb` drift check, the test suite, `zeitwerk:check`), `security` (Brakeman,
+bundler-audit) and `integrated-journeys` jobs. `npm run test:all` runs only the frontend source
+smoke tests; the legacy Node server and its tests were removed.
 
 Coverage floors: `bin/rails test` measures line and branch coverage with SimpleCov
 (`backend/coverage/index.html`) and, on CI, fails when either drops below the floor in

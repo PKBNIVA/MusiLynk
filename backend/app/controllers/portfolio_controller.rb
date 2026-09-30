@@ -1,5 +1,5 @@
 class PortfolioController < ApplicationController
-  before_action -> { authenticate!("jobseeker") }
+  before_action -> { authenticate!("jobseeker", "employer") }
 
   def index = render(json: { items: current_user.portfolio_items.order(featured: :desc, sort_order: :asc, created_at: :desc).limit(200).map(&:api_json) })
 

@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test';
 import { assertNoHorizontalOverflow } from './qa-helpers';
 import { mockApi } from './mock-api';
 
+// The public preview is the first local server (playwright.config.ts): QA_PORT_BASE.
+const portBase = Number(process.env.QA_PORT_BASE || 4173);
+
 // Mocked-API regressions for the admin console on the admin site (moved from public-admin-hardening.spec.ts).
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
 
@@ -158,7 +161,7 @@ test.describe('admin console', () => {
     await expect(link).toBeVisible();
     // VITE_PUBLIC_URL for the admin build under test is set to the public preview's own origin
     // (playwright.config.ts) — see src/app/lib/appTarget.ts's toPublicUrl.
-    await expect(link).toHaveAttribute('href', 'http://127.0.0.1:4173/opportunities/job-1');
+    await expect(link).toHaveAttribute('href', `http://127.0.0.1:${portBase}/opportunities/job-1`);
     await expect(link).toHaveAttribute('target', '_blank');
   });
 

@@ -47,6 +47,7 @@ import { ChipInput, LoadState, Panel, ShowcaseShell, useWorkspaceBase } from '..
 import { SHOWCASE_HELP } from '../../components/showcase/help';
 import { apiDelete, apiGet, apiPatch, apiPost, uploadContentType, uploadMedia, UPLOAD_ACCEPT } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { trackProfileLinkAdded } from '../../lib/analytics';
 import { useActingAsKey } from '../../lib/actingAs';
 import { announceSuggestionsChanged, syncSummary, type Portfolio, type Suggestion } from '../../lib/showcase';
 import type { MediaMetadata, PortfolioItem } from '../../lib/apiTypes';
@@ -268,6 +269,8 @@ export default function Library() {
         : await apiPost<{ id: string; item: PortfolioItem }>('/portfolio', payload);
       const saved = out.item;
       toast.success(editId ? 'Work updated' : 'Work added');
+      // A new work that is a pasted link (not an uploaded file) counts as a link added to the profile.
+      if (!editId && saved.url && !form.mediaMetadata?.uploadId) trackProfileLinkAdded(saved.kind || saved.type);
       setItems((list) =>
         editId ? (list || []).map((i) => (i.id === saved.id ? saved : i)) : [saved, ...(list || [])],
       );
@@ -533,6 +536,7 @@ export default function Library() {
         open={linkImportOpen}
         onOpenChange={setLinkImportOpen}
         onImported={(imported) => {
+          imported.forEach((item) => trackProfileLinkAdded(item.kind || item.type));
           setItems((list) => [...imported, ...(list || [])]);
           void loadPortfolios();
         }}

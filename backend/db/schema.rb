@@ -930,6 +930,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_090100) do
     t.string "referrer"
     t.string "city"
     t.datetime "created_at", null: false
+    t.index "((props ->> 'profileId'::text))", name: "index_product_events_on_profile_view_profile_id", where: "((name)::text = 'profile_view'::text)"
     t.index ["anon_id"], name: "index_product_events_on_anon_id"
     t.index ["name", "created_at"], name: "index_product_events_on_name_and_created_at"
     t.index ["user_id"], name: "index_product_events_on_user_id"

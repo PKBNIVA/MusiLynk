@@ -1,97 +1,15 @@
-import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+// Loading, error and retry states of the app and public pages are asserted by Vitest; this keeps the
+// `npm run test:frontend-resilience` entry point and runs those tests.
+import { spawnSync } from 'node:child_process';
 
-const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
-const publicPages = await Promise.all([
-  read('../src/app/pages/public/PublicOpportunity.tsx'),
-  read('../src/app/pages/public/PublicProfile.tsx'),
-  read('../src/app/pages/public/PublicAct.tsx'),
-  read('../src/app/pages/public/PublicActs.tsx'),
-]);
-
-const detailState = await read('../src/app/components/PublicDetailState.tsx');
-// Paged lists keep their loading and error state in the shared usePagedList hook.
-const pagedList = await read('../src/app/lib/usePagedList.ts');
-for (const source of publicPages) {
-  const loader = /usePagedList/.test(source) ? pagedList : source;
-  assert.match(loader, /setLoading\(true\)/, 'public API screens must expose a loading state');
-  assert.match(loader, /setError\(/, 'public API screens must expose request failures');
-  if (/PublicDetailState/.test(source)) {
-    // The shared detail state renders the Try again button; the page must wire its retry.
-    assert.match(source, /onRetry=/, 'public API screens must provide a retry action');
-    assert.match(
-      detailState,
-      /onRetry\}>\s*Try again\s*</,
-      'the shared public detail state must render a retry action',
-    );
-  } else {
-    assert.match(source, /Try again/, 'public API screens must provide a retry action');
-  }
-}
-assert.match(
-  publicPages[3],
-  /acts\.length\s*===\s*0/,
-  'the public act catalog must distinguish an empty result from a failed request',
+const result = spawnSync(
+  'npx',
+  [
+    'vitest',
+    'run',
+    'src/app/pages/__tests__/appResilience.test.tsx',
+    'src/app/pages/public/__tests__/publicResilience.test.tsx',
+  ],
+  { stdio: 'inherit', shell: process.platform === 'win32' },
 );
-
-const notifications = await read('../src/app/pages/Notifications.tsx');
-// Whitespace-insensitive: these checks are about behaviour, not formatting.
-const notificationsCompact = notifications.replace(/\s+/g, '');
-assert.doesNotMatch(notificationsCompact, /catch\(\(\)=>\{\}\)/, 'notification failures must not be swallowed');
-assert.match(
-  notificationsCompact,
-  /setItems\(\(?xs\)?=>xs\.map\(\(?x\)?=>\(?x\.id===n\.id\?\{\.\.\.x,readAt\}:x\)?\)\)/,
-  'mark-read must update optimistically',
-);
-assert.match(
-  notificationsCompact,
-  /catch\(e:unknown\)\{setItems\(\(?xs\)?=>xs\.map\(\(?x\)?=>\(?x\.id===n\.id\?\{\.\.\.x,readAt:null\}:x\)?\)\)/,
-  'mark-read failure must roll back optimistic state',
-);
-
-const jobDetails = await read('../src/app/pages/JobDetails.tsx');
-assert.match(
-  jobDetails,
-  /user\?\.role\s*===\s*'jobseeker'\s*&&\s*\(?\s*<div className="flex gap-2 mb-5">/,
-  'save and report controls must be limited to jobseekers',
-);
-
-const legal = await read('../src/app/pages/public/LegalPage.tsx');
-assert.doesNotMatch(
-  legal,
-  /starter terms|before launch|replace this placeholder|operational starter copy|production launch should|production operations should/i,
-  'public legal pages must not expose internal launch instructions',
-);
-assert.match(
-  legal,
-  /Browser Storage & Session Notice/,
-  'session notice must describe the implemented browser storage model',
-);
-assert.doesNotMatch(legal, /HttpOnly cookie/, 'session notice must not claim an unimplemented cookie model');
-assert.match(legal, /mailto:/, 'support pages must provide an actionable contact link');
-
-const availability = await read('../src/app/pages/Availability.tsx');
-assert.match(
-  availability,
-  /validateSlot\(form\)/,
-  'availability submission must validate its date range before calling the API',
-);
-assert.match(availability, /Try again/, 'availability load failures must provide a retry action');
-assert.match(availability, /Unable to remove availability/, 'availability deletion failures must be visible');
-
-const workspace = await read('../src/app/pages/Workspace.tsx');
-assert.match(workspace, /Unable to load workspaces/, 'workspace load failures must be visible');
-assert.match(workspace, /window\.confirm|confirmDialog/, 'member removal must require confirmation');
-
-const adminTester = await read('../src/app/pages/AdminTester.tsx');
-assert.match(adminTester, /Unable to run platform checks/, 'admin runtime check failures must be visible');
-
-const catalogs = await Promise.all([
-  read('../src/app/pages/public/PublicJobs.tsx'),
-  read('../src/app/pages/public/PublicTalent.tsx'),
-  read('../src/app/pages/public/PublicActs.tsx'),
-]);
-for (const source of catalogs)
-  assert.match(source, /\/(auth|join)\//, 'empty public catalogs must offer a useful account action (sign in or join)');
-
-console.log('frontend resilience smoke: ok');
+process.exit(result.status ?? 1);

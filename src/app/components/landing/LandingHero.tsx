@@ -6,6 +6,7 @@ import { personLines } from '../../lib/personLine';
 import { UserAvatar } from '../kit/UserAvatar';
 import { PlayChipButton } from '../kit/PlayChip';
 import { apiGet } from '../../lib/api';
+import { trackPathChosen } from '../../lib/analytics';
 import type { PortfolioItem, Professional } from '../../lib/apiTypes';
 
 export const LAUNCH_CITIES = ['Mumbai'] as const;
@@ -58,12 +59,14 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
           <div className="mt-6 grid gap-3 sm:grid-cols-2" data-testid="hero-paths">
             <PathLink
               to="/join/hiring"
+              path="hire"
               icon={BriefcaseBusiness}
               title="I'm hiring"
               detail="Studios, weddings, events and bands"
             />
             <PathLink
               to="/join/musician"
+              path="musician"
               icon={Mic2}
               title="I'm a musician or crew"
               detail="Get booked for sessions and gigs"
@@ -90,10 +93,23 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
   );
 }
 
-function PathLink({ to, icon: Icon, title, detail }: { to: string; icon: LucideIcon; title: string; detail: string }) {
+function PathLink({
+  to,
+  path,
+  icon: Icon,
+  title,
+  detail,
+}: {
+  to: string;
+  path: 'hire' | 'musician';
+  icon: LucideIcon;
+  title: string;
+  detail: string;
+}) {
   return (
     <Link
       to={to}
+      onClick={() => trackPathChosen(path)}
       className="group flex min-h-16 items-center gap-3 rounded-2xl border border-white/15 bg-gradient-to-r from-fuchsia-700 to-violet-700 px-4 py-3 text-white shadow-lg shadow-violet-950/40 transition hover:from-fuchsia-600 hover:to-violet-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200"
     >
       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/15">

@@ -40,4 +40,36 @@ class AdminFunnelAndLegalTest < ActionDispatch::IntegrationTest
     assert body.dig("legal", "grievanceOfficer").is_a?(Hash)
     assert_equal false, body.dig("legal", "gstinPresent")
   end
+
+  test "unfilled legal fields are served blank with configured false, and listed for the admin" do
+    get "/api/legal/policy"
+    legal = response.parsed_body.fetch("legal")
+    assert_equal "", legal["legalName"]
+    assert_equal "", legal.dig("grievanceOfficer", "email")
+    assert_equal false, legal.dig("configured", "legalName")
+    assert_equal false, legal.dig("configured", "grievanceOfficer", "email")
+
+    admin = User.create!(name: "Legal Admin", email: "legal-admin-#{SecureRandom.hex(3)}@example.com", password: "StrongPass123!", role: "admin", status: "active")
+    get "/api/admin/operations", headers: auth(admin)
+    assert_response :success
+    assert_equal LegalConfig::REQUIRED_FIELDS, response.parsed_body.dig("legal", "unfilled")
+  end
+
+  test "a filled-in legal field is served and marked configured" do
+    LegalConfig.instance_variable_set(:@config, {
+      business: { legal_name: "Alien Brains Private Limited", gstin: "", address: "[REGISTERED ADDRESS]", state: "Maharashtra" },
+      grievance_officer: { name: "Asha Rao", email: "grievance@example.com", address: "[ADDRESS]" }
+    })
+    get "/api/legal/policy"
+    legal = response.parsed_body.fetch("legal")
+    assert_equal "Alien Brains Private Limited", legal["legalName"]
+    assert_equal "grievance@example.com", legal.dig("grievanceOfficer", "email")
+    assert_equal true, legal.dig("configured", "legalName")
+    assert_equal true, legal.dig("configured", "grievanceOfficer", "name")
+    assert_equal false, legal.dig("configured", "businessAddress")
+    assert_equal "", legal["businessAddress"]
+    assert_equal %w[business.address grievance_officer.address], LegalConfig.unfilled_fields
+  ensure
+    LegalConfig.reload!
+  end
 end

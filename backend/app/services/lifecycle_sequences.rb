@@ -33,7 +33,7 @@ class LifecycleSequences
   attr_reader :now
 
   def users_created_on(days_ago, role)
-    User.where(role:).where(created_at: (days_ago.days.ago.beginning_of_day)..(days_ago.days.ago.end_of_day))
+    User.organic.where(role:).where(created_at: (days_ago.days.ago.beginning_of_day)..(days_ago.days.ago.end_of_day))
   end
 
   # --- Musician sequence --------------------------------------------------------
@@ -57,7 +57,7 @@ class LifecycleSequences
   # matching their city (and role, when they listed one), skipped when there are none.
   def send_musician_inactive
     key = "musician_day21_inactive_requests"
-    User.where(role: "jobseeker").where(created_at: ...(21.days.ago))
+    User.organic.where(role: "jobseeker").where(created_at: ...(21.days.ago))
       .where("last_login_at IS NULL OR last_login_at < ?", INACTIVE_AFTER.ago)
       .find_each do |user|
         next if LifecycleEmail.sent?(user, key)
@@ -71,7 +71,7 @@ class LifecycleSequences
   end
 
   def matching_open_requests_count(user)
-    scope = UrgentRequest.open_and_recent
+    scope = UrgentRequest.open_and_recent.where(requester_id: User.organic.select(:id))
     city = user.profile&.location
     scope = scope.where("city ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(city)}%") if city.present?
     roles = Array(user.profile&.roles)
@@ -119,7 +119,7 @@ class LifecycleSequences
   end
 
   def matching_verified_musicians(city:, role:)
-    Profile.joins(:user).where(users: { role: "jobseeker", status: "active" }).where(verified: true)
+    Profile.joins(:user).where(users: { role: "jobseeker", status: "active", synthetic_batch: nil }).where(verified: true)
       .where("location ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(city)}%")
       .where("roles::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(role)}%")
       .limit(5)
@@ -146,7 +146,7 @@ class LifecycleSequences
   # requests, skipped when there is no data yet.
   def send_hirer_inactive
     key = "hirer_day14_inactive_response_time"
-    User.where(role: "employer").where(created_at: ...(14.days.ago))
+    User.organic.where(role: "employer").where(created_at: ...(14.days.ago))
       .where("last_login_at IS NULL OR last_login_at < ?", INACTIVE_AFTER.ago)
       .find_each do |user|
         next if LifecycleEmail.sent?(user, key)

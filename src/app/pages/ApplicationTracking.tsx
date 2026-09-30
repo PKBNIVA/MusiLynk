@@ -1,4 +1,4 @@
-import { EmptyState } from '../components/help/EmptyState';
+import { EmptyState as SceneEmptyState } from '../components/kit/EmptyState';
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
@@ -11,7 +11,7 @@ import { apiDelete, apiGet } from '../lib/api';
 import { toast } from 'sonner';
 import { Link } from 'react-router';
 import { useConfirm } from '../components/booking/BookingDialogs';
-import { MapPin, Calendar, BriefcaseBusiness, Send, Search } from 'lucide-react';
+import { MapPin, Calendar, BriefcaseBusiness } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { Application } from '../lib/apiTypes';
 const ordered = ['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Offer', 'Hired'];
@@ -67,20 +67,12 @@ export default function ApplicationTracking() {
         ) : loading ? (
           <p className="text-slate-400">Loading applications…</p>
         ) : apps.length === 0 ? (
-          <EmptyState
-            icon={Send}
-            title="You have not applied to an opportunity yet."
-            action={
-              <Button asChild>
-                <Link to="/jobseeker/jobs">
-                  <Search aria-hidden="true" size={16} className="mr-2" />
-                  Browse opportunities
-                </Link>
-              </Button>
-            }
-          >
-            Find a gig, session or role you like and apply with your profile in a couple of minutes.
-          </EmptyState>
+          <SceneEmptyState
+            scene="inbox"
+            title="No applications yet"
+            hint="Find a gig, session or role and apply in minutes."
+            action={{ label: 'Find work', to: '/jobseeker/jobs' }}
+          />
         ) : (
           <div className="space-y-4">
             {apps.map((a) => (

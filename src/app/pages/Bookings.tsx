@@ -1,5 +1,4 @@
-import { CalendarCheck, Search } from 'lucide-react';
-import { EmptyState } from '../components/help/EmptyState';
+import { EmptyState as SceneEmptyState } from '../components/kit/EmptyState';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
@@ -344,26 +343,18 @@ export default function Bookings() {
             </Button>
           </div>
         ) : rows.length === 0 ? (
-          <EmptyState
-            icon={CalendarCheck}
-            className="mt-7"
-            title="No bookings yet"
-            action={
-              <div className="flex flex-wrap justify-center gap-3">
-                <Button asChild>
-                  <Link to={`${base}/book-talent`}>
-                    <Search aria-hidden="true" size={16} className="mr-2" />
-                    Book talent
-                  </Link>
-                </Button>
-                <Button asChild variant="ghost">
-                  <Link to={`${base}/acts`}>Manage your acts</Link>
-                </Button>
-              </div>
-            }
-          >
-            Enquiries you send, and enquiries for acts you own, appear here.
-          </EmptyState>
+          <div className="mt-7">
+            <SceneEmptyState
+              scene="calendar"
+              title="No bookings yet"
+              hint={
+                base === '/jobseeker'
+                  ? 'Bookings appear here once a hirer confirms'
+                  : 'Bookings appear here once a musician accepts'
+              }
+              action={{ label: 'Book talent', to: `${base}/book-talent` }}
+            />
+          </div>
         ) : (
           <div className="space-y-4 mt-7">
             {rows.map((b) => {

@@ -207,7 +207,8 @@ test('interview scheduling and recruiter notes use in-page dialogs, not browser 
   await interview.getByRole('button', { name: 'Schedule interview' }).click();
   await expect(interview).toBeHidden();
 
-  await page.getByRole('button', { name: 'Rate / note' }).click();
+  await page.getByRole('button', { name: 'Move to…' }).click();
+  await page.getByRole('menuitem', { name: 'Rate / note' }).click();
   const notes = page.getByRole('dialog', { name: 'Rate and note' });
   await notes.getByLabel('Recruiter note').fill('Great feel');
   await chooseOption(notes.getByLabel('Internal rating'), '4 / 5');

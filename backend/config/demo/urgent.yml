@@ -1,0 +1,142 @@
+# The 8 demo-showcase urgent requests (SyntheticQa::Showcase): 3 filled, 5 open, each with responses.
+# `hirer` is a company name from companies.yml. `responses` are the first messages from musicians of
+# the matching role in the request's city, in the order they replied; `filled_by` (filled requests
+# only) is the index of the response that was accepted. Open requests run for several days so the
+# batch keeps looking alive after it is seeded.
+urgent_requests:
+  - hirer: Marigold & Monsoon Weddings
+    title: "Urgent: singer for the sangeet, our booked vocalist is unwell"
+    role: Singer
+    instrument: Vocals
+    genre: Bollywood
+    status: filled
+    created_days_ago: 9
+    start_days_ago: 8
+    hours: 4
+    budget: [18000, 26000]
+    travel_covered: true
+    requirements: "A singer for a 300-guest sangeet in Lonavala, three sets of 40 minutes with a live band already booked. We will send the set list tonight and cover the taxi from Mumbai."
+    filled_by: 1
+    responses:
+      - "I know most of the songs on the list already and can rehearse with the band tomorrow afternoon. Happy to travel with the band from Mumbai."
+      - "Free that evening. I can do the full three sets and bring my own in-ear monitors. Please send the key list."
+      - "I have sung sangeet nights with this kind of line-up before. My fee for three sets is at the top of your range because of the travel."
+      - "Available, though I can only start after 8 pm. Would that work with your run sheet?"
+      - "Interested. I can send a short clip of a sangeet set from last month if that helps."
+  - hirer: Meridian Group Events Desk
+    title: "Urgent: guitarist for an acoustic set at our client evening"
+    role: Guitarist
+    instrument: Acoustic Guitar
+    genre: Acoustic
+    status: filled
+    created_days_ago: 6
+    start_days_ago: 5
+    hours: 3
+    budget: [9000, 14000]
+    travel_covered: false
+    requirements: "One guitarist to play with our singer for a 90-minute client evening at a hotel. The repertoire is soft Hindi and English songs; charts arrive in an hour."
+    filled_by: 0
+    responses:
+      - "I can do it and I have played with acoustic singers at hotel events a lot. Please send the charts and the singer's keys."
+      - "Available. I bring my own small amp and can be there an hour early for a line check."
+      - "I am free but would need the charts a day earlier. Let me know if that is possible."
+  - hirer: The Baraat Company
+    title: "Urgent: dhol player for a Sunday morning baraat"
+    role: Dhol player
+    instrument: Dhol
+    genre: Bhangra
+    status: filled
+    created_days_ago: 12
+    start_days_ago: 11
+    hours: 2
+    budget: [6000, 9000]
+    travel_covered: false
+    requirements: "A second dhol for a 400-metre baraat with a team of three. Start is at 8:30 am, please reach the meeting point by 8."
+    filled_by: 0
+    responses:
+      - "I can be there at 8 with my own dhol and sticks, and I have worked with baraat teams of three before."
+      - "Available. I play both dhol and tasha, so I can adapt to your team's pattern."
+      - "I am free. My fee is the top of your range because it is a Sunday morning."
+  - hirer: The Verandah Lounge
+    title: "Urgent: singer for Friday and Saturday at our lounge"
+    role: Singer
+    instrument: Vocals
+    genre: Jazz
+    status: open
+    created_hours_ago: 7
+    start_days_ahead: 3
+    hours: 3
+    budget: [12000, 18000]
+    travel_covered: false
+    requirements: "Our booked singer has dropped out for this weekend. Two evenings, two sets of 45 minutes each night with our house trio. Repertoire is jazz standards and soft pop."
+    responses:
+      - "I sing with a piano trio most weekends and can do both nights. I will send you three standards I would open with."
+      - "Free on both nights. I carry about 60 standards in my key and can share the list."
+      - "Available for Friday only, I am booked on Saturday. Is a one-night booking possible?"
+      - "Both nights work for me. I can come on Thursday for a quick rehearsal with your trio if that helps."
+  - hirer: Northbound Live
+    title: "Urgent: vocalist for a hotel brunch, covering a cancellation"
+    role: Singer
+    instrument: Vocals
+    genre: Pop
+    status: open
+    created_hours_ago: 14
+    start_days_ahead: 5
+    hours: 3
+    budget: [10000, 15000]
+    travel_covered: false
+    requirements: "A Sunday brunch with 120 guests at a hotel, two 40-minute sets of light pop and soul with a backing guitarist we provide. Sound is provided by the hotel."
+    responses:
+      - "I do brunch sets often. Please share the guitarist's name so we can agree keys ahead of time."
+      - "I can do it. My fee is inside your range, and I will send a repertoire list today."
+      - "Available and I bring my own microphone. I will need the arrival time and the parking details."
+      - "Free that morning. I sing soul and light pop, and can dress for a hotel setting."
+  - hirer: Saptapadi Celebrations
+    title: "Urgent: singer with harmonium for a reception dinner"
+    role: Singer
+    instrument: Harmonium
+    genre: Ghazal
+    status: open
+    created_hours_ago: 20
+    start_days_ahead: 6
+    hours: 3
+    budget: [15000, 22000]
+    travel_covered: false
+    requirements: "A singer who plays harmonium, for 90 minutes of ghazals and light classical songs at a family reception dinner, about 180 guests. A tabla player is already booked."
+    responses:
+      - "I sing ghazals with my own harmonium, and I have played with tabla players at receptions. I will send a set list of 25 songs."
+      - "Available. I can also bring a second harmonium player if you would like a fuller sound."
+      - "I am free that day. Could you tell me whether the hall has a sound system?"
+      - "Interested, and I can send a short recording of a similar reception set."
+  - hirer: Tidal House Bar & Kitchen
+    title: "Urgent: guitarist for a Saturday band that lost its player"
+    role: Guitarist
+    instrument: Electric Guitar
+    genre: Rock
+    status: open
+    created_hours_ago: 11
+    start_days_ahead: 4
+    hours: 4
+    budget: [8000, 12000]
+    travel_covered: false
+    requirements: "Our Saturday four-piece is missing its guitarist for this weekend. Two sets of 45 minutes, classic rock and blues covers. We send the set list and the band's contact now."
+    responses:
+      - "I know about two thirds of that repertoire and can learn the rest in two days. Please send the list."
+      - "Free on Saturday. I bring a pedalboard and my own amp if the venue needs it."
+      - "Available, and I have played that venue's stage before. Let me know if the band wants a rehearsal."
+  - hirer: Afterglow Entertainment
+    title: "Urgent: keyboard player for a brand night"
+    role: Keyboard player
+    instrument: Keyboard
+    genre: Pop
+    status: open
+    created_hours_ago: 26
+    start_days_ahead: 7
+    hours: 4
+    budget: [14000, 20000]
+    travel_covered: false
+    requirements: "A keyboard player for a brand night with a live band, playing pop hits and some Bollywood, 90 minutes on stage. Rehearsal the evening before; the band already has a drummer and a bassist."
+    responses:
+      - "I run strings and piano patches from one controller and can attend the rehearsal. Please share the set list."
+      - "Available for both the rehearsal and the show. I can share a video of a recent pop and Bollywood set."
+      - "Free that day. I would need the charts a few days ahead to prepare the patches."

@@ -1,5 +1,4 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
-import { chooseOption } from './qa-helpers';
 
 // Mocked-API test of the admin demo-data panel. The real API is exercised by the Rails request tests.
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
@@ -13,6 +12,7 @@ const admin = {
   profileComplete: true,
 };
 const sizes = {
+  showcase: { artists: 110, employers: 40 },
   small: { artists: 20, employers: 8 },
   medium: { artists: 60, employers: 20 },
   large: { artists: 150, employers: 50 },
@@ -54,8 +54,9 @@ function demoApi() {
     batches: state.batches,
     jobs: state.jobs,
     busy: state.jobs.some((j) => ['queued', 'running'].includes(j.state)),
-    demoUsers: state.batches.length ? 28 : 0,
+    demoUsers: (state.batches as { users: number }[]).reduce((sum, b) => sum + b.users, 0),
     maxUsers: 300,
+    showcaseBatch: 'demo-showcase',
     sizes,
   });
   const advance = () => {
@@ -68,18 +69,25 @@ function demoApi() {
     }
     job.state = 'succeeded';
     if (job.kind === 'seed') {
-      job.result = { jobseekers: 20, employers: 8, jobs: 16, bookings: 16 };
+      const showcase = job.size === 'showcase';
+      job.result = showcase
+        ? { jobseekers: 110, employers: 40, jobs: 45, bookings: 12, acts: 12, reviews: 18, posts: 40 }
+        : { jobseekers: 20, employers: 8, jobs: 16, bookings: 16 };
       state.batches = [
+        ...state.batches,
         {
-          name: 'demo-20260926-1000',
+          name: job.batch,
           demo: true,
           visibility: 'public',
-          artists: 20,
-          employers: 8,
-          users: 28,
+          artists: showcase ? 110 : 20,
+          employers: showcase ? 40 : 8,
+          users: showcase ? 150 : 28,
           createdAt: now,
         },
       ];
+    } else if (job.kind === 'purge') {
+      job.result = { usersRemoved: 28, recordsRemoved: 321, batches: [job.batch as string] };
+      state.batches = (state.batches as { name: string }[]).filter((b) => b.name !== job.batch);
     } else {
       job.result = { usersRemoved: 28, recordsRemoved: 1234, batches: ['demo-20260926-1000'] };
       state.batches = [];
@@ -106,18 +114,28 @@ function demoApi() {
       }
       state.polls = 0;
       const id = `job-${state.jobs.length + 1}`;
+      const size = JSON.parse(request.postData() || '{}').size;
       const job: Job =
         request.method() === 'POST'
           ? {
               id,
               kind: 'seed',
               state: 'queued',
-              batch: 'demo-20260926-1000',
-              size: JSON.parse(request.postData() || '{}').size,
+              batch: size === 'showcase' ? 'demo-showcase' : 'demo-20260926-1000',
+              size,
               createdAt: now,
               updatedAt: now,
             }
           : { id, kind: 'purge_all', state: 'queued', createdAt: now, updatedAt: now };
+      state.jobs.unshift(job);
+      return json(202, { jobId: id, job });
+    }
+    const batchDelete = pathname.match(/^\/api\/admin\/demo-data\/(demo-[a-z0-9-]+)$/);
+    if (batchDelete && request.method() === 'DELETE') {
+      state.requests.push(`DELETE ${pathname}`);
+      state.polls = 0;
+      const id = `job-${state.jobs.length + 1}`;
+      const job: Job = { id, kind: 'purge', state: 'queued', batch: batchDelete[1], createdAt: now, updatedAt: now };
       state.jobs.unshift(job);
       return json(202, { jobId: id, job });
     }
@@ -150,15 +168,14 @@ test('admin creates demo data, sees progress and deletes it all after confirming
   await expect(panel.getByText('No demo data on the site.')).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Delete all demo data' })).toBeDisabled();
 
-  await chooseOption(panel.getByLabel('Size'), /^Medium/);
-  await chooseOption(panel.getByLabel('Size'), /^Small/);
-  await panel.getByRole('button', { name: 'Create demo data' }).click();
+  await expect(panel.getByRole('button', { name: /^Showcase/ })).toBeEnabled();
+  await panel.getByRole('button', { name: /^Small/ }).click();
   await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', /queued|running/);
-  await expect(panel.getByRole('button', { name: 'Create demo data' })).toBeDisabled();
+  await expect(panel.getByRole('button', { name: /^Small/ })).toBeDisabled();
   await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', 'succeeded', { timeout: 10_000 });
-  await expect(panel.getByTestId('demo-job-status')).toContainText('20 artists, 8 employers');
+  await expect(panel.getByTestId('demo-job-status')).toContainText('20 musicians, 8 hirers');
   await expect(panel.getByTestId('demo-batches')).toContainText('demo-20260926-1000');
-  await expect(panel.getByTestId('demo-batches')).toContainText('20 artists · 8 employers');
+  await expect(panel.getByTestId('demo-batches')).toContainText('20 musicians · 8 hirers');
   expect(api.state.requests).toContain('POST /api/admin/demo-data {"size":"small"}');
 
   await panel.getByRole('button', { name: 'Delete all demo data' }).click();
@@ -180,7 +197,41 @@ test('admin creates demo data, sees progress and deletes it all after confirming
 test('a refused request is reported clearly', async ({ page }) => {
   const { api, panel } = await openAdmin(page);
   api.state.conflictNext = true;
-  await panel.getByRole('button', { name: 'Create demo data' }).click();
+  await panel.getByRole('button', { name: /^Small/ }).click();
   await expect(panel.getByRole('alert')).toContainText('Another demo data job is still running');
-  await expect(panel.getByRole('button', { name: 'Create demo data' })).toBeEnabled();
+  await expect(panel.getByRole('button', { name: /^Small/ })).toBeEnabled();
+});
+
+test('the showcase preset seeds once, and one batch can be deleted after confirming', async ({ page }) => {
+  const { api, panel } = await openAdmin(page);
+
+  await expect(panel.getByTestId('demo-scope')).toContainText('What is included');
+  await expect(panel.getByTestId('demo-scope')).toContainText('What is not included');
+  await expect(panel.getByTestId('demo-scope')).toContainText('nobody can log in');
+
+  await panel.getByRole('button', { name: 'Showcase (150)' }).click();
+  await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', /queued|running/);
+  await expect(panel.getByTestId('demo-job-progress')).toBeVisible();
+  await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', 'succeeded', { timeout: 10_000 });
+  await expect(panel.getByTestId('demo-job-status')).toContainText('110 musicians, 40 hirers, 45 opportunities');
+  await expect(panel.getByTestId('demo-job-status')).toContainText('12 acts, 40 Stage posts, 18 reviews');
+  expect(api.state.requests).toContain('POST /api/admin/demo-data {"size":"showcase"}');
+  await expect(panel.getByTestId('demo-batches')).toContainText('demo-showcase');
+  await expect(panel.getByRole('button', { name: 'Showcase (150)' })).toBeDisabled();
+  await expect(panel.getByText('Already on the site.')).toBeVisible();
+
+  await panel.getByRole('button', { name: 'Delete demo-showcase' }).click();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toContainText('Delete demo-showcase?');
+  await expect(dialog).toContainText('150 demo accounts');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  expect(api.state.requests.filter((r) => r.startsWith('DELETE'))).toEqual([]);
+
+  await panel.getByRole('button', { name: 'Delete demo-showcase' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete demo-showcase' }).click();
+  await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', 'succeeded', { timeout: 10_000 });
+  await expect(panel.getByTestId('demo-job-status')).toContainText('28 demo accounts');
+  expect(api.state.requests).toContain('DELETE /api/admin/demo-data/demo-showcase');
+  await expect(panel.getByText('No demo data on the site.')).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Showcase (150)' })).toBeEnabled();
 });

@@ -12,39 +12,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 type Step = [LucideIcon, string, string];
 
 const HIRER_STEPS: Step[] = [
-  [
-    ClipboardList,
-    'Say who you need',
-    'The role, date, area and budget. A session bassist for Friday, a dholi for a sangeet, a sound engineer for a show.',
-  ],
-  [
-    Headphones,
-    'Hear verified players',
-    'Every profile leads with real work: YouTube, SoundCloud, Spotify or Instagram. Check the Verified badge before you message.',
-  ],
-  [
-    ShieldCheck,
-    'Book and pay the deposit',
-    'Agree the fee and terms, pay the deposit through Razorpay, and review each other after the gig.',
-  ],
+  [ClipboardList, 'Say who you need', 'Role, date, area and budget.'],
+  [Headphones, 'Hear verified players', 'Real work, plus a Verified badge.'],
+  [ShieldCheck, 'Book and pay the deposit', 'Agree the fee, pay the deposit securely.'],
 ];
 
 const MUSICIAN_STEPS: Step[] = [
-  [
-    Link2,
-    'Paste links to your work',
-    'Your YouTube, Instagram, SoundCloud or Spotify links become a portfolio in about two minutes.',
-  ],
-  [
-    BadgeCheck,
-    'Get your Verified badge',
-    'Our team reviews your work and profile. Hirers can filter for verified people, so it gets you seen.',
-  ],
-  [
-    CalendarCheck,
-    'Get booked',
-    'Answer urgent requests and gig posts in your city: sessions, weddings, tours, jingles and OTT scores.',
-  ],
+  [Link2, 'Paste links to your work', 'Your links become a portfolio in minutes.'],
+  [BadgeCheck, 'Get your Verified badge', 'We review your work. Hirers filter for it.'],
+  [CalendarCheck, 'Get booked', 'Answer urgent requests and gigs near you.'],
 ];
 
 /** Three steps for each side, switched with a tab so the page stays short. */

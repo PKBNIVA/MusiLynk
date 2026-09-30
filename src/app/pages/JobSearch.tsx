@@ -12,6 +12,9 @@ import { Link } from 'react-router';
 import { apiDelete, apiPost } from '../lib/api';
 import { LoadMoreJobs } from '../components/LoadMoreJobs';
 import { JobCard } from '../components/JobCard';
+import { JobFilterChips } from '../components/JobFilterChips';
+import { optionLabel } from '../components/ui/option-labels';
+import { useAuth } from '../lib/authContext';
 import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../components/SearchFeedback';
 import { usePagedJobs } from '../lib/usePagedJobs';
 import { useLatestCallback } from '../lib/useLatestCallback';
@@ -28,6 +31,7 @@ const workplaces = ['', 'onsite', 'hybrid', 'remote', 'travel'];
 const FILTERS = ['q', 'location', 'kind', 'function', 'workplace', 'paid', 'verified'] as const;
 
 export default function JobSearch() {
+  const { user } = useAuth();
   const list = usePagedJobs<Job>();
   const { jobs, setJobs, loading, total, meta } = list;
   const functions = useFunctionAreas();
@@ -178,9 +182,14 @@ export default function JobSearch() {
             )}
           </CardContent>
         </Card>
+        <JobFilterChips values={f} profileCity={user?.location} onChange={(c) => update(c)} />
         <div className="flex justify-between items-center mb-4">
-          <div className="text-sm text-slate-400">
-            {loading ? 'Searching…' : `${total} ${total === 1 ? 'opportunity' : 'opportunities'} found`}
+          <div className="text-sm text-slate-400" role="status">
+            {loading
+              ? 'Searching…'
+              : `${total} ${total === 1 ? 'opportunity' : 'opportunities'} · ${f.location || 'all cities'} · ${
+                  f.kind ? optionLabel(f.kind).toLowerCase() : 'all formats'
+                }`}
           </div>
           <Link to="/jobseeker/saved" className="text-sm text-violet-300 hover:text-violet-200">
             View saved opportunities
@@ -190,7 +199,7 @@ export default function JobSearch() {
         {loading ? (
           <div className="grid gap-4">
             {[1, 2, 3].map((x) => (
-              <div key={x} className="h-44 rounded-2xl bg-white/[.04] animate-pulse" />
+              <div key={x} className="h-24 rounded-2xl bg-white/[.04] animate-pulse" />
             ))}
           </div>
         ) : jobs.length === 0 ? (

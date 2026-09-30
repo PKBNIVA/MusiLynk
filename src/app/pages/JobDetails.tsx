@@ -9,27 +9,14 @@ import { ReportDialog } from '../components/ReportDialog';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { toast } from 'sonner';
-import {
-  Bookmark,
-  BookmarkCheck,
-  Flag,
-  MapPin,
-  ShieldCheck,
-  CalendarDays,
-  Wallet,
-  BriefcaseBusiness,
-  MessageSquare,
-  Send,
-  FileText,
-  ListChecks,
-} from 'lucide-react';
+import { Bookmark, BookmarkCheck, Flag, MessageSquare, Send, FileText, ListChecks } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, Job } from '../lib/apiTypes';
-import { formatDate, formatDeadline, formatPay } from '../lib/format';
+import { formatDate } from '../lib/format';
 import { MoreDetails } from '../components/help/MoreDetails';
 import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
-import { PostedBy } from '../components/showcase/PostedBy';
+import { JobHero } from '../components/JobHero';
 import { ApplyMaterials, type Materials } from '../components/showcase/ApplyMaterials';
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import type { Portfolio, Resume } from '../lib/showcase';
@@ -155,53 +142,22 @@ export default function JobDetails() {
         )}
       </div>
     );
-  const pay = formatPay(job);
+  const canApply = user?.role === 'jobseeker' && job.status !== 'closed' && !job.applied;
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
+      <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-44 lg:pb-16">
         <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6">
           <div className="space-y-5">
             <Card className="bg-white/[.055] border-white/10">
               <CardContent className="p-6 md:p-8">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary">{title(job.opportunity_kind || 'job')}</Badge>
-                    {job.employerVerified && (
-                      <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-400/20">
-                        <ShieldCheck size={13} className="mr-1" />
-                        Verified employer
-                      </Badge>
-                    )}
-                    {job.fitScore && (
-                      <Badge className="bg-sky-500/15 text-sky-200 border-sky-400/20">
-                        {job.fitScore}% profile fit
-                      </Badge>
-                    )}
-                  </div>
-                  {FEATURE_STAGE && <ShareToStageButton kind="job_share" id={job.id} label={job.title} />}
-                </div>
-                <h1 className="text-3xl md:text-5xl font-bold mt-4 leading-tight">{job.title}</h1>
-                <p className="text-xl text-violet-300 mt-2">{job.company}</p>
-                <PostedBy postedAs={job.postedAs} className="mt-2" />
-                <div className="grid sm:grid-cols-2 gap-3 mt-6 text-sm text-slate-300">
-                  <div className="flex gap-2">
-                    <MapPin size={18} className="text-slate-500" />
-                    {job.location} · {title(job.workplace)}
-                  </div>
-                  <div className="flex gap-2">
-                    <BriefcaseBusiness size={18} className="text-slate-500" />
-                    {job.function_area || job.type}
-                  </div>
-                  <div className="flex gap-2">
-                    <Wallet size={18} className="text-slate-500" />
-                    {pay}
-                  </div>
-                  <div className="flex gap-2">
-                    <CalendarDays size={18} className="text-slate-500" />
-                    {formatDeadline(job.application_deadline, { verb: 'Apply by' })}
-                  </div>
-                </div>
+                <JobHero
+                  job={job}
+                  actions={FEATURE_STAGE && <ShareToStageButton kind="job_share" id={job.id} label={job.title} />}
+                />
+                {job.fitScore && job.fitScore >= 60 ? (
+                  <p className="mt-3 text-sm text-slate-400">{job.fitScore}% profile fit</p>
+                ) : null}
               </CardContent>
             </Card>
             <Card className="bg-white/[.055] border-white/10">
@@ -266,7 +222,7 @@ export default function JobDetails() {
             </Card>
           </div>
           <aside className="space-y-4">
-            <Card className="bg-white/[.06] border-white/10 lg:sticky lg:top-24">
+            <Card id="apply-panel" className="bg-white/[.06] border-white/10 lg:sticky lg:top-24">
               <CardContent className="p-5">
                 {user?.role === 'jobseeker' && (
                   <div className="flex gap-2 mb-5">
@@ -409,6 +365,16 @@ export default function JobDetails() {
           </aside>
         </div>
       </main>
+      {canApply && (
+        <div className="fixed inset-x-3 bottom-[5.5rem] z-40 rounded-2xl border border-white/15 bg-slate-950/95 p-2 shadow-xl backdrop-blur lg:hidden">
+          <Button
+            className="w-full"
+            onClick={() => document.getElementById('apply-panel')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            Apply
+          </Button>
+        </div>
+      )}
       <ReportDialog
         open={reporting}
         onOpenChange={setReporting}

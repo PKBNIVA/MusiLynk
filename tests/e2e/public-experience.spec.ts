@@ -22,10 +22,10 @@ test('a visitor can follow the primary discovery journey', async ({ page }) => {
   const runtimeFailures = watchRuntimeFailures(page);
   await openSettledPage(page, '/');
 
-  const primaryCta = page.locator('a[href="/start"]').first();
+  const primaryCta = page.getByTestId('hero-paths').locator('a[href="/join/hiring"]');
   await expect(primaryCta).toBeVisible();
   await primaryCta.click();
-  await expect(page).toHaveURL(/\/start$/);
+  await expect(page).toHaveURL(/\/join\/hiring$/);
   await expect(page.getByRole('heading').first()).toBeVisible();
 
   await page.goBack({ waitUntil: 'domcontentloaded' });

@@ -58,10 +58,10 @@ test('opportunity count is pluralised correctly', async ({ page }) => {
   let jobs = [job('a'), job('b')];
   await signIn(page, (_r, path) => (path === '/api/jobs' ? { body: { jobs } } : undefined));
   await page.goto('/jobseeker/jobs');
-  await expect(page.getByText('2 opportunities found')).toBeVisible();
+  await expect(page.getByText('2 opportunities · all cities · all formats')).toBeVisible();
   jobs = [job('a')];
   await page.getByRole('button', { name: 'Search', exact: true }).click();
-  await expect(page.getByText('1 opportunity found')).toBeVisible();
+  await expect(page.getByText('1 opportunity · all cities · all formats')).toBeVisible();
 });
 
 test('changing a filter re-runs the search without pressing Search', async ({ page }) => {

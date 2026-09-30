@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { EmptyState as SceneEmptyState } from '../components/kit/EmptyState';
 import { Link, useSearchParams } from 'react-router';
 import { ArrowLeft, Ban, Flag, MessageSquare, Send } from 'lucide-react';
 import { toast } from 'sonner';
@@ -421,6 +422,15 @@ export default function Messages() {
                   >
                     Try again
                   </Button>
+                </div>
+              ) : convs.length === 0 && user?.role !== 'employer' ? (
+                <div data-testid="messages-empty">
+                  <SceneEmptyState
+                    scene="inbox"
+                    title="No conversations yet"
+                    hint="Apply or respond to an urgent request to start one"
+                    action={{ label: 'Explore opportunities', to: '/jobseeker/jobs' }}
+                  />
                 </div>
               ) : convs.length === 0 ? (
                 <div className="p-6 text-sm text-slate-400" data-testid="messages-empty">

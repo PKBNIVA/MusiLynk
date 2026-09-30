@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { EmptyState as SceneEmptyState } from '../../components/kit/EmptyState';
 import { Link } from 'react-router';
 import { flushSync } from 'react-dom';
 import { toast } from 'sonner';
@@ -632,26 +633,26 @@ export default function Library() {
           {items === null ? (
             <LoadState error={error} onRetry={load} />
           ) : visible.length === 0 ? (
-            <EmptyState
-              icon={FileAudio}
-              title={items.length ? 'Nothing matches these filters' : 'Add your first piece of work'}
-              action={
-                items.length ? (
+            items.length ? (
+              <EmptyState
+                icon={FileAudio}
+                title="Nothing matches these filters"
+                action={
                   <Button variant="outline" onClick={() => (setQuery(''), setKind(''), setFacet(''))}>
                     Clear filters
                   </Button>
-                ) : (
-                  <Button onClick={startAdd}>
-                    <Plus size={16} aria-hidden="true" />
-                    Add work
-                  </Button>
-                )
-              }
-            >
-              {items.length
-                ? 'Try another word or kind.'
-                : 'Three to six strong, different pieces are a great start. Each one can appear in many portfolios.'}
-            </EmptyState>
+                }
+              >
+                Try another word or kind.
+              </EmptyState>
+            ) : (
+              <SceneEmptyState
+                scene="portfolio"
+                title="Add your first work sample"
+                hint="Hirers hear a sample before they message."
+                action={{ label: 'Add from a link', onClick: () => setLinkImportOpen(true) }}
+              />
+            )
           ) : (
             <ul className={`grid gap-4 ${open ? 'xl:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
               {visible.map((i) => {

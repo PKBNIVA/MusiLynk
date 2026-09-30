@@ -1,6 +1,12 @@
 import { Link } from 'react-router';
 import { AppSelect, type AppSelectOption } from '../ui/app-select';
-import { ArrowRight, BadgeCheck, BriefcaseBusiness, MapPin, Mic2, Play, Zap, type LucideIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowRight, BadgeCheck, BriefcaseBusiness, MapPin, Mic2, Zap, type LucideIcon } from 'lucide-react';
+import { personLines } from '../../lib/personLine';
+import { UserAvatar } from '../kit/UserAvatar';
+import { PlayChipButton } from '../kit/PlayChip';
+import { apiGet } from '../../lib/api';
+import type { PortfolioItem, Professional } from '../../lib/apiTypes';
 
 export const LAUNCH_CITIES = ['Mumbai'] as const;
 // Live cities, then a disabled row saying more are coming. The shared dark listbox, never the OS one.
@@ -63,6 +69,7 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
               detail="Get booked for sessions and gigs"
             />
           </div>
+          <VerifiedRow city={city} />
           <div className="mt-5 space-y-1">
             <Link
               to="/urgent"
@@ -74,12 +81,6 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
             </Link>
             <p className="text-sm text-slate-400">
               Free to post. Fill it in first; you create an account or sign in to send it.
-            </p>
-            <p className="pt-1 text-sm text-slate-400">
-              Something else?{' '}
-              <Link to="/start" className="font-medium text-slate-200 underline underline-offset-4 hover:text-white">
-                See every way to use Verse
-              </Link>
             </p>
           </div>
         </div>
@@ -109,11 +110,6 @@ function PathLink({ to, icon: Icon, title, detail }: { to: string; icon: LucideI
 
 /** What a verified portfolio looks like to a hirer. Clearly an example; desktop only. */
 function ExampleProfile() {
-  const samples = [
-    ['Live at a sangeet, Bandra', 'YouTube'],
-    ['Studio session for a Marathi single', 'SoundCloud'],
-    ['Drums on a 30-second ad jingle', 'Spotify'],
-  ] as const;
   return (
     <section className="relative mx-auto hidden w-full max-w-md lg:block" aria-label="Example of a verified profile">
       <div className="verse-surface rounded-3xl p-6">
@@ -138,23 +134,83 @@ function ExampleProfile() {
           <BadgeCheck aria-hidden="true" size={14} />
           Verified by the Verse team
         </p>
-        <ul className="mt-5 space-y-2.5">
-          {samples.map(([title, source]) => (
-            <li key={title} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/10 text-teal-200">
-                <Play aria-hidden="true" size={16} />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold">{title}</span>
-                <span className="block text-xs text-slate-400">{source}</span>
-              </span>
-            </li>
+        <div className="mt-5 flex flex-col items-start gap-2" ref={makeStatic}>
+          {DEMO_SAMPLES.map((sample) => (
+            <PlayChipButton key={sample.id} sample={sample} onOpen={() => {}} />
           ))}
-        </ul>
+        </div>
+        <div aria-hidden="true" className="mt-4 flex h-10 items-end gap-2" data-testid="example-waveform">
+          {[40, 75, 55, 100, 65, 85].map((h, i) => (
+            <span
+              key={i}
+              className="w-2 rounded-full bg-gradient-to-t from-fuchsia-500/60 to-violet-400/60"
+              style={{ height: `${h}%` }}
+            />
+          ))}
+        </div>
         <p className="mt-5 border-t border-white/10 pt-4 text-sm text-slate-300">
           Hirers hear the work first, then message or book.
         </p>
       </div>
     </section>
+  );
+}
+
+// Static demo samples for the example card. They look like the real play chips but do nothing.
+const DEMO_SAMPLES: PortfolioItem[] = [
+  ['Live at a sangeet, Bandra', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
+  ['Studio session, Marathi single', 'https://soundcloud.com/verse-demo/marathi-single'],
+  ['Drums on a 30-second ad jingle', 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC'],
+].map(([title, url], i) => ({ id: `demo-${i}`, kind: 'link', type: 'link', title, url }));
+
+// The chips are a picture of the real thing, not controls: keep them out of the tab order.
+const makeStatic = (el: HTMLElement | null) => el?.setAttribute('inert', '');
+
+/** Up to six people in the chosen city under the hero buttons. Verified people are preferred and the
+ * caption only says "Verified" when every face shown is. Renders nothing on failure or under 3 people. */
+function VerifiedRow({ city }: { city: string }) {
+  const [state, setState] = useState<{ people: Professional[]; verified: boolean }>({ people: [], verified: false });
+  useEffect(() => {
+    let live = true;
+    setState({ people: [], verified: false });
+    apiGet<{ talent?: Professional[]; total?: number }>(
+      `/public/talent?${new URLSearchParams({ location: city, limit: '12' })}`,
+    )
+      .then((d) => {
+        if (!live) return;
+        const all = d.talent || [];
+        const verified = all.filter((p) => p.verified);
+        if (verified.length >= 3) setState({ people: verified.slice(0, 6), verified: true });
+        else if ((d.total ?? all.length) >= 3 && all.length >= 3)
+          setState({ people: all.slice(0, 6), verified: false });
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [city]);
+  const { people, verified } = state;
+  if (!people.length) return null;
+  return (
+    <div className="mt-5" data-testid="verified-row">
+      <ul className="flex flex-wrap gap-x-4 gap-y-2">
+        {people.map((p) => {
+          const line = personLines(p);
+          return (
+            <li key={p.id} className="flex items-center gap-2">
+              <UserAvatar id={p.id} name={p.name} size="sm" />
+              <span className="text-sm text-slate-200">
+                {p.name.split(' ')[0]}
+                {line.primary && <span className="sr-only">, {line.primary}</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/[.06] px-2.5 py-1 text-xs text-slate-300">
+        <MapPin aria-hidden="true" size={13} className="text-teal-300" />
+        {verified ? `Verified in ${city}` : `Now on Verse in ${city}`}
+      </p>
+    </div>
   );
 }

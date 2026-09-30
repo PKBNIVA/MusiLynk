@@ -31,6 +31,16 @@ class SyntheticQaPurgeTest < ActiveSupport::TestCase
     assert_match(/already exists \(150 accounts\); nothing to do/, output)
     assert_equal 150, User.synthetic(BATCH).count
 
+    # Run the scheduled Stage, badge and review-prompt jobs over the seeded batch, for this week and the last:
+    # they skip synthetic accounts (T-09), so nothing about the showcase may appear.
+    now = Time.current
+    [now, now + 1.week].each do |at|
+      StageSystemPostsJob.perform_now(at)
+      FastResponderWeekJob.perform_now(at)
+      ReviewPromptSweepJob.perform_now(at)
+    end
+    assert_equal [0, 0, 0], [Post.where(author_type: "system").count, Badge.count, ReviewPrompt.count]
+
     user_ids = User.synthetic(BATCH).pluck(:id)
     real = add_real_interactions
     add_platform_rows(user_ids, real)

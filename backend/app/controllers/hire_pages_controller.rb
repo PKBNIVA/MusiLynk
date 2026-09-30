@@ -52,7 +52,7 @@ class HirePagesController < ApplicationController
   def build_payload(role_slug, role_label, city_slug, city_name)
     # Visitors see demo profiles in the counts and the list; only organic profiles make a page indexable.
     counts = Seo::HireStats.counts_for(role_label, city_name, include_demo: true)
-    indexable = Seo::HireStats.counts_for(role_label, city_name)[:professionals] >= INDEXABLE_MIN_PROFESSIONALS
+    indexable = Seo::HireStats.scope_for(role_label, city_name).count >= INDEXABLE_MIN_PROFESSIONALS
     rates = Seo::Rates.summary_for(role_label, city_name, include_demo: true)
     {
       role: { slug: role_slug, label: role_label },

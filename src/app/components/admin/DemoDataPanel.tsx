@@ -76,7 +76,7 @@ const NOT_INCLUDED = [
   'Sign-in: nobody can log in to a demo account.',
   'Photos: the app draws art for demo people; no real person’s photo is used.',
   'Money and queues: no payments, subscriptions, reports, pending verification or review items.',
-  'E-mail: demo addresses end in example.invalid and are never written to.',
+  'Email: demo addresses end in example.invalid and are never written to.',
   'Search engines and metrics: kept out of the sitemap, share pages, landing counters, funnel, digests, lifecycle e-mails, badges, system posts and review prompts.',
 ];
 

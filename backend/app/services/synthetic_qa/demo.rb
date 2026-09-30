@@ -26,11 +26,6 @@ module SyntheticQa
 
     def user?(user) = user.present? && batch?(user.synthetic_batch)
 
-    # Any synthetic account (QA or demo). Background jobs that email, badge or count people skip these.
-    def synthetic_user?(user) = user.present? && user.synthetic_batch.present?
-
-    def showcase? = User.exists?(synthetic_batch: SHOWCASE_BATCH)
-
     # Untagged users plus demo batches; every other synthetic batch stays hidden.
     def publicly_listed(scope)
       scope.where("users.synthetic_batch IS NULL OR users.synthetic_batch LIKE ?", "#{PREFIX}%")

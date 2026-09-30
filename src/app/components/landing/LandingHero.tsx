@@ -70,6 +70,7 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
               to="/join/hiring"
               path="hire"
               icon={BriefcaseBusiness}
+              primary
               title="I'm hiring"
               detail="Studios, weddings, events and bands"
             />
@@ -106,25 +107,32 @@ function PathLink({
   icon: Icon,
   title,
   detail,
+  primary = false,
 }: {
   to: string;
   path: 'hire' | 'musician';
   icon: LucideIcon;
   title: string;
   detail: string;
+  /** The one primary action; the other role link is a quieter outline. */
+  primary?: boolean;
 }) {
   return (
     <Link
       to={to}
       onClick={() => trackPathChosen(path)}
-      className="group flex min-h-16 items-center gap-3 rounded-2xl border border-white/15 bg-gradient-to-r from-fuchsia-700 to-violet-700 px-4 py-3 text-white shadow-lg shadow-violet-950/40 transition hover:from-fuchsia-600 hover:to-violet-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200"
+      className={`group flex min-h-16 items-center gap-3 rounded-2xl border px-4 py-3 text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200 ${
+        primary
+          ? 'border-white/15 bg-gradient-to-r from-fuchsia-700 to-violet-700 shadow-lg shadow-violet-950/40 hover:from-fuchsia-600 hover:to-violet-600'
+          : 'border-white/25 bg-slate-950/50 hover:bg-white/10'
+      }`}
     >
       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/15">
         <Icon aria-hidden="true" size={20} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-base font-bold leading-6">{title}</span>
-        <span className="block text-[13px] leading-5 text-fuchsia-50">{detail}</span>
+        <span className="block text-[13px] leading-5 text-slate-200">{detail}</span>
       </span>
       <ArrowRight aria-hidden="true" size={18} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
     </Link>

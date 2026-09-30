@@ -57,14 +57,16 @@ export function readSeoPages(yaml) {
   return lists;
 }
 
+const lowerRole = (label) => (label === 'DJ' ? label : label.toLowerCase());
+
 /** path -> [title, description] for the hire and rates pages, as the pages set them client-side. */
 export function seoPageRoutes({ roles, cities }) {
   const routes = {};
   for (const [roleSlug, role] of roles) {
     for (const [citySlug, city] of cities) {
       routes[`/hire/${roleSlug}/${citySlug}`] = [
-        `Hire a verified ${role.toLowerCase()} in ${city} | Verse`,
-        `Browse verified ${role.toLowerCase()}s in ${city} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`,
+        `Hire a verified ${lowerRole(role)} in ${city} | Verse`,
+        `Browse verified ${lowerRole(role)}s in ${city} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`,
       ];
     }
   }

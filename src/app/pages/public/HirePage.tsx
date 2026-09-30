@@ -14,7 +14,7 @@ import { apiGet } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { fromRateText } from '../../lib/landing';
 import { personLines } from '../../lib/personLine';
-import { hireHeading, hireLinkText, hirePagePath } from '../../lib/seoPages';
+import { hireHeading, hireLinkText, hirePagePath, lower } from '../../lib/seoPages';
 import type { Professional } from '../../lib/apiTypes';
 
 interface HirePageData {
@@ -54,11 +54,9 @@ export default function HirePage() {
     };
   }, [role, city]);
 
-  const title = data
-    ? `Hire a verified ${data.role.label.toLowerCase()} in ${data.city.name} | Verse`
-    : 'Hire on Verse';
+  const title = data ? `Hire a verified ${lower(data.role.label)} in ${data.city.name} | Verse` : 'Hire on Verse';
   const description = data
-    ? `Browse verified ${data.role.label.toLowerCase()}s in ${data.city.name} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`
+    ? `Browse verified ${lower(data.role.label)}s in ${data.city.name} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`
     : undefined;
   const jsonLd = data
     ? [
@@ -132,8 +130,8 @@ function HirePageContent({ data }: { data: HirePageData }) {
         title={hireHeading(role.label, city.name)}
       >
         <p className="max-w-2xl">
-          Every profile on Verse shows real work you can review. Browse verified {role.label.toLowerCase()}s in{' '}
-          {city.name}, filter by availability, or post an urgent request and hear back within hours.
+          Every profile on Verse shows real work you can review. Browse verified {lower(role.label)}s in {city.name},
+          filter by availability, or post an urgent request and hear back within hours.
         </p>
       </PhotoHeader>
 
@@ -152,7 +150,7 @@ function HirePageContent({ data }: { data: HirePageData }) {
         </Button>
         <Button variant="outline" asChild>
           <Link to={browsePath}>
-            Browse all {role.label.toLowerCase()}s in {city.name}
+            Browse all {lower(role.label)}s in {city.name}
           </Link>
         </Button>
       </div>
@@ -160,7 +158,7 @@ function HirePageContent({ data }: { data: HirePageData }) {
       {featured.length > 0 && (
         <section className="mt-14" aria-labelledby="featured-title">
           <h2 id="featured-title" className="text-2xl font-black">
-            Verified {role.label.toLowerCase()}s in {city.name}
+            Verified {lower(role.label)}s in {city.name}
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6" data-testid="featured-grid">
             {featured.map((professional) => (
@@ -231,8 +229,8 @@ function HirePageContent({ data }: { data: HirePageData }) {
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[.03] p-4 text-center">
-      <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
+    <div className="rounded-xl border border-white/10 bg-white/[.03] p-3 text-center sm:p-4">
+      <dt className="text-xs normal-case break-words text-slate-400 sm:uppercase sm:tracking-wide">{label}</dt>
       <dd className="text-2xl font-black mt-1">{value.toLocaleString('en-IN')}</dd>
     </div>
   );

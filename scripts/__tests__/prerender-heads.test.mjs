@@ -115,7 +115,7 @@ describe('prerender-heads.mjs', () => {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://verse.example' },
     });
     const hire = readFileSync(join(dist, 'hire', 'dj', 'pune', 'index.html'), 'utf8');
-    expect(hire).toContain('<title>Hire a verified dj in Pune | Verse</title>');
+    expect(hire).toContain('<title>Hire a verified DJ in Pune | Verse</title>');
     expect(hire).toContain('<link rel="canonical" href="https://verse.example/hire/dj/pune">');
     expect(hire).not.toContain('noindex');
     expect(hire).toContain('<div id="root"></div>');

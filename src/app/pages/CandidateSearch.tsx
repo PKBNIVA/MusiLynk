@@ -38,7 +38,7 @@ function FilterChip({ pressed, onClick, children }: { pressed: boolean; onClick:
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className={`min-h-9 rounded-full border px-3.5 text-sm ${
+      className={`min-h-9 shrink-0 snap-start whitespace-nowrap rounded-full border px-3.5 text-sm ${
         pressed
           ? 'border-violet-400 bg-violet-500/20 text-white'
           : 'border-white/15 bg-white/[.04] text-slate-300 hover:bg-white/[.08]'
@@ -167,7 +167,11 @@ export default function CandidateSearch() {
             Search
           </Button>
         </form>
-        <div className="mb-5 flex flex-wrap items-center gap-2" role="group" aria-label="Filters">
+        <div
+          className="-mx-5 mb-5 flex snap-x flex-nowrap items-center gap-2 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+          role="group"
+          aria-label="Filters"
+        >
           <FilterChip
             pressed={f.verified === 'true'}
             onClick={() => update({ verified: f.verified === 'true' ? '' : 'true' })}

@@ -14,9 +14,15 @@ class DemoVisibilityRulesTest < ActionDispatch::IntegrationTest
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
     clear_enqueued_jobs
+    # The lifecycle step is only claimed when an email provider is configured; do not depend on the host env.
+    @previous_webhook = ENV["EMAIL_DELIVERY_WEBHOOK"]
+    ENV["EMAIL_DELIVERY_WEBHOOK"] = "https://email-hook.example.invalid/send"
   end
 
-  teardown { Rails.cache = @original_cache }
+  teardown do
+    Rails.cache = @original_cache
+    @previous_webhook.nil? ? ENV.delete("EMAIL_DELIVERY_WEBHOOK") : ENV["EMAIL_DELIVERY_WEBHOOK"] = @previous_webhook
+  end
 
   # --- what visitors see ---------------------------------------------------------------------
 

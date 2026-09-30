@@ -76,6 +76,8 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "rate limits a burst of requests from the same IP" do
+    # The throttle bucket is a wall-clock minute; freeze it so the burst cannot straddle two buckets.
+    freeze_time
     EventsController::RATE_LIMIT_PER_MINUTE.times do
       post "/api/events", params: { events: [{ name: "landing_view", anonId: "anon-rl" }] }, as: :json
       assert_response :success

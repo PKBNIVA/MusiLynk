@@ -16,6 +16,8 @@ class AdminUrgentRequestsTest < ActionDispatch::IntegrationTest
   end
 
   test "index lists open requests with age, response count and the no-response flag, plus today's funnel" do
+    # Pin the clock to midday so "90 minutes ago" is still today, whatever hour CI runs at.
+    travel_to Time.current.change(hour: 12)
     @urgent.update!(created_at: 90.minutes.ago)
 
     get "/api/admin/urgent-requests", headers: auth(@admin)

@@ -1,0 +1,168 @@
+# The 25 demo-showcase conversations (SyntheticQa::Showcase), 3 to 6 messages each, oldest first.
+# `from` is hirer or musician. Placeholders: {musician} and {hirer} (first names), {job} (the listing
+# title, application threads only) and {company}. `topic`: application (linked to an application and
+# its listing), enquiry (a direct conversation before a booking), urgent (after an urgent response).
+threads:
+  - topic: application
+    messages:
+      - { from: hirer, body: "Hi {musician}, thanks for applying for {job}. Your cover note mentions weddings; how many have you played this season?" }
+      - { from: musician, body: "Hi {hirer}, about twenty since October, mostly sangeet and reception sets. I can send two recent videos if that helps." }
+      - { from: hirer, body: "Please do. We would also like to know your fee for two 45-minute sets with a break in between." }
+      - { from: musician, body: "Sent both links to your email. For two sets my fee is the upper half of your range, because of the travel time." }
+      - { from: hirer, body: "That works. I will confirm the date with the family and get back to you by Friday." }
+  - topic: application
+    messages:
+      - { from: musician, body: "Hello {hirer}, I applied for {job}. Could you tell me whether the fee includes transport? I would be coming from the suburbs." }
+      - { from: hirer, body: "Hi {musician}. Transport is not included, but we can add a fixed travel allowance if the venue is more than 25 km away." }
+      - { from: musician, body: "Thank you. I will check the distance and confirm. Is there a soundcheck slot?" }
+      - { from: hirer, body: "Yes, 4 pm on the day. The venue's sound engineer will meet you at the stage." }
+  - topic: application
+    messages:
+      - { from: hirer, body: "{musician}, we liked your samples for {job}. Can you come for a 20-minute audition on Thursday evening?" }
+      - { from: musician, body: "Thursday works. Should I bring my own instrument, or will one be available at the venue?" }
+      - { from: hirer, body: "We have a house kit and a keyboard, but please bring your own cables and sticks or picks." }
+      - { from: musician, body: "Understood. I will prepare three songs and a short groove test. What time should I arrive?" }
+      - { from: hirer, body: "Please come at 6:30 pm. Ask for me at the front desk." }
+      - { from: musician, body: "See you then. Thank you for the chance." }
+  - topic: application
+    messages:
+      - { from: hirer, body: "Hi {musician}, one question on your application for {job}: are you free on the full weekend, or only on Saturday?" }
+      - { from: musician, body: "Both days, but I need to leave by 5 pm on Sunday for another commitment." }
+      - { from: hirer, body: "That should be fine, our finish time on Sunday is 3 pm. I will mark you as shortlisted." }
+      - { from: musician, body: "Thanks, {hirer}. Please share the run sheet when it is ready." }
+  - topic: application
+    messages:
+      - { from: musician, body: "Hi {hirer}, thanks for shortlisting me for {job}. What repertoire are you hoping for?" }
+      - { from: hirer, body: "Mostly Hindi film songs from the 90s and 2000s, plus a few English pop songs for the younger guests." }
+      - { from: musician, body: "That fits my list. I can send the songs I would play so you can strike out any you do not want." }
+      - { from: hirer, body: "Please do. We also do not want any songs with loud dance numbers before 9 pm, since there are older guests." }
+      - { from: musician, body: "Noted. I will keep the first hour soft and build up after dinner." }
+  - topic: application
+    messages:
+      - { from: hirer, body: "Hello {musician}. We received your application for {job} and would like to move ahead. Are you able to sign a short agreement?" }
+      - { from: musician, body: "Yes, of course. Could you send it as a PDF? I can sign and return it the same day." }
+      - { from: hirer, body: "Sending it now. It covers dates, fee, payment schedule and cancellation terms." }
+      - { from: musician, body: "Received. I have one question about the payment schedule: is the advance due before rehearsals?" }
+      - { from: hirer, body: "Yes, 30 percent before the first rehearsal and the rest within a week of the event." }
+  - topic: application
+    messages:
+      - { from: musician, body: "Hi {hirer}, I have applied to {job} and wanted to introduce myself. I have read your company page and think my experience with acoustic sets fits." }
+      - { from: hirer, body: "Thanks {musician}. Yes, we like acoustic work. Do you sing as well, or only play?" }
+      - { from: musician, body: "I do both, and I can add a second voice for harmonies. I can share a short recording of a set." }
+      - { from: hirer, body: "Please send it. We would like to finalise by the end of the week." }
+  - topic: application
+    messages:
+      - { from: hirer, body: "Hi {musician}, we are moving forward with two other applicants for {job} but would like to keep you in mind. Could we contact you for the next one?" }
+      - { from: musician, body: "Thanks for letting me know, {hirer}. Yes, please keep me on the list. I am usually free on weekends." }
+      - { from: hirer, body: "Good to know. We will write when we have a date." }
+  - topic: application
+    messages:
+      - { from: hirer, body: "Hi {musician}, quick note on {job}: the rehearsal has moved to Wednesday at 7 pm. Does that still work?" }
+      - { from: musician, body: "Wednesday is fine. I will bring the parts I marked up. Do you want me to record the rehearsal for reference?" }
+      - { from: hirer, body: "Yes please, that helps the singers. Thank you." }
+      - { from: musician, body: "I will upload it the same night." }
+      - { from: hirer, body: "Perfect. See you Wednesday." }
+  - topic: application
+    messages:
+      - { from: musician, body: "Hello {hirer}, following up on my application for {job}. I wanted to check whether the role is still open." }
+      - { from: hirer, body: "Hi {musician}, yes, still open until the end of next week. We are reading applications on Monday." }
+      - { from: musician, body: "Thank you. I will send an extra sample video today, in case it helps you decide." }
+      - { from: hirer, body: "That will be useful. I will look for it before Monday." }
+  - topic: application
+    messages:
+      - { from: hirer, body: "Hi {musician}. We are impressed by your work sample for {job}. What software and interface do you use for recording?" }
+      - { from: musician, body: "Logic Pro and a two-channel interface with a pair of condenser microphones. I track in a treated bedroom and send WAV stems." }
+      - { from: hirer, body: "That works for us. Can you deliver a first draft within five working days?" }
+      - { from: musician, body: "Yes. I would like to see the brief and a reference track before I start." }
+      - { from: hirer, body: "I will send them today." }
+  - topic: application
+    messages:
+      - { from: musician, body: "Hi {hirer}, I have a scheduling question about {job}. My other band has a show on the same Saturday, but the times do not overlap. Is that a problem?" }
+      - { from: hirer, body: "Not as long as you are at our venue for soundcheck at 5 pm. What time does your other show finish?" }
+      - { from: musician, body: "It finishes by 3 pm, and the venue is twenty minutes from yours." }
+      - { from: hirer, body: "That works. Thank you for telling us in advance." }
+  - topic: application
+    messages:
+      - { from: hirer, body: "{musician}, congratulations, we would like to offer you the {job} booking. Can you confirm you are still available?" }
+      - { from: musician, body: "Thank you, {hirer}. Yes, I am available and happy to accept. Please send the confirmation and payment details." }
+      - { from: hirer, body: "Sent to your email. The advance will go out once you have signed." }
+      - { from: musician, body: "Signed and returned. Looking forward to it." }
+      - { from: hirer, body: "Great. We will be in touch a week before with the run sheet." }
+  - topic: application
+    messages:
+      - { from: hirer, body: "Hi {musician}. Can you send a list of the equipment you would bring for {job}? The venue has limited backline." }
+      - { from: musician, body: "I bring my own instrument, a small amp, two stands and cables. I will need one power outlet close to the stage." }
+      - { from: hirer, body: "There is one at stage left. We will also have a technician who can help with setup." }
+      - { from: musician, body: "Good to know. I will arrive an hour early to set up." }
+  - topic: application
+    messages:
+      - { from: musician, body: "Hello {hirer}, thank you for the interview slot for {job}. Should I prepare anything specific?" }
+      - { from: hirer, body: "Please prepare two songs of your choice and be ready to talk about a project that did not go as planned." }
+      - { from: musician, body: "Will do. Is the interview by video call or in person?" }
+      - { from: hirer, body: "By video, on the link in your calendar invite. It runs about twenty-five minutes." }
+      - { from: musician, body: "Thank you. I will be online ten minutes early." }
+  - topic: enquiry
+    messages:
+      - { from: hirer, body: "Hi {musician}, I found your profile on Verse. We are planning a private party on a rooftop next month for about 80 guests and want live music. Are you available?" }
+      - { from: musician, body: "Hi {hirer}, thanks for writing. Which date are you thinking of, and how long would you like the set to be?" }
+      - { from: hirer, body: "The last Saturday of next month, two hours with a short break. We are open to a duo if you have a partner you play with." }
+      - { from: musician, body: "I do play with a duo partner. For two hours with a PA we would charge in the range shown on my profile; I can send a quote today." }
+      - { from: hirer, body: "Please do. We will decide by the end of the week." }
+  - topic: enquiry
+    messages:
+      - { from: hirer, body: "{musician}, we run a small cafe and would like an acoustic evening every second Friday. Would that suit you?" }
+      - { from: musician, body: "That could work. Could you tell me the seating and whether there is a PA?" }
+      - { from: hirer, body: "40 seats, a small PA and a microphone. We pay a fixed fee for a 90-minute set." }
+      - { from: musician, body: "That suits me. I would like to start with one trial evening before we agree a schedule." }
+      - { from: hirer, body: "Fair. I will propose two dates by tomorrow." }
+  - topic: enquiry
+    messages:
+      - { from: hirer, body: "Hello {musician}. We are looking for a tabla accompanist for a classical evening next month. Have you accompanied vocalists before?" }
+      - { from: musician, body: "Yes, regularly. A concert of two hours is typical for me. Who is the vocalist and what raga will they present?" }
+      - { from: hirer, body: "The vocalist is a Hindustani singer and will present Yaman and a Bhairavi. We will confirm the timings soon." }
+      - { from: musician, body: "Both suit me. I would like to meet the vocalist once before the concert, even on a call." }
+      - { from: hirer, body: "That can be arranged. Thank you." }
+  - topic: enquiry
+    messages:
+      - { from: musician, body: "Hi {hirer}, I saw that your team books artists for events. Do you accept sample submissions from solo performers?" }
+      - { from: hirer, body: "Hello {musician}. Yes, send a link to a live recording and your repertoire. We review submissions every Monday." }
+      - { from: musician, body: "Thank you. I will send a 15-minute clip and a list of 40 songs today." }
+      - { from: hirer, body: "Received. We will write back within a week either way." }
+  - topic: enquiry
+    messages:
+      - { from: hirer, body: "Hi {musician}. Our college fest has a slot for a DJ on the second night. Are you free that weekend?" }
+      - { from: musician, body: "I am. What is the slot length and what is the audience like?" }
+      - { from: hirer, body: "Ninety minutes from 9 pm, about 2,000 students, mostly pop and EDM." }
+      - { from: musician, body: "That suits my sets. I would need a table, two power sockets and a monitor speaker." }
+      - { from: hirer, body: "All available. I will send the technical rider to your email." }
+      - { from: musician, body: "Thanks. I will confirm within two days after checking my calendar." }
+  - topic: enquiry
+    messages:
+      - { from: hirer, body: "Hi {musician}. We are recording a folk album and would like to add violin to three songs. Would you be interested?" }
+      - { from: musician, body: "Yes. Can you send the rough mixes and the keys? I can record at home and send stems, or come to your studio." }
+      - { from: hirer, body: "We would prefer the studio for one session, so we can direct you live. Would a Thursday afternoon work?" }
+      - { from: musician, body: "Thursday works. Three songs in four hours should be fine if the charts are ready." }
+      - { from: hirer, body: "I will send the charts on Monday. Thank you." }
+  - topic: urgent
+    messages:
+      - { from: musician, body: "Hi {hirer}, I responded to your urgent request and can confirm I am still available." }
+      - { from: hirer, body: "Thanks {musician}. Can you share your set list and the fee you have in mind?" }
+      - { from: musician, body: "I will send my list right away. My fee is within your range if travel is covered." }
+      - { from: hirer, body: "Travel is covered. I will confirm in the next hour." }
+  - topic: urgent
+    messages:
+      - { from: hirer, body: "{musician}, your response to our urgent request looks like a good fit. Could you arrive an hour earlier for a line check?" }
+      - { from: musician, body: "Yes, I can be there an hour early. Please send the venue address and a contact number for the day." }
+      - { from: hirer, body: "I will share both by message tonight. Thank you for replying so quickly." }
+  - topic: urgent
+    messages:
+      - { from: musician, body: "Hi {hirer}, following up on the urgent request. Have you filled the slot, or is it still open?" }
+      - { from: hirer, body: "Hello {musician}. It is still open. We are speaking to two people and will decide tonight." }
+      - { from: musician, body: "Understood. I will keep the evening free until I hear from you." }
+      - { from: hirer, body: "Thank you, that helps." }
+  - topic: urgent
+    messages:
+      - { from: hirer, body: "Hi {musician}, we would like to book you for the urgent request. Please confirm the rate you quoted." }
+      - { from: musician, body: "Confirmed at the rate in my response. Could you send an email confirmation for my records?" }
+      - { from: hirer, body: "Sent. We will also add you to the run sheet." }
+      - { from: musician, body: "Received. Thank you {hirer}, see you on the day." }

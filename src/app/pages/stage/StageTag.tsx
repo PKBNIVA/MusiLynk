@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useParams } from 'react-router';
 import { Hash } from 'lucide-react';
 import { Navigation } from '../../components/Navigation';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { Skeleton } from '../../components/ui/skeleton';
 import { PostCard } from '../../components/stage/PostCard';
 import { useFeedList } from '../../components/stage/useFeedList';

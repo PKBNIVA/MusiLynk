@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { Copy, Globe2, Layers, Link2, Lock, Plus, Star } from 'lucide-react';
 import { Button } from '../../components/ui/button';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { copyLink, LoadState, ShowcaseShell, useWorkspaceBase } from '../../components/showcase/parts';
 import { RulesSentence } from '../../components/showcase/RulesEditor';
 import { SHOWCASE_HELP } from '../../components/showcase/help';

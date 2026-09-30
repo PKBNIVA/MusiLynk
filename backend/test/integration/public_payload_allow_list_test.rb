@@ -57,6 +57,17 @@ class PublicPayloadAllowListTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the public payload carries the profile photo and event types (B1)" do
+    photo = "https://media.example.org/uploads/photo.webp"
+    @musician.profile.update!(photo_url: photo, event_types: ["Wedding", "Corporate"])
+    get "/api/public/talent/#{@musician.id}"
+    person = response.parsed_body["professional"]
+    assert_equal photo, person["photoUrl"]
+    assert_equal ["Wedding", "Corporate"], person["eventTypes"]
+    get "/api/public/talent", params: { q: "drummer" }
+    assert_equal photo, response.parsed_body["talent"].first["photoUrl"]
+  end
+
   test "a hidden synthetic batch is not reachable by direct URL, a demo profile is" do
     hidden = create_user("Hidden QA Person", "hidden-qa-allow@example.com", batch: "local-qa")
     demo = create_user("Demo Batch Person", "demo-batch-allow@example.com", batch: "demo-20260926-1200")

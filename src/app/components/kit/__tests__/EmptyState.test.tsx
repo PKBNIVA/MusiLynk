@@ -17,6 +17,7 @@ afterEach(() => {
 });
 const show = (el: ReactElement) => act(() => root.render(<MemoryRouter>{el}</MemoryRouter>));
 
+import { Inbox } from 'lucide-react';
 import { EmptyState } from '../EmptyState';
 import { SCENES, type SceneName } from '../scenes';
 
@@ -42,6 +43,30 @@ describe('EmptyState', () => {
     expect(onClick).toHaveBeenCalled();
     show(<EmptyState scene="stage" title="Only" />);
     expect(host.querySelector('button,a')).toBeNull();
+  });
+  it('shows an icon in a dashed box, with children, a custom action element and compact padding', () => {
+    show(
+      <EmptyState icon={Inbox} title="No projects yet." action={<button type="button">Create one</button>} compact>
+        Nothing here <a href="/x">yet</a>.
+      </EmptyState>,
+    );
+    const box = host.querySelector('[data-testid=empty-state]') as HTMLElement;
+    expect(box.className).toContain('border-dashed');
+    expect(box.className).toContain('py-6');
+    expect(box.querySelector('svg[data-scene]')).toBeNull();
+    expect(box.querySelector('h2')).toBeNull();
+    expect(box.querySelector('p')?.textContent).toBe('No projects yet.');
+    expect(box.querySelector('a')?.getAttribute('href')).toBe('/x');
+    expect(box.querySelector('button')?.textContent).toBe('Create one');
+    show(<EmptyState icon={Inbox} title="Quiet" action={null} className="mt-6" />);
+    expect(host.querySelector('button,a')).toBeNull();
+    expect(host.querySelector('[data-testid=empty-state]')?.className).toContain('mt-6');
+  });
+  it('keeps the illustration look, and shrinks it when compact', () => {
+    show(<EmptyState scene="search" title="Nothing" compact />);
+    const box = host.querySelector('[data-testid=empty-state]') as HTMLElement;
+    expect(box.className).not.toContain('border-dashed');
+    expect(box.querySelector('svg[data-scene=search]')?.getAttribute('class')).toContain('h-20');
   });
   it('has all eight scenes', () => {
     const names = Object.keys(SCENES) as SceneName[];

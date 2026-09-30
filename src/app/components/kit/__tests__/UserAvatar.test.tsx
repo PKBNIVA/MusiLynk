@@ -33,6 +33,12 @@ describe('UserAvatar', () => {
     expect(el.getAttribute('aria-label')).toBe('Asha Sharma');
     expect(el.style.width).toBe('96px');
   });
+  it('loads a photo lazily, or eagerly above the fold', () => {
+    show(<UserAvatar id="u1" name="Asha Sharma" photoUrl="https://media.example.org/a.webp" />);
+    expect(host.querySelector('img')?.getAttribute('loading')).toBe('lazy');
+    show(<UserAvatar id="u1" name="Asha Sharma" photoUrl="https://media.example.org/a.webp" eager />);
+    expect(host.querySelector('img')?.getAttribute('loading')).toBe('eager');
+  });
   it('has a stable hue per id', () => {
     expect(avatarHue('abc')).toBe(avatarHue('abc'));
     expect(avatarHue('abc')).toBeGreaterThanOrEqual(0);
@@ -49,5 +55,30 @@ describe('UserAvatar', () => {
     expect(initialsOf('Madonna')).toBe('M');
     expect(initialsOf('  ')).toBe('?');
     expect(initialsOf('a b c')).toBe('AC');
+  });
+  it('prefers a photo, then generated art, then initials', () => {
+    show(<UserAvatar id="u1" name="Asha Sharma" photoUrl="https://cdn.test/a.webp" art demo />);
+    let el = host.querySelector('[data-testid=user-avatar]') as HTMLElement;
+    expect(el.getAttribute('data-layer')).toBe('photo');
+    const img = el.querySelector('img') as HTMLImageElement;
+    expect(img.getAttribute('src')).toBe('https://cdn.test/a.webp');
+    expect(img.getAttribute('loading')).toBe('lazy');
+    expect(img.getAttribute('width')).toBe('40');
+    show(<UserAvatar id="u1" name="Asha Sharma" art />);
+    el = host.querySelector('[data-testid=user-avatar]') as HTMLElement;
+    expect(el.getAttribute('data-layer')).toBe('art');
+    show(<UserAvatar id="u1" name="Asha Sharma" demo genres={['Jazz']} />);
+    expect(host.querySelector('[data-layer=art]')).not.toBeNull();
+    show(<UserAvatar id="u1" name="Asha Sharma" photoUrl={null} />);
+    expect(host.querySelector('[data-layer=initials]')?.textContent).toBe('AS');
+  });
+  it('falls back when the photo does not load, and retries when the URL changes', () => {
+    show(<UserAvatar id="u1" name="Asha Sharma" photoUrl="https://cdn.test/broken.webp" />);
+    act(() => {
+      host.querySelector('img')?.dispatchEvent(new Event('error'));
+    });
+    expect(host.querySelector('[data-layer=initials]')?.textContent).toBe('AS');
+    show(<UserAvatar id="u1" name="Asha Sharma" photoUrl="https://cdn.test/fixed.webp" />);
+    expect(host.querySelector('[data-layer=photo]')).not.toBeNull();
   });
 });

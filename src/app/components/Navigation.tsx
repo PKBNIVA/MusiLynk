@@ -319,6 +319,7 @@ export function Navigation() {
                     name={user?.name || 'Account'}
                     size="sm"
                     photoUrl={user?.photoUrl}
+                    eager
                   />
                   <span className="hidden max-w-28 truncate text-sm text-white sm:block">
                     {user?.name?.split(' ')[0]}

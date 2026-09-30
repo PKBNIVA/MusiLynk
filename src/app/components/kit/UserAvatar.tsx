@@ -18,6 +18,8 @@ type Props = {
   /** Demo/showcase account: art rather than a faceless disc, never a photo of anyone. */
   demo?: boolean;
   genres?: readonly string[];
+  /** Above the fold (the header avatar): load the photo eagerly instead of lazily. */
+  eager?: boolean;
 };
 
 /**
@@ -35,6 +37,7 @@ export function UserAvatar({
   art = false,
   demo = false,
   genres,
+  eager = false,
 }: Props) {
   const [failed, setFailed] = useState<string | null>(null);
   useEffect(() => setFailed(null), [photoUrl]);
@@ -54,7 +57,7 @@ export function UserAvatar({
           alt=""
           width={px}
           height={px}
-          loading="lazy"
+          loading={eager ? 'eager' : 'lazy'}
           decoding="async"
           referrerPolicy="no-referrer"
           className="size-full object-cover"

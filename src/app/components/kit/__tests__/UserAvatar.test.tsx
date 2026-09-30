@@ -33,6 +33,12 @@ describe('UserAvatar', () => {
     expect(el.getAttribute('aria-label')).toBe('Asha Sharma');
     expect(el.style.width).toBe('96px');
   });
+  it('loads a photo lazily, or eagerly above the fold', () => {
+    show(<UserAvatar id="u1" name="Asha Sharma" photoUrl="https://media.example.org/a.webp" />);
+    expect(host.querySelector('img')?.getAttribute('loading')).toBe('lazy');
+    show(<UserAvatar id="u1" name="Asha Sharma" photoUrl="https://media.example.org/a.webp" eager />);
+    expect(host.querySelector('img')?.getAttribute('loading')).toBe('eager');
+  });
   it('has a stable hue per id', () => {
     expect(avatarHue('abc')).toBe(avatarHue('abc'));
     expect(avatarHue('abc')).toBeGreaterThanOrEqual(0);

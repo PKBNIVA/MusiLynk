@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { CalendarDays, Clock, MapPin, ShieldCheck, Wallet } from 'lucide-react';
 import { DemoBadge } from './DemoBadge';
-import { FormatGlyph } from './kit/FormatGlyph';
 import { CoverArt } from './media/CoverArt';
 import { optionLabel } from './ui/option-labels';
 import { PostedBy } from './showcase/PostedBy';
@@ -34,7 +33,6 @@ export function JobHero({ job, actions }: { job: Job; actions?: ReactNode }) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
-          <FormatGlyph kind={job.opportunity_kind || 'job'} size={24} />
           <span className="font-medium">{optionLabel(job.opportunity_kind || 'job')}</span>
           <DemoBadge show={job.demo} />
           {job.employerVerified && (

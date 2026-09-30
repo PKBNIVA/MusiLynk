@@ -75,8 +75,8 @@ export function TalentCard({ person: c, index, to, aside, footer }: Props) {
         <div className="flex items-start gap-3">
           <UserAvatar id={c.id} name={c.name} size="lg" photoUrl={c.photoUrl} demo={c.demo} genres={c.genres} />
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <h2 className="truncate text-lg font-semibold">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+              <h2 className="min-w-0 break-words text-lg font-semibold">
                 <Link to={to} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
                   {c.name}
                 </Link>

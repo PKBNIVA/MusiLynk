@@ -16,8 +16,7 @@ class TalentController < ApplicationController
     "(CASE WHEN EXISTS (SELECT 1 FROM portfolio_items scored_items WHERE scored_items.user_id = users.id) THEN 1 ELSE 0 END)"
   ].join(" + ").then { "(#{_1})" }.freeze
   # The "from" price on a card is the lowest of these rates (tour-day pay is a different kind of engagement).
-  FROM_RATE_COLUMNS = %w[session_rate show_rate day_rate hourly_rate].freeze
-  FROM_RATE_SQL = "LEAST(#{FROM_RATE_COLUMNS.map { "NULLIF(profiles.#{_1}, 0)" }.join(", ")})".freeze
+  FROM_RATE_SQL = "LEAST(NULLIF(profiles.session_rate, 0), NULLIF(profiles.show_rate, 0), NULLIF(profiles.day_rate, 0), NULLIF(profiles.hourly_rate, 0))".freeze
   HAS_RATES_SQL = "(#{FROM_RATE_SQL} IS NOT NULL)".freeze
   # Tie-breaks after relevance, and the order of an unfiltered directory; ends in a unique column.
   LIST_ORDER = [

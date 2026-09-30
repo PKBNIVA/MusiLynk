@@ -1,4 +1,4 @@
-import { EmptyState } from '../components/help/EmptyState';
+import { EmptyState } from '../components/kit/EmptyState';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';

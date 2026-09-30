@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { EmptyState as SceneEmptyState } from '../../components/kit/EmptyState';
 import { Link } from 'react-router';
 import { flushSync } from 'react-dom';
 import { toast } from 'sonner';
@@ -37,7 +36,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { AppSelect } from '../../components/ui/app-select';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { StepForm, focusStepHeading } from '../../components/help/StepForm';
 import { Field } from '../../components/form/Field';
 import { AutocompleteInput } from '../../components/ai/AutocompleteInput';
@@ -646,7 +645,7 @@ export default function Library() {
                 Try another word or kind.
               </EmptyState>
             ) : (
-              <SceneEmptyState
+              <EmptyState
                 scene="portfolio"
                 title="Add your first work sample"
                 hint="Hirers hear a sample before they message."

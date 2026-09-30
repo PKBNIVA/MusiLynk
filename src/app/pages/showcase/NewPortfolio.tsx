@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { AppSelect } from '../../components/ui/app-select';
 import { Field } from '../../components/form/Field';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { AiSuggestButton } from '../../components/ai/AiSuggestButton';
 import { Panel, ShowcaseShell, useWorkspaceBase } from '../../components/showcase/parts';
 import { RulesSentence } from '../../components/showcase/RulesEditor';

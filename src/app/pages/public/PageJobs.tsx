@@ -5,7 +5,7 @@ import { PublicNav } from '../../components/PublicNav';
 import { PublicDetailState } from '../../components/PublicDetailState';
 import { usePageMeta } from '../../components/PageMeta';
 import { JobCard } from '../../components/JobCard';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { apiGet } from '../../lib/api';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { Job } from '../../lib/apiTypes';

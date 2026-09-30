@@ -206,19 +206,6 @@ export function HowToCallout({ storageKey, children }: { storageKey: string; chi
   );
 }
 
-/** Empty state with an icon, a sentence and a next step, for lists that have nothing to show. */
-export function EmptyState({ icon: Icon, text, hint }: { icon: LucideIcon; text: string; hint?: string }) {
-  return (
-    <Card className="bg-white/[.03] border-white/10">
-      <CardContent className="p-10 text-center flex flex-col items-center gap-2">
-        <Icon aria-hidden="true" size={26} className="text-slate-500" />
-        <p className="text-slate-300">{text}</p>
-        {hint && <p className="text-sm text-slate-500">{hint}</p>}
-      </CardContent>
-    </Card>
-  );
-}
-
 /**
  * Subtle fixed decorative layer for the admin shell only: two blurred glows in a
  * cooler indigo/teal palette plus a faint grid. Never intercepts pointer events,

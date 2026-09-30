@@ -128,7 +128,7 @@ export default function JobSeekerDashboard() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <h2 className="font-semibold">{t.title}</h2>
-                  {t.line && <p className="truncate text-sm text-slate-400">{t.line}</p>}
+                  {t.line && <p className="line-clamp-2 text-sm text-slate-400">{t.line}</p>}
                 </div>
                 <Button asChild variant="outline" size="sm" className="shrink-0">
                   <Link to={t.to}>{t.cta}</Link>

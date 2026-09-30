@@ -146,7 +146,7 @@ export default function JobDetails() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-28 lg:pb-16">
+      <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-44 lg:pb-16">
         <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6">
           <div className="space-y-5">
             <Card className="bg-white/[.055] border-white/10">
@@ -366,7 +366,7 @@ export default function JobDetails() {
         </div>
       </main>
       {canApply && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-slate-950/95 p-3 backdrop-blur lg:hidden">
+        <div className="fixed inset-x-3 bottom-[5.5rem] z-40 rounded-2xl border border-white/15 bg-slate-950/95 p-2 shadow-xl backdrop-blur lg:hidden">
           <Button
             className="w-full"
             onClick={() => document.getElementById('apply-panel')?.scrollIntoView({ behavior: 'smooth' })}

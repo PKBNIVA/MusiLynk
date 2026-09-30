@@ -71,7 +71,7 @@ export function JobFilterChips({
     <div
       role="group"
       aria-label="Quick filters"
-      className="sticky top-[72px] z-20 -mx-5 mb-4 flex gap-2 overflow-x-auto bg-slate-950/90 px-5 py-2 backdrop-blur md:-mx-6 md:px-6"
+      className="sticky top-[72px] z-20 -mx-5 mb-4 flex gap-2 overflow-x-auto bg-slate-950/90 px-5 py-2 backdrop-blur md:mx-0 md:px-0"
       data-testid="job-filter-chips"
     >
       <ChipMenu label={values.kind ? `Format: ${optionLabel(values.kind)}` : 'Format'} active={Boolean(values.kind)}>

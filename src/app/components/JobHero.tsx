@@ -39,17 +39,17 @@ export function JobHero({ job, actions }: { job: Job; actions?: ReactNode }) {
       <h1 className="mt-3 text-3xl font-bold leading-tight break-words">{job.title}</h1>
       <p className="mt-1 text-lg text-violet-300">{job.company}</p>
       <PostedBy postedAs={job.postedAs} className="mt-1" />
-      <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {facts.map(({ Icon, label, value }) => (
-          <div key={label} className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
+          <li key={label} className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
             <Icon aria-hidden="true" size={18} className="mt-0.5 shrink-0 text-slate-400" />
             <div className="min-w-0">
-              <dt className="text-xs text-slate-400">{label}</dt>
-              <dd className="text-sm font-medium text-slate-100 [overflow-wrap:anywhere]">{value}</dd>
+              <span className="block text-xs text-slate-400">{label}</span>
+              <span className="block text-sm font-medium text-slate-100 [overflow-wrap:anywhere]">{value}</span>
             </div>
-          </div>
+          </li>
         ))}
-      </dl>
+      </ul>
     </header>
   );
 }

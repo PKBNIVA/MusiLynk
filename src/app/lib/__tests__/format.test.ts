@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatDateTime, formatDeadline, formatMoney, formatPay, toDate } from '../format';
+import { formatDate, formatDateTime, formatDeadline, formatMoney, formatPay, toDate, formatWhen } from '../format';
 
 const UTC = { timeZone: 'UTC' };
 
@@ -125,5 +125,21 @@ describe('formatPay', () => {
   it('uses the fallback when nothing is disclosed', () => {
     expect(formatPay({})).toBe('Not disclosed');
     expect(formatPay({ compensation_min: null, compensation_max: '' }, 'Terms in listing')).toBe('Terms in listing');
+  });
+});
+
+describe('formatWhen', () => {
+  const now = new Date('2026-09-28T10:00:00Z');
+  const opts = { timeZone: 'UTC', now };
+  it('says Today and Tomorrow with a short time', () => {
+    expect(formatWhen('2026-09-28T18:00:00Z', opts)).toBe('Today 6 pm');
+    expect(formatWhen('2026-09-29T18:30:00Z', opts)).toBe('Tomorrow 6:30 pm');
+  });
+  it('uses the weekday and date further out', () => {
+    expect(formatWhen('2026-10-03T09:00:00Z', opts)).toBe('Sat 3 Oct 9 am');
+  });
+  it('falls back for empty values', () => {
+    expect(formatWhen(null, { fallback: '-' })).toBe('-');
+    expect(formatWhen('')).toBe('');
   });
 });

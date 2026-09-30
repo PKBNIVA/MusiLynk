@@ -39,11 +39,11 @@ export function JobCard({ job, to, index, aside, compact = false }: Props) {
   const chips = compact ? [] : [job.genre, job.function_area || job.skills?.[0]].filter((x): x is string => Boolean(x));
   return (
     <Card className="verse-lift bg-white/[.055] border-white/10 hover:bg-white/[.075]" data-testid="job-card">
-      <CardContent className="p-4">
+      <CardContent className="p-3.5 md:p-4">
         <div className="flex items-start gap-3">
           <FormatGlyph kind={job.opportunity_kind || 'job'} size={24} className="mt-0.5" />
           <Link
-            className="min-w-0 flex-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 flex flex-col gap-1 md:flex-row md:justify-between md:gap-4"
+            className={`min-w-0 flex-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 flex flex-col gap-1 md:gap-4 ${compact ? '' : 'md:flex-row md:justify-between'}`}
             to={to}
             data-job-item={index}
           >
@@ -54,19 +54,23 @@ export function JobCard({ job, to, index, aside, compact = false }: Props) {
               </div>
               <p className="text-sm text-slate-400 truncate flex items-center gap-1.5" data-testid="job-facts-place">
                 <span className="text-violet-300 truncate">{job.company}</span>
-                {job.employerVerified && (
+                {!compact && job.employerVerified && (
                   <span className="shrink-0 text-emerald-300" title="Verified employer">
                     <ShieldCheck size={14} aria-hidden="true" />
                     <span className="sr-only">Verified employer</span>
                   </span>
                 )}
-                {place && <span className="truncate">· {place}</span>}
+                {!compact && place && <span className="truncate">· {place}</span>}
               </p>
               {!compact && <PostedBy postedAs={job.postedAs} link={false} className="mt-0.5 text-xs" />}
               {chips.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                <div className="flex flex-wrap gap-1.5 mt-1">
                   {chips.map((c) => (
-                    <Badge variant="outline" key={c} className="border-white/15 text-slate-300">
+                    <Badge
+                      variant="outline"
+                      key={c}
+                      className="border-white/15 px-1.5 py-0 text-[11px] leading-5 text-slate-300"
+                    >
                       {c}
                     </Badge>
                   ))}

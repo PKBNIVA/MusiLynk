@@ -409,6 +409,12 @@ export default function ProfileSetup() {
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) => anyUnsaved && currentLocation.pathname !== nextLocation.pathname,
   );
+  // A save that is already on its way finishes first: leaving carries on once it lands, and the
+  // question is asked only if it did not save (or something else is still unsaved).
+  const anySaving = SECTIONS.some((s) => savingSection[s.id]);
+  useEffect(() => {
+    if (blocker.state === 'blocked' && !anyUnsaved) blocker.proceed?.();
+  }, [blocker, anyUnsaved]);
   const saveAllAndLeave = async () => {
     const results = await Promise.all(SECTIONS.map((s) => saveSection(s.id)));
     if (results.every(Boolean)) blocker.proceed?.();
@@ -1063,7 +1069,7 @@ export default function ProfileSetup() {
       </main>
       <VerificationRequestDialog open={verifying} onOpenChange={setVerifying} onSubmit={verify} />
       <DebugLinkDialog link={debugLink} onClose={() => setDebugLink(null)} />
-      <AlertDialog open={blocker.state === 'blocked'}>
+      <AlertDialog open={blocker.state === 'blocked' && !anySaving}>
         <AlertDialogContent data-testid="unsaved-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle>Leave without saving?</AlertDialogTitle>

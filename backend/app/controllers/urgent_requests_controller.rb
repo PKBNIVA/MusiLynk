@@ -38,6 +38,8 @@ class UrgentRequestsController < ApplicationController
       currency: params[:currency].presence || "INR", genre: params[:genre], requirements: requirements_text,
       travel_covered: params[:travelCovered] || false, status: "open")
     item.validate
+    # The title is written from the role and city, so a missing one is reported on those fields only.
+    item.errors.delete(:title) if params[:title].blank?
     item.errors.add(:start_at, "can't be in the past") if item.start_at && item.start_at < 1.minute.ago
     item.errors.add(:budget, "is required: choose a budget band") if item.budget_min.nil? && item.budget_max.nil?
     item.errors.add(:note, "is required: tell them what to expect") if requirements_text.blank?

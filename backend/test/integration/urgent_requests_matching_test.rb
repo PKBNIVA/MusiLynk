@@ -23,7 +23,7 @@ class UrgentRequestsMatchingTest < ActionDispatch::IntegrationTest
   test "create needs role, when, city, a budget band and a note, and reports every gap at once" do
     post "/api/urgent-requests", params: { roleName: "Drummer" }, headers: auth(@hirer), as: :json
     assert_response :unprocessable_content
-    assert_equal %w[budget city note startAt title], response.parsed_body.fetch("fields").keys.sort
+    assert_equal %w[budget city note startAt], response.parsed_body.fetch("fields").keys.sort
 
     post "/api/urgent-requests", params: { roleName: "Drummer", city: "Mumbai", startAt: 1.day.ago.iso8601, budgetMax: 5_000, note: "Tonight" }, headers: auth(@hirer), as: :json
     assert_response :unprocessable_content

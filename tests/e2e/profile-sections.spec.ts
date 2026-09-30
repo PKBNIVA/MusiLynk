@@ -110,11 +110,13 @@ test('a web address typed as example.com is completed to https:// before it is c
 });
 
 test('leaving with unsaved changes asks first', async ({ page }) => {
-  // A slow save keeps the edit unsaved while the person tries to leave.
-  await mock(page, { putDelayMs: 3_000 });
+  // A web address that cannot be saved stays unsaved while the person tries to leave.
+  await mock(page);
   await page.goto('/jobseeker/profile');
-  await page.getByLabel('Professional headline').fill('Session guitarist and arranger');
-  await page.getByLabel('Website').focus(); // leaving About starts its (slow) save
+  await page.getByLabel('Website').fill('not a url');
+  await page.getByLabel('Phone').focus();
+  await page.getByLabel('Bio').focus(); // leaving Links tries to save it and cannot
+  await expect(page.getByTestId('section-status-links')).toHaveText(/Not saved/);
   const home = page.getByRole('link', { name: 'Verse dashboard' });
   await home.click();
   const dialog = page.getByTestId('unsaved-dialog');
@@ -122,10 +124,20 @@ test('leaving with unsaved changes asks first', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Keep editing' }).click();
   await expect(dialog).toBeHidden();
   await expect(page).toHaveURL(/\/jobseeker\/profile/);
-  await expect(page.getByLabel('Professional headline')).toHaveValue('Session guitarist and arranger');
+  await expect(page.getByLabel('Website')).toHaveValue('not a url');
 
   await home.click();
   await page.getByTestId('unsaved-dialog').getByRole('button', { name: 'Leave without saving' }).click();
+  await expect(page).not.toHaveURL(/\/jobseeker\/profile/);
+});
+
+test('leaving while a save is on its way waits for it instead of asking', async ({ page }) => {
+  await mock(page, { putDelayMs: 1_500 });
+  await page.goto('/jobseeker/profile');
+  await page.getByLabel('Professional headline').fill('Session guitarist and arranger');
+  await page.getByLabel('Website').focus(); // leaving About starts its (slow) save
+  await page.getByRole('link', { name: 'Verse dashboard' }).click();
+  await expect(page.getByTestId('unsaved-dialog')).toHaveCount(0);
   await expect(page).not.toHaveURL(/\/jobseeker\/profile/);
 });
 

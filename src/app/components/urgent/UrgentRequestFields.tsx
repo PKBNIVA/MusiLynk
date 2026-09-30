@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AutocompleteInput } from '../ai/AutocompleteInput';
 import { AppSelect } from '../ui/app-select';
 import { Input } from '../ui/input';
@@ -19,6 +20,9 @@ export function UrgentRequestFields({
   errors: Partial<Record<UrgentField, string>>;
   onChange: <K extends keyof UrgentFormValues>(key: K, value: UrgentFormValues[K]) => void;
 }) {
+  // Once an error has opened More details it stays open, so fixing the field does not fold it away mid-typing.
+  const [endAtFlagged, setEndAtFlagged] = useState(false);
+  if (errors.endAt && !endAtFlagged) setEndAtFlagged(true);
   const shown = (error?: string) =>
     error && (
       <p role="alert" className="mt-1.5 text-sm text-rose-300">
@@ -88,7 +92,7 @@ export function UrgentRequestFields({
           className="min-h-24 border-white/10 bg-slate-900"
         />
       </Field>
-      <MoreDetails forceOpen={Boolean(errors.endAt)}>
+      <MoreDetails forceOpen={endAtFlagged}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="urgent-venue" label="Venue or studio" optional>
             <Input

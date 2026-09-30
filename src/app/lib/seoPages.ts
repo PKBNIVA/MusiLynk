@@ -46,8 +46,7 @@ export const hirePagePath = (roleSlug: string, citySlug: string) => `/hire/${rol
 export const ratesPagePath = (citySlug: string) => `/rates/${citySlug}`;
 
 const article = (label: string) => (/^[aeiou]/i.test(label) ? 'an' : 'a');
-/** Role label in running text: keeps the acronym in "DJ", lowercases the rest. */
-export const lower = (label: string) => (label === 'DJ' ? label : label.toLowerCase());
+const lower = (label: string) => (label === 'DJ' ? label : label.toLowerCase());
 
 /** "Hire a drummer in Mumbai" / "Hire an arranger in Pune" — the landing page's link text. */
 export function hireLinkText(label: string, cityName: string) {

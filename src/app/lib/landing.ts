@@ -61,10 +61,13 @@ export const HIRE_ROLES = [
 export const hireSearchPath = (role: string, city: string) =>
   `/music-professionals?${new URLSearchParams({ role, location: city }).toString()}`;
 
+/** Role label in running text: keeps the acronym in "DJ", lowercases the rest. */
+export const roleNoun = (label: string) => (label === 'DJ' ? label : label.toLowerCase());
+
 /** "Hire a drummer in Mumbai" / "Hire an arranger in Pune". */
 export function hireLinkText(label: string, city: string) {
   const article = /^[aeiou]/i.test(label) ? 'an' : 'a';
-  return `Hire ${article} ${label === 'DJ' ? label : label.toLowerCase()} in ${city}`;
+  return `Hire ${article} ${roleNoun(label)} in ${city}`;
 }
 
 type RateFields = {

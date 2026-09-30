@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultUrgentStartAt, fromRateText, lowestRate, urgentPath } from '../landing';
+import { defaultUrgentStartAt, fromRateText, lowestRate, roleNoun, urgentPath } from '../landing';
 
 describe('lowestRate / fromRateText', () => {
   it('takes the lowest filled-in rate', () => {
@@ -30,5 +30,12 @@ describe('urgent prefill', () => {
     expect(urgentPath({ role: ' Drummer ', city: 'Mumbai', startAt: '2026-10-01T18:00' })).toBe(
       '/urgent?role=Drummer&city=Mumbai&startAt=2026-10-01T18%3A00',
     );
+  });
+});
+
+describe('roleNoun', () => {
+  it('keeps the DJ acronym and lowercases other roles', () => {
+    expect(roleNoun('DJ')).toBe('DJ');
+    expect(roleNoun('Drummer')).toBe('drummer');
   });
 });

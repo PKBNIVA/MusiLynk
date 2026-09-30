@@ -15,12 +15,12 @@ Written 2026-09-30 by the integration session (replaces the earlier partial note
 Earlier in the launch: B9 #130, B0 #131, B1 #132, B5 #133, B4 #134 (merged by the orchestration session).
 
 ## What is live
-- Production head: `5c46197` (merge of #139). API release serving at the time of writing: `8926fe387a87` (#138); the `5c46197` Railway redeploy only carries a comment change on the backend and was queued behind the QA Agent run (see Verification).
+- Production head: `5c46197` (merge of #139). Railway web and worker latest deployments are SUCCESS (18:07Z, `72bfdc6d` / `981c0e2c`); `/api/readiness` returns ok with release `5c46197140ee`. The worker's previous deployment (`5e021306`, 17:26Z) shows CRASHED in the history after being replaced; I did not investigate whether it crashed before or at replacement, so glance at the worker logs once.
 - Vercel production deployment `dpl_7A8uHeMomSnfntNWUqFiB84CJwKF`: READY for `5c46197`.
 - Showcase seeded: `demo-showcase` with 110 musicians, 40 hirers, 45 jobs, 60 applications, 25 conversations, 12 bookings, 12 acts, 8 urgent requests, 18 reviews, 40 posts.
 
 ## Verification (2026-09-30, UTC)
-- `https://verse-music-platform-production.up.railway.app/api/readiness` returns `{"ok":true,...}`.
+- `https://verse-music-platform-production.up.railway.app/api/readiness` returns `{"ok":true,...}` with release `5c46197140ee`; `/api/public/talent` still totals 111 after the redeploy.
 - `https://verse-music-platform.vercel.app/` returns 200 with the B3 head (theme-color, manifest, apple-touch-icon); `/manifest.webmanifest` is `application/manifest+json`; `/img/sitar-trio-1600.webp` is `image/webp`; `/hire/drummer/mumbai` has its own prerendered title and canonical; the B3-only chunk `LandingBelowFold` contains "Latest from The Stage".
 - `/api/public/talent?limit=40` lists 40 people, every one with `demo: true`, 33 verified; total 111 (110 demo + the owner). Demo profiles carry no photo (art avatars).
 - `/api/public/stats`: organic counts `professionals: 1, verifiedProfiles: 0`; the `listed` block counts the demo people (111 / 33).

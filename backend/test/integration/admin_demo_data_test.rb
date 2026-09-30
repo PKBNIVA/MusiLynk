@@ -187,7 +187,7 @@ class AdminDemoDataTest < ActionDispatch::IntegrationTest
     perform_enqueued_jobs
     summary = SyntheticQa::DemoJobs.find(job_id)
     assert_equal "succeeded", summary[:state]
-    assert_equal({ "jobseekers" => 110, "employers" => 40, "jobs" => 45, "acts" => 12, "posts" => 40, "bookings" => 6 },
+    assert_equal({ "jobseekers" => 110, "employers" => 40, "jobs" => 45, "acts" => 12, "posts" => 40, "bookings" => 12 },
       summary[:result].slice("jobseekers", "employers", "jobs", "acts", "posts", "bookings"))
     assert_equal 150, User.synthetic("demo-showcase").count
 

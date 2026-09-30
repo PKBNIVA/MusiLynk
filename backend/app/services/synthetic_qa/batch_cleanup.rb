@@ -4,7 +4,9 @@ module SyntheticQa
 
     # Every column that can hold a user id (foreign keys and loose references), by table. The purge
     # test walks the database and fails when a table with a foreign key to users is missing here, so a
-    # new table cannot silently make a purge roll back or leave rows behind.
+    # new table cannot silently make a purge roll back or leave rows behind. Columns listed here that
+    # have no delete statement (promo_codes.created_by_id/owner_user_id, users.vouched_by_id) are not
+    # purged by this class: schema.rb declares ON DELETE SET NULL for them, which the database applies.
     HANDLED_USER_COLUMNS = {
       "act_members" => %w[user_id], "acts" => %w[owner_id], "ai_topup_payments" => %w[user_id], "application_events" => %w[actor_id],
       "applications" => %w[candidate_id], "audit_logs" => %w[actor_id entity_id], "auth_connections" => %w[owner_id],

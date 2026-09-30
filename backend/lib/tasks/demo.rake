@@ -4,10 +4,11 @@ namespace :demo do
     # Safe in production: needs no ALLOW_SYNTHETIC_QA, only touches the demo-* batch it names, and refuses
     # to grow the demo population past SyntheticQa::Demo::MAX_USERS. Remove it again from Admin -> Demo data.
     batch = ENV.fetch("BATCH", SyntheticQa::Demo::SHOWCASE_BATCH)
+    # Before seeding, so the warning is not read after 200+ samples that cannot play already exist.
+    warn "demo:showcase: no AWS_BUCKET, so the work samples link to ccMixter, which refuses cross-site playback; the audio will not play." unless SyntheticQa::TrackMirror.enabled?
     outcome = SyntheticQa::Demo.with_admin_lock { SyntheticQa::Showcase.call(batch:) }
     abort "demo:showcase: another demo data job holds the lock; nothing was changed." if outcome == :locked
 
-    warn "demo:showcase: no AWS_BUCKET, so the work samples link to ccMixter, which refuses cross-site playback; the audio will not play." unless SyntheticQa::TrackMirror.enabled?
     if outcome.skipped
       puts "demo:showcase: #{batch} already exists (#{User.synthetic(batch).count} accounts); nothing to do."
     else

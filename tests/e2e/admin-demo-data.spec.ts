@@ -71,7 +71,7 @@ function demoApi() {
     if (job.kind === 'seed') {
       const showcase = job.size === 'showcase';
       job.result = showcase
-        ? { jobseekers: 110, employers: 40, jobs: 45, bookings: 6, acts: 12, reviews: 12, posts: 40 }
+        ? { jobseekers: 110, employers: 40, jobs: 45, bookings: 12, acts: 12, reviews: 18, posts: 40 }
         : { jobseekers: 20, employers: 8, jobs: 16, bookings: 16 };
       state.batches = [
         ...state.batches,
@@ -214,7 +214,7 @@ test('the showcase preset seeds once, and one batch can be deleted after confirm
   await expect(panel.getByTestId('demo-job-progress')).toBeVisible();
   await expect(panel.getByTestId('demo-job-status')).toHaveAttribute('data-state', 'succeeded', { timeout: 10_000 });
   await expect(panel.getByTestId('demo-job-status')).toContainText('110 musicians, 40 hirers, 45 opportunities');
-  await expect(panel.getByTestId('demo-job-status')).toContainText('12 acts, 40 Stage posts, 12 reviews');
+  await expect(panel.getByTestId('demo-job-status')).toContainText('12 acts, 40 Stage posts, 18 reviews');
   expect(api.state.requests).toContain('POST /api/admin/demo-data {"size":"showcase"}');
   await expect(panel.getByTestId('demo-batches')).toContainText('demo-showcase');
   await expect(panel.getByRole('button', { name: 'Showcase (150)' })).toBeDisabled();

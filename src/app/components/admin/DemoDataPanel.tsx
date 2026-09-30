@@ -66,9 +66,9 @@ const PRESET_NOTE: Record<string, string> = {
   large: 'Generated sample accounts',
 };
 const INCLUDED = [
-  'Showcase: 110 musicians (60% in Mumbai, 33 Verified, 3 Verified Pro) with bios, rates, languages and labelled CC BY audio samples.',
+  'Showcase: 110 musicians (60% in Mumbai, 33 Verified, 5 of them Verified Pro) with bios, rates, languages and labelled CC BY audio samples.',
   'Showcase: 40 hirers with company profiles, 45 opportunities, 8 urgent requests, 60 applications and 25 conversations.',
-  'Showcase: 12 acts, 6 completed bookings with 12 reviews, and 40 Stage posts with reactions and comments.',
+  'Showcase: 12 acts, 12 completed bookings with 18 reviews, and 40 Stage posts with reactions and comments.',
   'Small, Medium and Large: generated musicians, hirers and opportunities with templated text; no Stage posts or audio.',
   'Every account shows the Demo badge, and each batch can be deleted here in one click.',
 ];

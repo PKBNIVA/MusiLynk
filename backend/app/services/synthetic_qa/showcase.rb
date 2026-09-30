@@ -16,6 +16,7 @@ module SyntheticQa
   class Showcase
     BATCH = Demo::SHOWCASE_BATCH
     SEED = 20_260_930
+    BUCKET_UPLOAD_ERROR = "must be one of your own completed uploads".freeze
     MUSICIANS = 110
     HIRERS = 40
 
@@ -333,8 +334,12 @@ module SyntheticQa
         item.genres |= found.genres
         item.instruments |= found.instruments
         # A copy in the app's own bucket is not "one of the user's uploads", which is what the model insists on for
-        # bucket URLs; the seeder vouches for it.
-        item.save!(validate: !TrackMirror.enabled?)
+        # bucket URLs; the seeder vouches for that one rule. Every other rule (title, kind, URL shape) still applies.
+        item.validate
+        foreign = item.errors.reject { _1.message == BUCKET_UPLOAD_ERROR }
+        raise ActiveRecord::RecordInvalid, item if foreign.any? || (item.errors.any? && !TrackMirror.enabled?)
+
+        item.save!(validate: false)
       end
     end
 

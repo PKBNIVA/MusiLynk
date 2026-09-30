@@ -6,7 +6,11 @@ module SyntheticQa
   module Demo
     PREFIX = "demo-".freeze
     MAX_USERS = 300
+    # The hand-written "Verse showcase" (SyntheticQa::Showcase): fixed batch name, so seeding it is idempotent.
+    SHOWCASE_BATCH = "demo-showcase".freeze
+    SHOWCASE_SIZE = "showcase".freeze
     SIZES = {
+      SHOWCASE_SIZE => { jobseekers: 110, employers: 40 },
       "small" => { jobseekers: 20, employers: 8 },
       "medium" => { jobseekers: 60, employers: 20 },
       "large" => { jobseekers: 150, employers: 50 }
@@ -21,6 +25,11 @@ module SyntheticQa
     def batch?(name) = name.to_s.start_with?(PREFIX)
 
     def user?(user) = user.present? && batch?(user.synthetic_batch)
+
+    # Any synthetic account (QA or demo). Background jobs that email, badge or count people skip these.
+    def synthetic_user?(user) = user.present? && user.synthetic_batch.present?
+
+    def showcase? = User.exists?(synthetic_batch: SHOWCASE_BATCH)
 
     # Untagged users plus demo batches; every other synthetic batch stays hidden.
     def publicly_listed(scope)

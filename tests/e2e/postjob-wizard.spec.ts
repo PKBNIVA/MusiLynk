@@ -156,6 +156,8 @@ test('choosing not to disclose the pay hides the amounts and warns about fewer a
   await page.getByRole('combobox', { name: 'Location' }).fill('Mumbai');
   await page.getByRole('combobox', { name: 'Location' }).press('Enter');
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
+  // The warning is about hiding the pay, so the untouched "Show the pay" choice does not carry it.
+  await expect(page.getByText('Listings that don’t show the pay get fewer applicants.')).toHaveCount(0);
   await page.getByLabel('Not disclosed').check();
   await expect(page.getByText('Listings that don’t show the pay get fewer applicants.')).toBeVisible();
   await expect(page.getByLabel('Minimum pay')).toHaveCount(0);

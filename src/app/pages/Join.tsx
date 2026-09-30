@@ -502,7 +502,6 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
       <Field
         id="join-company"
         label="Organisation or team name"
-
         error={errors.company}
         hint="We’ll create its Page on Verse, so you can post work as it."
       >

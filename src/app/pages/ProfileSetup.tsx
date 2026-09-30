@@ -317,9 +317,13 @@ export default function ProfileSetup() {
           : 'idle';
   const anyUnsaved = loaded && SECTIONS.some((s) => dirty(s.id) || savingSection[s.id]);
 
-  /** Saves one section's fields on their own. Resolves true when nothing is left unsaved in it. */
+  /**
+   * Saves one section's fields on their own. Resolves true when nothing is left unsaved in it.
+   * A `quiet` save (the timer that follows typing) sends only a valid section and shows no
+   * messages for one that is still being typed; leaving the section or "Save now" shows them.
+   */
   const saveSection = useCallback(
-    async (id: SectionId): Promise<boolean> => {
+    async (id: SectionId, quiet = false): Promise<boolean> => {
       clearTimeout(timers.current[id]);
       const section = SECTIONS.find((s) => s.id === id)!;
       const raw = fRef.current;
@@ -331,7 +335,7 @@ export default function ProfileSetup() {
       for (const k of section.fields) {
         const message = problems[k as ProfileField] ?? '';
         if (message) invalid = true;
-        form.setFieldError(k as ProfileField, message);
+        if (!quiet) form.setFieldError(k as ProfileField, message);
       }
       if (invalid) return false;
       inFlight.current[id] = true;
@@ -375,13 +379,13 @@ export default function ProfileSetup() {
   );
 
   // Autosave: a section that has changed saves itself a moment after typing stops, and when focus
-  // leaves it (see onBlur below). Saved values leave the "unsaved" state; invalid ones stay put
-  // with their message until they are fixed.
+  // leaves it (see onBlur below). Saved values leave the "unsaved" state; a section that is not
+  // valid yet waits quietly, and shows its message once focus leaves it or on "Save now".
   useEffect(() => {
     if (!loaded) return;
     for (const s of SECTIONS) {
       clearTimeout(timers.current[s.id]);
-      if (dirty(s.id, f, base)) timers.current[s.id] = setTimeout(() => void saveSection(s.id), AUTOSAVE_MS);
+      if (dirty(s.id, f, base)) timers.current[s.id] = setTimeout(() => void saveSection(s.id, true), AUTOSAVE_MS);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- rescheduled on every edit
   }, [f, base, loaded, saveSection]);

@@ -56,7 +56,7 @@ test('shows six templates, one per opportunity type', async ({ page }) => {
   await expect(group.getByRole('button', { name: 'Teaching' })).toBeVisible();
 });
 
-test('picking a template prefills title, description and screening questions', async ({ page }) => {
+test('picking a template prefills description and screening questions and keeps the typed title', async ({ page }) => {
   await mockPostJob(page);
   await toReview(page);
   await page.getByRole('button', { name: 'Studio session' }).click();
@@ -65,7 +65,7 @@ test('picking a template prefills title, description and screening questions', a
   await expect(page.getByLabel('Screening questions')).toHaveValue(/Can you read charts/);
   await page.getByRole('button', { name: 'Back' }).click();
   await page.getByRole('button', { name: 'Back' }).click();
-  await expect(page.getByLabel('Title')).toHaveValue('Session musician for a studio recording');
+  await expect(page.getByLabel('Title')).toHaveValue('Session player');
 });
 
 // J-02: the template's {{placeholders}} are highlighted and block submit until they are replaced.
@@ -101,7 +101,7 @@ test("picking a different template replaces the previous one's content", async (
   await expect(page.getByLabel(/^Description/)).toHaveValue(/is looking for a/);
   await page.getByRole('button', { name: 'Back' }).click();
   await page.getByRole('button', { name: 'Back' }).click();
-  await expect(page.getByLabel('Title')).toHaveValue('Music teacher / instructor');
+  await expect(page.getByLabel('Title')).toHaveValue('Session player');
 });
 
 // V-14: a Free hirer publishing a second active listing sees a dialog, not a toast, and the

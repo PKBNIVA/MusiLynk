@@ -616,7 +616,8 @@ export default function PostJob() {
   const questions = lines(f.screeningQuestions);
   const placeholders = findPlaceholders(f.title, f.description, f.requirements, f.screeningQuestions);
   const showTemplates = !job || job.status === 'draft';
-  const noAmount = f.payMode === 'undisclosed' || (f.payMode === 'range' && !f.compensationMin && !f.compensationMax);
+  // The warning belongs to the choice to hide the pay, not to the untouched default.
+  const payHidden = f.payMode === 'undisclosed';
   const periods =
     !f.compensationPeriod || PAY_PERIODS.includes(f.compensationPeriod)
       ? PAY_PERIODS
@@ -636,8 +637,9 @@ export default function PostJob() {
   function applyTemplate(template: JobPostTemplate) {
     setF((x) => ({
       ...x,
-      opportunityKind: template.opportunityKind,
-      title: template.title,
+      // Keep a title already typed on step 1; the template only fills an empty one.
+      opportunityKind: x.title.trim() ? x.opportunityKind : template.opportunityKind,
+      title: x.title.trim() ? x.title : template.title,
       description: template.description,
       screeningQuestions: template.screeningQuestions.join('\n'),
     }));
@@ -718,7 +720,8 @@ export default function PostJob() {
             <AutocompleteInput
               id="job-location"
               field="cities"
-              label="Location (required)"
+              label="Location"
+              required
               multiple={false}
               values={f.location ? [f.location] : []}
               onChange={(vs) => set('location', vs[0] || '')}
@@ -829,7 +832,7 @@ export default function PostJob() {
                 </label>
               ))}
             </div>
-            {noAmount && (
+            {payHidden && (
               <p
                 role="note"
                 className="mt-3 rounded-lg border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
@@ -926,7 +929,6 @@ export default function PostJob() {
               <Field
                 id="job-open-slots"
                 label="Open slots"
-                required
                 error={form.errors.slots}
                 help="How many people you want to hire for this. A horn section of three is 3 slots."
               >

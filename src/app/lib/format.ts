@@ -160,3 +160,51 @@ export function formatWhen(value: DateInput, options: FormatOptions & { now?: Da
     .replace(',', '');
   return `${day} ${time}`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Musician rates and response time, for cards and profiles.
+
+export interface RateFields {
+  sessionRate?: Amount;
+  showRate?: Amount;
+  dayRate?: Amount;
+  tourDayRate?: Amount;
+  hourlyRate?: Amount;
+  currency?: string | null;
+}
+
+/** Lowest of the session, show, day and hourly rates that are filled in (tour-day pay is a different engagement); null when none. */
+export function fromRate(p: RateFields): number | null {
+  const rates = [p.sessionRate, p.showRate, p.dayRate, p.hourlyRate]
+    .map(toAmount)
+    .filter((n): n is number => n !== null && n > 0);
+  return rates.length ? Math.min(...rates) : null;
+}
+
+/** "from ₹5,000", or '' when no rate is published. */
+export function formatFromRate(p: RateFields): string {
+  const rate = fromRate(p);
+  return rate === null ? '' : `from ${formatMoney(rate, p.currency || 'INR')}`;
+}
+
+/** The filled rows of the rates table, in a fixed order: Session, Show, Day, Tour day, Hourly. */
+export function rateRows(p: RateFields): { label: string; amount: string }[] {
+  const rows: [string, Amount][] = [
+    ['Session', p.sessionRate],
+    ['Show', p.showRate],
+    ['Day', p.dayRate],
+    ['Tour day', p.tourDayRate],
+    ['Hourly', p.hourlyRate],
+  ];
+  return rows.flatMap(([label, value]) => {
+    const n = toAmount(value);
+    return n !== null && n > 0 ? [{ label, amount: formatMoney(n, p.currency || 'INR') }] : [];
+  });
+}
+
+/** "Replies in ~12 min", "Replies in ~2 h"; '' when the response time is not known. */
+export function formatReplyTime(minutes: number | null | undefined): string {
+  if (minutes === null || minutes === undefined || !Number.isFinite(minutes) || minutes < 0) return '';
+  if (minutes < 90) return `Replies in ~${Math.max(1, Math.round(minutes))} min`;
+  return `Replies in ~${Math.round(minutes / 60)} h`;
+}

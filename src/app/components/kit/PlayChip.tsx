@@ -45,7 +45,7 @@ export function PlayChipButton({ sample, onOpen }: { sample: PortfolioItem; onOp
         <Play aria-hidden="true" size={13} className="shrink-0 fill-current text-violet-300" />
       )}
       <span className="truncate">{truncateTitle(sample.title)}</span>
-      {peaks && <WaveformStrip peaks={peaks} height={16} className="w-12 shrink-0" />}
+      {peaks && <WaveformStrip peaks={peaks} height={16} className="w-20 shrink-0" />}
       <span className="shrink-0 text-slate-400">{providerOf(sample)}</span>
     </button>
   );

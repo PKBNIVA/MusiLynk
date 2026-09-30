@@ -1,6 +1,7 @@
 import { usePageMeta } from '../components/PageMeta';
 import { Link } from 'react-router';
 import { PublicNav } from '../components/PublicNav';
+import { PhotoHeader } from '../components/landing/PhotoHeader';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Search, Briefcase, Music, Users, Zap, ShieldCheck, CheckCircle2 } from 'lucide-react';
@@ -88,16 +89,16 @@ export default function Guide() {
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
       <main className="max-w-6xl mx-auto px-5 py-14">
-        <div className="max-w-3xl">
-          <div className="text-violet-300 text-sm font-medium">5-minute guide</div>
-          <h1 className="text-4xl md:text-6xl font-bold mt-2">
-            Get what you came for without learning the whole platform.
-          </h1>
-          <p className="text-lg text-slate-400 mt-5 leading-8">
+        <PhotoHeader
+          photo="sitar-trio"
+          eyebrow="5-minute guide"
+          title="Get what you came for without learning the whole platform."
+        >
+          <p className="text-lg leading-8">
             Verse has many music-industry workflows, but you rarely need all of them. Pick your goal below and follow
             only that path.
           </p>
-          <div className="flex gap-2 mt-7">
+          <div className="flex gap-2 mt-6">
             <Button asChild>
               <Link to="/start">Choose my goal</Link>
             </Button>
@@ -108,7 +109,7 @@ export default function Guide() {
               </Link>
             </Button>
           </div>
-        </div>
+        </PhotoHeader>
         <div className="grid md:grid-cols-2 gap-5 mt-12">
           {paths.map((p) => (
             <Card key={p.title} className="bg-white/[.05] border-white/10">

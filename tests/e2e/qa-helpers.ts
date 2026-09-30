@@ -37,6 +37,7 @@ export const accessibilityRoutes = [
   ['Guide', '/guide'],
   ['Search', '/search'],
   ['Site map', '/sitemap'],
+  ['Photo credits', '/credits'],
   ['About', '/about'],
   ['Terms', '/terms'],
   ['Privacy', '/privacy'],

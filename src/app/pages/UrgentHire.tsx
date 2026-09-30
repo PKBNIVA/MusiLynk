@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { Navigation } from '../components/Navigation';
+import { PublicNav } from '../components/PublicNav';
+import { PhotoHeader } from '../components/landing/PhotoHeader';
 import { usePageMeta } from '../components/PageMeta';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -12,7 +13,7 @@ import { errorMessage } from '../lib/errors';
 import { useAuth } from '../lib/authContext';
 import { saveUrgentDraft } from '../lib/urgentDraft';
 import { toast } from 'sonner';
-import { CheckCircle2, Clock3, MessageCircle, Siren, Zap } from 'lucide-react';
+import { CheckCircle2, Clock3, MessageCircle, Zap } from 'lucide-react';
 import type { UrgentRequest, UrgentRequestResponse } from '../lib/apiTypes';
 
 type Confirmed = { id: string; notifiedCount: number; responseTimePromise: string };
@@ -35,6 +36,12 @@ export default function UrgentHire() {
   const urgent = useUrgentForm({ role: prefill.get('role') || undefined, city: prefill.get('city') || undefined });
   const { form } = urgent;
   const [submitting, setSubmitting] = useState(false);
+  // The landing page's "Need someone by tomorrow" band passes the date it showed along.
+  const askedStartAt = prefill.get('startAt') || '';
+  const setStartAt = urgent.set;
+  useEffect(() => {
+    if (/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(askedStartAt)) setStartAt('startAt', askedStartAt);
+  }, [askedStartAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit() {
     const body = urgent.validate();
@@ -63,21 +70,23 @@ export default function UrgentHire() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <Navigation />
-      <main className="max-w-2xl mx-auto px-4 sm:px-5 pt-28 pb-20">
+      <PublicNav />
+      <main className="max-w-2xl mx-auto px-4 sm:px-5 pt-8 pb-20">
         {confirmed ? (
           <StatusCard confirmed={confirmed} onNewRequest={() => setConfirmed(null)} />
         ) : (
           <>
-            <p className="text-xs uppercase tracking-[.22em] text-orange-300 flex items-center gap-2">
-              <Siren size={14} /> Need someone by tomorrow
-            </p>
-            <h1 className="text-3xl sm:text-4xl font-bold mt-2">Find a verified musician, fast.</h1>
-            <p className="text-slate-400 mt-2">
-              Tell us who you need and where. We notify verified musicians nearby right away — most requests get a first
-              response within 2 hours.
-            </p>
-            <Card className="bg-white/[.055] border-white/10 mt-7">
+            <PhotoHeader
+              photo="rehearsal-room"
+              eyebrow="Need someone by tomorrow"
+              title="Find a verified musician, fast."
+            >
+              <p>
+                Tell us who you need and where. We notify verified musicians nearby right away — most requests get a
+                first response within 2 hours.
+              </p>
+            </PhotoHeader>
+            <Card className="bg-white/[.055] border-white/10 mt-6">
               <CardContent className="p-5 sm:p-6 space-y-4">
                 {form.formError && (
                   <p role="alert" className="text-sm text-rose-300">

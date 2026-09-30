@@ -29,6 +29,22 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     assert_includes response.body, job.title
     assert_includes response.body, "\"@type\":\"JobPosting\""
     assert_includes response.body, "<link rel=\"canonical\""
+    assert_includes response.body, %(<meta property="og:image" content="#{FrontendUrl.base}/api/og/opportunity/#{job.id}.png">)
+    assert_includes response.body, %(<meta name="twitter:image" content="#{FrontendUrl.base}/api/og/opportunity/#{job.id}.png">)
+  end
+
+  test "share pages redirect browsers by meta refresh but not Google's crawlers" do
+    job = create_job("published")
+    get "/share/opportunities/#{job.id}", headers: { "User-Agent" => "WhatsApp/2.23" }
+    assert_includes response.body, %(http-equiv="refresh")
+    assert_equal "User-Agent", response.headers["Vary"]
+    [ "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "Mozilla/5.0 (compatible; Google-InspectionTool/1.0)" ].each do |agent|
+      get "/share/opportunities/#{job.id}", headers: { "User-Agent" => agent }
+      assert_response :success
+      refute_includes response.body, %(http-equiv="refresh")
+      assert_includes response.body, "\"@type\":\"JobPosting\""
+      assert_includes response.body, %(<link rel="canonical" href="#{FrontendUrl.base}/opportunities/#{job.id}">)
+    end
   end
 
   test "draft job share page 404s" do
@@ -58,6 +74,7 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, user.name
     assert_includes response.body, "\"@type\":\"Person\""
+    assert_includes response.body, %(<meta property="og:image" content="#{FrontendUrl.base}/api/og/professional/#{user.id}.png">)
   end
 
   test "act share page renders" do
@@ -66,6 +83,13 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Share Act"
     assert_includes response.body, "\"@type\":\"MusicGroup\""
+    assert_includes response.body, %(<meta property="og:image" content="#{FrontendUrl.base}/api/og/act/#{act.id}.png">)
+  end
+
+  test "an unknown id and the default page keep the static default image" do
+    get "/share/professionals/does-not-exist"
+    assert_response :not_found
+    assert_includes response.body, %(<meta property="og:image" content="#{FrontendUrl.base}/og-default.png">)
   end
 
   test "portfolio share page renders" do

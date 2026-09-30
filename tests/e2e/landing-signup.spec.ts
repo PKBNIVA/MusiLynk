@@ -37,7 +37,7 @@ test.describe('landing page', () => {
     expect(await page.locator('select#landing-city').count()).toBe(0);
     await city.click();
     await expect(page.getByRole('option', { name: 'Mumbai' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('option', { name: 'More cities soon' })).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByRole('option', { name: 'Delhi, Bengaluru, Pune, Goa coming' })).toHaveAttribute('aria-disabled', 'true');
     await page.keyboard.press('Escape');
     await page
       .getByTestId('hero-paths')

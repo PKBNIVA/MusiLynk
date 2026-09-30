@@ -4,11 +4,13 @@ import { HowItWorks } from './HowItWorks';
 import { LiveProof } from './LiveProof';
 import { TrustStrip } from './TrustStrip';
 import { PopularSearches } from './PopularSearches';
+import { NowOnVerse } from './NowOnVerse';
 
 /** Everything under the hero, loaded as its own chunk after the first paint. */
-export default function LandingBelowFold({ city: _city }: { city: string }) {
+export default function LandingBelowFold({ city }: { city: string }) {
   return (
     <>
+      <NowOnVerse city={city} />
       <HowItWorks />
       <LiveProof />
       <TrustStrip />

@@ -108,3 +108,26 @@ export function urgentPath(fields: { role?: string; city?: string; startAt?: str
   const qs = query.toString();
   return qs ? `/urgent?${qs}` : '/urgent';
 }
+
+/** A line from the platform's own account on The Stage (author type "system", id "verse"). */
+export interface StageTeaserPost {
+  id: string;
+  body: string;
+  createdAt: string;
+}
+
+/**
+ * The three newest public-safe posts by Verse itself. The Stage's author route is public; a
+ * system post is public by construction. "Welcome Priya, drummer in Mumbai" posts name one new
+ * member, so only the aggregate and platform lines (verified, filled requests, roundups) show.
+ */
+export async function loadStageTeaser(limit = 3): Promise<StageTeaserPost[]> {
+  const body = await apiGet<{ posts?: { id: string; body?: string | null; createdAt: string; visibility?: string }[] }>(
+    '/stage/authors/system/verse/posts',
+    { skipAuthRedirect: true, timeoutMs: 6_000 },
+  );
+  return (body.posts || [])
+    .filter((post) => post.visibility !== 'followers' && post.body?.trim() && !/^Welcome\s/i.test(post.body))
+    .slice(0, limit)
+    .map((post) => ({ id: post.id, body: post.body!.trim(), createdAt: post.createdAt }));
+}

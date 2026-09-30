@@ -9,7 +9,7 @@ class SharePagesController < ActionController::API
   }.freeze
 
   def job
-    job = Job.published.find_by(id: params[:id])
+    job = Job.published.joins(:employer).merge(User.organic).find_by(id: params[:id])
     return render_default(:not_found) unless job
 
     description = plain_text(job.description)
@@ -24,7 +24,7 @@ class SharePagesController < ActionController::API
   end
 
   def professional
-    user = User.discoverable_talent.find_by(id: params[:id])
+    user = User.discoverable_talent.organic.find_by(id: params[:id])
     return render_default(:not_found) unless user
 
     profile = user.profile
@@ -40,7 +40,7 @@ class SharePagesController < ActionController::API
   end
 
   def act
-    act = Act.where(status: "active").find_by(id: params[:id])
+    act = Act.where(status: "active").joins(:owner).merge(User.organic).find_by(id: params[:id])
     return render_default(:not_found) unless act
 
     bio = plain_text(act.bio)
@@ -56,7 +56,7 @@ class SharePagesController < ActionController::API
 
   def portfolio
     portfolio = Portfolio.with_owner.find_by(slug: params[:slug].to_s)
-    return render_default(:not_found) unless portfolio&.publicly_readable?
+    return render_default(:not_found) unless portfolio&.publicly_readable? && !synthetic_owner?(portfolio)
 
     bio = plain_text(portfolio.effective["bio"])
     image = portfolio.members.first&.first&.thumbnail_url.presence
@@ -73,6 +73,9 @@ class SharePagesController < ActionController::API
   private
 
   def base = FrontendUrl.base
+
+  # Demo and QA accounts never get a crawlable preview page (they are excluded from the sitemap too).
+  def synthetic_owner?(portfolio) = User.where(id: portfolio.library_user_id).where.not(synthetic_batch: nil).exists?
 
   def plain_text(value)
     return "" if value.blank?

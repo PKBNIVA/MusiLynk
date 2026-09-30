@@ -18,7 +18,7 @@ class SharePagesController < ActionController::API
       description: truncate(description),
       canonical_path: "/opportunities/#{job.id}",
       og_type: "article",
-      image: nil,
+      image: og_image("opportunity", job.id),
       json_ld: job_json_ld(job, description)
     )
   end
@@ -34,7 +34,7 @@ class SharePagesController < ActionController::API
       description: truncate(bio.presence || profile&.headline.to_s),
       canonical_path: "/professionals/#{user.id}",
       og_type: "profile",
-      image: nil,
+      image: og_image("professional", user.id),
       json_ld: person_json_ld(user, profile, bio)
     )
   end
@@ -49,7 +49,7 @@ class SharePagesController < ActionController::API
       description: truncate(bio),
       canonical_path: "/acts/#{act.id}",
       og_type: "website",
-      image: nil,
+      image: og_image("act", act.id),
       json_ld: act_json_ld(act, bio)
     )
   end
@@ -73,6 +73,10 @@ class SharePagesController < ActionController::API
   private
 
   def base = FrontendUrl.base
+
+  # The 1200x630 card drawn per share by the Vercel function api/og.ts (reached through the
+  # /api/og/:type/:id rewrite in vercel.json); an unknown id gets its default card.
+  def og_image(type, id) = "#{base}/api/og/#{type}/#{ERB::Util.url_encode(id)}.png"
 
   # Demo and QA accounts never get a crawlable preview page (they are excluded from the sitemap too).
   def synthetic_owner?(portfolio) = User.where(id: portfolio.library_user_id).where.not(synthetic_batch: nil).exists?
@@ -148,16 +152,25 @@ class SharePagesController < ActionController::API
     ).html_safe, status:, content_type: "text/html"
   end
 
+  # Google's crawlers are rewritten to these pages too (vercel.json) so the JobPosting/Person
+  # JSON-LD reaches them; a 0-second refresh to the canonical URL would look like a self-redirect.
+  GOOGLE_CRAWLER = /Googlebot|Google-InspectionTool|GoogleOther/i
+
+  def google_crawler? = GOOGLE_CRAWLER.match?(request.user_agent.to_s)
+
   def render_html(title:, description:, canonical_path:, og_type:, image:, json_ld:)
     canonical = "#{base}#{canonical_path}"
     resolved_image = image.presence || "#{base}/og-default.png"
     resolved_image = "#{base}#{resolved_image}" unless resolved_image.start_with?("http")
     expires_in 10.minutes, public: true
-    render html: page_html(title:, description:, canonical:, og_type:, image: resolved_image, json_ld:).html_safe, content_type: "text/html"
+    response.headers["Vary"] = "User-Agent"
+    render html: page_html(title:, description:, canonical:, og_type:, image: resolved_image, json_ld:, refresh: !google_crawler?).html_safe,
+      content_type: "text/html"
   end
 
-  def page_html(title:, description:, canonical:, og_type:, image:, json_ld:)
+  def page_html(title:, description:, canonical:, og_type:, image:, json_ld:, refresh: true)
     esc = CGI.method(:escapeHTML)
+    refresh_tag = refresh ? %(<meta http-equiv="refresh" content="0; url=#{esc.call(canonical)}">) : ""
     ld_script = json_ld ? %(<script type="application/ld+json">#{json_ld.to_json.gsub('</', '<\/')}</script>) : ""
     <<~HTML
       <!doctype html>
@@ -177,7 +190,7 @@ class SharePagesController < ActionController::API
         <meta name="twitter:title" content="#{esc.call(title)}">
         <meta name="twitter:description" content="#{esc.call(description)}">
         <meta name="twitter:image" content="#{esc.call(image)}">
-        <meta http-equiv="refresh" content="0; url=#{esc.call(canonical)}">
+        #{refresh_tag}
         #{ld_script}
         <style>body{background:#0b0b12;color:#f4f4f6;font-family:system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px}
         a{color:#8b8bff;font-size:1.1rem}</style>

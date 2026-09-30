@@ -55,6 +55,7 @@ export function LandingFooter() {
     ['Safety', '/safety'],
     ['Privacy', '/privacy'],
     ['Terms', '/terms'],
+    ['Photo credits', '/credits'],
     ['Site map', '/sitemap'],
     ['Contact', '/contact'],
   ] as const;

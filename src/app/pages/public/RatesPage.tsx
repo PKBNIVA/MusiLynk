@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
+import { PhotoHeader } from '../../components/landing/PhotoHeader';
 import { usePageMeta } from '../../components/PageMeta';
 import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
@@ -80,14 +81,15 @@ export default function RatesPage() {
   usePageMeta(title, description, {
     canonicalPath: ratesPagePath(city),
     type: 'website',
-    noindex: !data || !data.indexable,
+    // Indexable until the API has answered and says otherwise (too little data); a failed lookup is not a page.
+    noindex: data ? !data.indexable : Boolean(error),
     jsonLd,
   });
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
-      <main className="max-w-4xl mx-auto px-5 py-14">
+      <main className="max-w-5xl mx-auto px-5 py-14">
         {loading ? (
           <p className="text-slate-400 text-center py-16" role="status">
             Loading…
@@ -101,15 +103,23 @@ export default function RatesPage() {
           </div>
         ) : (
           <>
-            <p className="text-xs uppercase tracking-[.22em] text-violet-300">Rates guide</p>
-            <h1 className="text-4xl md:text-6xl font-bold mt-2">What musicians charge in {data.city.name}</h1>
-            <p className="text-slate-400 mt-4 max-w-2xl">
-              Ranges reported by verified and unverified professionals on Verse; they are a guide, not a quote.
-            </p>
-            <p className="text-xs text-slate-500 mt-3">
-              Last updated{' '}
-              {new Date(data.updatedAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
+            <PhotoHeader
+              photo="recording-studio"
+              eyebrow="Rates guide"
+              title={`What musicians charge in ${data.city.name}`}
+            >
+              <p className="max-w-2xl">
+                Ranges reported by verified and unverified professionals on Verse; they are a guide, not a quote.
+              </p>
+              <p className="mt-3 text-xs text-slate-300">
+                Last updated{' '}
+                {new Date(data.updatedAt).toLocaleDateString('en-IN', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
+            </PhotoHeader>
 
             <div className="overflow-x-auto mt-8">
               <table className="w-full text-left text-sm" data-testid="rates-table">

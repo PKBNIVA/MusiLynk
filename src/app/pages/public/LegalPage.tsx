@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { usePageMeta } from '../../components/PageMeta';
 import { Link, useLocation } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
+import { PhotoHeader } from '../../components/landing/PhotoHeader';
 import { apiGet } from '../../lib/api';
 
 // GET /api/legal/policy (LegalController#policy) — the DPDP grievance officer placeholders
@@ -284,6 +285,31 @@ function dynamicItems(key: string, policy: LegalPolicy | null): [string, string]
   return [];
 }
 
+/** The photograph behind each page's header (public/img, credited on /credits). */
+const PHOTOS: Record<string, string> = {
+  about: 'wedding-band',
+  safety: 'choir-stage',
+  community: 'choir-stage',
+  contact: 'studio-vocalist',
+};
+
+const anchorId = (title: string) =>
+  `s-${title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')}`;
+
+const RELATED: [label: string, to: string][] = [
+  ['Terms', '/terms'],
+  ['Privacy', '/privacy'],
+  ['Safety', '/safety'],
+  ['Browser storage', '/cookies'],
+  ['Refunds', '/refund-policy'],
+  ['Conduct', '/community-guidelines'],
+  ['Accessibility', '/accessibility'],
+  ['Contact', '/contact'],
+];
+
 export default function LegalPage() {
   const path = useLocation().pathname.split('/').filter(Boolean)[0] || 'about';
   const key = path === 'community-guidelines' ? 'community' : path === 'refund-policy' ? 'refunds' : path;
@@ -294,41 +320,61 @@ export default function LegalPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
-      <main className="max-w-4xl mx-auto px-5 py-14">
-        <div className="text-xs uppercase tracking-[.2em] text-violet-300">Verse information</div>
-        <h1 className="text-4xl md:text-6xl font-bold mt-2">{content.title}</h1>
-        <p className="text-slate-300 leading-8 mt-6 text-lg">{content.intro}</p>
-        <div className="mt-9 space-y-4">
-          {items.map(([title, body]) => (
-            <section key={title} className="rounded-xl border border-white/10 bg-white/[.035] p-5">
-              <h2 className="font-semibold text-lg">{title}</h2>
-              <p className="text-slate-400 leading-7 mt-2">{body}</p>
-              {body.includes(SUPPORT_EMAIL) && (
-                <a
-                  className="inline-block mt-3 text-violet-300 hover:text-violet-200 underline underline-offset-4"
-                  href={`mailto:${SUPPORT_EMAIL}`}
-                >
-                  Email Verse support
-                </a>
-              )}
-            </section>
+      <main className="max-w-5xl mx-auto px-5 py-10 md:py-14">
+        <PhotoHeader photo={PHOTOS[key] ?? 'sarod-mumbai'} eyebrow="Verse information" title={content.title}>
+          <p className="text-lg leading-8">{content.intro}</p>
+        </PhotoHeader>
+        <div className="mt-9 lg:grid lg:grid-cols-[13rem_1fr] lg:gap-10">
+          {items.length > 3 && (
+            <nav aria-label="On this page" className="hidden lg:block">
+              <ul className="sticky top-24 space-y-2 text-sm" data-testid="legal-contents">
+                {items.map(([title]) => (
+                  <li key={title}>
+                    <a href={`#${anchorId(title)}`} className="text-slate-400 hover:text-white">
+                      {title.replace(/ — Draft, pending legal review$/, '')}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+          <div className={`space-y-4 ${items.length > 3 ? '' : 'lg:col-span-2'}`}>
+            {items.map(([title, body]) => (
+              <section
+                key={title}
+                id={anchorId(title)}
+                className="scroll-mt-24 rounded-xl border border-white/10 bg-white/[.035] p-5"
+              >
+                <h2 className="font-semibold text-lg">{title}</h2>
+                <p className="text-slate-300 leading-7 mt-2">{body}</p>
+                {body.includes(SUPPORT_EMAIL) && (
+                  <a
+                    className="inline-block mt-3 text-violet-300 hover:text-violet-200 underline underline-offset-4"
+                    href={`mailto:${SUPPORT_EMAIL}`}
+                  >
+                    Email Verse support
+                  </a>
+                )}
+              </section>
+            ))}
+            {['terms', 'privacy', 'cookies', 'refunds'].includes(key) && (
+              <p className="text-xs text-slate-400 pt-3">
+                Effective {EFFECTIVE_DATE}. Material updates will be published on this page.
+              </p>
+            )}
+          </div>
+        </div>
+        <nav aria-label="Related pages" className="mt-10 flex flex-wrap gap-2 text-sm">
+          {RELATED.filter(([, to]) => to !== `/${path}`).map(([label, to]) => (
+            <Link
+              key={to}
+              to={to}
+              className="rounded-full border border-white/10 px-3.5 py-1.5 text-slate-300 hover:border-white/30 hover:text-white"
+            >
+              {label}
+            </Link>
           ))}
-        </div>
-        {['terms', 'privacy', 'cookies', 'refunds'].includes(key) && (
-          <p className="text-xs text-slate-500 mt-7">
-            Effective {EFFECTIVE_DATE}. Material updates will be published on this page.
-          </p>
-        )}
-        <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
-          <Link to="/terms">Terms</Link>
-          <Link to="/privacy">Privacy</Link>
-          <Link to="/safety">Safety</Link>
-          <Link to="/cookies">Browser storage</Link>
-          <Link to="/refund-policy">Refunds</Link>
-          <Link to="/community-guidelines">Conduct</Link>
-          <Link to="/accessibility">Accessibility</Link>
-          <Link to="/contact">Contact</Link>
-        </div>
+        </nav>
       </main>
     </div>
   );

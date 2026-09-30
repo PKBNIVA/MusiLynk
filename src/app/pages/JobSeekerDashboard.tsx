@@ -174,7 +174,7 @@ export default function JobSeekerDashboard() {
             scene="stage"
             title="Your first gig starts with your work"
             hint="Hirers hear a sample before they message."
-            action={{ label: 'Add a work sample', to: '/jobseeker/library' }}
+            action={{ label: 'Add a work sample', to: '/jobseeker/library', variant: 'outline' }}
           />
         )}
         {state === 'ready' && (

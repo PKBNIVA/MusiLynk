@@ -5,7 +5,8 @@ import { Scene, type SceneName } from './scenes';
 type Props = {
   scene: SceneName;
   title: string;
-  action?: { label: string; to?: string; onClick?: () => void };
+  /** `outline` when the page already has its one primary button elsewhere. */
+  action?: { label: string; to?: string; onClick?: () => void; variant?: 'default' | 'outline' };
   hint?: string;
 };
 
@@ -18,11 +19,11 @@ export function EmptyState({ scene, title, action, hint }: Props) {
       {hint && <p className="mt-1 max-w-sm text-sm text-slate-400">{hint}</p>}
       {action &&
         (action.to ? (
-          <Button asChild className="mt-5">
+          <Button asChild variant={action.variant} className="mt-5">
             <Link to={action.to}>{action.label}</Link>
           </Button>
         ) : (
-          <Button className="mt-5" onClick={action.onClick}>
+          <Button variant={action.variant} className="mt-5" onClick={action.onClick}>
             {action.label}
           </Button>
         ))}

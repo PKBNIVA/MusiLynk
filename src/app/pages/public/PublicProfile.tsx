@@ -127,7 +127,7 @@ export default function PublicProfile() {
       <main className="mx-auto max-w-5xl px-5 pb-28 pt-12 lg:pb-12">
         <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
           <div className="min-w-0">
-            <header className="flex flex-col gap-5 sm:flex-row sm:items-start" data-testid="profile-hero">
+            <header className="flex items-start gap-4 sm:gap-5" data-testid="profile-hero">
               <UserAvatar id={c.id} name={c.name} size="xl" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-3">

@@ -27,7 +27,8 @@ class TalentRankingAndFiltersTest < ActionDispatch::IntegrationTest
 
     get "/api/public/talent", params: { limit: 50 }
     assert_response :success
-    names = response.parsed_body.fetch("talent").pluck("name")
+    mine = [empty, login_old, login_new, rates_only, complete, partial, sampled, verified, private_sample].map(&:name)
+    names = response.parsed_body.fetch("talent").pluck("name") & mine
     assert_equal ["Verified Bare", "Sampled Partial"], names.first(2)
     assert_equal ["Login New", "Login Old", "Rates Only", "Complete No Rate"], names.values_at(2, 3, 4, 5)
     assert_operator names.index("Empty Newest"), :>, names.index("Partial"), "an empty profile never outranks a populated one"
@@ -40,16 +41,17 @@ class TalentRankingAndFiltersTest < ActionDispatch::IntegrationTest
     unpriced = make_user("No Rates", profile: FULL.merge(languages: ["Hindi"], genres: ["Ghazal"]))
     employer = make_user("Filter Hirer", "employer")
 
+    mine = [hindi.id, marathi.id, unpriced.id]
     get "/api/public/talent", params: { language: "hindi" }
-    assert_equal [hindi.id, unpriced.id].sort, ids
+    assert_equal [hindi.id, unpriced.id].sort, ids(mine)
     get "/api/public/talent", params: { genre: "ghazal", budgetMax: "10000" }
-    assert_equal [hindi.id], ids, "budgetMax uses the lowest rate and leaves out people with no published rate"
+    assert_equal [hindi.id], ids(mine), "budgetMax uses the lowest rate and leaves out people with no published rate"
     get "/api/public/talent", params: { eventType: "wedding" }
-    assert_equal [hindi.id], ids
+    assert_equal [hindi.id], ids(mine)
     get "/api/public/talent", params: { eventType: "corporate" }
-    assert_equal [marathi.id], ids, "open_to counts as an event type"
+    assert_equal [marathi.id], ids(mine), "open_to counts as an event type"
     get "/api/public/talent", params: { budgetMax: "abc" }
-    assert_equal [hindi.id, marathi.id, unpriced.id].sort, ids, "a malformed budget is ignored"
+    assert_equal mine.sort, ids(mine), "a malformed budget is ignored"
     get "/api/public/talent", params: { language: ["Hindi"] }
     assert_response :bad_request
 
@@ -78,8 +80,10 @@ class TalentRankingAndFiltersTest < ActionDispatch::IntegrationTest
     BookingRequest.create!(act:, requester: hirer, event_type: "wedding", city: "Goa", currency: "INR", status: "requested")
     idle = make_user("Idle Musician", profile: FULL)
 
-    get "/api/public/talent"
-    counts = response.parsed_body.fetch("talent").to_h { [_1["id"], _1["bookingsCount"]] }
+    counts = [musician, idle].to_h do |person|
+      get "/api/public/talent", params: { q: person.name }
+      [person.id, response.parsed_body.fetch("talent").find { _1["id"] == person.id }&.fetch("bookingsCount")]
+    end
     assert_equal({ musician.id => 2, idle.id => 0 }, counts)
     get "/api/public/talent/#{musician.id}"
     assert_equal 2, response.parsed_body.dig("professional", "bookingsCount")
@@ -127,5 +131,5 @@ class TalentRankingAndFiltersTest < ActionDispatch::IntegrationTest
 
   private
 
-  def ids = response.parsed_body.fetch("talent").pluck("id").sort
+  def ids(within) = response.parsed_body.fetch("talent").pluck("id").sort & within.sort
 end

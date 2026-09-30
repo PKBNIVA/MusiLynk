@@ -41,7 +41,7 @@ export function JobCard({ job, to, index, aside, compact = false }: Props) {
   return (
     <Card className="verse-lift min-w-0 bg-white/[.055] border-white/10 hover:bg-white/[.075]" data-testid="job-card">
       <CardContent className="p-3.5 md:p-4">
-        <div className="flex items-start gap-3">
+        <div className="flex flex-wrap items-start gap-3 md:flex-nowrap">
           <span className="relative shrink-0" data-testid="job-cover">
             <CoverArt
               seed={job.id}
@@ -101,7 +101,11 @@ export function JobCard({ job, to, index, aside, compact = false }: Props) {
               )}
             </div>
           </Link>
-          {aside && <div className="flex flex-col items-end gap-3 shrink-0">{aside}</div>}
+          {aside && (
+            <div className="flex w-full shrink-0 items-center justify-between gap-3 md:w-auto md:flex-col md:items-end">
+              {aside}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

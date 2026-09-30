@@ -163,7 +163,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {workspace ? <Navigation /> : <PublicNav />}
-      <main className={`mx-auto max-w-5xl px-5 pb-28 lg:pb-12 ${workspace ? 'pt-28' : 'pt-12'}`}>
+      <main className={`mx-auto max-w-5xl px-5 lg:pb-12 ${workspace ? 'pb-44 pt-28' : 'pb-28 pt-12'}`}>
         <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
           <div className="min-w-0">
             <header className="flex items-start gap-4 sm:gap-5" data-testid="profile-hero">
@@ -350,7 +350,9 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
         </div>
       </main>
       <div
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-slate-950/95 p-3 backdrop-blur lg:hidden"
+        className={`fixed z-40 border-white/10 bg-slate-950/95 p-3 backdrop-blur lg:hidden ${
+          workspace ? 'inset-x-3 bottom-[5.5rem] rounded-2xl border shadow-xl' : 'inset-x-0 bottom-0 border-t'
+        }`}
         data-testid="profile-bottom-bar"
       >
         {actions}

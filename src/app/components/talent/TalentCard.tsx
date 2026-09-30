@@ -27,9 +27,7 @@ function Reviews({ average, count }: { average?: number | null; count: number })
   return (
     <span className="inline-flex items-center gap-1" title={`${count} ${count === 1 ? 'review' : 'reviews'}`}>
       <Star size={13} aria-hidden="true" className="fill-amber-300 text-amber-300" />
-      <span>
-        {average?.toFixed(1)} ({count})
-      </span>
+      <span>{average == null ? String(count) : `${average.toFixed(1)} (${count})`}</span>
       <span className="sr-only">{count === 1 ? 'review' : 'reviews'}</span>
     </span>
   );

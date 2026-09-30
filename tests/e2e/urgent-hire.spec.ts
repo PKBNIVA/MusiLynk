@@ -76,10 +76,8 @@ test('signed-out hirer fills the urgent form, signs up, and lands on the confirm
   await page.getByRole('button', { name: 'Continue to sign up' }).click();
   // The draft survives the hop through the two-minute hirer sign-up.
   await expect(page).toHaveURL(/\/join\/hiring$/);
-  await page.getByLabel('Recording studio').check();
-  await page.getByLabel('Studio name').fill('New Studio');
-  await page.getByRole('button', { name: 'Next: your account' }).click();
-  await page.getByLabel('Your name').fill('New Studio Owner');
+  await page.getByLabel('Recording and studio sessions').check();
+  await page.getByLabel('Organisation or team name').fill('New Studio');
   await page.getByLabel('Email').fill('studio@example.invalid');
   // The mocked sign-in methods have no email delivery, so the password field is already shown.
   await page.getByLabel('Password', { exact: true }).fill('LongEnoughPass123!');

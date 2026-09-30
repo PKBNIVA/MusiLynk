@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ChevronDown, SlidersHorizontal, type LucideIcon } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { cn } from '../ui/utils';
@@ -23,6 +23,10 @@ export function MoreDetails({
   className?: string;
 }) {
   const [userOpen, setOpen] = useState(defaultOpen);
+  // Once an error has opened the section it stays open, so fixing the field does not fold it away mid-typing.
+  useEffect(() => {
+    if (forceOpen) setOpen(true);
+  }, [forceOpen]);
   const open = userOpen || forceOpen;
   return (
     <Collapsible open={open} onOpenChange={setOpen} className={cn('rounded-xl border border-white/10', className)}>

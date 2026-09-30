@@ -11,6 +11,9 @@ export interface FormStep {
   content: ReactNode;
 }
 
+/* Tab columns from sm up, so three steps fill the row instead of leaving a gap. Full labels wrap rather than truncate. */
+const COLUMNS: Record<number, string> = { 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3', 4: 'sm:grid-cols-4' };
+
 /**
  * A multi-step form body: a progress indicator, then every step's fields. All steps stay mounted
  * (inactive ones are `hidden`) so values, ids and error focus keep working; the parent owns the
@@ -46,7 +49,7 @@ export function StepForm({
             style={{ width: `${pct}%` }}
           />
         </div>
-        <ol className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <ol className={cn('mt-4 grid grid-cols-2 gap-2', COLUMNS[steps.length] ?? 'sm:grid-cols-4')}>
           {steps.map((s, i) => {
             const done = i < current;
             const active = i === current;
@@ -74,7 +77,7 @@ export function StepForm({
                   >
                     <Icon aria-hidden="true" size={16} />
                   </span>
-                  <span className="min-w-0 truncate">
+                  <span className="min-w-0 break-words leading-tight">
                     <span className="sr-only">
                       {done ? 'Completed: ' : active ? 'Current: ' : open ? 'Go to: ' : 'Upcoming: '}
                     </span>

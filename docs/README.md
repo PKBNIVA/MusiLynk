@@ -3,6 +3,10 @@
 Start with the [repository README](../README.md). Operational documents stay at the root;
 everything else lives here.
 
+## The plan
+
+- [VERSE_PLAN.md](VERSE_PLAN.md): **the only planning document** — thesis, production facts, market benchmark, findings register, design direction, the showcase demo data, execution briefs, owner actions and roadmap. Every change of direction edits this file.
+
 ## Root
 
 - [README.md](../README.md): what Verse is, local setup, tests.
@@ -35,9 +39,6 @@ everything else lives here.
 - [product/ROADMAP.md](product/ROADMAP.md): phased product roadmap.
 - [product/MUSIC_ROLE_TAXONOMY.md](product/MUSIC_ROLE_TAXONOMY.md): role families served by `/api/taxonomy`.
 - [product/TOUR_AND_GUIDE.md](product/TOUR_AND_GUIDE.md): first-run tour, `/guide`, `/start` and search as onboarding.
-- [product/MARKET_RESEARCH.md](product/MARKET_RESEARCH.md): market direction notes (September 2026).
-- [product/PRODUCT_EXPERIENCE.md](product/PRODUCT_EXPERIENCE.md): goal-led navigation principles (v0.4; historical implementation notes).
-- [product/PRODUCT_AUDIT.md](product/PRODUCT_AUDIT.md): 260-item product improvement register from the prototype era.
 
 ## History
 

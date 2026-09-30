@@ -1,8 +1,11 @@
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { signInShowcase } from './support/showcase-fixtures';
 
-const OUT =
-  '/tmp/claude-0/-home-user-verse-music-platform/75cf3a6a-808f-50f4-83a6-511d9459f29e/scratchpad/design/showcase';
+// Screenshots land in $SHOTS_DIR (default: .qa-stack/shots in the repo, which is git-ignored).
+// The default is resolved from this file, so it is the repo's .qa-stack/shots from any working directory.
+const OUT = join(process.env.SHOTS_DIR || fileURLToPath(new URL('../../.qa-stack/shots', import.meta.url)), 'showcase');
 test.skip(!process.env.SHOWCASE_SHOTS, 'Screenshots on demand only.');
 
 const shot = async (page: Page, name: string, fullPage = true) => {

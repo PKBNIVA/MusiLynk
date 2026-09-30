@@ -18,7 +18,7 @@ class SharePagesController < ActionController::API
       description: truncate(description),
       canonical_path: "/opportunities/#{job.id}",
       og_type: "article",
-      image: nil,
+      image: og_image("opportunity", job.id),
       json_ld: job_json_ld(job, description)
     )
   end
@@ -34,7 +34,7 @@ class SharePagesController < ActionController::API
       description: truncate(bio.presence || profile&.headline.to_s),
       canonical_path: "/professionals/#{user.id}",
       og_type: "profile",
-      image: nil,
+      image: og_image("professional", user.id),
       json_ld: person_json_ld(user, profile, bio)
     )
   end
@@ -49,7 +49,7 @@ class SharePagesController < ActionController::API
       description: truncate(bio),
       canonical_path: "/acts/#{act.id}",
       og_type: "website",
-      image: nil,
+      image: og_image("act", act.id),
       json_ld: act_json_ld(act, bio)
     )
   end
@@ -73,6 +73,10 @@ class SharePagesController < ActionController::API
   private
 
   def base = FrontendUrl.base
+
+  # The 1200x630 card drawn per share by the Vercel function api/og.ts (reached through the
+  # /api/og/:type/:id rewrite in vercel.json); an unknown id gets its default card.
+  def og_image(type, id) = "#{base}/api/og/#{type}/#{ERB::Util.url_encode(id)}.png"
 
   # Demo and QA accounts never get a crawlable preview page (they are excluded from the sitemap too).
   def synthetic_owner?(portfolio) = User.where(id: portfolio.library_user_id).where.not(synthetic_batch: nil).exists?

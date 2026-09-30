@@ -29,6 +29,7 @@ class ActsController < ApplicationController
 
   def create
     return unless authenticate!("jobseeker", "employer")
+    return unless photo_allowed?(nil)
     act = current_user.owned_acts.create!(act_params)
     act.act_members.create!(display_name: current_user.name, role_name: params[:leaderRole].presence || params[:ownerRole].presence || "Leader", is_leader: true, member_status: "confirmed", user: current_user)
     audit!("act.create", act)
@@ -54,6 +55,7 @@ class ActsController < ApplicationController
   def update
     return unless authenticate!("jobseeker", "employer")
     act = current_user.owned_acts.find(params[:id])
+    return unless photo_allowed?(act)
     act.update!(act_params)
     audit!("act.update", act)
     render json: { act: act.reload.api_json }
@@ -99,8 +101,16 @@ class ActsController < ApplicationController
   # Same rule as talent: non-demo synthetic QA batches are only visible to synthetic viewers.
   def public_visible(scope) = current_user&.synthetic_batch.present? ? scope : SyntheticQa::Demo.publicly_listed(scope.joins(:owner))
 
+  # A photo must be an image the caller uploaded (or the one the act already has); anything else is refused.
+  def photo_allowed?(act)
+    photo = params[:photoUrl].to_s.strip
+    return true if photo.blank? || photo == act&.photo_url || Upload.photo_owned_by?(current_user, photo)
+    render_error("Upload a JPEG, PNG or WebP photo first, then save.", :unprocessable_content, "VALIDATION_FAILED", fields: { "photoUrl" => ["Upload a JPEG, PNG or WebP photo first, then save."] })
+    false
+  end
+
   def act_params
-    raw = params.permit(:name, :actType, :tagline, :bio, :city, :lineupSize, :minFee, :maxFee, :currency, :feeBasis, :travelRadiusKm, :travelsNationally, :travelsInternationally, :techRiderUrl, :hospitalityRiderUrl, :promoUrl, :status, genres: [], languages: [], eventTypes: []).to_h.transform_keys { _1.underscore }
+    raw = params.permit(:name, :actType, :tagline, :bio, :city, :lineupSize, :minFee, :maxFee, :currency, :feeBasis, :travelRadiusKm, :travelsNationally, :travelsInternationally, :techRiderUrl, :hospitalityRiderUrl, :promoUrl, :photoUrl, :status, genres: [], languages: [], eventTypes: []).to_h.transform_keys { _1.underscore }
     raw["currency"] ||= "INR"; raw["fee_basis"] ||= "event"; raw["status"] ||= "active"; raw
   end
 end

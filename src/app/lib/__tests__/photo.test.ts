@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { photoSrcSet, photoUrl } from '../photo';
+import { photoSrcSet, photoUrl, squareCropRect } from '../photo';
 
 describe('photo helpers', () => {
   it('builds the srcset from a base path', () => {
@@ -13,5 +13,16 @@ describe('photo helpers', () => {
   it('defaults to, and falls back to, the largest width', () => {
     expect(photoUrl('/img/a')).toBe('/img/a-1600.webp');
     expect(photoUrl('/img/a', 1234)).toBe('/img/a-1600.webp');
+  });
+});
+
+describe('squareCropRect', () => {
+  it('centres the square on the longer side', () => {
+    expect(squareCropRect(1600, 900)).toEqual({ sx: 350, sy: 0, side: 900 });
+    expect(squareCropRect(900, 1600)).toEqual({ sx: 0, sy: 350, side: 900 });
+    expect(squareCropRect(500, 500)).toEqual({ sx: 0, sy: 0, side: 500 });
+  });
+  it('never returns a zero-sized square', () => {
+    expect(squareCropRect(0, 0).side).toBe(1);
   });
 });

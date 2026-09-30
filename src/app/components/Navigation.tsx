@@ -41,7 +41,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { UserAvatar } from './kit/UserAvatar';
 import { useEffect, useState } from 'react';
 import { apiGet } from '../lib/api';
 import { UNREAD_CHANGED_EVENT, useVisiblePolling } from '../lib/usePolling';
@@ -314,11 +314,12 @@ export function Navigation() {
                     pendingReview > 0 ? `Open account menu, ${pendingReview} changes to review` : 'Open account menu'
                   }
                 >
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gradient-to-br from-fuchsia-500 to-violet-600 text-xs font-bold text-white">
-                      {user?.name?.charAt(0) || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    id={user?.id || 'me'}
+                    name={user?.name || 'Account'}
+                    size="sm"
+                    photoUrl={user?.photoUrl}
+                  />
                   <span className="hidden max-w-28 truncate text-sm text-white sm:block">
                     {user?.name?.split(' ')[0]}
                   </span>

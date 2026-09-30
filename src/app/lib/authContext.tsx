@@ -47,6 +47,8 @@ export interface User {
   genres?: string[];
   credits?: string[];
   openTo?: string[];
+  /** The photo the person uploaded (or their Google picture); UserAvatar falls back to initials. */
+  photoUrl?: string | null;
   phoneE164?: string | null;
   whatsappConsentedAt?: string | null;
 }

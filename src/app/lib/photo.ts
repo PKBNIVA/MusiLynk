@@ -15,3 +15,12 @@ export function photoUrl(base: string, width: number = PHOTO_WIDTHS[PHOTO_WIDTHS
   const w = (PHOTO_WIDTHS as readonly number[]).includes(width) ? width : PHOTO_WIDTHS[PHOTO_WIDTHS.length - 1];
   return `${base.replace(/\.webp$/, '').replace(/-(800|1600)$/, '')}-${w}.webp`;
 }
+
+/** Largest centred square in a w x h image: where to start reading and how long each side is. */
+export function squareCropRect(width: number, height: number) {
+  const side = Math.max(1, Math.min(width, height));
+  return { sx: Math.floor((width - side) / 2), sy: Math.floor((height - side) / 2), side };
+}
+
+/** Edge length in pixels of an uploaded profile or act photo. */
+export const PROFILE_PHOTO_PX = 512;

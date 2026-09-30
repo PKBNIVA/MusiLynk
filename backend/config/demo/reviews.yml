@@ -1,0 +1,106 @@
+# The 12 demo-showcase reviews (SyntheticQa::Showcase): six completed bookings, one review from the
+# hirer about the act's owner (bookings 0-1 go to the first act, 2-3 to the second, 4-5 to the third) and one from the act's owner about the hirer. Text is unique and
+# specific; ratings are 4 or 5. `hirer_category` picks the kind of demo hirer who made the booking.
+bookings:
+  - event_name: Rooftop sangeet, 220 guests
+    event_type: sangeet
+    hirer_category: wedding
+    audience: 220
+    duration_minutes: 150
+    budget: [60000, 90000]
+    requirements: "Three sets with a short break, dhol for the entry, a set list agreed with the family."
+    performance_fee: 68000
+    travel_fee: 4000
+    hirer_review:
+      rating: 5
+      title: On time, and the dance floor filled by the second song
+      body: "The band arrived two hours early, tested every microphone and asked for the family's must-play list before the first note. The set moved smoothly from soft Hindi songs to dance numbers, and the vocalist handled every request the grandparents made."
+    musician_review:
+      rating: 5
+      title: Clear brief and payment on the day
+      body: "The planner sent a run sheet a week ahead, arranged a green room and paid the balance before we packed up. Rare to work with a team that answers messages the same day."
+  - event_name: Annual day dinner, 350 employees
+    event_type: corporate
+    hirer_category: corporate
+    audience: 350
+    duration_minutes: 120
+    budget: [45000, 70000]
+    requirements: "Two 45-minute sets, family-friendly songs only, no explicit material."
+    performance_fee: 52000
+    travel_fee: 0
+    hirer_review:
+      rating: 5
+      title: Exactly the volume we asked for
+      body: "Conversation at the tables was never drowned out, and the closing set got the whole hall up. The team sent an invoice with the right GST details and left the stage cleaner than they found it."
+    musician_review:
+      rating: 4
+      title: Well organised, slightly late soundcheck
+      body: "The event team was polite and the hall was well prepared. The soundcheck started forty minutes late because the sound company was delayed, but we still finished in time."
+  - event_name: Cocktail hour on a seaside lawn
+    event_type: wedding
+    hirer_category: wedding
+    audience: 120
+    duration_minutes: 75
+    budget: [25000, 40000]
+    requirements: "A duo playing soft songs while guests arrive, then a change of pace for the last three numbers."
+    performance_fee: 28000
+    travel_fee: 3000
+    hirer_review:
+      rating: 5
+      title: The right mood for the hour
+      body: "We asked for something soft that would not stop people talking, and the duo got it right. They also changed the last three songs when the couple arrived early, without needing a cue."
+    musician_review:
+      rating: 5
+      title: Considerate planners
+      body: "The planners had shade, water and a power outlet ready for us, which is not always the case outdoors. They paid in full the same evening."
+  - event_name: Friday lounge night with a live trio
+    event_type: club
+    hirer_category: venue
+    audience: 90
+    duration_minutes: 180
+    budget: [30000, 45000]
+    requirements: "Three 45-minute sets for a lounge crowd, mostly jazz standards and soft pop."
+    performance_fee: 34000
+    travel_fee: 0
+    hirer_review:
+      rating: 4
+      title: Good sets, solid repeat booking
+      body: "The trio played to the room, keeping the first hour soft and lifting the energy after ten. One set ran ten minutes long, which did not bother anyone, but we would like a printed set list next time."
+    musician_review:
+      rating: 5
+      title: A pleasure to play at this room
+      body: "The stage is small but the sound system is well kept, and the owners gave us a meal between sets. Payment arrived by transfer before midnight."
+  - event_name: Diwali evening for a bank's staff
+    event_type: corporate
+    hirer_category: corporate
+    audience: 250
+    duration_minutes: 90
+    budget: [20000, 35000]
+    requirements: "A dhol entry at the start, then an hour of festive dance numbers with a DJ."
+    performance_fee: 26000
+    travel_fee: 2000
+    hirer_review:
+      rating: 5
+      title: A high-energy start, then a calm hour
+      body: "The dhol entry got the staff to their seats faster than any announcement, and the DJ kept the floor busy for the whole hour. Several people asked us to book the team again for next year."
+    musician_review:
+      rating: 4
+      title: Friendly staff, one change on the day
+      body: "The team changed the start time by thirty minutes on the day, but they informed us early and adjusted the fee for the extra wait. Good communication overall."
+  - event_name: Baraat entry and reception dance hour
+    event_type: wedding
+    hirer_category: wedding
+    audience: 400
+    duration_minutes: 120
+    budget: [35000, 55000]
+    requirements: "Dhol team for a 45-minute baraat, then a DJ set for the first dance hour."
+    performance_fee: 42000
+    travel_fee: 3000
+    hirer_review:
+      rating: 5
+      title: The baraat set the tone for the night
+      body: "The dhol players kept the family dancing for the full walk, and the DJ picked up the tempo without a gap once we reached the hall. They followed our timings closely, which mattered because the muhurat was fixed."
+    musician_review:
+      rating: 5
+      title: Organised and respectful
+      body: "The planners sent a map of the walk and had water bottles for the team. The family was warm, and we were paid in cash and by transfer as agreed."

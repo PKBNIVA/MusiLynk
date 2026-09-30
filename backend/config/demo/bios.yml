@@ -1,0 +1,634 @@
+# The demo-showcase musicians: role metadata plus 110 first-person bios (SyntheticQa::Showcase).
+# Style card: two or three sentences in the person's own voice, concrete (numbers, rooms, gear,
+# a habit), no superlatives, no pronouns for the writer beyond I/my/we, no invented famous names.
+# `years` becomes years_experience, `genres` come from config/search_taxonomy.yml, `credits` are
+# shown on the profile. The per-role lists below are consumed in order.
+roles:
+  singer:
+    label: Singer
+    instruments: [Vocals]
+    skills: [Live vocals, Harmonies, Set list planning]
+    gear: [In-ear monitors, Personal microphone]
+    software: [Ableton Live]
+    secondary: [Songwriter, Backing vocalist, Music teacher, Voice-over artist]
+    tier: 1.2
+    open_to: [sessions, shows, weddings]
+  guitarist:
+    label: Guitarist
+    instruments: [Electric Guitar, Acoustic Guitar]
+    skills: [Rhythm guitar, Lead guitar, Chord charts]
+    gear: [Pedalboard, Combo amplifier]
+    software: [Logic Pro]
+    secondary: [Session musician, Arranger, Music teacher]
+    tier: 1.0
+    open_to: [sessions, shows, touring]
+  drummer:
+    label: Drummer
+    instruments: [Drum Kit]
+    skills: [Playing to a click, Live drums, Sample pads]
+    gear: [Five-piece kit, Cymbal set]
+    software: [Ableton Live]
+    secondary: [Session musician, Percussionist, Music teacher]
+    tier: 1.0
+    open_to: [sessions, shows, touring]
+  music-producer:
+    label: Music producer
+    instruments: [Keyboard, Synthesizer]
+    skills: [Arrangement, Recording, Mixing, Vocal production]
+    gear: [Studio monitors, Audio interface, Condenser microphone]
+    software: [Logic Pro, Ableton Live]
+    secondary: [Mix engineer, Arranger, Songwriter]
+    tier: 1.5
+    open_to: [sessions, freelance, remote]
+  keyboard-player:
+    label: Keyboard player
+    instruments: [Keyboard, Piano]
+    skills: [Chord charts, Arranging, Transposing, Sound patches]
+    gear: [61-key controller, Stage piano]
+    software: [MainStage, Logic Pro]
+    secondary: [Pianist, Arranger, Music director]
+    tier: 1.1
+    open_to: [sessions, shows, touring]
+  bassist:
+    label: Bassist
+    instruments: [Bass Guitar]
+    skills: [Groove playing, Reading charts, Session recording]
+    gear: [Four-string bass, Compact combo amplifier, DI box]
+    software: [Logic Pro]
+    secondary: [Session musician, Double bassist]
+    tier: 0.9
+    open_to: [sessions, shows, touring]
+  tabla-player:
+    label: Tabla player
+    instruments: [Tabla]
+    skills: [Accompaniment, Taal, Hand percussion]
+    gear: [Tabla and dayan set, Spare heads]
+    software: [Ableton Live]
+    secondary: [Percussionist, Music teacher, Dholak player]
+    tier: 1.0
+    open_to: [sessions, shows, teaching]
+  sound-engineer:
+    label: Sound engineer
+    instruments: []
+    skills: [Live mixing, System tuning, Line checks, Monitor mixes]
+    gear: [Digital mixer, Measurement microphone, Stage box]
+    software: [Pro Tools, Reaper]
+    secondary: [FOH engineer, Live sound engineer, Recording engineer, Monitor engineer]
+    tier: 1.1
+    open_to: [shows, freelance, touring]
+  dj:
+    label: DJ
+    instruments: [Turntables, Sampler]
+    skills: [Beatmatching, Crowd reading, Playlist planning]
+    gear: [DJ controller, Headphones, Wireless microphone]
+    software: [Serato, Rekordbox]
+    secondary: [MC, Music producer]
+    tier: 1.0
+    open_to: [shows, weddings, freelance]
+  dhol-player:
+    label: Dhol player
+    instruments: [Dhol]
+    skills: [Baraat rhythms, Stage entries, Playing with DJs]
+    gear: [Two dhols, Dagga and tili sticks]
+    software: []
+    secondary: [Percussionist, Dholak player]
+    tier: 0.8
+    open_to: [shows, weddings, sessions]
+  violinist:
+    label: Violinist
+    instruments: [Violin]
+    skills: [Sight-reading, String arrangements, Overdubbing]
+    gear: [Violin with pickup, Music stand and light]
+    software: [Logic Pro]
+    secondary: [Session musician, Music teacher, Arranger]
+    tier: 1.1
+    open_to: [sessions, shows, weddings]
+  saxophonist:
+    label: Saxophonist
+    instruments: [Saxophone]
+    skills: [Improvisation, Horn arrangements, Playing over DJ sets]
+    gear: [Tenor and alto saxophones, Clip-on microphone]
+    software: [Logic Pro]
+    secondary: [Session musician, Music teacher, Arranger]
+    tier: 1.1
+    open_to: [sessions, shows, weddings]
+  sitarist:
+    label: Sitarist
+    instruments: [Sitar]
+    skills: [Raga performance, Studio recording, Fusion]
+    gear: [Two sitars, Tanpura app]
+    software: [Logic Pro]
+    secondary: [Music teacher, Session musician]
+    tier: 1.4
+    open_to: [shows, sessions, teaching]
+  bansuri-player:
+    label: Bansuri player
+    instruments: [Bansuri]
+    skills: [Raga playing, Film sessions, Key matching]
+    gear: [Six bansuri in different keys]
+    software: [Logic Pro]
+    secondary: [Session musician, Music teacher]
+    tier: 1.2
+    open_to: [shows, sessions, teaching]
+  percussionist:
+    label: Percussionist
+    instruments: [Cajon, Congas, Bongos]
+    skills: [Hand percussion, Layered recording, Workshops]
+    gear: [Cajon, Djembe, Congas, Shaker set]
+    software: [Ableton Live]
+    secondary: [Drummer, Workshop facilitator]
+    tier: 0.9
+    open_to: [sessions, shows, teaching]
+  composer:
+    label: Composer
+    instruments: [Piano, Synthesizer]
+    skills: [Underscore, Cue sheets, Orchestral mockups]
+    gear: [88-key controller, Studio monitors]
+    software: [Logic Pro, Cubase]
+    secondary: [Music producer, Arranger, Songwriter]
+    tier: 1.5
+    open_to: [freelance, remote, sessions]
+  mastering-engineer:
+    label: Mastering engineer
+    instruments: []
+    skills: [Mastering, Loudness targets, Album sequencing]
+    gear: [Treated room, Hardware mastering chain]
+    software: [Wavelab, iZotope Ozone]
+    secondary: [Mix engineer, Recording engineer]
+    tier: 1.3
+    open_to: [freelance, remote]
+
+bios:
+  singer:
+    - years: 9
+      genres: [Bollywood, Sufi]
+      text: "I sing lead in a four-piece wedding and lounge band, about 90 shows a year across hotel ballrooms and farmhouse lawns. The set list runs from 90s Hindi film songs to Sufi kalaams, and I carry my own in-ear monitors so the sound desk gets a clean signal. If a family has a request song, I need the reference recording two weeks ahead."
+      credits: ["Lead vocal, wedding and hotel circuit, 90 shows a year", "Sufi evening series at private mehfils"]
+    - years: 6
+      genres: [Indie Pop, Pop]
+      text: "Singer-songwriter with two self-released EPs recorded in a rented bedroom studio and one Hindi-English single that played on a college radio show. I take session vocal work for jingles and demo tracks, usually one or two takes per line. Simple lead sheets are fine, and I write harmonies on the spot."
+      credits: ["Two self-released EPs", "Session vocals for regional jingles"]
+    - years: 14
+      genres: [Ghazal, Hindustani]
+      text: "Fourteen years of Hindustani vocal training under a guru in the Kirana style, and now ghazal evenings at small clubs and private baithaks. A typical set is 75 minutes with a harmonium player and a tabla player that I bring along. On weekends I teach six beginners at a time."
+      credits: ["Ghazal evenings at small clubs and private baithaks", "Weekend vocal class for beginners"]
+    - years: 4
+      genres: [Rock, Blues]
+      text: "I have fronted a cover band since college and now sing rock and blues at pubs and corporate off-sites with a five-piece line-up. I can step in as a deputy singer at short notice if the set list reaches me by the evening before. My range sits around a baritone with a comfortable top G."
+      credits: ["Frontperson, five-piece rock cover band", "Deputy vocalist for two other bands"]
+    - years: 11
+      genres: [Devotional, Bhajan]
+      text: "Bhajan and kirtan for temple events, satsangs and home pujas, usually with a harmonium and a dholak player. Sessions run from forty-five minutes to three hours, and I keep the tempo singable so a full room can join in. I also record devotional tracks for families and trusts."
+      credits: ["Bhajan sandhya at temple trusts", "Recorded devotional albums for two community groups"]
+    - years: 8
+      genres: [Punjabi, Bhangra]
+      text: "Lead vocal on Punjabi wedding and sangeet sets: bhangra openers, a slow Sufi stretch, then an hour of dance-floor numbers. I have worked with three dhol players regularly and know how to cue them from the mic. A portable PA comes with me for halls that do not have one."
+      credits: ["Sangeet and reception sets, Punjabi and Hindi", "Regular vocalist with a dhol and DJ team"]
+    - years: 5
+      genres: [Jazz, Soul]
+      text: "Jazz and soul vocalist working hotel lobbies and restaurants, mostly Friday and Saturday evening sets with a piano-bass-drums trio. I carry about 60 standards in transposed charts and take requests within reason. Studio backing vocals are welcome too."
+      credits: ["Weekend residency with a piano trio", "Backing vocals on four studio tracks"]
+    - years: 7
+      genres: [Carnatic, Fusion]
+      text: "Carnatic-trained singer who works on fusion projects and film music sessions, comfortable with kalpanaswaram and with singing straight to a click. I have recorded Tamil and Telugu jingles for regional ad agencies. With two days' notice I can travel for a session."
+      credits: ["Regional ad jingles in Tamil and Telugu", "Fusion project with a violin and mridangam trio"]
+    - years: 10
+      genres: [Bollywood, Film Score]
+      text: "I record reference vocals for composers, which means learning a new song in an hour and delivering three clean takes. Live, I do sangeet performances with a track and a dance troupe. My phone keeps a voice memo of the last song I learned, in case a client asks for a redo."
+      credits: ["Reference vocals for film and web-series composers", "Sangeet performances with dance troupes"]
+    - years: 3
+      genres: [Pop, R&B]
+      text: "This is my third year as a full-time singer after leaving a job in accounts. Open mics fill my weeknights, paid restaurant sets fill the weekends, and I am building a repertoire of R&B covers next to two originals. More backing vocal work for bands is what I am looking for."
+      credits: ["Weekly restaurant sets", "Two original singles"]
+    - years: 12
+      genres: [Qawwali, Sufi]
+      text: "I lead a qawwali party of seven that has performed at urs celebrations and private mehfils for about a dozen years. As lead I handle the opening alaap and the call and response with the chorus. For smaller bookings we can travel as a party of four."
+      credits: ["Urs celebrations and private mehfils", "Qawwali party of seven, twelve years"]
+    - years: 6
+      genres: [Bengali, Folk]
+      text: "Bengali folk, baul and Rabindra sangeet, with a dotara and a small khamak for accompaniment. Bookings are mostly cultural evenings, Poila Boishakh programmes and cafe nights. For a corporate audience I prepare a mixed Hindi-Bengali set."
+      credits: ["Poila Boishakh programmes", "Cafe nights of baul and Rabindra sangeet"]
+    - years: 9
+      genres: [Rock, Indie]
+      text: "Vocalist and rhythm guitarist for an original indie-rock band with three singles out on streaming platforms. When our own dates allow, I sing as a deputy with cover bands. Two-hour sets with two breaks are what I am used to."
+      credits: ["Three singles released with an indie-rock band", "Deputy vocalist with cover bands"]
+    - years: 15
+      genres: [Bollywood, Ghazal]
+      text: "More than 1,200 shows so far, most of them wedding receptions and anniversary evenings for 150 to 400 guests. Every song on my list has its printed lyrics in a binder, and I never read from a phone on stage. One rehearsal with the accompanists is included in the fee."
+      credits: ["Wedding receptions and anniversary evenings", "Ghazal and film-song programmes"]
+    - years: 2
+      genres: [Pop, Punjabi]
+      text: "I moved to the city recently and am building a client base through open mic nights and short weekday gigs. Hindi and Punjabi pop is my repertoire, and I am learning to work with backing tracks and a loop pedal. Most weekday evenings are free."
+      credits: ["Open mic nights", "Short weekday gigs"]
+    - years: 13
+      genres: [Jazz, Blues]
+      text: "For eleven of the last thirteen years I have been the resident vocalist at a jazz supper club, and I sing with a big band once a month. Charts are no problem, and I tell the audience the story behind a song before I sing it. Rehearsals are booked a week ahead."
+      credits: ["Resident vocalist at a jazz supper club", "Monthly big band engagement"]
+
+  guitarist:
+    - years: 10
+      genres: [Rock, Blues]
+      text: "Lead guitar in a cover band that plays three-hour sets at pubs and weddings. My pedalboard is compact, with overdrive, delay, chorus and a tuner on one power supply, so setup takes about ten minutes. At home I record session guitar with two mics and a DI."
+      credits: ["Lead guitar, pub and wedding cover band", "Session guitar tracked at a home studio"]
+    - years: 7
+      genres: [Bollywood, Acoustic]
+      text: "Acoustic guitarist who accompanies singers at cocktail hours and unplugged nights. I play fingerstyle arrangements of film songs and can transpose on the spot to suit a singer. A small acoustic amp and a spare set of strings come to every job."
+      credits: ["Cocktail hour and unplugged sets", "Fingerstyle film-song arrangements"]
+    - years: 15
+      genres: [Jazz, Fusion]
+      text: "I play jazz guitar on a hollowbody and run an improvisation class for intermediate players on Saturday mornings. On gigs I work from lead sheets and can comp behind a horn front line. Three background scores carry my recorded guitar."
+      credits: ["Jazz quartet, monthly club dates", "Guitar on three background scores"]
+    - years: 5
+      genres: [Metal, Rock]
+      text: "Rhythm guitar in a metal band with one full-length album and a regional run of dates behind us. I take session work for heavier tracks and deliver DI takes within a day for re-amping. A seven-string is available on request."
+      credits: ["One full-length metal album", "Regional tour dates"]
+    - years: 12
+      genres: [Indie, Pop]
+      text: "Session guitar for indie and pop producers, played through a small home rig built for clean and ambient tones: two amps, a reverb tank and a volume pedal. About forty released tracks so far, and I keep a log of the tempo and tuning of each. A full song takes me two days."
+      credits: ["Guitar on about forty released tracks", "Ambient guitar for short films"]
+    - years: 8
+      genres: [Folk, Country]
+      text: "Folk and country-leaning songs on a steel-string and a resonator guitar, at cafes and small festivals. I sing harmony and can support a singer-songwriter without crowding the vocal. A bar stool and a microphone are all I ask of the stage."
+      credits: ["Cafe and small festival sets", "Harmony vocals for singer-songwriters"]
+    - years: 20
+      genres: [Blues, Soul]
+      text: "Two decades of blues in clubs, including a six-year residency at a hotel bar. A Strat-style guitar into a tube amp does the work, kept quiet enough for people to talk. If a band needs a fill-in for a Saturday night, I can learn twenty songs in a week."
+      credits: ["Six-year hotel bar residency", "Fill-in guitarist for local blues bands"]
+    - years: 4
+      genres: [Punjabi, Bollywood]
+      text: "Guitar in a wedding band, playing rhythm behind vocals and adding lead fills on sangeet numbers. I know the common wedding set lists and the key changes singers usually ask for. Most Sundays are free."
+      credits: ["Wedding band guitarist", "Sangeet sets with two vocalists"]
+    - years: 9
+      genres: [Hindustani, Fusion]
+      text: "I play slide guitar in Hindustani-influenced fusion, using open tunings and a lap steel to follow raga phrases. A trio with tabla and bansuri performs small concerts, and my original pieces are in ragas Yaman and Bhoopali. I am open to film and podcast scoring."
+      credits: ["Fusion trio with tabla and bansuri", "Original pieces in Yaman and Bhoopali"]
+    - years: 6
+      genres: [Rock, Indie]
+      text: "Guitarist and arranger for a four-piece indie band, and a freelancer for corporate events that need a live acoustic act. My repertoire covers about 80 songs from the 1990s to now. A printable set list is ready to share with any organiser."
+      credits: ["Guitar and arrangements, four-piece indie band", "Corporate acoustic sets"]
+    - years: 11
+      genres: [Funk, R&B]
+      text: "Funk and R&B guitar in a six-piece group with two horns, keys, bass, drums and me. My focus is tight rhythm playing, muted sixteenth-note patterns and short single-note fills. We rehearse on Tuesday evenings and bring our own backline to private parties."
+      credits: ["Six-piece funk and R&B group", "Private parties with own backline"]
+    - years: 3
+      genres: [Pop, Acoustic]
+      text: "After four years in college bands I am learning the session trade and doing acoustic duos at cafes for a fixed evening fee. I play from chord charts and Nashville numbers and read basic tab. Small, quick recording jobs are welcome while I build a portfolio."
+      credits: ["Acoustic duo at cafes", "College band guitarist, four years"]
+
+  drummer:
+    - years: 11
+      genres: [Rock, Pop]
+      text: "Cover bands and studio sessions, with a five-piece kit that fits in a hatchback and a compact e-drum setup for rooms that cannot take an acoustic kit. I play to a click and have recorded drums for about fifty tracks in home and commercial rooms. Load-in to sound check takes about forty minutes."
+      credits: ["Drums on about fifty tracks", "Cover band, weekend pub circuit"]
+    - years: 6
+      genres: [Bollywood, EDM]
+      text: "Live drums for sangeet nights, where the set flips from Bollywood to EDM without a break. A sample pad handles claps, dhol loops and transitions, and I follow the DJ's tempo through a click in one ear. Rehearsal with the vocalist is usually one evening."
+      credits: ["Sangeet nights with DJ and vocalist", "Sample pad and live kit hybrid setup"]
+    - years: 14
+      genres: [Jazz, Fusion]
+      text: "Brushes in supper clubs and sticks in fusion projects. A vintage-style four-piece serves small rooms, and I bring cymbals for larger stages. On weekday evenings I teach drums to children and adult beginners."
+      credits: ["Supper club trio", "Fusion project with a saxophone and bass"]
+    - years: 8
+      genres: [Metal, Rock]
+      text: "Double-kick drummer in a metal band and a freelance session player. My home studio has close mics, room mics and triggers, and stems go out within 24 hours. Five-four and seven-eight need no chart."
+      credits: ["Metal band, two EPs", "Session drums delivered as stems"]
+    - years: 5
+      genres: [Indie, Pop]
+      text: "I play with two indie bands and pick up gigs with singer-songwriters who want a light touch. The kit is small, with a 20-inch kick and a low-tuned snare that sits under acoustic guitars. A shared backline is no problem."
+      credits: ["Drums for two indie bands", "Singer-songwriter showcase nights"]
+    - years: 17
+      genres: [Ghazal, Bollywood]
+      text: "Seventeen years of light music and ghazal programmes on kit with a cajon and shakers, which means brushes and a lot of restraint. I know how to leave space around a singer's phrasing. One rehearsal, then the show."
+      credits: ["Ghazal and light music programmes", "Anniversary and reception shows"]
+    - years: 9
+      genres: [Rock, Blues]
+      text: "Drummer for a blues-rock trio and a standby for wedding bands when the regular drummer is away. I travel with a floor tom and a snare and can use a house kit if the hardware is decent. My fee includes one rehearsal."
+      credits: ["Blues-rock trio", "Standby drummer for wedding bands"]
+    - years: 3
+      genres: [Pop, Hip-Hop]
+      text: "Three years with a hip-hop collective, where I trigger samples and play live drums over beats. I am building a session portfolio and can deliver clean grooves at 80 to 140 BPM. Travel within the state is fine."
+      credits: ["Live drums with a hip-hop collective", "Clean groove recordings, 80 to 140 BPM"]
+    - years: 12
+      genres: [Funk, Soul]
+      text: "A pocket-first drummer playing funk and soul with a nine-piece band that does hotel shows monthly. I count songs in, keep set changes short and watch the singers for cues. A week's notice is enough for a one-off deputy job."
+      credits: ["Nine-piece band, monthly hotel shows", "Deputy drummer for soul bands"]
+    - years: 7
+      genres: [Devotional, Folk]
+      text: "Percussion and kit for devotional nights and folk-fusion shows, comfortable adding a dholak or manjira to a groove. I run a small rhythm section of three players for community events. Most bookings are on Saturday evenings."
+      credits: ["Devotional nights, kit and hand percussion", "Folk-fusion shows"]
+
+  music-producer:
+    - years: 8
+      genres: [Indie Pop, Electronic]
+      text: "I produce indie-pop and electronic tracks from a treated room with a laptop, an audio interface and two pairs of monitors. A typical job is a full production from a voice memo demo in two to three weeks, including live guitar or keys tracked here. Session files are organised so mix engineers can open them cold."
+      credits: ["Produced eleven indie-pop singles", "Live guitar and keys tracked in-house"]
+    - years: 12
+      genres: [Bollywood, Film Score]
+      text: "Composer-producer for ad films and web series, mostly 30 to 90 second cues delivered with stems. I work in Logic and keep a small library of live-recorded tabla and strings. A first draft takes three days."
+      credits: ["Music for ad films and web series", "Live-recorded tabla and string library"]
+    - years: 5
+      genres: [Hip-Hop, Rap]
+      text: "Beat maker working with emerging rappers in Hindi and English. I sell exclusive beats and produce full songs with the rapper in the room, usually over two evening sessions. Files leave the studio as WAV stems with the tempo and key in the filename."
+      credits: ["Exclusive beats for emerging rappers", "Full song productions in Hindi and English"]
+    - years: 10
+      genres: [Rock, Metal]
+      text: "I record bands live to computer in a rented rehearsal room, then mix in my own studio. Pre-production is where I help most: we tighten arrangements, tempo and tuning before anyone pays for tracking hours. A four-song EP takes about ten working days."
+      credits: ["Recorded and mixed rock and metal EPs", "Pre-production for first-time bands"]
+    - years: 15
+      genres: [Ghazal, Sufi]
+      text: "Acoustic-leaning albums for ghazal and Sufi singers, recorded with live vocals, harmonium, tabla and a string quartet. Arrangement, session hire, mixing and mastering can be one package or separate jobs. Most albums take four to six weeks."
+      credits: ["Ghazal and Sufi albums with live strings", "Arranger and mixing engineer"]
+    - years: 7
+      genres: [EDM, House]
+      text: "EDM and house producer releasing on small labels, also remixing ballads into club versions for singers. Tracks finish at 124 to 128 BPM, with a radio edit and an extended mix. Stems and the project file are included."
+      credits: ["Releases on small dance labels", "Club remixes for singers"]
+    - years: 3
+      genres: [Lo-fi, Ambient]
+      text: "Lo-fi and ambient producer making background music for videos, podcasts and cafes. I work in Ableton and deliver loops and full tracks with a plain licence letter. Rates are per finished minute."
+      credits: ["Background music for podcasts and videos", "Cafe playlists"]
+    - years: 13
+      genres: [Pop, R&B]
+      text: "Pop and R&B production for young artists since 2012, from vocal production to the final mix. I am patient with first-time recording artists and work in short sessions so voices stay fresh. Everything is tracked at 48 kHz, 24-bit."
+      credits: ["Pop and R&B productions since 2012", "Vocal producer for first-time artists"]
+    - years: 9
+      genres: [Folk, Fusion]
+      text: "Folk-fusion projects that blend regional instruments with electronic textures. A small mic collection covers sitar, bansuri and dholak, and I call on a list of about twenty session players. I can take a project from first sketch to a release-ready master."
+      credits: ["Folk-fusion album productions", "Session player network of about twenty"]
+
+  keyboard-player:
+    - years: 12
+      genres: [Bollywood, Pop]
+      text: "Keyboardist and arranger for wedding and stage bands, running strings, piano and synth patches from a single 61-key controller and a laptop. Each set gets a cue sheet so the sound engineer knows every patch change. I can transpose on the fly."
+      credits: ["Keys and arrangements for wedding bands", "Cue sheets for live rigs"]
+    - years: 6
+      genres: [Jazz, Blues]
+      text: "Pianist and Rhodes player for jazz trios and hotel lobby sets. I read charts, comp with shell voicings and leave room for the bass. A digital stage piano and a small amp travel with me."
+      credits: ["Jazz trio, hotel lobby sets", "Rhodes and piano for blues nights"]
+    - years: 9
+      genres: [Western Classical, Classical]
+      text: "Trained on piano at a conservatory, and now playing weddings, church services and recitals. I accompany choirs and can play from a vocal score. Weekday hours go to teaching students up to Grade 8."
+      credits: ["Choir accompanist", "Piano teacher, Grades 1 to 8"]
+    - years: 4
+      genres: [Rock, Indie]
+      text: "Keys and synth in an indie band, using two synths and a controller to cover pads, bass lines and leads live. Touring projects that rehearse on weekday evenings suit me. My rig fits in one bag."
+      credits: ["Keys and synth, indie band", "Live pads and bass lines"]
+    - years: 14
+      genres: [Ghazal, Hindustani]
+      text: "Harmonium and keyboard accompanist for ghazal and light classical singers. I follow the singer's phrasing, know the common scales and can shift key mid-song when asked. More than 300 concerts so far, in halls and living rooms."
+      credits: ["Harmonium and keys for ghazal singers", "More than 300 concerts"]
+    - years: 8
+      genres: [Devotional, Bhajan]
+      text: "Church and devotional keyboardist. Sunday services, choir rehearsals and evening prayer meetings are my regular jobs, and a mixed gospel-and-bhajan set is available on request. Piano and organ parts can be recorded remotely for small projects."
+      credits: ["Sunday services and choir rehearsals", "Remote piano and organ parts"]
+    - years: 11
+      genres: [Film Score, Background Score]
+      text: "Session keys for film and OTT music: piano, organ, pads and simple orchestral mockups. I record in a home studio and deliver stems at the requested tempo and key. Turnaround for a single cue is 24 to 48 hours."
+      credits: ["Session keys for OTT series", "Orchestral mockups for short films"]
+    - years: 5
+      genres: [EDM, Pop]
+      text: "Keys player who also programs. Ableton runs on stage and I trigger backing tracks with hand controls. Festival-style shows and college fests are familiar, as are in-ear monitors and a click."
+      credits: ["College fests and festival-style shows", "Live Ableton rigs"]
+    - years: 16
+      genres: [Soul, R&B]
+      text: "Keys and organ for soul and R&B bands, with sixteen years of live gigs across hotels, clubs and cruise ships. A Hammond-style organ module and a Rhodes emulation fit in a taxi boot. Horn lines are something I arrange for keyboard when the budget has no horns."
+      credits: ["Sixteen years in soul and R&B bands", "Hotel, club and cruise gigs"]
+
+  bassist:
+    - years: 9
+      genres: [Rock, Funk]
+      text: "Bass in a funk-rock band on a four-string, with a pick or with fingers depending on the song. A compact combo amp and a DI come along so I can plug into any house system. Twenty songs in a week is a normal rehearsal load."
+      credits: ["Funk-rock band, club dates", "Deputy bassist for cover bands"]
+    - years: 12
+      genres: [Jazz, Fusion]
+      text: "Double bass and electric bass for jazz groups. Work covers weeknight club sets and weekend brunch gigs, plus studio sessions when a producer wants an upright sound. I read charts and walk bass lines fluently."
+      credits: ["Weekend brunch jazz gigs", "Upright bass on studio sessions"]
+    - years: 4
+      genres: [Pop, Indie]
+      text: "Bass for singer-songwriters and indie bands, keeping lines simple to support the vocal. I own a Precision-style bass and a five-string for lower parts. A song can be recorded from home in a day."
+      credits: ["Bass for singer-songwriters", "Remote bass recording"]
+    - years: 7
+      genres: [Bollywood, Rock]
+      text: "Session and live bass for wedding bands. About 150 Hindi songs learned by ear, and I can pull the bass line from a recording within an hour. A laminated list holds the key of every song I play."
+      credits: ["Wedding band bassist", "About 150 songs learned by ear"]
+    - years: 15
+      genres: [Blues, Rock]
+      text: "Fifteen years in blues bands, in clubs, at festivals and on one touring package of nine cities. I lock in with a drummer within the first song. A spare cable and a spare set of strings come to every gig."
+      credits: ["Blues bands, fifteen years", "Nine-city touring package"]
+    - years: 6
+      genres: [Metal, Rock]
+      text: "Bass in a punk and metal band, played with a pick and plenty of distortion. For engineers who want to re-amp, I record DI tracks with clear notes on tuning and tempo. Saturdays are open."
+      credits: ["Punk and metal band", "DI tracks for re-amping"]
+    - years: 10
+      genres: [Funk, Soul]
+      text: "A groove-focused bassist: slap when the song wants it, thumb and fingers otherwise. Ten years with a nine-piece band at hotel shows and private parties. Remote bass tracking for producers comes back in two days."
+      credits: ["Nine-piece band, ten years", "Remote tracking for producers"]
+
+  tabla-player:
+    - years: 18
+      genres: [Hindustani, Classical]
+      text: "Tabla accompanist for Hindustani vocal and instrumental recitals, trained for eighteen years under a guru of the Farrukhabad gharana. I play concerts of two hours or more and can accompany kathak dancers. My tabla and dayan are tuned to the soloist's scale before the concert."
+      credits: ["Accompanist at Hindustani recitals", "Kathak dance accompaniment"]
+    - years: 10
+      genres: [Fusion, Sufi]
+      text: "Tabla and percussion for fusion bands and Sufi nights. I use a tabla with a small sampler for bass sounds and add a cajon when a song needs it. Sound check takes twenty minutes."
+      credits: ["Fusion band percussionist", "Sufi nights"]
+    - years: 6
+      genres: [Bollywood, Ghazal]
+      text: "Tabla for ghazal evenings and Bollywood unplugged shows, mostly in small ensembles of harmonium, guitar and a singer. I know the common taals of light music and can play quietly enough for a restaurant. Weekends are preferred."
+      credits: ["Ghazal evenings", "Bollywood unplugged shows"]
+    - years: 13
+      genres: [Classical, Devotional]
+      text: "Accompanist for bhajan sandhya and classical vocal concerts at temples and cultural clubs. A spare set of tabla comes with me in case of a broken head, and I play dholak for folk-style bhajans. Eight students learn from me on Tuesdays and Thursdays."
+      credits: ["Bhajan sandhya at temples and clubs", "Tabla teacher, eight students"]
+    - years: 4
+      genres: [Fusion, Indie]
+      text: "Tabla recorded for indie and electronic projects, delivered as a clean stereo take with a few loops. I work from a small room with two condenser mics and can send rough stems within hours. Studio work with producers is what I am after."
+      credits: ["Tabla on indie and electronic tracks", "Loop packs for producers"]
+    - years: 9
+      genres: [Qawwali, Sufi]
+      text: "Tabla and dholak in a qawwali party, and available for private bookings. We play with harmonium and a clapping chorus and adjust the length of a piece to the crowd. Quieter Sufi kalaam programmes suit us too."
+      credits: ["Qawwali party", "Private Sufi programmes"]
+    - years: 15
+      genres: [Hindustani, Fusion]
+      text: "I accompany sitar and sarod players in concerts and in two fusion groups that pair tabla with electric bass and drums. Short tihai endings are written to fit the length of each concert. College workshop demos are welcome."
+      credits: ["Sitar and sarod concerts", "Two fusion groups"]
+    - years: 7
+      genres: [Film Score, Folk]
+      text: "Tabla and hand percussion for film and web-series sessions, recorded from three or four mic positions with takes labelled by taal and tempo. A single cue is finished in one day."
+      credits: ["Film and web-series sessions", "Takes labelled by taal and tempo"]
+
+  sound-engineer:
+    - years: 12
+      genres: [Rock, Pop]
+      text: "Front-of-house engineer for club shows, weddings and corporate events. A 16-channel digital mixer, a stage box and two in-ear monitor packs come with me, and a line check happens before doors. Setup for a five-piece band takes about 90 minutes."
+      credits: ["Front-of-house for club shows and weddings", "Corporate event sound"]
+    - years: 8
+      genres: [Bollywood, Fusion]
+      text: "Live sound for sangeet nights and receptions, where one system has to serve a singer, a DJ and a dhol player within one evening. I tune the room with a measurement microphone before sound check. A compact PA for up to 300 guests can be rented with me."
+      credits: ["Sangeet and reception mixing", "Compact PA rental"]
+    - years: 15
+      genres: [Jazz, Classical]
+      text: "Recording and live engineer for acoustic groups: jazz trios, string quartets and classical vocal recitals. I record with a stereo pair plus spot mics and mix for natural balance. Live shows get as little compression as the room allows."
+      credits: ["Acoustic group recordings", "String quartet and recital sound"]
+    - years: 5
+      genres: [Hip-Hop, EDM]
+      text: "Mixing club nights and rap shows with a DJ mixer, a laptop and a compact PA, keeping vocals above heavy bass. I also mix stems for release. A song mix takes one day and includes two revisions."
+      credits: ["Club night and rap show mixing", "Stem mixing for releases"]
+    - years: 10
+      genres: [Rock, Metal]
+      text: "Monitor and front-of-house engineer for touring rock bands, across festival stages and club runs of up to fifteen dates. I manage in-ear mixes for six musicians and label every channel before load-in. When cables fail I stay calm, and there is always a spare set."
+      credits: ["Touring monitor engineer", "Festival stage front-of-house"]
+    - years: 6
+      genres: [Devotional, Folk]
+      text: "Sound for religious and community events, including outdoor stages with dhol and dholak. All cables, stands and microphones come with me, and a single-mic system for a speaker is ready in ten minutes. Work is mostly on weekends."
+      credits: ["Community and religious event sound", "Outdoor stage setups"]
+    - years: 13
+      genres: [Ghazal, Sufi]
+      text: "Recording engineer at a small studio, tracking vocals and instruments for ghazal and Sufi albums. A pair of ribbon mics goes on harmonium and a large-diaphragm condenser on voice. Session rates include a first rough mix."
+      credits: ["Ghazal and Sufi album tracking", "Small studio recording engineer"]
+    - years: 4
+      genres: [Pop, Indie]
+      text: "Sound assistant turned freelance engineer. I run sound check for open mic nights and small festivals and set up backline for touring acts. Comfortable with the common digital mixers, and happy to work under a lead engineer. Weekdays are open."
+      credits: ["Open mic and small festival sound", "Backline setup for touring acts"]
+
+  dj:
+    - years: 10
+      genres: [Bollywood, EDM]
+      text: "Wedding and sangeet DJ with a controller setup, two speakers and a small light rig. I plan the evening with the family in three blocks: welcome music, dance floor and a late-night finish, with a printed list of must-play and do-not-play songs. More than 300 events so far."
+      credits: ["More than 300 wedding and sangeet events", "Light and sound package"]
+    - years: 6
+      genres: [House, Techno]
+      text: "Club DJ playing house and techno sets of two to four hours. I mix from USB drives with a backup on a laptop and play warm-up slots as happily as peak time. My own headphones and a spare cable come with me."
+      credits: ["Club residencies, house and techno", "Warm-up and peak-time sets"]
+    - years: 8
+      genres: [Hip-Hop, R&B]
+      text: "Open-format DJ for private parties and lounge nights. I scratch and juggle on vinyl and can add a live MC and percussion on request. Early sets run at 90 to 105 BPM and late ones at 120 and up."
+      credits: ["Private parties and lounge nights", "Vinyl sets with live MC"]
+    - years: 4
+      genres: [EDM, Pop]
+      text: "College fest and corporate event DJ. My playlists are built to keep a crowd interested through the first hour, and I work announcements into the music. The setup includes a wireless mic for the host, and weekday events are welcome."
+      credits: ["College fests", "Corporate events with a wireless host mic"]
+    - years: 12
+      genres: [Punjabi, Bhangra]
+      text: "Punjabi weddings and bhangra nights, with a dhol player in the same slot and live dhol synced to the beat. My library holds 4,000 tracks sorted by tempo and mood. A small sound system for up to 250 guests can come with the booking."
+      credits: ["Punjabi weddings with a live dhol", "Bhangra nights"]
+    - years: 7
+      genres: [Lo-fi, Ambient]
+      text: "DJ for cafes, restaurants and hotel lobbies, building slow, low-volume playlists across an evening. Tracks are cross-faded to avoid empty gaps, and nothing with explicit lyrics plays unless asked. Monthly retainers are welcome."
+      credits: ["Cafe and restaurant residencies", "Hotel lobby playlists"]
+    - years: 14
+      genres: [Techno, EDM]
+      text: "Fourteen years of techno across warehouse nights, small festivals and a radio show. I play vinyl and digital and am at ease with long sets. Club nights and private events that suit the sound are what I am looking for."
+      credits: ["Warehouse nights and small festivals", "Weekly radio show"]
+    - years: 3
+      genres: [Pop, Bollywood]
+      text: "New DJ with three years of birthday parties and small weddings behind me. I practise on a controller at home for two hours a day and can prepare the exact playlist a family wants. Rates for smaller functions are modest."
+      credits: ["Birthday parties and small weddings", "Custom playlists on request"]
+
+  dhol-player:
+    - years: 12
+      genres: [Punjabi, Bhangra]
+      text: "Dhol player for baraat processions and bhangra openers, usually with a second dhol and a vocalist. Two dhols and a pair of dagga sticks come with me, and I can play forty-five minutes non-stop. Weddings, corporate welcome events and college fests are the usual bookings."
+      credits: ["Baraat processions", "Bhangra openers at weddings and fests"]
+    - years: 8
+      genres: [Folk, Fusion]
+      text: "Dhol and tasha for Ganpati processions and wedding baraats, in a group of six. For DJ nights I sync my playing to the track so the crowd builds. A solo dhol or a full pathak can be booked."
+      credits: ["Ganpati processions", "Group of six for baraats"]
+    - years: 5
+      genres: [Bhangra, Pop]
+      text: "Dhol with DJs and live bands, adding the drum to pop and dance sets. I know eight rhythm patterns and can adjust the tempo on request. Sound check takes five minutes, and a stool and a wired microphone are all I need."
+      credits: ["Dhol with DJs and live bands", "Pop and dance sets"]
+    - years: 15
+      genres: [Punjabi, Folk]
+      text: "Fifteen years of dhol at Punjabi weddings and folk festivals. On Sundays I teach the instrument to teenagers and often bring a student along for stage time. My regular team has a second dhol and a nagara player."
+      credits: ["Punjabi weddings and folk festivals", "Dhol teacher for teenagers"]
+    - years: 3
+      genres: [Bhangra, EDM]
+      text: "Dhol since college, now booking baraats and sangeet entries. Loops for DJs can be recorded in three tempos on request. With two days' notice I can travel within the region."
+      credits: ["Baraat and sangeet entries", "Loops recorded for DJs"]
+
+  violinist:
+    - years: 14
+      genres: [Western Classical, Bollywood]
+      text: "Violin for wedding entries, string quartet evenings and film recordings. I lead a four-piece string group and can arrange a Bollywood medley within a week. Our own stands and lights come to the venue."
+      credits: ["Four-piece string group", "Film recording sessions"]
+    - years: 8
+      genres: [Carnatic, Fusion]
+      text: "Carnatic violinist accompanying vocalists and playing in fusion bands. I read notation, play by ear, and can hold a drone or a counter-melody. Concerts, recording sessions and dance recitals are all welcome."
+      credits: ["Carnatic vocal concerts", "Fusion band violinist"]
+    - years: 5
+      genres: [Folk, Indie]
+      text: "Fiddle and violin for folk and indie tracks. A layered string part comes back in a single afternoon as WAV stems. Live, I play with acoustic groups at cafes and small festivals."
+      credits: ["Strings on folk and indie tracks", "Acoustic group shows"]
+    - years: 11
+      genres: [Hindustani, Ghazal]
+      text: "Hindustani violinist accompanying ghazal singers and playing light classical pieces at private concerts. I follow the singer's improvisation and answer phrases in the lower octave. A solo raga performance of forty minutes is also possible."
+      credits: ["Ghazal accompaniment", "Private light classical concerts"]
+    - years: 3
+      genres: [Pop, Rock]
+      text: "Electric violin for pop and rock covers, on a solid-body violin with a small pedalboard. Corporate events and college fests with a backing track are my usual work. More session work is what I would like to record."
+      credits: ["Pop and rock covers", "Corporate events and college fests"]
+    - years: 16
+      genres: [Western Classical, Film Score]
+      text: "Orchestral violinist with sixteen years of session dates for film scores and web series. I sight-read and record overdubs from a click to build a section of eight players. A recording day away from home is fine."
+      credits: ["Session dates for film scores", "String section overdubs"]
+
+  saxophonist:
+    - years: 10
+      genres: [Jazz, Bollywood]
+      text: "Tenor and alto in jazz combos and wedding bands. Live sax on Bollywood songs is a regular request, and I can play a full sixty-minute set of jazz standards. Two saxophones and a spare reed kit travel with me."
+      credits: ["Jazz combo and wedding band dates", "Live sax on Bollywood songs"]
+    - years: 6
+      genres: [Pop, Soul]
+      text: "Sax for hotel lounge sets, pop covers and soul bands. I can solo over a backing track or improvise with a live rhythm section. A clip-on mic goes on the bell for stage shows."
+      credits: ["Hotel lounge sets", "Soul band horn section"]
+    - years: 13
+      genres: [Blues, Rock]
+      text: "Baritone and tenor sax for blues bands and horn sections. I write horn parts for small groups and rehearse with two trumpets and a trombone. Studio dates and festival slots are available."
+      credits: ["Blues band horn section", "Festival and studio dates"]
+    - years: 4
+      genres: [Bollywood, EDM]
+      text: "Sax over DJ sets at weddings and club nights. A wireless mic and a small monitor come with me, and I agree the key with the DJ ahead of time. Sets run for thirty minutes."
+      credits: ["Sax over DJ sets", "Wedding and club nights"]
+    - years: 8
+      genres: [Jazz, Fusion]
+      text: "Soprano and alto in a jazz-fusion quartet, playing original tunes and transcribed solos. On Saturday mornings I teach saxophone to beginners. Nine tracks by other artists carry my playing."
+      credits: ["Jazz-fusion quartet", "Saxophone on nine tracks by other artists"]
+
+  sitarist:
+    - years: 16
+      genres: [Hindustani, Classical]
+      text: "Sitarist trained in the Maihar tradition, playing evening ragas at concerts and cultural clubs. A concert usually runs 90 minutes with tabla. I also record ambient sitar pieces for films and meditation apps."
+      credits: ["Evening raga concerts", "Ambient sitar for films and apps"]
+    - years: 7
+      genres: [Fusion, Ambient]
+      text: "Sitar for fusion, film and ambient recordings. Several takes at different tempos are supplied as separate stems. Live, I play with an electronic trio."
+      credits: ["Fusion and ambient recordings", "Electronic trio"]
+
+  bansuri-player:
+    - years: 11
+      genres: [Hindustani, Folk]
+      text: "Bansuri in E and G bass keys for raga concerts and film sessions. Six flutes tuned to different keys let me match a singer's scale on request. Recording happens in my home studio."
+      credits: ["Raga concerts", "Film sessions"]
+
+  percussionist:
+    - years: 9
+      genres: [Fusion, World]
+      text: "A table of hand instruments: cajon, djembe, congas, shakers and frame drums. I add colour to live bands and record layered percussion for tracks in a day. Drum-circle workshops for corporate teams are a side line."
+      credits: ["Live band percussion", "Corporate drum-circle workshops"]
+
+  composer:
+    - years: 13
+      genres: [Film Score, Background Score]
+      text: "Composer for short films, documentaries and web series. I write the theme and underscore, deliver stems with a numbered cue sheet and revise up to twice. Most scores are for small acoustic and electronic ensembles."
+      credits: ["Scores for short films and documentaries", "Web-series underscore"]
+    - years: 6
+      genres: [Jingle, Pop]
+      text: "Jingle and brand-audio composer working with ad agencies on 15 to 60 second spots. Three options for any brief are ready in two days, and I can bring in vocalists and players. Licences are kept clear and in writing."
+      credits: ["Jingles for ad agencies", "Brand audio, 15 to 60 seconds"]
+
+  mastering-engineer:
+    - years: 9
+      genres: [Pop, Rock]
+      text: "Mastering from a treated room with a stereo hardware chain and a digital finishing stage. Singles and EPs are mastered in a day, with two reference versions: one at streaming loudness and one louder for clubs. Mixes should arrive with 3 dB of headroom."
+      credits: ["Mastered singles and EPs", "Streaming and club versions"]

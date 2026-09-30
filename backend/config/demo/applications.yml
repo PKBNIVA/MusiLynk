@@ -1,0 +1,71 @@
+# Cover notes for the 60 demo-showcase applications (SyntheticQa::Showcase). Sixty distinct notes in the
+# applicant's voice; `fit` says which kind of listing a note suits (performer, session, engineer,
+# producer, teaching, dj, any). Placeholders: {job} (listing title) and {company}.
+applications:
+  # performer (30)
+  - { fit: performer, note: "I have played about thirty events of this size in the last year and can send two videos from recent weddings. My fee is flexible if the schedule is confirmed early." }
+  - { fit: performer, note: "This is close to what I do every weekend. I bring my own monitors and a small PA in case the venue's system is busy." }
+  - { fit: performer, note: "Happy to learn any songs on your list that I do not already know, as long as I get the reference recordings a week ahead." }
+  - { fit: performer, note: "I read your description twice and think my set fits. I can do a trial evening at a reduced fee so you can hear how it works in the room." }
+  - { fit: performer, note: "I have worked with {company}'s kind of clients before, mostly hotel lounges and private hosts. References are available on request." }
+  - { fit: performer, note: "My band rehearses on Tuesday evenings, so a rehearsal with you before the event is easy to arrange. We can also play a shorter version of our set." }
+  - { fit: performer, note: "I applied because the dates match my calendar. I can perform two 45-minute sets and I am comfortable with a 30-minute soundcheck." }
+  - { fit: performer, note: "I have been performing for eight years and my set list is updated every season. I will send the current version with my profile link." }
+  - { fit: performer, note: "Available on those dates and willing to travel. If accommodation is included, my fee drops by a third." }
+  - { fit: performer, note: "Our group has played at similar family functions and corporate evenings. We keep the volume low at dinner and lift it after." }
+  - { fit: performer, note: "I like the brief. A quieter first hour and a livelier second half is how I usually plan a night, and I am happy to follow your run sheet." }
+  - { fit: performer, note: "I can bring one more musician if you would prefer a fuller sound, at an additional fee. Alone, I play with backing tracks." }
+  - { fit: performer, note: "This sounds like a good match. I have a printed set list and can adapt it to the family's preferences." }
+  - { fit: performer, note: "I regularly cover for other musicians on short notice, so a late change in your schedule is not a problem for me." }
+  - { fit: performer, note: "My recent video is on my profile. It was a two-hour set at a hotel banquet with about 200 guests, similar to what you describe." }
+  - { fit: performer, note: "I would like to be considered. I have my own transport and instruments and can arrive early for setup." }
+  - { fit: performer, note: "I have played this kind of engagement four times this year. Feel free to call any of the planners listed on my profile." }
+  - { fit: performer, note: "Free on the weekend you mention. I can send the exact songs I would play, with keys, so you can approve them in advance." }
+  - { fit: performer, note: "I am new to the city but have played in similar rooms elsewhere. I would be glad to do an audition at your convenience." }
+  - { fit: performer, note: "I have a small light rig and can provide it at cost if you need atmosphere for the room." }
+  - { fit: performer, note: "Applying with my duo partner. We split the fee evenly and can share one rehearsal if the venue allows." }
+  - { fit: performer, note: "I play in three languages, so I can tailor the repertoire to the audience. Tell me the guest mix and I will suggest a set." }
+  - { fit: performer, note: "This role appeals to me because of the residency format. I prefer to settle into one room and build a regular audience." }
+  - { fit: performer, note: "Please consider my application. My last two bookings came through repeat clients, and I am happy to share their contacts." }
+  - { fit: performer, note: "I have handled sound checks in noisy banquet halls before, and I know how to keep vocals clear when the room fills up." }
+  - { fit: performer, note: "I can adjust the length of my set on the day if the schedule changes, and I always ask for a contact on site." }
+  - { fit: performer, note: "I have read the brief and would keep the songs mainstream and easy to sing along with. Older guests usually respond well to that." }
+  - { fit: performer, note: "We are a four-piece and travel with our own backline. Loading in takes us thirty minutes." }
+  - { fit: performer, note: "I am comfortable performing without a stage, on a lawn or in a courtyard, and I carry a folding stool and a small monitor." }
+  - { fit: performer, note: "My availability is open for the whole month, so I can adapt to any date you settle on." }
+  # session (10)
+  - { fit: session, note: "I can attend the session with my own instrument and cables, and I usually finish a song in two to three takes. A short reel of session work is linked from my profile." }
+  - { fit: session, note: "Comfortable with charts and with learning by ear. Please send the demo and the tempo, and I will arrive prepared." }
+  - { fit: session, note: "I have recorded in rooms similar to yours and know how to work with a producer's notes quickly. Happy to start at the time you prefer." }
+  - { fit: session, note: "I can deliver dry, clean takes and label them by section. If you want alternate parts, I will record two versions." }
+  - { fit: session, note: "Available on the days you list. I play to a click as a habit and keep a spare set of strings and sticks in my bag." }
+  - { fit: session, note: "I have session credits on about twenty released tracks. One is linked on my profile, and I can send more if you need them." }
+  - { fit: session, note: "I record at home too, so if the studio date moves, I can deliver remote takes within a day." }
+  - { fit: session, note: "Happy to do a first song at half the fee so you can hear if my playing suits your project." }
+  - { fit: session, note: "My rates are on my profile. For a run of sessions, I offer a lower daily rate from the third booking." }
+  - { fit: session, note: "I can start with a short call to talk about tone and references, which usually saves time in the studio." }
+  # engineer (10)
+  - { fit: engineer, note: "I have run sound for events of this size for eight years and can share input lists and stage plots from earlier jobs. I bring a measurement microphone and a set of spare cables." }
+  - { fit: engineer, note: "I have mixed on the common digital consoles and can adapt to whichever one you have. I would like to see the stage plot a few days ahead." }
+  - { fit: engineer, note: "Reliable on early call times and comfortable with long days. My last festival had eleven acts and a forty-minute changeover." }
+  - { fit: engineer, note: "I approach load-in with a checklist, label everything and keep a spare of every cable type. Happy to share the checklist." }
+  - { fit: engineer, note: "I worked as an assistant for two years before going freelance, and I am at ease under a lead engineer or on my own." }
+  - { fit: engineer, note: "I can travel and stay with the crew. My rate for touring days is on my profile and includes my own laptop and interface." }
+  - { fit: engineer, note: "I mix for natural balance and keep the compression light. Samples of recorded and live mixes are linked on my profile." }
+  - { fit: engineer, note: "Available on the dates listed. For stage work, I also prepare a short show file for each band so changeovers are quick." }
+  - { fit: engineer, note: "I have handled monitors for six-piece bands and set in-ear mixes by talking through each player's needs. I can send a sample mix sheet." }
+  - { fit: engineer, note: "I am interested in the role and would like to learn from your team. I am careful with equipment and punctual." }
+  # producer (5)
+  - { fit: producer, note: "My portfolio has three finished productions from the last year, including one I composed, tracked and mixed. I usually deliver a first draft within a week." }
+  - { fit: producer, note: "I write and produce in Logic and Ableton. Please send the brief and a reference track, and I will send back a sketch in three days." }
+  - { fit: producer, note: "I like to start with a call about the reference material, then deliver stems with tempo and key in the filenames." }
+  - { fit: producer, note: "I have scored two short films and a web series. I keep cue sheets and licences clean, and I revise up to twice." }
+  - { fit: producer, note: "I can work remotely and come to the studio for tracking days. My rates are per project and include two revision rounds." }
+  # teaching (3)
+  - { fit: teaching, note: "I have taught for six years to children and adult beginners, and my students prepare for graded exams every year. I would be glad to give a demo lesson." }
+  - { fit: teaching, note: "I plan lessons in blocks of four weeks with a small performance at the end of each block. I can share a sample plan." }
+  - { fit: teaching, note: "Teaching is my main work, weekday evenings and Saturday mornings. I keep classes to eight students so everyone gets time." }
+  # dj (1)
+  - { fit: dj, note: "I run a controller setup with backup on a laptop and can send a recent recording of a two-hour set. I am flexible on start times and happy to follow your music policy." }
+  # any (1)
+  - { fit: any, note: "Thanks for the clear listing. I am available, I have read the requirements, and I can share references whenever you need them." }

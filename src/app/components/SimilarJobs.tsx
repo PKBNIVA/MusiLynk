@@ -29,12 +29,10 @@ export function pickSimilar(
  */
 export function SimilarJobs({ job, basePath }: { job: Job; basePath: string }) {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const kind = job.opportunity_kind;
   useEffect(() => {
     let live = true;
-    const query = new URLSearchParams({ limit: '12' });
-    if (kind) query.set('kind', kind);
-    apiGet<{ jobs?: Job[] }>(`/jobs?${query.toString()}`)
+    // No kind filter: pickSimilar ranks same kind first and falls back to city and genre.
+    apiGet<{ jobs?: Job[] }>('/jobs?limit=24')
       .then((d) => live && setJobs(pickSimilar(job, d.jobs || [])))
       .catch(() => live && setJobs([]));
     return () => {
@@ -42,7 +40,7 @@ export function SimilarJobs({ job, basePath }: { job: Job; basePath: string }) {
     };
     // The list depends on which opportunity is open, not on every field of it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [job.id, kind]);
+  }, [job.id]);
   if (!jobs.length) return null;
   return (
     <section aria-labelledby="similar-jobs" data-testid="similar-jobs">

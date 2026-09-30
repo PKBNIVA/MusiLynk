@@ -5,7 +5,7 @@ import { Navigation } from '../../components/Navigation';
 import { PageHeader } from '../../components/PageHeader';
 import { HelpCallout } from '../../components/help/HelpCallout';
 import { HELP } from '../../components/help/helpContent';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Composer } from '../../components/stage/Composer';
 import { EventStrip } from '../../components/stage/EventStrip';

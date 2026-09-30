@@ -8,7 +8,8 @@ class WeeklyDigestJob < ApplicationJob
   def perform(now = Time.current)
     since = now - 7.days
     key = LifecycleEmail.digest_key(now)
-    User.where(status: "active").where(role: %w[jobseeker employer]).find_each do |user|
+    # Synthetic QA and demo accounts never get e-mail.
+    User.organic.where(status: "active").where(role: %w[jobseeker employer]).find_each do |user|
       next if LifecycleEmail.sent?(user, key)
       next unless NotificationEmail.deliverable_to?(user, category: "digest")
 

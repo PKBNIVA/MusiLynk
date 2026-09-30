@@ -85,4 +85,20 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
     post "/api/events", params: { events: [{ name: "landing_view", anonId: "anon-rl" }] }, as: :json
     assert_response :too_many_requests
   end
+
+  test "the four signup funnel events are accepted and counted by the admin funnel" do
+    post "/api/events", params: { events: [
+      { name: "landing_view", anonId: "anon-funnel" },
+      { name: "path_chosen", anonId: "anon-funnel", props: { path: "musician" } },
+      { name: "signup_started", anonId: "anon-funnel", props: { role: "jobseeker" } },
+      { name: "signup_completed", anonId: "anon-funnel", props: { role: "jobseeker" } },
+      { name: "profile_link_added", anonId: "anon-funnel", props: { kind: "youtube" } }
+    ] }, as: :json
+    assert_equal 5, response.parsed_body.fetch("accepted")
+
+    counts = FunnelQueries.funnel(1.day.ago).to_h { [_1[:step], _1[:count]] }
+    assert_equal 1, counts["path_chosen"]
+    assert_equal 1, counts["signup_completed"]
+    assert_equal 1, counts["first_action"]
+  end
 end

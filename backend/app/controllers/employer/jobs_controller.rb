@@ -13,6 +13,10 @@ module Employer
       "closed" => %w[pending draft]
     }.freeze
 
+    # Text a moderator reads. Changing it on a live listing sends the listing back to review;
+    # changing anything else (pay, dates, slots, location…) keeps it live (J-05).
+    MODERATED_FIELDS = %w[title description requirements].freeze
+
     def index
       return unless authenticate!("jobseeker", "employer")
       return unless require_scalar_params!(:postedAs)
@@ -58,13 +62,17 @@ module Employer
       reattached = job.posted_as_type_changed? || job.posted_as_id_changed?
       return render_error("No opportunity changes supplied.", :bad_request) if requested.nil? && attributes.empty? && params[:company].blank? && !reattached
       edited = reattached || attributes.any? { |key, value| job.public_send(key) != job.class.type_for_attribute(key).cast(value) }
+      # Blank and missing text are the same thing here, so a wizard save that sends "" for a field
+      # that was never filled in does not count as an edit to it.
+      moderated_edit = reattached || attributes.slice(*MODERATED_FIELDS).any? { |key, value| job.public_send(key).to_s.strip != value.to_s.strip }
       if edited && job.closed? && requested.nil?
         return render_error("Reopen or save this opportunity as a draft to edit it.", :conflict)
       end
       job.assign_attributes(attributes)
       job.company = params[:company] if params[:company].present?
-      # A live listing that changes goes back to review so moderated content stays moderated.
-      target = requested || ((job.published? || job.rejected?) && edited ? "pending" : job.status)
+      # A live listing whose title, description or requirements change goes back to review so
+      # moderated content stays moderated; a rejected one is always resubmitted by an edit.
+      target = requested || ((job.published? && moderated_edit) || (job.rejected? && edited) ? "pending" : job.status)
       job.status = target
       if edited
         flags = moderation_flags_for(job.attributes)

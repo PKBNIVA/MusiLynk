@@ -2,9 +2,27 @@ class TalentController < ApplicationController
   include ScalarParams
   include ListPaging
   LIST_LIMIT = 200
-  LIST_PARAMS = %i[q location role instrument verified remoteRecording limit cursor].freeze
+  # The India-first facets (language, eventType, genre, budgetMax) are shared with /api/search.
+  FACET_PARAMS = %i[language eventType genre budgetMax].freeze
+  LIST_PARAMS = (%i[q location role instrument verified remoteRecording limit cursor] + FACET_PARAMS).freeze
+
+  # Ranking rewards proof (plan 5.1.4): verified, then a playable public sample, then how complete the
+  # profile is, then any published rate, then the most recent sign-in. An empty profile therefore never
+  # outranks a populated one. COMPLETENESS mirrors the dashboard's profileScore (six signals, 0-6).
+  HAS_SAMPLE_SQL = "EXISTS (SELECT 1 FROM portfolio_items ranked_samples WHERE ranked_samples.user_id = users.id AND ranked_samples.visibility = 'public')".freeze
+  COMPLETENESS_SQL = [
+    *%w[headline bio location].map { "(CASE WHEN btrim(COALESCE(profiles.#{_1}, '')) <> '' THEN 1 ELSE 0 END)" },
+    *%w[skills genres].map { "(CASE WHEN profiles.#{_1} <> '[]'::jsonb THEN 1 ELSE 0 END)" },
+    "(CASE WHEN EXISTS (SELECT 1 FROM portfolio_items scored_items WHERE scored_items.user_id = users.id) THEN 1 ELSE 0 END)"
+  ].join(" + ").then { "(#{_1})" }.freeze
+  # The "from" price on a card is the lowest of these rates (tour-day pay is a different kind of engagement).
+  FROM_RATE_SQL = "LEAST(NULLIF(profiles.session_rate, 0), NULLIF(profiles.show_rate, 0), NULLIF(profiles.day_rate, 0), NULLIF(profiles.hourly_rate, 0))".freeze
+  HAS_RATES_SQL = "(#{FROM_RATE_SQL} IS NOT NULL)".freeze
   # Tie-breaks after relevance, and the order of an unfiltered directory; ends in a unique column.
-  LIST_ORDER = ["profiles.verified DESC", "users.created_at DESC", "users.id ASC"].freeze
+  LIST_ORDER = [
+    "profiles.verified DESC", "#{HAS_SAMPLE_SQL} DESC", "#{COMPLETENESS_SQL} DESC", "#{HAS_RATES_SQL} DESC",
+    "users.last_login_at DESC NULLS LAST", "users.created_at DESC", "users.id ASC"
+  ].freeze
   ROLE_FIELDS = Search::Query::Fields.new(primary: ["profiles.roles::text", "profiles.headline"], secondary: ["profiles.skills::text"], tertiary: [], location: [])
   LOCATION_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["profiles.location"])
 
@@ -14,8 +32,8 @@ class TalentController < ApplicationController
   end
 
   def public_show
-    candidate = public_scope.find(params[:id])
-    render json: { professional: public_profile(candidate), portfolio: candidate.portfolio_items.where(visibility: "public").order(featured: :desc, sort_order: :asc).map(&:api_json) }
+    candidate = listing_scope.find(params[:id])
+    render json: { professional: with_bookings(public_profile(candidate), candidate.id), portfolio: candidate.portfolio_items.where(visibility: "public").order(featured: :desc, sort_order: :asc).map(&:api_json) }
   end
 
   def index
@@ -27,9 +45,9 @@ class TalentController < ApplicationController
 
   def show
     return unless authenticate!("jobseeker", "employer")
-    candidate = public_scope.find(params[:id])
+    candidate = listing_scope.find(params[:id])
     RecentActivity.create!(user: current_user, kind: "profile_view", entity_id: candidate.id, label: candidate.name)
-    render json: { candidate: public_profile(candidate), portfolio: candidate.portfolio_items.where(visibility: "public").map(&:api_json) }
+    render json: { candidate: with_bookings(public_profile(candidate), candidate.id), portfolio: candidate.portfolio_items.where(visibility: "public").map(&:api_json) }
   end
 
   def compare
@@ -37,7 +55,7 @@ class TalentController < ApplicationController
     return unless require_scalar_params!(:ids)
     ids = params[:ids].to_s.split(",").map(&:strip).reject(&:blank?).uniq.first(4)
     return render_error("Choose at least two professionals to compare.", :bad_request) if ids.length < 2
-    professionals = public_scope.where(id: ids).map do |candidate|
+    professionals = listing_scope.where(id: ids).map do |candidate|
       availability = AvailabilityWindow.where(user: candidate, status: "available").where("end_at > ?", Time.current).order(:start_at).limit(5).map do |window|
         { startAt: window.start_at, endAt: window.end_at, status: window.status, city: window.city }
       end
@@ -52,7 +70,7 @@ class TalentController < ApplicationController
   def shortlist
     return unless authenticate!("jobseeker", "employer")
     return unless require_scalar_params!(:note)
-    candidate = public_scope.find(params[:id])
+    candidate = listing_scope.find(params[:id])
     TalentShortlist.transaction do
       current_user.lock!
       unless TalentShortlist.exists?(employer: current_user, candidate:)
@@ -87,6 +105,18 @@ class TalentController < ApplicationController
     render json: { employers: User.employer.active.includes(:profile).order(:name).limit(LIST_LIMIT).map { public_employer(_1) } }
   end
 
+  # Narrows a talent scope (joined to :profile) by the India-first facets. Blank or malformed values
+  # are ignored. `budgetMax` keeps people whose "from" rate is at or under it; people with no rate
+  # published are left out, since their price is unknown.
+  def self.apply_facets(scope, params)
+    contains = ->(value) { "%#{ActiveRecord::Base.sanitize_sql_like(value.to_s.strip)}%" }
+    scope = scope.where("profiles.languages::text ILIKE ?", contains.(params[:language])) if params[:language].present?
+    scope = scope.where("profiles.event_types::text ILIKE :v OR profiles.open_to::text ILIKE :v", v: contains.(params[:eventType])) if params[:eventType].present?
+    scope = scope.where("profiles.genres::text ILIKE ?", contains.(params[:genre])) if params[:genre].present?
+    budget = Integer(params[:budgetMax].to_s.strip, 10, exception: false)
+    budget&.positive? ? scope.where("#{FROM_RATE_SQL} <= ?", budget) : scope
+  end
+
   private
 
   def public_scope = User.discoverable_talent.preload(:profile, :portfolio_items)
@@ -94,6 +124,14 @@ class TalentController < ApplicationController
   # Browse/search listings hide synthetic QA accounts from real users (except badged demo-* batches);
   # synthetic viewers still see every batch.
   def listing_scope = current_user&.synthetic_batch.present? ? public_scope : SyntheticQa::Demo.publicly_listed(public_scope)
+
+  # { owner_id => completed bookings across the acts they own }, for the "N bookings" on a card.
+  def completed_bookings(ids)
+    return {} if ids.empty?
+    BookingRequest.where(status: "completed").joins(:act).where(acts: { owner_id: ids }).group("acts.owner_id").count
+  end
+
+  def with_bookings(profile, id, counts = nil) = profile.merge("bookingsCount" => (counts || completed_bookings([id])).fetch(id, 0))
 
   # One ranked page of professionals: `key` => rows, plus nextCursor, total and how the query was read.
   def render_listing(key)
@@ -103,7 +141,8 @@ class TalentController < ApplicationController
     limit = list_limit
     search = Search::Runner.call(scope, params[:q], Search::Targets::TALENT, order: LIST_ORDER, offset:, limit:)
     prime_profile_stats(search.rows)
-    body = { key => search.rows.map { yield _1 }, nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta)
+    bookings = completed_bookings(search.rows.map(&:id))
+    body = { key => search.rows.map { with_bookings(yield(_1), _1.id, bookings) }, nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta)
     if (role = role_filter)
       body[:role] = role
     end
@@ -132,6 +171,6 @@ class TalentController < ApplicationController
     scope = scope.where(profiles: { verified: true }) if params[:verified] == "true"
     scope = scope.where(profiles: { verified: true }).where(users: { id: Verification::Tier.pro_user_ids }) if params[:verified] == "pro"
     scope = scope.where(profiles: { remote_recording: true }) if params[:remoteRecording] == "true"
-    scope
+    self.class.apply_facets(scope, params)
   end
 end

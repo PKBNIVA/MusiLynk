@@ -8,20 +8,25 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Photo } from '../media/Photo';
+import { editorialPhoto } from './photos';
 
-type Step = [LucideIcon, string, string];
+type Step = [LucideIcon, string];
 
+// Three icons and at most eight words each.
 const HIRER_STEPS: Step[] = [
-  [ClipboardList, 'Say who you need', 'Role, date, area and budget.'],
-  [Headphones, 'Hear verified players', 'Real work, plus a Verified badge.'],
-  [ShieldCheck, 'Book and pay the deposit', 'Agree the fee, pay the deposit securely.'],
+  [ClipboardList, 'Say who you need'],
+  [Headphones, 'Hear verified players'],
+  [ShieldCheck, 'Book the one you like'],
 ];
 
 const MUSICIAN_STEPS: Step[] = [
-  [Link2, 'Paste links to your work', 'Your links become a portfolio in minutes.'],
-  [BadgeCheck, 'Get your Verified badge', 'We review your work. Hirers filter for it.'],
-  [CalendarCheck, 'Get booked', 'Answer urgent requests and gigs near you.'],
+  [Link2, 'Paste links to your work'],
+  [BadgeCheck, 'Get your Verified badge'],
+  [CalendarCheck, 'Get booked'],
 ];
+
+const STRIP = ['rehearsal-room', 'sitar-trio', 'studio-vocalist'] as const;
 
 /** Three steps for each side, switched with a tab so the page stays short. */
 export function HowItWorks() {
@@ -48,6 +53,7 @@ export function HowItWorks() {
             <Steps steps={MUSICIAN_STEPS} />
           </TabsContent>
         </Tabs>
+        <PhotoStrip />
       </div>
     </section>
   );
@@ -56,18 +62,40 @@ export function HowItWorks() {
 function Steps({ steps }: { steps: Step[] }) {
   return (
     <ol className="grid gap-4 md:grid-cols-3">
-      {steps.map(([Icon, title, text], index) => (
-        <li key={title} className="verse-surface rounded-2xl p-6">
-          <div className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-xl bg-violet-500/15 text-violet-200">
-              <Icon aria-hidden="true" size={21} />
-            </span>
-            <span className="text-sm font-semibold text-slate-400">Step {index + 1}</span>
+      {steps.map(([Icon, title], index) => (
+        <li key={title} className="verse-surface flex items-center gap-4 rounded-2xl p-5">
+          <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-violet-500/15 text-violet-200">
+            <Icon aria-hidden="true" size={22} />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-slate-400">Step {index + 1}</p>
+            <h3 className="text-lg font-bold leading-6">{title}</h3>
           </div>
-          <h3 className="mt-4 text-xl font-bold">{title}</h3>
-          <p className="mt-2 leading-7 text-slate-300">{text}</p>
         </li>
       ))}
     </ol>
+  );
+}
+
+/** Three photographs of musicians at work under the steps. */
+function PhotoStrip() {
+  return (
+    <ul className="mt-6 grid grid-cols-3 gap-3" data-testid="how-photos">
+      {STRIP.map((file) => {
+        const photo = editorialPhoto(file);
+        return (
+          <li key={file} className="overflow-hidden rounded-2xl border border-white/10">
+            <Photo
+              src={photo.src}
+              alt={photo.alt}
+              width={photo.width}
+              height={photo.height}
+              sizes="(min-width: 1152px) 368px, 33vw"
+              className="aspect-[4/3] w-full object-cover sm:aspect-[3/2]"
+            />
+          </li>
+        );
+      })}
+    </ul>
   );
 }

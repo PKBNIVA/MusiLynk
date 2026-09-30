@@ -1,4 +1,4 @@
-import { EmptyState } from '../components/help/EmptyState';
+import { EmptyState } from '../components/kit/EmptyState';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Navigation } from '../components/Navigation';

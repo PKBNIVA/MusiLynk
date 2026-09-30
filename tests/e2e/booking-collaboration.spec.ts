@@ -324,7 +324,9 @@ test('lineup members and urgent requests use dialogs instead of native prompts',
   await expect(page.getByText('No open urgent requests right now.')).toBeVisible();
   await page.getByRole('button', { name: 'Post urgent need' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Publish request' }).click();
-  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Add a title, role, city and start time.');
+  await expect(page.getByRole('dialog').getByRole('alert').filter({ hasText: 'before posting' })).toContainText(
+    'Check the role, budget and a short note before posting.',
+  );
   expect(failures).toEqual([]);
 });
 

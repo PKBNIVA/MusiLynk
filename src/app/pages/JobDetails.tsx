@@ -17,6 +17,7 @@ import { MoreDetails } from '../components/help/MoreDetails';
 import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { JobHero } from '../components/JobHero';
+import { SimilarJobs } from '../components/SimilarJobs';
 import { ApplyMaterials, type Materials } from '../components/showcase/ApplyMaterials';
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import type { Portfolio, Resume } from '../lib/showcase';
@@ -220,6 +221,7 @@ export default function JobDetails() {
                 )}
               </CardContent>
             </Card>
+            {user?.role === 'jobseeker' && <SimilarJobs job={job} basePath="/jobseeker/jobs" />}
           </div>
           <aside className="space-y-4">
             <Card id="apply-panel" className="bg-white/[.06] border-white/10 lg:sticky lg:top-24">

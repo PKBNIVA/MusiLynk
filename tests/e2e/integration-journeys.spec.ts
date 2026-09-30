@@ -14,11 +14,20 @@ test.describe('real frontend and Rails journeys', () => {
       const name = role === 'jobseeker' ? 'Integration Artist' : 'Integration Studio';
       const profilePath = `/${role}/profile`;
 
-      // The two-minute sign-up, skipping the questions ("complete my profile later").
+      // The two-minute sign-up. Musicians skip the questions ("complete my profile later"); hirers
+      // fill the one-screen join (what they hire for, organisation) and open "More" for the name
+      // and the password choice.
       await page.goto(`/auth/${role}`);
       await page.getByRole('link', { name: 'New to Verse? Join in two minutes' }).click();
-      await page.getByRole('button', { name: 'Complete my profile later' }).click();
-      await page.getByLabel('Your name').fill(name);
+      if (role === 'jobseeker') {
+        await page.getByRole('button', { name: 'Complete my profile later' }).click();
+        await page.getByLabel('Your name').fill(name);
+      } else {
+        await page.getByLabel('Studio sessions').check();
+        await page.getByLabel('Organisation or team name').fill(name);
+        await page.getByRole('button', { name: /More: your name/ }).click();
+        await page.getByLabel('Your name (optional)').fill(name);
+      }
       await page.getByLabel('Email').fill(email);
       await page.getByRole('button', { name: 'Use a password instead' }).click();
       await page.getByLabel('Password', { exact: true }).fill(password);

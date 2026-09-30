@@ -34,6 +34,8 @@ export type Operations = {
     suppressedAddresses: number;
     webhookConfigured: boolean;
   };
+  /** Required fields of config/legal.yml that still hold a "[PLACEHOLDER]" (e.g. "grievance_officer.email"). */
+  legal?: { unfilled: string[] };
 };
 
 const REFRESH_MS = 60_000;
@@ -179,6 +181,17 @@ export default function OperationsPanel() {
         >
           <AlertTriangle aria-hidden="true" size={16} />
           {error}
+        </div>
+      )}
+      {data?.legal && data.legal.unfilled.length > 0 && (
+        <div
+          role="alert"
+          data-testid="legal-unfilled"
+          className="rounded-xl border border-red-400/40 bg-red-500/10 p-4 text-sm text-red-100"
+        >
+          <strong className="font-semibold">Legal details unfilled</strong>
+          <span className="text-red-200"> — the Terms, Privacy and invoices still lack: </span>
+          <span className="font-mono text-xs">{data.legal.unfilled.join(', ')}</span>
         </div>
       )}
       {data && (

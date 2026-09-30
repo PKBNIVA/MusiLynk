@@ -54,6 +54,10 @@ export interface ProfileFields {
   dayRate?: number | null;
   availability?: string | null;
   currency?: string | null;
+  /** The person's uploaded (or Google) picture. Demo accounts never have one: they render generated art. */
+  photoUrl?: string | null;
+  /** Kinds of event they take (wedding, corporate…); the directory's event-type filter reads it. */
+  eventTypes?: string[];
   /** Consent to announce a verification approval on The Stage and generate a share card
    * (Post::SYSTEM_KINDS "verified", ShareCardsController). Defaults true. */
   shareVerificationPublicly?: boolean;
@@ -96,6 +100,8 @@ export interface Professional extends ProfileFields {
   reviewsAverage?: number | null;
   responseTimeMinutes?: number | null;
   fastResponderBadge?: boolean;
+  /** TalentController: completed bookings across the acts they own (absent from other payloads). */
+  bookingsCount?: number;
 }
 
 /** TalentController#compare: a professional with their public work and upcoming availability. */
@@ -413,6 +419,8 @@ export interface Act {
   tech_rider_url?: string | null;
   hospitality_rider_url?: string | null;
   promo_url?: string | null;
+  /** The act's uploaded picture; demo acts have none and render generated art. */
+  photo_url?: string | null;
   bio?: string | null;
   genres: string[];
   languages: string[];

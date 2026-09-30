@@ -37,7 +37,10 @@ test.describe('landing page', () => {
     expect(await page.locator('select#landing-city').count()).toBe(0);
     await city.click();
     await expect(page.getByRole('option', { name: 'Mumbai' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('option', { name: 'More cities soon' })).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByRole('option', { name: 'Delhi, Bengaluru, Pune, Goa coming' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     await page.keyboard.press('Escape');
     await page
       .getByTestId('hero-paths')
@@ -72,12 +75,13 @@ test.describe('landing page', () => {
     await expect(section.getByRole('heading', { name: 'Hear verified players' })).toBeHidden();
   });
 
-  test('live proof shows real counts only once they are meaningful', async ({ page }) => {
+  test('the promise strip is always there; real counts join it only once they are meaningful', async ({ page }) => {
     await mockSignupApi(page, {
       stats: { verifiedProfiles: 142, cities: 1, openOpportunities: 30, urgentRequests: 4 },
     });
     await page.goto('/');
     const proof = page.getByTestId('live-proof');
+    await expect(proof.getByTestId('promise-strip')).toContainText('Verified by the Verse team');
     await expect(proof.getByRole('heading', { name: 'On Verse right now' })).toBeVisible();
     await expect(proof).toContainText('142');
     await expect(proof).toContainText('verified musicians and crew');
@@ -85,17 +89,32 @@ test.describe('landing page', () => {
     await expect(proof).not.toContainText('cities');
   });
 
-  test('with nothing meaningful to count, the page shows what Verse promises instead', async ({ page }) => {
+  test('with nothing meaningful to count, only the promises show and no number is invented', async ({ page }) => {
     await mockSignupApi(page, { stats: { verifiedProfiles: 3, cities: 1, openOpportunities: 0 } });
     await page.goto('/');
     const proof = page.getByTestId('live-proof');
-    await expect(proof.getByRole('heading', { name: 'What you can count on' })).toBeVisible();
+    const strip = proof.getByTestId('promise-strip');
+    await expect(strip.getByRole('listitem')).toHaveText([
+      'Verified by the Verse team',
+      'Reply within 2 hours, 9 am–11 pm IST',
+      'Free to post · musicians never pay',
+    ]);
+    await expect(proof.getByRole('heading', { name: 'On Verse right now' })).toHaveCount(0);
     await expect(proof).not.toContainText(/\b3\b/);
   });
 
-  test('popular searches link into the role × city hire pages, and structured data describes the site', async ({
-    page,
-  }) => {
+  test('the urgent band carries its role and time into the urgent form', async ({ page }) => {
+    await mockSignupApi(page);
+    await page.goto('/');
+    const band = page.getByTestId('urgent-band');
+    await band.getByLabel('Role needed').fill('Tabla player');
+    await band.getByLabel('Date & time').fill('2026-12-01T19:30');
+    await band.getByRole('button', { name: 'Continue' }).click();
+    await expect(page).toHaveURL(/\/urgent\?role=Tabla\+player&city=Mumbai&startAt=2026-12-01T19%3A30$/);
+    await expect(page.locator('#urgent-start')).toHaveValue('2026-12-01T19:30');
+  });
+
+  test('role tiles link the 12 roles into the hire pages, and structured data describes the site', async ({ page }) => {
     await mockSignupApi(page);
     await page.goto('/');
     await expect(page.getByRole('link', { name: 'Hire a drummer in Mumbai' })).toHaveAttribute(
@@ -103,9 +122,42 @@ test.describe('landing page', () => {
       '/hire/drummer/mumbai',
     );
     await expect(page.getByRole('link', { name: 'Hire a DJ in Mumbai' })).toBeVisible();
+    await expect(page.getByTestId('role-tiles').getByRole('link')).toHaveCount(12);
     const data = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent()) ?? '[]');
     expect(data.map((entry: { '@type': string }) => entry['@type'])).toEqual(['Organization', 'WebSite']);
     expect(await page.locator('meta[name="description"]').getAttribute('content')).toMatch(/Mumbai/);
+  });
+
+  test('an unknown page offers search and the three ways back in, without printing the path', async ({ page }) => {
+    await mockSignupApi(page);
+    await page.goto('/this-page-does-not-exist');
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Public navigation' })).toBeVisible();
+    await expect(page.locator('main')).not.toContainText('this-page-does-not-exist');
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+    const links = page.getByTestId('not-found-links').getByRole('link');
+    await expect(links).toHaveText([/Hire a musician/, /Find work/, /Book a live act/]);
+    await page.getByRole('searchbox').or(page.getByLabel('Search jobs, people and acts')).last().fill('tabla');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await expect(page).toHaveURL(/\/search\?q=tabla$/);
+  });
+
+  test('the public urgent page uses the public navigation and a photo header', async ({ page }) => {
+    await mockSignupApi(page);
+    await page.goto('/urgent');
+    await expect(page.getByRole('navigation', { name: 'Public navigation' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /Find a verified musician/ })).toBeVisible();
+    await expect(page.getByTestId('photo-header').locator('img')).toHaveAttribute('src', /rehearsal-room-1600\.webp$/);
+  });
+
+  test('pricing has no engineering pill and no annual toggle while annual billing is off', async ({ page }) => {
+    await mockSignupApi(page);
+    await page.goto('/pricing');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Pay for operating capacity');
+    await expect(page.getByText('server-enforced')).toHaveCount(0);
+    await expect(
+      page.getByRole('radio', { name: /annual/i }).or(page.getByRole('button', { name: /annual/i })),
+    ).toHaveCount(0);
   });
 
   test('old "?mode=register" links land on the two-minute sign-up', async ({ page }) => {
@@ -208,6 +260,23 @@ test.describe('musician sign-up', () => {
     await expect(page).toHaveURL(/\/jobseeker$/);
   });
 
+  test('the step tabs show their full labels, even on a phone', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockSignupApi(page);
+    await page.goto('/join/musician');
+    const tabs = page.getByRole('navigation', { name: 'Form progress' }).getByRole('button');
+    await expect(tabs).toHaveCount(3);
+    for (const [index, label] of ['What you do', 'Your work', 'Your account'].entries()) {
+      const tab = tabs.nth(index);
+      await expect(tab).toContainText(label);
+      const clipped = await tab.evaluate((element) => {
+        const text = element.querySelector('span:last-child') as HTMLElement;
+        return text.scrollWidth > text.clientWidth || getComputedStyle(text).textOverflow === 'ellipsis';
+      });
+      expect(clipped, `${label} is not cut off`).toBe(false);
+    }
+  });
+
   test('drafting a profile from pasted links shows a review card with sources, and Use this fills the sign-up', async ({
     page,
   }) => {
@@ -297,21 +366,28 @@ test.describe('musician sign-up', () => {
 });
 
 test.describe('hirer sign-up', () => {
-  test('what you are, city and company, then an account; lands on post or urgent request', async ({ page }) => {
+  test('organisation, city, what you hire for and email on one screen; lands on post or urgent request', async ({
+    page,
+  }) => {
     const calls = await mockSignupApi(page);
     await page.goto('/join/hiring');
-    await page.getByRole('button', { name: 'Next: your account' }).click();
-    await expect(page.getByRole('alert')).toContainText('Choose the closest match');
-    await page.getByLabel('Event or wedding company').check();
-    await expect(page.getByLabel('Company name')).toBeVisible();
-    await page.getByLabel('Company name').fill('Shaadi Beats Events');
-    await page.getByRole('button', { name: 'Next: your account' }).click();
+    await expect(page.getByRole('combobox', { name: 'City you hire in' })).toHaveValue('Mumbai');
+    // Four answers and the Terms box; the name and the password choice are under More.
+    await expect(page.getByLabel('Your name (optional)')).toBeHidden();
+    await page.getByLabel(/I agree to the Terms/).check();
+    await page.getByRole('button', { name: 'Email me a code' }).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'Enter the name musicians will see' })).toBeVisible();
+    await expect(page.getByLabel('Organisation or team name')).toBeFocused();
+    await expect(page.getByRole('alert').filter({ hasText: 'Choose what you hire for' })).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: 'Enter your email address' })).toBeVisible();
 
-    await page.getByLabel('Your name').fill('Anita Kulkarni');
+    await page.getByLabel('Weddings and events').check();
+    await page.getByLabel('Organisation or team name').fill('Shaadi Beats Events');
     await page.getByLabel('Email').fill('anita@example.invalid');
+    await page.getByRole('button', { name: /More: your name/ }).click();
+    await page.getByLabel('Your name (optional)').fill('Anita Kulkarni');
     await page.getByRole('button', { name: 'Use a password instead' }).click();
     await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
-    await page.getByLabel(/I agree to the Terms/).check();
     await page.getByRole('button', { name: 'Create my account' }).click();
 
     await expect(page).toHaveURL(/\/employer\?welcome=1$/);
@@ -333,6 +409,27 @@ test.describe('hirer sign-up', () => {
       'href',
       '/employer/post-job',
     );
+  });
+
+  test('an email that already has an account says "Sign in instead"', async ({ page }) => {
+    await mockSignupApi(page);
+    await page.route('**/api/auth/register', (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'An account already exists for this email.', code: 'EMAIL_TAKEN' }),
+      }),
+    );
+    await page.goto('/join/hiring');
+    await page.getByLabel('Weddings and events').check();
+    await page.getByLabel('Organisation or team name').fill('Shaadi Beats Events');
+    await page.getByLabel('Email').fill('anita@example.invalid');
+    await page.getByRole('button', { name: /More: your name/ }).click();
+    await page.getByRole('button', { name: 'Use a password instead' }).click();
+    await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
+    await page.getByLabel(/I agree to the Terms/).check();
+    await page.getByRole('button', { name: 'Create my account' }).click();
+    await expect(page.getByRole('link', { name: 'Sign in instead' })).toHaveAttribute('href', '/auth/employer');
   });
 
   test('an urgent-request visitor fills the public form first and is only asked to sign up to send it', async ({

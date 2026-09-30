@@ -1,0 +1,489 @@
+# Forty CC BY tracks from ccMixter (https://ccmixter.org), used as clearly labelled demo work samples by
+# SyntheticQa::Showcase. Only licence = Attribution (CC BY) tracks were picked, and every MP3 answered a
+# ranged request with HTTP 206 audio/mpeg when it was curated (2026-09-30). Note: ccMixter refuses
+# requests that carry no Referer or a Referer from another site (403); it serves the file when the
+# Referer is https://ccmixter.org/. For that reason SyntheticQa::TrackMirror copies the files into the app's
+# bucket (demo/showcase/<id>.mp3) when the showcase is seeded, and the samples play from there.
+# `peaks` are 64 values 0-100: the maximum absolute sample in each 1/64th of the track, decoded to mono
+# 8 kHz and normalised to the loudest segment. Only these numbers are stored; no audio is committed. `families` map a track to the kind of musician it suits.
+tracks:
+  - id: 28236
+    title: "Freedom in my voice"
+    artist: "Carosone"
+    ccmixter_user: "Carosone"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/Carosone/28236"
+    url: "https://ccmixter.org/content/Carosone/Carosone_-_Freedom_in_my_voice.mp3"
+    year: 2010
+    duration_seconds: 231
+    families: [hindustani, fusion, vocal]
+    peaks: [94, 94, 64, 87, 73, 99, 91, 94, 98, 90, 98, 96, 92, 98, 91, 91, 82, 78, 87, 98, 100, 91, 96, 94, 93, 98, 93, 93, 93, 95, 90, 93, 93, 92, 89, 84, 88, 92, 88, 86, 78, 96, 96, 90, 97, 98, 95, 91, 100, 90, 92, 95, 89, 83, 79, 88, 88, 97, 85, 85, 90, 59, 26, 2]
+  - id: 32298
+    title: "A Trio Cultural Mix"
+    artist: "CSoul"
+    ccmixter_user: "CSoul"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/CSoul/32298"
+    url: "https://ccmixter.org/content/CSoul/CSoul_-_A_Trio_Cultural_Mix.mp3"
+    year: 2011
+    duration_seconds: 145
+    families: [hindustani, fusion, percussion]
+    peaks: [43, 27, 96, 61, 99, 90, 71, 90, 72, 99, 91, 99, 80, 70, 100, 100, 100, 97, 92, 100, 90, 100, 85, 100, 100, 100, 99, 97, 100, 80, 99, 100, 80, 100, 90, 99, 100, 85, 100, 83, 100, 100, 100, 97, 100, 91, 100, 84, 96, 100, 100, 100, 100, 90, 100, 81, 100, 100, 96, 100, 91, 43, 0, 0]
+  - id: 14403
+    title: "Rain On the Motherland"
+    artist: "Dominique Cyprès"
+    ccmixter_user: "lunasspecto"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/lunasspecto/14403"
+    url: "https://ccmixter.org/content/lunasspecto/lunasspecto_-_Rain_On_the_Motherland.mp3"
+    year: 2008
+    duration_seconds: 244
+    families: [hindustani, folk]
+    peaks: [37, 34, 48, 58, 47, 58, 60, 54, 50, 49, 60, 45, 59, 54, 61, 56, 60, 50, 53, 45, 46, 50, 64, 51, 49, 58, 65, 67, 60, 65, 67, 79, 83, 87, 99, 100, 86, 46, 82, 71, 70, 43, 33, 84, 89, 89, 57, 58, 64, 62, 76, 58, 74, 65, 69, 72, 66, 61, 73, 59, 66, 71, 55, 52]
+  - id: 12507
+    title: "Abhi's Vibe"
+    artist: "Abhi S.V."
+    ccmixter_user: "abhisv"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/abhisv/12507"
+    url: "https://ccmixter.org/content/abhisv/abhisv_-_Abhi_s_Vibe.mp3"
+    year: 2007
+    duration_seconds: 177
+    families: [hindustani, hiphop, fusion]
+    peaks: [100, 100, 100, 100, 100, 100, 100, 100, 100, 99, 100, 97, 100, 100, 99, 100, 100, 99, 100, 100, 99, 100, 100, 100, 99, 100, 99, 100, 100, 100, 100, 97, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 95, 100, 100, 100, 99, 100, 100, 100, 100, 100, 72, 99, 98, 97, 92, 87, 4, 0, 0, 0]
+  - id: 32007
+    title: "Give it up"
+    artist: "Carosone"
+    ccmixter_user: "Carosone"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/Carosone/32007"
+    url: "https://ccmixter.org/content/Carosone/Carosone_-_Give_it_up.mp3"
+    year: 2011
+    duration_seconds: 255
+    families: [fusion, percussion, vocal]
+    peaks: [41, 82, 80, 56, 85, 82, 91, 96, 83, 91, 89, 87, 93, 80, 60, 75, 94, 87, 85, 96, 91, 88, 90, 86, 93, 93, 87, 93, 70, 73, 82, 78, 74, 89, 96, 91, 97, 100, 96, 92, 98, 93, 95, 96, 94, 94, 95, 96, 91, 97, 97, 92, 80, 77, 85, 82, 70, 88, 61, 25, 17, 5, 1, 0]
+  - id: 59774
+    title: "Tabla Rasa (free music for film or meditation / yoga, influenced by John Carpenter and Bollywood music)"
+    artist: "geoffpeters"
+    ccmixter_user: "geoffpeters"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/geoffpeters/59774"
+    url: "https://ccmixter.org/content/geoffpeters/geoffpeters_-_Tabla_Rasa_(free_music_for_film_or_meditation_yoga_influenced_by_John_Carpenter_and_Bollywood_music)_1.mp3"
+    year: 2019
+    duration_seconds: 166
+    families: [percussion, hindustani, film]
+    peaks: [63, 93, 96, 99, 98, 82, 77, 99, 98, 96, 99, 90, 90, 86, 98, 99, 99, 100, 99, 97, 97, 95, 80, 76, 64, 71, 75, 75, 71, 78, 79, 80, 79, 94, 84, 92, 84, 91, 85, 87, 88, 82, 89, 82, 81, 89, 83, 97, 94, 95, 99, 82, 86, 85, 60, 55, 46, 32, 30, 28, 17, 7, 2, 0]
+  - id: 12449
+    title: "Ta ke te Dhin"
+    artist: "skoria"
+    ccmixter_user: "skoria"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/skoria/12449"
+    url: "https://ccmixter.org/content/skoria/skoria_-_Ta_ke_te_Dhin.mp3"
+    year: 2007
+    duration_seconds: 127
+    families: [percussion, electronic, hindustani]
+    peaks: [100, 100, 100, 100, 100, 100, 100, 100, 100, 99, 100, 100, 100, 100, 100, 100, 100, 100, 95, 100, 100, 100, 100, 99, 100, 100, 100, 100, 98, 100, 100, 100, 100, 100, 99, 98, 100, 100, 100, 100, 100, 100, 98, 99, 100, 100, 100, 93, 100, 100, 99, 100, 100, 100, 98, 99, 100, 100, 99, 100, 100, 100, 100, 18]
+  - id: 15273
+    title: "Funky Tabla Loop"
+    artist: "PJ Rey"
+    ccmixter_user: "Trifidlebock"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/Trifidlebock/15273"
+    url: "https://ccmixter.org/content/Trifidlebock/Trifidlebock_-_Funky_Tabla_Loop.mp3"
+    year: 2008
+    duration_seconds: 200
+    families: [percussion, folk]
+    peaks: [100, 84, 96, 92, 91, 85, 100, 95, 92, 91, 85, 100, 93, 91, 91, 89, 100, 95, 91, 90, 89, 99, 95, 85, 91, 89, 100, 95, 85, 91, 89, 99, 95, 85, 92, 89, 99, 84, 95, 91, 91, 100, 85, 96, 92, 91, 85, 100, 95, 92, 91, 85, 100, 95, 91, 91, 85, 99, 95, 92, 91, 89, 100, 93]
+  - id: 19448
+    title: "Tamboura Drone"
+    artist: "Mellotroniac"
+    ccmixter_user: "Mellotroniac"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/Mellotroniac/19448"
+    url: "https://ccmixter.org/content/Mellotroniac/Mellotroniac_-_Tamboura_Drone.mp3"
+    year: 2009
+    duration_seconds: 114
+    families: [hindustani, classical]
+    peaks: [49, 81, 98, 90, 92, 90, 90, 92, 93, 91, 93, 92, 85, 93, 85, 96, 92, 97, 85, 92, 83, 95, 87, 91, 89, 94, 93, 92, 92, 92, 91, 86, 93, 87, 93, 88, 100, 86, 94, 83, 94, 84, 91, 91, 93, 91, 94, 89, 93, 93, 91, 93, 87, 93, 87, 94, 85, 91, 85, 93, 85, 91, 84, 80]
+  - id: 10548
+    title: "A.B.H.I. (Acapella)"
+    artist: "Abhi S.V."
+    ccmixter_user: "abhisv"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/abhisv/10548"
+    url: "https://ccmixter.org/content/abhisv/abhisv_-_A.B.H.I._(Acapella).mp3"
+    year: 2007
+    duration_seconds: 121
+    families: [vocal, hiphop, hindustani]
+    peaks: [1, 51, 56, 100, 71, 59, 79, 84, 98, 31, 37, 28, 24, 26, 36, 20, 23, 27, 36, 25, 19, 29, 24, 23, 26, 37, 28, 94, 69, 53, 50, 38, 82, 95, 37, 70, 48, 39, 70, 55, 24, 22, 20, 17, 18, 14, 22, 19, 20, 18, 14, 97, 67, 70, 50, 43, 82, 99, 68, 68, 50, 41, 78, 52]
+  - id: 26157
+    title: "Heart On Redial"
+    artist: "loveshadow"
+    ccmixter_user: "Loveshadow"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/Loveshadow/26157"
+    url: "https://ccmixter.org/content/Loveshadow/Loveshadow_-_Heart_On_Redial.mp3"
+    year: 2010
+    duration_seconds: 248
+    families: [acoustic, vocal, pop]
+    peaks: [8, 13, 62, 70, 57, 74, 78, 66, 100, 95, 97, 100, 94, 100, 100, 100, 94, 91, 100, 100, 100, 100, 100, 100, 100, 97, 100, 100, 100, 100, 100, 98, 100, 100, 100, 100, 93, 90, 86, 79, 99, 89, 100, 100, 93, 100, 100, 100, 100, 100, 100, 100, 99, 100, 100, 97, 100, 79, 40, 30, 16, 10, 4, 0]
+  - id: 62227
+    title: "Where the Moon Shines Bright"
+    artist: "Kara Square"
+    ccmixter_user: "mindmapthat"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/mindmapthat/62227"
+    url: "https://ccmixter.org/content/mindmapthat/mindmapthat_-_Where_the_Moon_Shines_Bright_1.mp3"
+    year: 2020
+    duration_seconds: 268
+    families: [folk, acoustic, vocal]
+    peaks: [75, 58, 50, 64, 55, 46, 59, 56, 58, 81, 88, 61, 54, 51, 48, 69, 48, 54, 73, 78, 73, 66, 78, 64, 65, 77, 69, 69, 100, 74, 79, 69, 67, 70, 74, 69, 73, 86, 77, 93, 81, 92, 87, 95, 94, 94, 83, 99, 79, 91, 96, 76, 83, 92, 98, 86, 68, 62, 72, 67, 63, 60, 75, 33]
+  - id: 24847
+    title: "Harmony"
+    artist: "wellman"
+    ccmixter_user: "wellman"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/wellman/24847"
+    url: "https://ccmixter.org/content/wellman/wellman_-_Harmony.mp3"
+    year: 2010
+    duration_seconds: 229
+    families: [acoustic, guitar, piano]
+    peaks: [15, 15, 17, 16, 31, 22, 26, 23, 30, 38, 38, 41, 45, 54, 47, 38, 52, 50, 95, 90, 92, 98, 94, 85, 93, 87, 97, 93, 97, 100, 100, 94, 90, 94, 95, 83, 94, 39, 35, 33, 34, 42, 40, 48, 47, 49, 70, 58, 61, 61, 76, 82, 95, 79, 96, 95, 80, 30, 45, 33, 25, 19, 7, 0]
+  - id: 8751
+    title: "B Calm Violin Track"
+    artist: "Dimitri Artemenko"
+    ccmixter_user: "stringfactory"
+    license: "CC BY 2.5"
+    license_url: "https://creativecommons.org/licenses/by/2.5/"
+    source_url: "https://ccmixter.org/files/stringfactory/8751"
+    url: "https://ccmixter.org/content/stringfactory/stringfactory_-_B_Calm_Violin_Track_2.mp3"
+    year: 2007
+    duration_seconds: 109
+    families: [strings, acoustic, film]
+    peaks: [54, 100, 57, 61, 42, 2, 35, 89, 66, 60, 87, 53, 1, 1, 57, 62, 73, 50, 16, 43, 61, 60, 48, 66, 58, 2, 19, 41, 43, 40, 39, 72, 72, 52, 32, 66, 20, 64, 45, 57, 51, 53, 41, 84, 26, 91, 78, 82, 59, 14, 23, 58, 54, 58, 59, 41, 86, 61, 94, 52, 6, 0, 1, 1]
+  - id: 29148
+    title: "Bedtime Blues"
+    artist: "Down With Ben"
+    ccmixter_user: "cuajitoben"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/cuajitoben/29148"
+    url: "https://ccmixter.org/content/cuajitoben/cuajitoben_-_Bedtime_Blues.mp3"
+    year: 2010
+    duration_seconds: 270
+    families: [jazz, blues, guitar]
+    peaks: [99, 98, 98, 100, 99, 98, 98, 98, 99, 100, 99, 97, 99, 98, 98, 100, 100, 98, 99, 100, 100, 100, 100, 100, 100, 98, 97, 98, 99, 100, 100, 100, 100, 100, 100, 99, 99, 98, 98, 98, 97, 98, 98, 100, 98, 98, 97, 98, 96, 99, 98, 99, 100, 100, 98, 100, 98, 100, 99, 99, 98, 97, 44, 36]
+  - id: 64427
+    title: "bluenotes"
+    artist: "airtone"
+    ccmixter_user: "airtone"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/airtone/64427"
+    url: "https://ccmixter.org/content/airtone/airtone_-_bluenotes_6.mp3"
+    year: 2021
+    duration_seconds: 229
+    families: [jazz, blues, piano]
+    peaks: [61, 69, 72, 70, 71, 72, 71, 77, 63, 77, 72, 83, 84, 92, 71, 72, 89, 75, 96, 68, 73, 75, 74, 82, 88, 74, 72, 92, 81, 84, 92, 76, 94, 95, 95, 65, 96, 89, 84, 96, 91, 99, 96, 94, 99, 99, 100, 96, 96, 96, 92, 92, 90, 66, 26, 70, 65, 48, 92, 33, 61, 25, 6, 4]
+  - id: 23880
+    title: "Wade in the Water (Light Jazz Mix)"
+    artist: "unreal_dm"
+    ccmixter_user: "unreal_dm"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/unreal_dm/23880"
+    url: "https://ccmixter.org/content/unreal_dm/unreal_dm_-_Wade_in_the_Water_(Light_Jazz_Mix).mp3"
+    year: 2009
+    duration_seconds: 197
+    families: [jazz, vocal]
+    peaks: [78, 70, 80, 95, 89, 97, 97, 93, 97, 87, 97, 94, 95, 94, 93, 96, 94, 92, 100, 92, 96, 97, 98, 98, 98, 92, 95, 96, 98, 90, 93, 95, 98, 84, 85, 93, 93, 94, 97, 95, 96, 95, 86, 93, 97, 98, 94, 86, 98, 92, 95, 94, 95, 87, 92, 96, 78, 87, 93, 84, 85, 84, 89, 3]
+  - id: 31638
+    title: "Brass Beat"
+    artist: "Blake"
+    ccmixter_user: "blakeht"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/blakeht/31638"
+    url: "https://ccmixter.org/content/blakeht/blakeht_-_Brass_Beat.mp3"
+    year: 2011
+    duration_seconds: 226
+    families: [jazz, hiphop]
+    peaks: [49, 50, 38, 100, 95, 95, 91, 91, 98, 98, 94, 96, 92, 97, 98, 94, 98, 90, 92, 97, 91, 96, 47, 99, 92, 89, 95, 91, 100, 98, 93, 96, 91, 96, 100, 98, 94, 92, 97, 98, 93, 97, 66, 93, 95, 91, 100, 93, 98, 96, 90, 99, 96, 94, 97, 94, 95, 97, 90, 100, 91, 93, 64, 3]
+  - id: 55112
+    title: "Blindly Love"
+    artist: "Kara Square"
+    ccmixter_user: "mindmapthat"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/mindmapthat/55112"
+    url: "https://ccmixter.org/content/mindmapthat/mindmapthat_-_Blindly_Love.mp3"
+    year: 2016
+    duration_seconds: 348
+    families: [folk, vocal, acoustic]
+    peaks: [64, 56, 47, 69, 75, 71, 83, 76, 85, 96, 99, 98, 82, 81, 81, 89, 92, 76, 75, 94, 99, 95, 88, 84, 98, 99, 86, 100, 94, 96, 96, 100, 91, 88, 91, 85, 94, 92, 93, 100, 95, 99, 95, 75, 51, 68, 75, 80, 79, 77, 70, 88, 95, 96, 96, 91, 80, 83, 94, 92, 97, 98, 98, 97]
+  - id: 23234
+    title: "Wade in the Water"
+    artist: "libraryowl"
+    ccmixter_user: "libraryowl"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/libraryowl/23234"
+    url: "https://ccmixter.org/content/libraryowl/libraryowl_-_Wade_in_the_Water_5.mp3"
+    year: 2009
+    duration_seconds: 142
+    families: [folk, vocal]
+    peaks: [28, 28, 46, 54, 50, 52, 35, 61, 35, 42, 79, 88, 21, 82, 48, 96, 60, 19, 30, 86, 62, 50, 59, 68, 69, 23, 62, 62, 100, 64, 89, 64, 87, 84, 38, 33, 30, 76, 88, 70, 77, 45, 47, 14, 45, 39, 95, 55, 75, 66, 57, 58, 41, 25, 34, 15, 49, 49, 47, 42, 23, 36, 28, 2]
+  - id: 14414
+    title: "(PIANO) A minor improvisation on Sunday"
+    artist: "The3amAssociation"
+    ccmixter_user: "The3amAssociation"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/The3amAssociation/14414"
+    url: "https://ccmixter.org/content/The3amAssociation/The3amAssociation_-_(PIANO)_A_minor_improvisation_on_Sunday.mp3"
+    year: 2008
+    duration_seconds: 231
+    families: [classical, piano]
+    peaks: [50, 42, 43, 36, 47, 51, 52, 43, 48, 44, 51, 46, 61, 51, 58, 57, 56, 69, 60, 39, 44, 52, 60, 59, 64, 56, 33, 3, 1, 100, 60, 63, 71, 61, 64, 67, 71, 80, 77, 68, 55, 69, 72, 67, 63, 64, 59, 53, 40, 46, 48, 58, 57, 52, 44, 38, 40, 51, 47, 57, 37, 42, 5, 2]
+  - id: 22593
+    title: "Ave Maria (Schubert)"
+    artist: "Dr. Emiliyan Stankov"
+    ccmixter_user: "iestankov"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/iestankov/22593"
+    url: "https://ccmixter.org/content/iestankov/iestankov_-_Ave_Maria_(Schubert).mp3"
+    year: 2009
+    duration_seconds: 270
+    families: [classical, vocal]
+    peaks: [72, 72, 70, 73, 78, 88, 78, 82, 84, 83, 85, 78, 68, 77, 85, 88, 89, 85, 82, 80, 90, 88, 85, 84, 72, 75, 0, 0, 0, 88, 91, 86, 77, 93, 88, 100, 88, 91, 77, 90, 83, 89, 75, 87, 78, 84, 91, 86, 92, 78, 82, 78, 81, 82, 70, 2, 0, 0, 1, 81, 83, 59, 63, 20]
+  - id: 45477
+    title: "E lucevan le stelle"
+    artist: "Dr. Emiliyan Stankov"
+    ccmixter_user: "iestankov"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/iestankov/45477"
+    url: "https://ccmixter.org/content/iestankov/iestankov_-_E_lucevan_le_stelle.mp3"
+    year: 2014
+    duration_seconds: 160
+    families: [classical, vocal]
+    peaks: [0, 41, 27, 0, 0, 37, 44, 51, 52, 54, 38, 41, 50, 0, 65, 58, 9, 0, 0, 0, 48, 49, 36, 0, 39, 55, 65, 57, 45, 52, 52, 53, 80, 86, 98, 95, 48, 38, 51, 40, 24, 71, 80, 69, 86, 79, 81, 73, 84, 45, 42, 37, 97, 100, 84, 27, 50, 23, 16, 5, 0, 0, 0, 0]
+  - id: 57884
+    title: "Moonlight Sonata (Shifting Sun Mix)"
+    artist: "Speck"
+    ccmixter_user: "speck"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/speck/57884"
+    url: "https://ccmixter.org/content/speck/speck_-_Moonlight_Sonata_(Shifting_Sun_Mix)_1.mp3"
+    year: 2018
+    duration_seconds: 355
+    families: [classical, piano, film]
+    peaks: [33, 39, 48, 56, 42, 45, 69, 56, 21, 52, 75, 70, 62, 46, 69, 71, 79, 74, 71, 71, 65, 75, 60, 74, 60, 69, 52, 59, 76, 79, 67, 77, 79, 72, 91, 88, 70, 92, 86, 79, 92, 83, 100, 87, 92, 85, 83, 87, 91, 96, 97, 90, 87, 89, 93, 87, 100, 97, 91, 88, 88, 70, 41, 48]
+  - id: 33628
+    title: "In Peace"
+    artist: "Madam Snowflake"
+    ccmixter_user: "snowflake"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/snowflake/33628"
+    url: "https://ccmixter.org/content/snowflake/snowflake_-_In_Peace.mp3"
+    year: 2011
+    duration_seconds: 236
+    families: [piano, vocal, film]
+    peaks: [32, 59, 27, 42, 31, 45, 49, 54, 36, 63, 59, 44, 74, 56, 80, 50, 25, 70, 56, 66, 37, 78, 66, 53, 59, 62, 47, 56, 60, 30, 35, 43, 70, 53, 72, 52, 36, 57, 49, 40, 72, 70, 67, 80, 47, 56, 100, 76, 73, 79, 81, 72, 66, 54, 42, 35, 45, 52, 57, 66, 43, 28, 13, 0]
+  - id: 24553
+    title: "Harmony"
+    artist: "Madam Snowflake"
+    ccmixter_user: "snowflake"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/snowflake/24553"
+    url: "https://ccmixter.org/content/snowflake/snowflake_-_Harmony_2.mp3"
+    year: 2009
+    duration_seconds: 227
+    families: [piano, vocal]
+    peaks: [66, 69, 85, 84, 83, 85, 86, 91, 88, 90, 82, 90, 84, 93, 96, 92, 91, 90, 85, 90, 93, 86, 92, 92, 100, 88, 90, 98, 88, 96, 93, 94, 92, 90, 91, 89, 83, 86, 96, 90, 82, 87, 86, 90, 93, 89, 91, 89, 90, 89, 96, 95, 94, 90, 91, 92, 88, 93, 100, 89, 94, 85, 16, 2]
+  - id: 17432
+    title: "Silence Await"
+    artist: "cdk"
+    ccmixter_user: "cdk"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/cdk/17432"
+    url: "https://ccmixter.org/content/cdk/cdk_-_Silence_Await.mp3"
+    year: 2008
+    duration_seconds: 199
+    families: [piano, electronic]
+    peaks: [54, 63, 54, 60, 53, 62, 61, 74, 72, 72, 73, 73, 81, 71, 72, 70, 81, 74, 71, 71, 78, 74, 85, 78, 71, 77, 68, 66, 64, 65, 68, 58, 66, 63, 67, 84, 84, 98, 95, 100, 85, 82, 99, 84, 77, 68, 67, 67, 74, 72, 76, 72, 64, 68, 73, 62, 74, 63, 74, 62, 69, 59, 11, 0]
+  - id: 37792
+    title: "Drops of H2O ( The Filtered Water Treatment )"
+    artist: "J.Lang"
+    ccmixter_user: "djlang59"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/djlang59/37792"
+    url: "https://ccmixter.org/content/djlang59/djlang59_-_Drops_of_H2O_(_The_Filtered_Water_Treatment_).mp3"
+    year: 2012
+    duration_seconds: 315
+    families: [piano, guitar, electronic]
+    peaks: [60, 55, 76, 67, 80, 72, 94, 63, 76, 96, 93, 96, 100, 100, 99, 98, 100, 100, 95, 100, 99, 100, 100, 98, 96, 98, 100, 100, 94, 96, 91, 100, 99, 97, 82, 75, 67, 74, 67, 100, 100, 96, 97, 98, 66, 65, 67, 58, 99, 94, 99, 100, 99, 100, 91, 100, 100, 98, 94, 73, 99, 71, 21, 15]
+  - id: 32423
+    title: "Spinnin'"
+    artist: "Alex Beroza"
+    ccmixter_user: "AlexBeroza"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/AlexBeroza/32423"
+    url: "https://ccmixter.org/content/AlexBeroza/AlexBeroza_-_Spinnin_.mp3"
+    year: 2011
+    duration_seconds: 212
+    families: [guitar, rock, electronic]
+    peaks: [99, 98, 97, 97, 98, 96, 96, 96, 96, 96, 96, 96, 97, 95, 97, 99, 97, 97, 98, 96, 92, 94, 97, 95, 97, 97, 96, 97, 100, 97, 95, 94, 98, 98, 99, 97, 95, 94, 95, 94, 94, 94, 98, 96, 96, 92, 97, 99, 94, 96, 91, 96, 93, 96, 96, 93, 97, 98, 95, 94, 94, 94, 34, 8]
+  - id: 31670
+    title: "Start Again"
+    artist: "Alex Beroza"
+    ccmixter_user: "AlexBeroza"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/AlexBeroza/31670"
+    url: "https://ccmixter.org/content/AlexBeroza/AlexBeroza_-_Start_Again.mp3"
+    year: 2011
+    duration_seconds: 248
+    families: [guitar, pop, electronic]
+    peaks: [38, 38, 41, 95, 96, 95, 95, 98, 98, 94, 93, 97, 97, 93, 95, 98, 98, 95, 94, 92, 94, 98, 96, 97, 96, 98, 94, 95, 96, 95, 94, 96, 95, 94, 94, 97, 96, 97, 97, 97, 100, 95, 95, 98, 98, 94, 93, 96, 98, 97, 97, 98, 97, 96, 98, 97, 98, 94, 95, 93, 93, 99, 100, 93]
+  - id: 34409
+    title: "Ave"
+    artist: "Alex Beroza"
+    ccmixter_user: "AlexBeroza"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/AlexBeroza/34409"
+    url: "https://ccmixter.org/content/AlexBeroza/AlexBeroza_-_Ave.mp3"
+    year: 2011
+    duration_seconds: 221
+    families: [guitar, jazz, blues]
+    peaks: [93, 95, 92, 87, 93, 96, 97, 95, 97, 98, 100, 97, 93, 97, 95, 93, 96, 98, 85, 94, 93, 89, 88, 91, 77, 89, 94, 94, 83, 87, 88, 94, 94, 95, 98, 97, 100, 94, 94, 97, 95, 96, 95, 93, 97, 96, 97, 91, 94, 95, 96, 94, 96, 95, 94, 98, 96, 98, 97, 96, 67, 53, 39, 12]
+  - id: 27917
+    title: "The Remixin' Blues"
+    artist: "Admiral Bob"
+    ccmixter_user: "admiralbob77"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/admiralbob77/27917"
+    url: "https://ccmixter.org/content/admiralbob77/admiralbob77_-_The_Remixin_Blues_2.mp3"
+    year: 2010
+    duration_seconds: 125
+    families: [guitar, blues, rock]
+    peaks: [30, 30, 35, 48, 48, 55, 68, 56, 60, 41, 70, 55, 46, 75, 43, 59, 56, 53, 60, 41, 39, 44, 30, 100, 42, 40, 24, 42, 50, 31, 58, 56, 60, 36, 46, 45, 33, 54, 48, 51, 34, 41, 41, 40, 65, 56, 41, 69, 65, 42, 53, 58, 63, 32, 61, 39, 30, 45, 49, 64, 33, 33, 31, 34]
+  - id: 19367
+    title: "Parametaphoriquement"
+    artist: "gmz"
+    ccmixter_user: "gmz"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/gmz/19367"
+    url: "https://ccmixter.org/content/gmz/gmz_-_Parametaphoriquement.mp3"
+    year: 2009
+    duration_seconds: 289
+    families: [electronic, hiphop]
+    peaks: [16, 21, 31, 45, 60, 70, 67, 70, 96, 100, 97, 97, 96, 96, 98, 98, 96, 97, 95, 97, 93, 95, 95, 98, 87, 89, 83, 89, 92, 91, 93, 84, 62, 59, 61, 79, 73, 74, 86, 98, 97, 95, 97, 100, 97, 97, 93, 100, 96, 95, 95, 96, 95, 96, 98, 58, 65, 58, 69, 74, 66, 57, 60, 5]
+  - id: 30513
+    title: "The New Music"
+    artist: "Alex Beroza"
+    ccmixter_user: "AlexBeroza"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/AlexBeroza/30513"
+    url: "https://ccmixter.org/content/AlexBeroza/AlexBeroza_-_The_New_Music.mp3"
+    year: 2011
+    duration_seconds: 216
+    families: [electronic]
+    peaks: [79, 98, 98, 98, 99, 98, 98, 98, 100, 98, 98, 100, 98, 97, 100, 98, 98, 98, 98, 100, 97, 96, 98, 98, 99, 97, 97, 98, 100, 96, 98, 98, 98, 98, 97, 100, 98, 97, 97, 94, 94, 92, 92, 99, 99, 99, 98, 100, 99, 98, 98, 97, 98, 98, 96, 98, 99, 97, 99, 97, 98, 99, 97, 50]
+  - id: 15924
+    title: "Hornet"
+    artist: "George_Ellinas"
+    ccmixter_user: "George_Ellinas"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/George_Ellinas/15924"
+    url: "https://ccmixter.org/content/George_Ellinas/George_Ellinas_-_Hornet.mp3"
+    year: 2008
+    duration_seconds: 288
+    families: [electronic]
+    peaks: [23, 29, 40, 63, 73, 60, 100, 96, 100, 100, 95, 96, 95, 98, 100, 100, 100, 100, 97, 94, 100, 90, 96, 95, 94, 94, 94, 94, 80, 37, 35, 42, 71, 70, 70, 94, 98, 92, 95, 94, 92, 93, 91, 97, 95, 94, 99, 91, 100, 100, 100, 100, 100, 100, 92, 98, 100, 100, 88, 93, 99, 20, 0, 0]
+  - id: 28062
+    title: "Put The Needle Down"
+    artist: "Alex Beroza"
+    ccmixter_user: "AlexBeroza"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/AlexBeroza/28062"
+    url: "https://ccmixter.org/content/AlexBeroza/AlexBeroza_-_Put_The_Needle_Down.mp3"
+    year: 2010
+    duration_seconds: 223
+    families: [electronic]
+    peaks: [57, 66, 99, 97, 94, 99, 98, 99, 98, 98, 99, 99, 98, 100, 100, 98, 99, 99, 100, 99, 99, 99, 99, 98, 99, 98, 98, 99, 100, 99, 98, 99, 99, 99, 99, 98, 99, 99, 99, 98, 100, 99, 99, 99, 98, 99, 97, 98, 97, 95, 97, 98, 99, 98, 100, 100, 100, 98, 98, 98, 99, 97, 10, 1]
+  - id: 12238
+    title: "beeKoo mix"
+    artist: "Lasswell"
+    ccmixter_user: "lazztunes07"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/lazztunes07/12238"
+    url: "https://ccmixter.org/content/lazztunes07/lazztunes07_-_beeKoo_mix.mp3"
+    year: 2007
+    duration_seconds: 253
+    families: [hiphop, funk]
+    peaks: [79, 80, 80, 85, 71, 100, 100, 100, 100, 100, 100, 99, 100, 100, 97, 100, 100, 99, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 99, 100, 100, 100, 100, 100, 100, 100, 98, 100, 100, 100, 100, 100, 75, 70, 100, 100, 100, 100, 100, 100, 100, 100, 99, 53, 60, 24, 6]
+  - id: 16626
+    title: "I dunno"
+    artist: "grapes"
+    ccmixter_user: "grapes"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/grapes/16626"
+    url: "https://ccmixter.org/content/grapes/grapes_-_I_dunno.mp3"
+    year: 2008
+    duration_seconds: 165
+    families: [hiphop]
+    peaks: [93, 22, 93, 22, 94, 95, 95, 95, 97, 95, 93, 94, 97, 98, 100, 98, 100, 100, 98, 95, 100, 97, 98, 96, 95, 99, 97, 98, 95, 98, 98, 98, 100, 98, 100, 98, 99, 100, 98, 97, 99, 94, 95, 96, 95, 97, 95, 99, 100, 94, 100, 97, 94, 100, 93, 98, 95, 96, 100, 97, 97, 97, 10, 0]
+  - id: 31698
+    title: "Give It Up-Urban Mix"
+    artist: "J.Lang"
+    ccmixter_user: "djlang59"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/djlang59/31698"
+    url: "https://ccmixter.org/content/djlang59/djlang59_-_Give_It_Up-Urban_Mix.mp3"
+    year: 2011
+    duration_seconds: 258
+    families: [hiphop, funk, guitar]
+    peaks: [66, 61, 80, 67, 67, 87, 93, 92, 91, 94, 93, 93, 97, 96, 97, 97, 91, 92, 92, 100, 93, 91, 92, 93, 93, 94, 92, 93, 93, 97, 94, 91, 91, 93, 98, 87, 73, 85, 96, 92, 92, 91, 93, 90, 91, 97, 92, 95, 96, 94, 97, 93, 93, 93, 94, 93, 94, 91, 90, 86, 76, 76, 74, 1]
+  - id: 36122
+    title: "Good Day"
+    artist: "Alex Beroza"
+    ccmixter_user: "AlexBeroza"
+    license: "CC BY 3.0"
+    license_url: "https://creativecommons.org/licenses/by/3.0/"
+    source_url: "https://ccmixter.org/files/AlexBeroza/36122"
+    url: "https://ccmixter.org/content/AlexBeroza/AlexBeroza_-_Good_Day.mp3"
+    year: 2012
+    duration_seconds: 197
+    families: [hiphop, pop]
+    peaks: [94, 97, 97, 96, 96, 99, 97, 99, 95, 98, 95, 96, 97, 96, 98, 97, 95, 94, 98, 97, 98, 96, 98, 96, 95, 97, 96, 97, 98, 94, 100, 98, 99, 97, 100, 97, 96, 92, 96, 98, 95, 99, 98, 97, 97, 96, 97, 94, 99, 95, 95, 96, 97, 97, 94, 96, 98, 97, 97, 97, 60, 56, 39, 18]

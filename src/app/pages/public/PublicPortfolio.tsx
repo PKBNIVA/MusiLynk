@@ -5,7 +5,7 @@ import { PublicNav } from '../../components/PublicNav';
 import { PublicDetailState } from '../../components/PublicDetailState';
 import { usePageMeta } from '../../components/PageMeta';
 import { Button } from '../../components/ui/button';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { MediaTile } from '../../components/showcase/MediaTile';
 import { apiGet } from '../../lib/api';
 import { errorMessage, errorStatus } from '../../lib/errors';

@@ -100,7 +100,7 @@ class ApiSecurityProbesTest < ActionDispatch::IntegrationTest
       "/api/job-alerts" => [{ name: "A", frequency: "daily", userId: rival, user_id: rival, nextRunAt: 1.year.ago }, JobAlert, :user_id],
       "/api/availability" => [{ startAt: 3.days.from_now, endAt: 4.days.from_now, userId: rival, user_id: rival }, AvailabilityWindow, :user_id],
       "/api/acts" => [{ name: "Mine", actType: "duo", verified: true, ownerId: rival, owner_id: rival }, Act, :owner_id],
-      "/api/urgent-requests" => [{ title: "U", roleName: "Keys", city: "Pune", startAt: 2.days.from_now, status: "filled", requesterId: rival }, UrgentRequest, :requester_id],
+      "/api/urgent-requests" => [{ title: "U", roleName: "Keys", city: "Pune", startAt: 2.days.from_now, budgetMax: 5_000, note: "Tonight", status: "filled", requesterId: rival }, UrgentRequest, :requester_id],
       "/api/organizations" => [{ name: "Org", status: "suspended", ownerId: rival, owner_id: rival }, Organization, :owner_id],
       "/api/talent-folders" => [{ name: "F", ownerId: rival, owner_id: rival }, TalentFolder, :owner_id],
       "/api/band-projects" => [{ name: "B", status: "closed", ownerId: rival }, BandProject, :owner_id],

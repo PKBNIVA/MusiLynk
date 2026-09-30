@@ -46,6 +46,14 @@ describe('PlayChip', () => {
     show(<PlayChip sample={sample({ thumbnailUrl: 'https://img.test/a.jpg' })} />);
     expect(host.querySelector('img')?.getAttribute('src')).toBe('https://img.test/a.jpg');
   });
+  it('shows an inline waveform when the sample has peaks', () => {
+    show(<PlayChip sample={sample()} />);
+    expect(host.querySelector('[data-testid=waveform-strip]')).toBeNull();
+    show(<PlayChip sample={sample({ mediaMetadata: { waveform: [0.1, 0.8, 0.4] } })} />);
+    const strip = host.querySelector('[data-testid=waveform-strip]') as SVGElement;
+    expect(strip.getAttribute('height')).toBe('16');
+    expect(strip.querySelectorAll('rect')).toHaveLength(64);
+  });
   it('opens the player dialog on click', () => {
     const onOpen = vi.fn();
     show(<PlayChip sample={sample()} onOpen={onOpen} />);

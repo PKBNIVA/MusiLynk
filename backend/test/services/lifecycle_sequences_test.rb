@@ -6,6 +6,12 @@ class LifecycleSequencesTest < ActiveSupport::TestCase
   setup do
     @seq = 0
     clear_enqueued_jobs
+    @previous_webhook = ENV["EMAIL_DELIVERY_WEBHOOK"]
+    ENV["EMAIL_DELIVERY_WEBHOOK"] = "https://email-hook.example.invalid/send"
+  end
+
+  teardown do
+    @previous_webhook.nil? ? ENV.delete("EMAIL_DELIVERY_WEBHOOK") : ENV["EMAIL_DELIVERY_WEBHOOK"] = @previous_webhook
   end
 
   test "musician day 1: sends only when the musician has no portfolio items" do
@@ -113,12 +119,73 @@ class LifecycleSequencesTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs(only: LifecycleEmailDeliveryJob)
   end
 
+  test "with no email provider nothing is claimed, so the step can still send once one is configured" do
+    musician = create_musician(created_at: 1.day.ago)
+    ENV.delete("EMAIL_DELIVERY_WEBHOOK")
+
+    LifecycleSequences.run
+
+    assert_not LifecycleEmail.sent?(musician, "musician_day1_first_link")
+    assert_no_enqueued_jobs(only: LifecycleEmailDeliveryJob)
+
+    ENV["EMAIL_DELIVERY_WEBHOOK"] = "https://email-hook.example.invalid/send"
+    LifecycleSequences.run
+    assert LifecycleEmail.sent?(musician, "musician_day1_first_link")
+  end
+
+  test "an unverified address or a category opt-out is not claimed either" do
+    unverified = create_musician(created_at: 1.day.ago)
+    unverified.update!(email_verified: false)
+    opted_out = create_musician(created_at: 1.day.ago)
+    opted_out.profile.update!(email_preferences: opted_out.profile.email_preferences.merge("lifecycle" => false))
+
+    LifecycleSequences.run
+
+    assert_not LifecycleEmail.sent?(unverified, "musician_day1_first_link")
+    assert_not LifecycleEmail.sent?(opted_out, "musician_day1_first_link")
+  end
+
+  test "lifecycle:release_undelivered deletes step rows claimed since a time, keeping digests and older rows" do
+    Rails.application.load_tasks unless Rake::Task.task_defined?("lifecycle:release_undelivered")
+    musician = create_musician(created_at: 30.days.ago)
+    burned = LifecycleEmail.create!(user: musician, key: "musician_day1_first_link", sent_at: 1.day.ago)
+    LifecycleEmail.create!(user: musician, key: "musician_day3_verified_badge", sent_at: 10.days.ago)
+    LifecycleEmail.create!(user: musician, key: LifecycleEmail.digest_key, sent_at: 1.day.ago)
+
+    ENV["SINCE"] = 3.days.ago.iso8601
+    task = Rake::Task["lifecycle:release_undelivered"]
+    out, = capture_io { task.execute }
+    assert_match(/Released 1 /, out)
+    assert_not LifecycleEmail.exists?(burned.id)
+    assert_equal 2, LifecycleEmail.where(user: musician).count
+  ensure
+    ENV.delete("SINCE")
+  end
+
+  test "lifecycle:release_undelivered with PAIRS releases only the named user and key" do
+    Rails.application.load_tasks unless Rake::Task.task_defined?("lifecycle:release_undelivered")
+    first = create_musician(created_at: 30.days.ago)
+    second = create_musician(created_at: 30.days.ago)
+    burned = LifecycleEmail.create!(user: first, key: "musician_day1_first_link", sent_at: 1.day.ago)
+    delivered = LifecycleEmail.create!(user: second, key: "musician_day1_first_link", sent_at: 1.day.ago)
+
+    ENV["SINCE"] = 3.days.ago.iso8601
+    ENV["PAIRS"] = "#{first.id}:musician_day1_first_link"
+    out, = capture_io { Rake::Task["lifecycle:release_undelivered"].execute }
+    assert_match(/Released 1 /, out)
+    assert_not LifecycleEmail.exists?(burned.id)
+    assert LifecycleEmail.exists?(delivered.id)
+  ensure
+    ENV.delete("SINCE")
+    ENV.delete("PAIRS")
+  end
+
   private
 
   def create_musician(created_at:, last_login_at: nil, city: nil)
     @seq += 1
     user = User.create!(name: "Musician #{@seq}", email: "musician-#{@seq}-#{SecureRandom.hex(4)}@example.com",
-      password: "StrongPass123!", role: "jobseeker", status: "active", last_login_at:)
+      password: "StrongPass123!", role: "jobseeker", status: "active", email_verified: true, last_login_at:)
     user.update_column(:created_at, created_at)
     user.create_profile!(location: city)
     user
@@ -127,7 +194,7 @@ class LifecycleSequencesTest < ActiveSupport::TestCase
   def create_hirer(created_at:, last_login_at: nil)
     @seq += 1
     user = User.create!(name: "Hirer #{@seq}", email: "hirer-#{@seq}-#{SecureRandom.hex(4)}@example.com",
-      password: "StrongPass123!", role: "employer", status: "active", last_login_at:)
+      password: "StrongPass123!", role: "employer", status: "active", email_verified: true, last_login_at:)
     user.update_column(:created_at, created_at)
     user.create_profile!
     user

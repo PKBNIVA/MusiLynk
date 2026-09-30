@@ -116,7 +116,15 @@ test.describe('Phase 3 UX regressions', () => {
 
   test('a plain footer link with no hover styling of its own still shows hover feedback (P3-05)', async ({ page }) => {
     await openSettledPage(page, '/about');
-    const link = page.getByRole('link', { name: 'Terms', exact: true });
+    // The legal pages' related-page chips now carry their own hover classes, so add a bare link
+    // to check the global fallback rule itself.
+    await page.evaluate(() => {
+      const bare = document.createElement('a');
+      bare.href = '/terms';
+      bare.textContent = 'Plain terms link';
+      document.querySelector('main')!.append(bare);
+    });
+    const link = page.getByRole('link', { name: 'Plain terms link', exact: true });
     const before = await link.evaluate((el) => getComputedStyle(el).opacity);
     await link.hover();
     await expect.poll(() => link.evaluate((el) => getComputedStyle(el).opacity)).not.toBe(before);

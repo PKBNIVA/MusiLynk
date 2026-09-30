@@ -1,11 +1,11 @@
 import { Link } from 'react-router';
-import { BadgeCheck, Ban, IndianRupee, Star } from 'lucide-react';
+import { BadgeCheck, Ban, FileCheck2, Star } from 'lucide-react';
 
 /** The four things that make booking a stranger feel safe, in one row. */
 export function TrustStrip() {
   const items = [
     [BadgeCheck, 'Verified badges', 'Checked by our team, not self-declared'],
-    [IndianRupee, 'Deposits via Razorpay', 'Recorded on the booking, with the terms you agreed'],
+    [FileCheck2, 'Terms in writing', 'The fee and terms are agreed on Verse before anyone is booked'],
     [Star, 'Reviews', 'Read what other hirers said before you book'],
     [Ban, 'Report and block', 'One step, and our team reviews every report'],
   ] as const;

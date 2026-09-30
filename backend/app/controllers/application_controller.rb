@@ -169,8 +169,21 @@ class ApplicationController < ActionController::API
     Digest::SHA256.hexdigest(value.to_s)
   end
 
+  # Columns of `users` a signed-in user (or an admin listing users) may see about an account.
+  ACCOUNT_KEYS = %w[id name email role status last_login_at synthetic_batch consented_at].freeze
+  # The whole of what an anonymous visitor sees about a person. An allow-list on purpose: the
+  # users table carries consent, phone-verification, vouching and password timestamps that must
+  # never reach a public payload, so nothing here is derived from `user.as_json`.
+  PUBLIC_PROFILE_KEYS = %w[
+    headline location experience website portfolioUrl bio skills genres instruments languages credits openTo roles gear software
+    companyName companyWebsite companySize companyDescription verified travelsNationally travelsInternationally remoteRecording
+    sightReading passportReady yearsExperience travelRadiusKm hourlyRate sessionRate showRate tourDayRate dayRate availability currency
+    photoUrl eventTypes
+  ].freeze
+
   def public_user(user)
-    user.as_json(except: %i[password_digest created_at updated_at], methods: %i[profileComplete emailVerified])
+    user.attributes.slice(*ACCOUNT_KEYS)
+      .merge("profileComplete" => user.profileComplete, "emailVerified" => user.emailVerified)
       .merge(user.profile&.api_json || {})
   end
 
@@ -180,8 +193,8 @@ class ApplicationController < ActionController::API
   end
 
   def public_profile(user)
-    public_user(user).except("email", "status", "profileComplete", "emailVerified", "last_login_at", "phone", "synthetic_batch",
-      "phoneE164", "whatsappConsentedAt")
+    { "id" => user.id, "name" => user.name, "role" => user.role, "createdAt" => user.created_at }
+      .merge((user.profile&.api_json || {}).slice(*PUBLIC_PROFILE_KEYS))
       .merge("demo" => SyntheticQa::Demo.user?(user), "verification" => verification_summary(user),
         "verificationTier" => Verification::Tier.for(user))
       .merge(@profile_stats&.dig(user.id) || ProfileStats.for(user))

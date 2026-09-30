@@ -85,6 +85,19 @@ class JobsController < ApplicationController
     render json: { job: job.api_json(current_user).merge(applied:, saved:) }
   end
 
+  # The poster's plan capacity for active opportunities, read by the post-opportunity page so it
+  # can say so before the first field is filled (J-01) instead of after the last step.
+  def limits
+    return unless authenticate!("jobseeker", "employer")
+    entitlements = Entitlements.for(current_user)
+    render json: {
+      activeAllowed: entitlements.limit(:active_posts),
+      activeUsed: current_user.jobs.where(status: ACTIVE_STATUSES).count,
+      plan: entitlements.plan_code,
+      planName: entitlements.plan.fetch(:name)
+    }
+  end
+
   def create
     return unless authenticate!("jobseeker", "employer")
     return unless require_scalar_params!(:status, :company)

@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatDateTime, formatDeadline, formatMoney, formatPay, toDate, formatWhen } from '../format';
+import {
+  formatDate,
+  formatDateTime,
+  formatDeadline,
+  formatFromRate,
+  formatMoney,
+  formatPay,
+  formatReplyTime,
+  formatWhen,
+  fromRate,
+  rateRows,
+  toDate,
+} from '../format';
 
 const UTC = { timeZone: 'UTC' };
 
@@ -150,5 +162,44 @@ describe('formatPay period', () => {
     expect(formatPay({ compensation_min: 15000, compensation_max: 25000, compensation_period: 'per project' })).toBe(
       '₹15,000–25,000 / project',
     );
+  });
+});
+
+describe('rates', () => {
+  it('fromRate is the lowest of session, show, day and hourly', () => {
+    expect(fromRate({ sessionRate: 8000, showRate: 30000, dayRate: 15000 })).toBe(8000);
+    expect(fromRate({ showRate: 30000, hourlyRate: 2500, tourDayRate: 500 })).toBe(2500);
+  });
+
+  it('ignores empty, zero and non-numeric rates', () => {
+    expect(fromRate({})).toBeNull();
+    expect(fromRate({ sessionRate: 0, showRate: null, dayRate: '' })).toBeNull();
+    expect(fromRate({ tourDayRate: 9000 })).toBeNull();
+    expect(fromRate({ sessionRate: 0, showRate: '12000' })).toBe(12000);
+  });
+
+  it('formats the from price with Indian grouping and blanks it when unknown', () => {
+    expect(formatFromRate({ sessionRate: 5000 })).toBe('from ₹5,000');
+    expect(formatFromRate({ dayRate: 125000 })).toBe('from ₹1,25,000');
+    expect(formatFromRate({})).toBe('');
+  });
+
+  it('lists only the filled rate rows, in table order', () => {
+    expect(rateRows({ hourlyRate: 1500, sessionRate: 5000, tourDayRate: 20000 })).toEqual([
+      { label: 'Session', amount: '₹5,000' },
+      { label: 'Tour day', amount: '₹20,000' },
+      { label: 'Hourly', amount: '₹1,500' },
+    ]);
+    expect(rateRows({})).toEqual([]);
+  });
+});
+
+describe('formatReplyTime', () => {
+  it('reads minutes, then hours, and is empty when unknown', () => {
+    expect(formatReplyTime(12)).toBe('Replies in ~12 min');
+    expect(formatReplyTime(0)).toBe('Replies in ~1 min');
+    expect(formatReplyTime(120)).toBe('Replies in ~2 h');
+    expect(formatReplyTime(null)).toBe('');
+    expect(formatReplyTime(undefined)).toBe('');
   });
 });

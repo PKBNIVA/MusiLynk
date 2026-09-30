@@ -7,17 +7,17 @@ import { HELP } from '../components/help/helpContent';
 import { apiGet, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { useLatestCallback } from '../lib/useLatestCallback';
-import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ActSearchForm } from '../components/ActSearchForm';
+import { ActCard } from '../components/talent/ActCard';
+import { useHomeCityDefault } from '../components/talent/useHomeCity';
 import { LoadMore } from '../components/LoadMore';
 import { NoResults, SearchNotice } from '../components/SearchFeedback';
 import { usePagedList, type PageMeta } from '../lib/usePagedList';
 import { useUrlFilters } from '../lib/useUrlFilters';
-import { Badge } from '../components/ui/badge';
 import { Field, FormDialog, textareaClass } from '../components/booking/BookingDialogs';
-import { Calendar, MapPin, ShieldCheck } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage, errorStatus } from '../lib/errors';
 import type { Act } from '../lib/apiTypes';
@@ -25,7 +25,7 @@ import { AppSelect } from '../components/ui/app-select';
 
 type ActPage = PageMeta & { acts?: Act[] };
 const pickActs = (page: ActPage) => page.acts;
-const FILTERS = ['q', 'city', 'type'] as const;
+const FILTERS = ['q', 'city', 'type', 'member'] as const;
 const NOUN = ['act', 'acts'] as const;
 const ACT_SUGGESTIONS = ['wedding band', 'sufi', 'jazz', 'DJ', 'singer'] as const;
 
@@ -79,6 +79,9 @@ export default function BookTalent() {
   const list = usePagedList<Act, ActPage>({ path: '/acts', pick: pickActs, noun: 'acts' });
   const { items: acts, loading, error: loadError } = list;
   const city = filters.city;
+  const member = filters.member;
+  // Coming from a musician's profile (?member=) or an act page (?act=) the city must not narrow the list.
+  const { city: homeCity, ready } = useHomeCityDefault('city', Boolean(params.get('member') || params.get('act')));
   const [booking, setBooking] = useState<Enquiry | null>(null),
     [formError, setFormError] = useState(''),
     [sending, setSending] = useState(false);
@@ -86,8 +89,8 @@ export default function BookTalent() {
 
   const load = useLatestCallback(() => list.search(query));
   useEffect(() => {
-    void load();
-  }, [query, load]);
+    if (ready) void load();
+  }, [ready, query, load]);
 
   const openEnquiry = useCallback(
     (a: Act) => {
@@ -129,6 +132,14 @@ export default function BookTalent() {
         ),
       );
   }, [actParam, userId, openEnquiry]);
+
+  // From a musician's profile (?member=): a single act they front opens its enquiry straight away.
+  const memberOpened = useRef<string | null>(null);
+  useEffect(() => {
+    if (!member || loading || loadError || acts.length !== 1 || memberOpened.current === member) return;
+    memberOpened.current = member;
+    openEnquiry(acts[0]);
+  }, [member, loading, loadError, acts, openEnquiry]);
 
   const closeEnquiry = () => {
     setBooking(null);
@@ -182,6 +193,40 @@ export default function BookTalent() {
           }}
           onType={(type) => update({ type })}
         />
+        {homeCity && !member && (
+          <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="City">
+            {[
+              { label: homeCity, pressed: city.toLowerCase() === homeCity.toLowerCase(), city: homeCity },
+              { label: 'All cities', pressed: !city, city: '' },
+            ].map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                aria-pressed={chip.pressed}
+                onClick={() => update({ city: chip.city })}
+                className={`min-h-9 rounded-full border px-3.5 text-sm ${
+                  chip.pressed
+                    ? 'border-violet-400 bg-violet-500/20 text-white'
+                    : 'border-white/15 bg-white/[.04] text-slate-300 hover:bg-white/[.08]'
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {member && (
+          <p className="mt-4 flex flex-wrap items-center gap-x-3 text-sm text-slate-300" data-testid="member-filter">
+            Showing the acts this musician fronts.
+            <button
+              type="button"
+              className="text-violet-300 hover:text-violet-200"
+              onClick={() => update({ member: '' })}
+            >
+              Show all acts
+            </button>
+          </p>
+        )}
         {!loading && !loadError && acts.length > 0 && (
           <p className="text-sm text-slate-400 mt-5" data-testid="result-count">
             {list.total} {list.total === 1 ? 'act' : 'acts'}
@@ -198,6 +243,19 @@ export default function BookTalent() {
             <Button variant="outline" className="mt-4" onClick={() => void load()}>
               Try again
             </Button>
+          </div>
+        ) : acts.length === 0 && member ? (
+          <div className="mt-7 rounded-xl border border-dashed border-white/15 p-8 text-center" role="status">
+            <p className="font-medium">This musician has no act open for booking yet.</p>
+            <p className="mt-1 text-sm text-slate-400">Message them from their profile to ask about availability.</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
+              <Button asChild>
+                <Link to={`/professionals/${encodeURIComponent(member)}`}>Back to profile</Link>
+              </Button>
+              <Button variant="outline" onClick={() => update({ member: '' })}>
+                Browse all acts
+              </Button>
+            </div>
           </div>
         ) : acts.length === 0 ? (
           <div className="mt-7 rounded-xl border border-dashed border-white/15">
@@ -222,56 +280,30 @@ export default function BookTalent() {
                 return acts.map((a, index) => {
                   const own = Boolean(user && a.owner_id && a.owner_id === user.id);
                   const ambiguous = (nameCounts.get(a.name) || 0) > 1 && Boolean(a.ownerName);
-                  const memberCount = a.members?.length || 0;
                   return (
-                    <Card key={a.id} className="bg-white/[.055] border-white/10" data-list-item={index} tabIndex={-1}>
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <Badge variant="secondary">{a.act_type}</Badge>
-                            <h2 className="text-xl font-semibold mt-2 break-words" data-testid="act-name">
-                              {a.name}
-                              {ambiguous && <span className="text-slate-400 font-normal"> · {a.ownerName}</span>}
-                            </h2>
+                    <ActCard
+                      key={a.id}
+                      act={a}
+                      index={index}
+                      to={`/acts/${a.id}`}
+                      nameSuffix={ambiguous ? a.ownerName : undefined}
+                      footer={
+                        <>
+                          <div className="flex gap-2">
+                            <Button className="flex-1 tap-target-44" onClick={() => openEnquiry(a)}>
+                              <Calendar size={16} className="mr-2" />
+                              Request availability
+                            </Button>
+                            <Button asChild variant="outline" className="tap-target-44">
+                              <Link to={`/acts/${a.id}`} aria-label={`View ${a.name}`}>
+                                View
+                              </Link>
+                            </Button>
                           </div>
-                          {(a.verified || a.ownerVerified) && (
-                            <ShieldCheck aria-label="Verified" className="text-emerald-300 shrink-0" size={18} />
-                          )}
-                        </div>
-                        <div className="text-sm text-slate-400 mt-3 flex flex-wrap gap-x-4 gap-y-1 items-center">
-                          <span className="flex gap-2 items-center">
-                            <MapPin size={14} />
-                            {a.city || 'Flexible location'}
-                          </span>
-                          {a.ownerName && <span>By {a.ownerName}</span>}
-                          {memberCount > 0 && (
-                            <span>
-                              {memberCount} member{memberCount === 1 ? '' : 's'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm mt-3">
-                          {(Array.isArray(a.genres) && a.genres.slice(0, 5).join(' · ')) || 'Multi-genre'}
-                        </div>
-                        <div className="text-sm text-emerald-300 mt-4">
-                          {a.min_fee
-                            ? `From ${a.currency || 'INR'} ${Number(a.min_fee).toLocaleString('en-IN')}`
-                            : 'Ask for quote'}
-                        </div>
-                        <div className="flex gap-2 mt-5">
-                          <Button className="flex-1 tap-target-44" onClick={() => openEnquiry(a)}>
-                            <Calendar size={16} className="mr-2" />
-                            Request availability
-                          </Button>
-                          <Button asChild variant="outline" className="tap-target-44">
-                            <Link to={`/acts/${a.id}`} aria-label={`View ${a.name}`}>
-                              View
-                            </Link>
-                          </Button>
-                        </div>
-                        {own && <p className="text-xs text-slate-500 mt-2">This is one of your acts.</p>}
-                      </CardContent>
-                    </Card>
+                          {own && <p className="mt-2 text-xs text-slate-500">This is one of your acts.</p>}
+                        </>
+                      }
+                    />
                   );
                 });
               })()}

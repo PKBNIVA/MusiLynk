@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react';
-import { FileCheck2, Headphones, IndianRupee, Zap } from 'lucide-react';
+import { BadgeCheck, Clock3, IndianRupee, type LucideIcon } from 'lucide-react';
 import { loadPublicStats, proofItems, type ProofItem } from '../../lib/landing';
 
+// What Verse promises, in three lines. These are policies, not statistics, so they are always true
+// and always shown. The response promise is the urgent-request one (backend/config/urgent.yml).
+const PROMISES: readonly (readonly [LucideIcon, string])[] = [
+  [BadgeCheck, 'Verified by the Verse team'],
+  [Clock3, 'Reply within 2 hours, 9 am–11 pm IST'],
+  [IndianRupee, 'Free to post · musicians never pay'],
+];
+
 /**
- * Real numbers from GET /api/public/stats, shown only once they mean something. Until then (or if
- * the API can't be reached) this shows what Verse promises instead; never an invented figure.
+ * The promise strip, plus real numbers from GET /api/public/stats once they mean something (see
+ * PROOF_THRESHOLDS; demo accounts are never counted). Nothing here is invented: with no counts, or
+ * if the API can't be reached, only the promises show.
  */
 export function LiveProof() {
-  const [items, setItems] = useState<ProofItem[] | null>(null);
+  const [items, setItems] = useState<ProofItem[]>([]);
   useEffect(() => {
     let active = true;
     loadPublicStats()
@@ -18,11 +27,27 @@ export function LiveProof() {
     };
   }, []);
 
-  if (items === null) return <div aria-hidden="true" className="min-h-40" />;
   return (
-    <section aria-labelledby="proof-title" className="px-4 pb-16 sm:px-6 md:pb-24" data-testid="live-proof">
-      <div className="mx-auto max-w-6xl rounded-3xl border border-white/10 bg-white/[.03] p-6 md:p-10">
-        {items.length ? <Stats items={items} /> : <Promise />}
+    <section
+      aria-labelledby="proof-title"
+      className="border-y border-white/10 bg-white/[.025] px-4 py-8 sm:px-6"
+      data-testid="live-proof"
+    >
+      <div className="mx-auto max-w-6xl">
+        <h2 id="proof-title" className="sr-only">
+          What you can count on
+        </h2>
+        <ul className="grid gap-4 md:grid-cols-3" data-testid="promise-strip">
+          {PROMISES.map(([Icon, text]) => (
+            <li key={text} className="flex items-center gap-3 font-semibold text-slate-100">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-400/10 text-emerald-300">
+                <Icon aria-hidden="true" size={19} />
+              </span>
+              {text}
+            </li>
+          ))}
+        </ul>
+        {items.length > 0 && <Stats items={items} />}
       </div>
     </section>
   );
@@ -30,11 +55,9 @@ export function LiveProof() {
 
 function Stats({ items }: { items: ProofItem[] }) {
   return (
-    <>
-      <h2 id="proof-title" className="text-2xl font-black md:text-3xl">
-        On Verse right now
-      </h2>
-      <dl className="mt-6 grid gap-6 sm:grid-cols-3">
+    <div className="mt-8 border-t border-white/10 pt-6">
+      <h3 className="text-lg font-black">On Verse right now</h3>
+      <dl className="mt-4 grid gap-6 sm:grid-cols-3">
         {items.map((item) => (
           <div key={item.key} className="flex flex-col-reverse">
             <dt className="mt-1 text-sm text-slate-300">{item.label}</dt>
@@ -42,33 +65,7 @@ function Stats({ items }: { items: ProofItem[] }) {
           </div>
         ))}
       </dl>
-      <p className="mt-6 text-xs text-slate-400">
-        Live counts of real accounts. Test and demo accounts are never counted.
-      </p>
-    </>
-  );
-}
-
-function Promise() {
-  const promises = [
-    [Zap, 'Urgent requests show up for musicians and crew as soon as you post.'],
-    [Headphones, 'You hear someone’s work before you message or book them.'],
-    [FileCheck2, 'The fee and terms are agreed on Verse before anyone is booked.'],
-    [IndianRupee, 'Posting a request is free.'],
-  ] as const;
-  return (
-    <>
-      <h2 id="proof-title" className="text-2xl font-black md:text-3xl">
-        What you can count on
-      </h2>
-      <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-        {promises.map(([Icon, text]) => (
-          <li key={text} className="flex gap-3 text-slate-200">
-            <Icon aria-hidden="true" size={20} className="mt-0.5 shrink-0 text-emerald-300" />
-            <span className="leading-7">{text}</span>
-          </li>
-        ))}
-      </ul>
-    </>
+      <p className="mt-4 text-xs text-slate-400">Live counts of real accounts.</p>
+    </div>
   );
 }

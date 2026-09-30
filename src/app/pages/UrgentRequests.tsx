@@ -1,4 +1,4 @@
-import { EmptyState } from '../components/help/EmptyState';
+import { EmptyState } from '../components/kit/EmptyState';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
@@ -11,48 +11,14 @@ import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
 import { useLatestCallback } from '../lib/useLatestCallback';
 import { Field, FormDialog, textareaClass, useConfirm } from '../components/booking/BookingDialogs';
+import { UrgentRequestFields } from '../components/urgent/UrgentRequestFields';
+import { URGENT_PROMISE, useUrgentForm } from '../lib/urgentForm';
 import { Clock3, Zap, Siren } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { UrgentRequest, UrgentRequestResponse } from '../lib/apiTypes';
 import { trackUrgentRequestSubmitted, trackUrgentResponseSubmitted } from '../lib/analytics';
 
-type Draft = {
-  title: string;
-  roleName: string;
-  instrument: string;
-  city: string;
-  startAt: string;
-  endAt: string;
-  budgetMin: string;
-  budgetMax: string;
-  requirements: string;
-};
-const emptyDraft: Draft = {
-  title: '',
-  roleName: '',
-  instrument: '',
-  city: '',
-  startAt: '',
-  endAt: '',
-  budgetMin: '',
-  budgetMax: '',
-  requirements: '',
-};
-const toIso = (local: string) => (local ? new Date(local).toISOString() : null);
 const whole = (v: string) => /^\d+$/.test(v.trim());
-
-function draftProblem(d: Draft): string {
-  if (!d.title.trim() || !d.roleName.trim() || !d.city.trim() || !d.startAt)
-    return 'Add a title, role, city and start time.';
-  const start = new Date(d.startAt).getTime();
-  if (Number.isNaN(start)) return 'Choose a valid start time.';
-  if (start < Date.now() - 60_000) return 'The start time cannot be in the past.';
-  if (d.endAt && new Date(d.endAt).getTime() <= start) return 'The end time must be after the start.';
-  for (const v of [d.budgetMin, d.budgetMax]) if (v.trim() && !whole(v)) return 'Budgets must be whole numbers.';
-  if (d.budgetMin.trim() && d.budgetMax.trim() && Number(d.budgetMax) < Number(d.budgetMin))
-    return 'Maximum budget must be at least the minimum.';
-  return '';
-}
 
 export default function UrgentRequests() {
   const { user } = useAuth();
@@ -63,11 +29,12 @@ export default function UrgentRequests() {
     [role, setRole] = useState(''),
     [responses, setResponses] = useState<Record<string, UrgentRequestResponse[]>>({}),
     [expanded, setExpanded] = useState<string | null>(null),
-    [draft, setDraft] = useState<Draft | null>(null),
+    [posting, setPosting] = useState(false),
     [reply, setReply] = useState<{ request: UrgentRequest; message: string; rate: string } | null>(null),
     [formError, setFormError] = useState(''),
     // The mutation in flight ("create" or a request id); others wait so nothing is submitted twice.
     [pending, setPending] = useState<string | null>(null);
+  const urgent = useUrgentForm();
   const { ask, element: confirmDialog } = useConfirm();
   const load = useLatestCallback(async () => {
     const p = new URLSearchParams();
@@ -87,29 +54,19 @@ export default function UrgentRequests() {
     void load();
   }, [load]);
   async function create() {
-    if (!draft || pending) return;
-    const problem = draftProblem(draft);
-    if (problem) return setFormError(problem);
+    if (!posting || pending) return;
+    const body = urgent.validate();
+    if (!body) return;
     setPending('create');
-    setFormError('');
     try {
-      await apiPost('/urgent-requests', {
-        title: draft.title.trim(),
-        roleName: draft.roleName.trim(),
-        instrument: draft.instrument.trim() || null,
-        city: draft.city.trim(),
-        startAt: toIso(draft.startAt),
-        endAt: toIso(draft.endAt),
-        budgetMin: draft.budgetMin.trim() ? Number(draft.budgetMin) : null,
-        budgetMax: draft.budgetMax.trim() ? Number(draft.budgetMax) : null,
-        requirements: draft.requirements.trim() || null,
-      });
+      await apiPost('/urgent-requests', body);
       trackUrgentRequestSubmitted();
       toast.success('Urgent request published');
-      setDraft(null);
+      setPosting(false);
+      urgent.reset();
       await load();
     } catch (e: unknown) {
-      setFormError(errorMessage(e, 'Unable to publish this request.'));
+      if (urgent.form.setFromApi(e, 'Unable to publish this request.')) urgent.form.focusFirst();
     } finally {
       setPending(null);
     }
@@ -172,8 +129,6 @@ export default function UrgentRequests() {
     setLoading(true);
     void load();
   };
-  const setD = (key: keyof Draft, value: string) =>
-    setDraft((current) => (current ? { ...current, [key]: value } : current));
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -183,8 +138,9 @@ export default function UrgentRequests() {
           actions={
             <Button
               onClick={() => {
-                setFormError('');
-                setDraft({ ...emptyDraft });
+                urgent.reset();
+                urgent.form.clear();
+                setPosting(true);
               }}
               disabled={pending !== null}
             >
@@ -350,94 +306,22 @@ export default function UrgentRequests() {
           </div>
         )}
         <FormDialog
-          open={Boolean(draft)}
-          onOpenChange={(open) => !open && setDraft(null)}
+          open={posting}
+          onOpenChange={(open) => !open && setPosting(false)}
           title="Post an urgent need"
           description="Visible to professionals until you mark it filled or cancel it."
           submitLabel="Publish request"
           busyLabel="Publishing…"
           busy={pending === 'create'}
-          error={formError}
+          error={urgent.form.formError}
           wide
           onSubmit={create}
         >
-          {draft && (
-            <>
-              <Field label="Title" htmlFor="urgent-title">
-                <Input
-                  id="urgent-title"
-                  placeholder="Drummer needed for tonight's show"
-                  value={draft.title}
-                  onChange={(e) => setD('title', e.target.value)}
-                />
-              </Field>
-              <div className="grid sm:grid-cols-2 gap-3">
-                <Field label="Role needed" htmlFor="urgent-role">
-                  <Input
-                    id="urgent-role"
-                    placeholder="Drummer / FOH engineer"
-                    value={draft.roleName}
-                    onChange={(e) => setD('roleName', e.target.value)}
-                  />
-                </Field>
-                <Field label="Instrument (optional)" htmlFor="urgent-instrument">
-                  <Input
-                    id="urgent-instrument"
-                    value={draft.instrument}
-                    onChange={(e) => setD('instrument', e.target.value)}
-                  />
-                </Field>
-                <Field label="City" htmlFor="urgent-city">
-                  <Input id="urgent-city" value={draft.city} onChange={(e) => setD('city', e.target.value)} />
-                </Field>
-                <Field label="Starts" htmlFor="urgent-start">
-                  <Input
-                    id="urgent-start"
-                    type="datetime-local"
-                    value={draft.startAt}
-                    onChange={(e) => setD('startAt', e.target.value)}
-                  />
-                </Field>
-                <Field label="Ends (optional)" htmlFor="urgent-end">
-                  <Input
-                    id="urgent-end"
-                    type="datetime-local"
-                    min={draft.startAt}
-                    value={draft.endAt}
-                    onChange={(e) => setD('endAt', e.target.value)}
-                  />
-                </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Budget min" htmlFor="urgent-budget-min">
-                    <Input
-                      id="urgent-budget-min"
-                      type="number"
-                      min="0"
-                      value={draft.budgetMin}
-                      onChange={(e) => setD('budgetMin', e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Budget max" htmlFor="urgent-budget-max">
-                    <Input
-                      id="urgent-budget-max"
-                      type="number"
-                      min="0"
-                      value={draft.budgetMax}
-                      onChange={(e) => setD('budgetMax', e.target.value)}
-                    />
-                  </Field>
-                </div>
-              </div>
-              <Field label="Details (optional)" htmlFor="urgent-requirements">
-                <textarea
-                  id="urgent-requirements"
-                  className={textareaClass}
-                  value={draft.requirements}
-                  onChange={(e) => setD('requirements', e.target.value)}
-                />
-              </Field>
-            </>
-          )}
+          <UrgentRequestFields values={urgent.values} errors={urgent.form.errors} onChange={urgent.set} />
+          <p className="flex items-center gap-1.5 text-sm text-slate-300">
+            <Clock3 aria-hidden="true" size={14} />
+            Expect a first response {URGENT_PROMISE}.
+          </p>
         </FormDialog>
         <FormDialog
           open={Boolean(reply)}

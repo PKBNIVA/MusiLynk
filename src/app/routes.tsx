@@ -59,6 +59,7 @@ function publicRoutes(): RouteObject[] {
   const PublicActs = L(() => import('./pages/public/PublicActs'));
   const PublicAct = L(() => import('./pages/public/PublicAct'));
   const LegalPage = L(() => import('./pages/public/LegalPage'));
+  const CreditsPage = L(() => import('./pages/public/CreditsPage'));
   const UrgentRequests = L(() => import('./pages/UrgentRequests'));
   const UrgentHire = L(() => import('./pages/UrgentHire'));
   const UrgentAction = L(() => import('./pages/UrgentAction'));
@@ -242,6 +243,14 @@ function publicRoutes(): RouteObject[] {
       ),
     },
     {
+      path: '/credits',
+      element: (
+        <S>
+          <CreditsPage />
+        </S>
+      ),
+    },
+    {
       path: '/terms',
       element: (
         <S>
@@ -338,7 +347,8 @@ function publicRoutes(): RouteObject[] {
       ),
     },
     { path: '/login', element: <Redirect to="/auth/jobseeker" /> },
-    { path: '/signup', element: <Redirect to="/join" /> },
+    { path: '/signup', element: <Redirect to="/join/musician" /> },
+    { path: '/join', element: <Redirect to="/join/musician" /> },
     {
       path: '/auth/:userType',
       element: (

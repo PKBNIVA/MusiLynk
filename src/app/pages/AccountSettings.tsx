@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { KeyRound, Link2, Mail, MessageCircle, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { Camera, KeyRound, Link2, Mail, MessageCircle, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
@@ -19,8 +19,18 @@ import {
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
 import { PasswordChecklist } from '../components/PasswordChecklist';
+import { UserAvatar } from '../components/kit/UserAvatar';
+import { cropSquare } from '../components/media/cropSquare';
 import { GoogleButton } from '../components/auth/GoogleButton';
-import { apiPatch, apiPost, disconnectAuthConnection, getSignInMethods, type AuthConnectionSummary } from '../lib/api';
+import {
+  apiPatch,
+  apiPost,
+  apiPut,
+  disconnectAuthConnection,
+  getSignInMethods,
+  uploadMedia,
+  type AuthConnectionSummary,
+} from '../lib/api';
 import { useAuth, type User } from '../lib/authContext';
 import { errorCode, errorMessage } from '../lib/errors';
 import { checkPasswordStrength } from '../lib/passwordStrength';
@@ -52,6 +62,7 @@ export default function AccountSettings() {
         />
 
         {user && <NameCard user={user} onSaved={setUser} />}
+        {user && <PhotoCard user={user} onSaved={setUser} />}
         {user && <EmailCard user={user} onSaved={setUser} />}
         {user?.role === 'jobseeker' && <WhatsAppCard user={user} />}
         {user && <PasswordCard user={user} />}
@@ -106,6 +117,97 @@ function NameCard({ user, onSaved }: { user: User; onSaved: (u: User) => void })
             {busy ? 'Saving…' : 'Save name'}
           </Button>
         </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+/** Profile photo: pick a picture, it is cropped to a 512 px square in the browser, uploaded and saved. */
+function PhotoCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function save(photoUrl: string) {
+    const d = await apiPut<{ user: User }>('/profile', { photoUrl });
+    onSaved({ ...user, ...d.user });
+  }
+
+  async function choose(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || busy) return;
+    if (!PHOTO_TYPES.includes(file.type)) {
+      toast.error('Choose a JPEG, PNG or WebP picture.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const cropped = await cropSquare(file);
+      const stored = await uploadMedia(cropped);
+      await save(stored.url);
+      toast.success('Photo updated');
+    } catch (err: unknown) {
+      toast.error(errorMessage(err, 'Could not update your photo. Try a smaller JPEG, PNG or WebP picture.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await save('');
+      toast.success('Photo removed');
+    } catch (err: unknown) {
+      toast.error(errorMessage(err, 'Could not remove your photo. Check your connection and try again.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="bg-white/[.055] border-white/10">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Camera size={18} className="text-violet-300" />
+          Photo
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-center gap-4" aria-busy={busy}>
+          <UserAvatar id={user.id} name={user.name} size="xl" photoUrl={user.photoUrl} decorative={false} />
+          <div className="space-y-2">
+            <p className="text-sm text-slate-300">JPEG, PNG or WebP. It is cropped to a square.</p>
+            <input
+              ref={input}
+              id="settings-photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={choose}
+              aria-label="Choose a photo"
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                aria-busy={busy}
+                onClick={() => input.current?.click()}
+              >
+                {busy ? 'Saving…' : user.photoUrl ? 'Change photo' : 'Upload photo'}
+              </Button>
+              {user.photoUrl && (
+                <Button type="button" variant="outline" disabled={busy} onClick={remove}>
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

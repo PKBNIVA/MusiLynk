@@ -1,15 +1,12 @@
-import { DemoBadge } from '../../components/DemoBadge';
 import { usePageMeta } from '../../components/PageMeta';
 import { useEffect } from 'react';
 import { Link } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
-import { Card, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+import { ActCard } from '../../components/talent/ActCard';
 import { Button } from '../../components/ui/button';
 import { ActSearchForm } from '../../components/ActSearchForm';
 import { LoadMore } from '../../components/LoadMore';
 import { NoResults, SearchNotice } from '../../components/SearchFeedback';
-import { MapPin, ShieldCheck } from 'lucide-react';
 import { useLatestCallback } from '../../lib/useLatestCallback';
 import { usePagedList, type PageMeta } from '../../lib/usePagedList';
 import { useUrlFilters } from '../../lib/useUrlFilters';
@@ -96,37 +93,7 @@ export default function PublicActs() {
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
               {acts.map((a, index) => (
-                <Link
-                  key={a.id}
-                  to={`/acts/${a.id}`}
-                  data-list-item={index}
-                  className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-                >
-                  <Card className="h-full bg-white/[.05] border-white/10 hover:bg-white/[.075]">
-                    <CardContent className="p-5">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-semibold">{a.name}</h2>
-                        <DemoBadge show={a.demo} />
-                        {a.verified && <ShieldCheck size={16} className="text-emerald-300" />}
-                      </div>
-                      <p className="text-violet-300 mt-1">{a.act_type}</p>
-                      {a.city && (
-                        <p className="text-sm text-slate-400 mt-3 flex">
-                          <MapPin size={15} className="mr-1" />
-                          {a.city}
-                        </p>
-                      )}
-                      <p className="text-sm text-slate-300 mt-3 line-clamp-3">{a.tagline || a.bio}</p>
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {a.genres?.slice(0, 4).map((x: string) => (
-                          <Badge key={x} variant="secondary">
-                            {x}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <ActCard key={a.id} act={a} index={index} to={`/acts/${a.id}`} />
               ))}
             </div>
             <LoadMore

@@ -25,9 +25,10 @@ class SearchController < ApplicationController
   # `totals` and `moreOf` (true when a type has more than it shows; the UI links to that type).
   # With `type`: one type, paged with `limit`/`cursor` like the lists (`nextCursor`, `total`).
   # Every response says how the query was read: interpretedAs, matchMode, didYouMean.
+  # `language`, `eventType`, `genre` and `budgetMax` narrow the talent results (see TalentController.apply_facets).
   def index
     return unless throttle!("search", limit: REQUESTS_PER_MINUTE, period: 1.minute)
-    return render_error("Search filters must be plain text.", :bad_request, "INVALID_PARAMETER") unless %i[q type limit cursor].all? { params[_1].nil? || params[_1].is_a?(String) }
+    return render_error("Search filters must be plain text.", :bad_request, "INVALID_PARAMETER") unless [*%i[q type limit cursor], *TalentController::FACET_PARAMS].all? { params[_1].nil? || params[_1].is_a?(String) }
 
     query = Search::Query.new(params[:q].to_s.strip.first(MAX_QUERY_LENGTH).strip)
     return render json: search_response([], query) if query.blank?
@@ -36,7 +37,7 @@ class SearchController < ApplicationController
     offset = type ? list_offset : 0
     return render_invalid_cursor if offset.nil?
     limit = type ? list_limit : PER_TYPE
-    key = [synthetic_viewer?, query.natural?, query.text, type, offset, limit]
+    key = [synthetic_viewer?, query.natural?, query.text, type, offset, limit, *TalentController::FACET_PARAMS.map { params[_1].to_s.strip }]
     render json: cached(key) { type ? type_response(type, query, offset, limit) : all_response(query) }
   end
 
@@ -89,7 +90,7 @@ class SearchController < ApplicationController
   def scope_for(type)
     scope = case type
     when "jobs" then Job.published.joins(:employer).includes(:employer)
-    when "talent" then User.discoverable_talent.joins(:profile).preload(:profile)
+    when "talent" then TalentController.apply_facets(User.discoverable_talent.joins(:profile).preload(:profile), params)
     when "acts" then Act.joins(:owner).includes(:owner).where(status: "active")
     else PortfolioItem.joins(user: :profile).includes(:user).where(visibility: "public", users: { status: "active", profile_complete: true })
     end

@@ -1,22 +1,22 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { TalentCard } from '../components/talent/TalentCard';
+import { FACET_KEYS, TalentFacets } from '../components/talent/TalentFacets';
+import { useHomeCityDefault } from '../components/talent/useHomeCity';
 import { Checkbox } from '../components/ui/checkbox';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
 import type { Created, ConversationCreated, Professional, RecentActivity, TalentFolder } from '../lib/apiTypes';
 import { useLatestCallback } from '../lib/useLatestCallback';
-import { Search, BookmarkPlus, BookmarkCheck, MessageSquare, ShieldCheck, FolderPlus, Folder } from 'lucide-react';
-import { VerifiedBadge } from '../components/VerifiedBadge';
-import { personLines } from '../lib/personLine';
+import { Search, BookmarkPlus, BookmarkCheck, MessageSquare, FolderPlus, Folder } from 'lucide-react';
 import { UserAvatar } from '../components/kit/UserAvatar';
 import { EmptyState } from '../components/kit/EmptyState';
-import { FirstSample } from '../components/talent/FirstSample';
 import { Label } from '../components/ui/label';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { toastJobError } from '../components/OpportunityPipeline';
@@ -30,7 +30,7 @@ import { AppSelect } from '../components/ui/app-select';
 type CandidatePage = PageMeta & { candidates?: Professional[] };
 const pickCandidates = (page: CandidatePage) => page.candidates;
 // URL keys are the API's filter names, so the URL is the search.
-const FILTERS = ['q', 'location', 'role', 'instrument', 'verified', 'remoteRecording'] as const;
+const FILTERS = ['q', 'location', 'role', 'instrument', 'verified', 'remoteRecording', ...FACET_KEYS] as const;
 const NOUN = ['professional', 'professionals'] as const;
 
 function FilterChip({ pressed, onClick, children }: { pressed: boolean; onClick: () => void; children: string }) {
@@ -70,10 +70,11 @@ export default function CandidateSearch() {
     setQ(f.q);
     setLocation(f.location);
   }, [f.q, f.location]);
+  const { city: homeCity, ready } = useHomeCityDefault('location');
   const load = useLatestCallback(() => list.search(query));
   useEffect(() => {
-    void load();
-  }, [query, load]);
+    if (ready) void load();
+  }, [ready, query, load]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!update({ q, location })) void load();
@@ -169,10 +170,23 @@ export default function CandidateSearch() {
           </Button>
         </form>
         <div
-          className="-mx-5 mb-5 flex snap-x flex-nowrap items-center gap-2 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+          className="-mx-5 flex snap-x flex-nowrap items-center gap-2 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
           role="group"
           aria-label="Filters"
         >
+          {homeCity && (
+            <>
+              <FilterChip
+                pressed={f.location.toLowerCase() === homeCity.toLowerCase()}
+                onClick={() => update({ location: homeCity })}
+              >
+                {homeCity}
+              </FilterChip>
+              <FilterChip pressed={!f.location} onClick={() => update({ location: '' })}>
+                All cities
+              </FilterChip>
+            </>
+          )}
           <FilterChip
             pressed={f.verified === 'true'}
             onClick={() => update({ verified: f.verified === 'true' ? '' : 'true' })}
@@ -209,7 +223,8 @@ export default function CandidateSearch() {
             </span>
           )}
         </div>
-        <div className="grid content-start gap-4 md:grid-cols-3">
+        <TalentFacets values={f} update={update} />
+        <div className="mt-5 grid content-start gap-4 md:grid-cols-3">
           {loading ? (
             <Card className="bg-white/[.035] border-white/10 md:col-span-3">
               <CardContent className="p-8 text-center text-slate-400" role="status">
@@ -245,52 +260,24 @@ export default function CandidateSearch() {
           {!loading &&
             !loadError &&
             items.map((c, index) => (
-              <Card key={c.id} className="bg-white/[.055] border-white/10" data-list-item={index} tabIndex={-1}>
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-3">
-                    <UserAvatar id={c.id} name={c.name} size="lg" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <h2 className="truncate text-lg font-semibold">
-                          <Link to={`/professionals/${encodeURIComponent(c.id)}`} className="hover:underline">
-                            {c.name}
-                          </Link>
-                        </h2>
-                        {c.verified && (
-                          <ShieldCheck size={16} aria-label="Verified" className="shrink-0 text-emerald-300" />
-                        )}
-                        {c.verificationTier === 'verified_pro' && (
-                          <VerifiedBadge verification={c.verification} tier={c.verificationTier} />
-                        )}
-                      </div>
-                      <p className="mt-0.5 text-sm text-slate-300">
-                        {(() => {
-                          const line = personLines(c);
-                          return [line.primary || 'Music professional', ...line.secondary.slice(0, 3)].join(' · ');
-                        })()}
-                      </p>
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label={c.shortlisted ? `Remove ${c.name} from shortlist` : `Shortlist ${c.name}`}
-                      aria-pressed={!!c.shortlisted}
-                      onClick={() => shortlist(c)}
-                    >
-                      {c.shortlisted ? <BookmarkCheck className="text-violet-300" /> : <BookmarkPlus />}
-                    </Button>
-                  </div>
-                  <FirstSample id={c.id} className="mt-4" />
-                  {!!c.skills?.length && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {c.skills.slice(0, 3).map((s: string) => (
-                        <span key={s} className="rounded-full bg-white/[.06] px-2.5 py-0.5 text-xs text-slate-300">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-4 flex items-center gap-2">
+              <TalentCard
+                key={c.id}
+                person={c}
+                index={index}
+                to={`/professionals/${encodeURIComponent(c.id)}`}
+                aside={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={c.shortlisted ? `Remove ${c.name} from shortlist` : `Shortlist ${c.name}`}
+                    aria-pressed={!!c.shortlisted}
+                    onClick={() => shortlist(c)}
+                  >
+                    {c.shortlisted ? <BookmarkCheck className="text-violet-300" /> : <BookmarkPlus />}
+                  </Button>
+                }
+                footer={
+                  <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" className="flex-1" onClick={() => message(c)}>
                       <MessageSquare size={16} className="mr-2" />
                       Message
@@ -318,8 +305,8 @@ export default function CandidateSearch() {
                       Compare
                     </label>
                   </div>
-                </CardContent>
-              </Card>
+                }
+              />
             ))}
           {!loading && !loadError && (
             <div className="md:col-span-3">
@@ -346,7 +333,14 @@ export default function CandidateSearch() {
                   const c = items.find((x) => x.id === id);
                   return (
                     <li key={id}>
-                      <UserAvatar id={id} name={c?.name || 'Selected professional'} size="sm" />
+                      <UserAvatar
+                        id={id}
+                        name={c?.name || 'Selected professional'}
+                        size="sm"
+                        photoUrl={c?.photoUrl}
+                        demo={c?.demo}
+                        genres={c?.genres}
+                      />
                     </li>
                   );
                 })}

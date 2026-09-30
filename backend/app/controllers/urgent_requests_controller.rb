@@ -27,11 +27,25 @@ class UrgentRequestsController < ApplicationController
     render json: { request: serialize(item, Set.new), responseTimePromise: UrgentConfig.response_time_promise }
   end
 
+  # The five required answers are the role, when, the city, a budget band and a short note; the
+  # rest (venue, end time, instrument, requirements) is optional. The title is optional too: it
+  # is written from the role and city when the client sends none. Every problem is returned at once.
   def create
-    item = UrgentRequest.create!(requester: current_user, title: params[:title], role_name: params[:roleName], instrument: params[:instrument],
-      city: params[:city], start_at: params[:startAt], end_at: params[:endAt], budget_min: params[:budgetMin], budget_max: params[:budgetMax],
-      currency: params[:currency].presence || "INR", genre: params[:genre], requirements: params[:requirements],
+    role, city = params[:roleName], params[:city]
+    title = params[:title].presence || ("#{role} needed in #{city}" if role.is_a?(String) && city.is_a?(String) && role.present? && city.present?)
+    item = UrgentRequest.new(requester: current_user, title:, role_name: role, instrument: params[:instrument],
+      city:, start_at: params[:startAt], end_at: params[:endAt], budget_min: params[:budgetMin], budget_max: params[:budgetMax],
+      currency: params[:currency].presence || "INR", genre: params[:genre], requirements: requirements_text,
       travel_covered: params[:travelCovered] || false, status: "open")
+    item.validate
+    # The title is written from the role and city, so a missing one is reported on those fields only.
+    item.errors.delete(:title) if params[:title].blank?
+    item.errors.add(:start_at, "can't be in the past") if item.start_at && item.start_at < 1.minute.ago
+    item.errors.add(:budget, "is required: choose a budget band") if item.budget_min.nil? && item.budget_max.nil?
+    item.errors.add(:note, "is required: tell them what to expect") if requirements_text.blank?
+    return render_record_invalid(ActiveRecord::RecordInvalid.new(item)) if item.errors.any?
+
+    item.save!
     notified = UrgentMatcher.notify!(item)
     render json: { id: item.id, notifiedCount: notified.size, responseTimePromise: UrgentConfig.response_time_promise }, status: :created
   end
@@ -83,6 +97,19 @@ class UrgentRequestsController < ApplicationController
   end
 
   private
+
+  # The note first, then the optional venue and extra requirements, in the one `requirements`
+  # column. Older clients send only `requirements`, which then is the note.
+  def requirements_text
+    return @requirements_text if defined?(@requirements_text)
+
+    note, venue, extra = %i[note venue requirements].map { params[_1].is_a?(String) ? params[_1].strip.presence : nil }
+    @requirements_text = if note
+      [note, venue && "Venue: #{venue}", extra && "Requirements: #{extra}"].compact.join("\n")
+    else
+      [extra, venue && "Venue: #{venue}"].compact.join("\n").presence
+    end
+  end
 
   def serialize(item, responded_ids, my_reasons = nil)
     item.attributes.merge(requesterName: item.requester.name, requesterVerified: item.requester.profile&.verified || false,

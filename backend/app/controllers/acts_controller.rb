@@ -1,6 +1,6 @@
 class ActsController < ApplicationController
   include ListPaging
-  LIST_PARAMS = %i[q city type genre eventType limit cursor].freeze
+  LIST_PARAMS = %i[q city type genre eventType member limit cursor].freeze
   LIST_ORDER = ["acts.verified DESC", "acts.updated_at DESC", "acts.id ASC"].freeze
   CITY_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["acts.city"])
   # Only "confirmed" exists today: public lineups show confirmed members and no flow sets another status.
@@ -29,6 +29,7 @@ class ActsController < ApplicationController
 
   def create
     return unless authenticate!("jobseeker", "employer")
+    return unless photo_allowed?(nil)
     act = current_user.owned_acts.create!(act_params)
     act.act_members.create!(display_name: current_user.name, role_name: params[:leaderRole].presence || params[:ownerRole].presence || "Leader", is_leader: true, member_status: "confirmed", user: current_user)
     audit!("act.create", act)
@@ -54,6 +55,7 @@ class ActsController < ApplicationController
   def update
     return unless authenticate!("jobseeker", "employer")
     act = current_user.owned_acts.find(params[:id])
+    return unless photo_allowed?(act)
     act.update!(act_params)
     audit!("act.update", act)
     render json: { act: act.reload.api_json }
@@ -79,7 +81,7 @@ class ActsController < ApplicationController
   private
 
   # One ranked page of active acts. Filters: q (name, type, genres, events, lineup roles and
-  # instruments), city, type (act type), genre and eventType; paged like the talent directory.
+  # instruments), city, type (act type), genre, eventType and member (a musician's id); paged like the talent directory.
   def render_listing
     unless LIST_PARAMS.all? { params[_1].nil? || params[_1].is_a?(String) }
       return render_error("Search filters must be plain text.", :bad_request, "INVALID_PARAMETER")
@@ -91,16 +93,31 @@ class ActsController < ApplicationController
     scope = scope.where("acts.act_type ILIKE ?", ActiveRecord::Base.sanitize_sql_like(params[:type].to_s.strip)) if params[:type].present?
     scope = scope.where("acts.genres::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:genre].to_s.strip)}%") if params[:genre].present?
     scope = scope.where("acts.event_types::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:eventType].to_s.strip)}%") if params[:eventType].present?
+    scope = fronted_by(scope, params[:member].to_s.strip) if params[:member].present?
     limit = list_limit
     search = Search::Runner.call(scope, params[:q], Search::Targets::ACTS, order: LIST_ORDER, offset:, limit:)
     render json: { acts: search.rows.map(&:public_json), nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta)
   end
 
+  # Acts a musician owns or plays in as a confirmed member (a profile's "Request a quote" lands on these).
+  def fronted_by(scope, user_id)
+    scope.where("acts.owner_id = :id OR EXISTS (SELECT 1 FROM act_members m WHERE m.act_id = acts.id AND m.user_id = :id AND m.member_status = 'confirmed')", id: user_id)
+  end
+
   # Same rule as talent: non-demo synthetic QA batches are only visible to synthetic viewers.
   def public_visible(scope) = current_user&.synthetic_batch.present? ? scope : SyntheticQa::Demo.publicly_listed(scope.joins(:owner))
 
+  # A photo must be an image the caller uploaded (or the one the act already has); anything else is refused.
+  def photo_allowed?(act)
+    photo = params[:photoUrl].to_s.strip
+    return true if photo.blank? || photo == act&.photo_url || Upload.photo_owned_by?(current_user, photo)
+    render_error("Upload a JPEG, PNG or WebP photo first, then save.", :unprocessable_content, "VALIDATION_FAILED", fields: { "photoUrl" => ["Upload a JPEG, PNG or WebP photo first, then save."] })
+    false
+  end
+
   def act_params
-    raw = params.permit(:name, :actType, :tagline, :bio, :city, :lineupSize, :minFee, :maxFee, :currency, :feeBasis, :travelRadiusKm, :travelsNationally, :travelsInternationally, :techRiderUrl, :hospitalityRiderUrl, :promoUrl, :status, genres: [], languages: [], eventTypes: []).to_h.transform_keys { _1.underscore }
+    raw = params.permit(:name, :actType, :tagline, :bio, :city, :lineupSize, :minFee, :maxFee, :currency, :feeBasis, :travelRadiusKm, :travelsNationally, :travelsInternationally, :techRiderUrl, :hospitalityRiderUrl, :promoUrl, :photoUrl, :status, genres: [], languages: [], eventTypes: []).to_h.transform_keys { _1.underscore }
+    raw["photo_url"] = nil if raw.key?("photo_url") && raw["photo_url"].blank?
     raw["currency"] ||= "INR"; raw["fee_basis"] ||= "event"; raw["status"] ||= "active"; raw
   end
 end

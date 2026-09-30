@@ -51,6 +51,12 @@ describe('JobCard', () => {
     expect(host.textContent).toContain('1 applicant');
     expect(host.textContent).not.toContain('Arranging');
   });
+  it('draws generated cover art keyed by the job, with the kind glyph on it', () => {
+    const host = render(job({ id: 'j9' }));
+    const cover = host.querySelector('[data-testid="job-cover"]');
+    expect(cover?.querySelector('[data-testid="cover-art"]')).toBeTruthy();
+    expect(cover?.querySelector('[data-glyph="session"]')).toBeTruthy();
+  });
   it('keeps undisclosed pay muted and compact shows only title, company and pay', () => {
     const host = render(job({ compensation_min: null, compensation_max: null, demo: false }), true);
     expect(host.textContent).toContain('Pay not disclosed');

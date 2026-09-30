@@ -149,7 +149,7 @@ export default function PublicJobs() {
           </div>
         ) : jobs.length ? (
           <>
-            <div className="grid gap-4 mt-6">
+            <div className="grid grid-cols-1 gap-4 mt-6">
               {jobs.map((j, index) => (
                 <JobCard key={j.id} job={j} index={index} to={`/opportunities/${j.id}`} aside={<ApplyCta job={j} />} />
               ))}

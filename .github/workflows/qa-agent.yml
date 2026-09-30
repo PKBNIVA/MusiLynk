@@ -111,7 +111,7 @@ jobs:
             lines.push(`${expected} passed, ${unexpected} failed, ${flaky} flaky, ${skipped} skipped against ${process.env.QA_BASE_URL}.`);
             const failed = [];
             const walk = (suite, trail) => {
-              const here = suite.title && !suite.title.endsWith('.ts') ? [...trail, suite.title] : trail;
+              const here = suite.title ? [...trail, suite.title] : trail;
               for (const spec of suite.specs || []) if (spec.ok === false) failed.push([...here, spec.title].join(' › '));
               for (const child of suite.suites || []) walk(child, here);
             };
@@ -141,11 +141,12 @@ jobs:
 
   # Alerts without any new service, the same pattern as .github/workflows/db-backup.yml: a failed
   # nightly or manual live run opens a GitHub issue labelled qa-failure (or comments on the one
-  # already open), which emails the repo owner through normal GitHub notifications. Every run posts
-  # its summary as a comment, and the next green run closes the issue.
+  # already open), which emails the repo owner through normal GitHub notifications. The failure text
+  # carries the run summary, and the next green run closes the issue with its own summary. A
+  # cancelled run (a newer run superseded it) is not a failure and opens nothing.
   alert:
     needs: live-synthetic
-    if: always() && needs.live-synthetic.result != 'skipped'
+    if: always() && needs.live-synthetic.result != 'skipped' && needs.live-synthetic.result != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -153,7 +154,6 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      RESULT: ${{ needs.live-synthetic.result }}
       SUMMARY: ${{ needs.live-synthetic.outputs.summary }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
@@ -161,7 +161,7 @@ jobs:
         if: needs.live-synthetic.result != 'success'
         run: |
           gh label create qa-failure --color B60205 --description "Live QA run failed" 2>/dev/null || true
-          body="The live QA run **${RESULT}** on $(date -u '+%Y-%m-%d %H:%M UTC') (trigger: ${GITHUB_EVENT_NAME}).
+          body="The live QA run failed on $(date -u '+%Y-%m-%d %H:%M UTC') (trigger: ${GITHUB_EVENT_NAME}).
 
           ${SUMMARY:-No summary was produced.}
 

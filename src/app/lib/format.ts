@@ -142,3 +142,21 @@ export function formatPay(job: PayFields, fallback = 'Not disclosed'): string {
   }
   return job.compensation_period ? `${range} / ${job.compensation_period}` : range;
 }
+
+/** "Today 6 pm", "Tomorrow 6:30 pm", otherwise "Sat 14 Nov 6 pm". Empty → `fallback`. */
+export function formatWhen(value: DateInput, options: FormatOptions & { now?: Date } = {}): string {
+  const d = toDate(value);
+  if (!d) return options.fallback ?? '';
+  const tz = options.timeZone;
+  const days = dayNumber(d, tz) - dayNumber(options.now ?? new Date(), tz);
+  const time = new Intl.DateTimeFormat(LOCALE, { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz })
+    .format(d)
+    .replace(':00', '')
+    .replace(/\s?([ap])m/i, (_m, x: string) => ` ${x.toLowerCase()}m`);
+  if (days === 0) return `Today ${time}`;
+  if (days === 1) return `Tomorrow ${time}`;
+  const day = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz })
+    .format(d)
+    .replace(',', '');
+  return `${day} ${time}`;
+}

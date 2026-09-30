@@ -39,6 +39,12 @@ describe('UserAvatar', () => {
     expect(avatarHue('abc')).toBeLessThan(360);
     expect(avatarHue('abc')).not.toBe(avatarHue('abd'));
   });
+  it('spreads ids that differ in one trailing character (consecutive ids at least 40 degrees apart)', () => {
+    const hues = ['u1', 'u2', 'u3'].map(avatarHue);
+    const gap = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+    expect(gap(hues[0], hues[1])).toBeGreaterThanOrEqual(40);
+    expect(gap(hues[1], hues[2])).toBeGreaterThanOrEqual(40);
+  });
   it('handles one-word and empty names', () => {
     expect(initialsOf('Madonna')).toBe('M');
     expect(initialsOf('  ')).toBe('?');

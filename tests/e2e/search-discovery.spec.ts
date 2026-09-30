@@ -236,18 +236,13 @@ test('signed-in job search keeps its filters in the URL (SRCH-06, SRCH-08)', asy
 
 test('job cards show the same facts on public and signed-in lists (SRCH-13)', async ({ page }) => {
   await mockApi(page, 'jobseeker', { '/api/jobs': () => ({ jobs: [job(1)], total: 1, nextCursor: null }) });
-  const facts = [
-    'Goa · Hybrid',
-    'Performance',
-    'Classical',
-    '₹15,000–35,000',
-    '3 applicants',
-    'Closes 11 Nov 2026 · in 44 days',
-  ];
+  const cardFacts = ['Goa · Hybrid', 'Performance', 'Classical'];
+  const facts = ['₹15,000–35,000', '3 applicants', 'Closes 11 Nov 2026 · in 44 days'];
   for (const path of ['/jobseeker/jobs', '/music-jobs']) {
     await page.goto(path);
     const card = page.getByTestId('job-card').first();
-    await expect(card.getByText('Gig', { exact: true })).toBeVisible();
+    await expect(card.locator('[data-glyph="gig"]')).toBeVisible();
+    for (const fact of cardFacts) await expect(card).toContainText(fact);
     for (const fact of facts) await expect(card.getByTestId('job-facts')).toContainText(fact);
   }
 });

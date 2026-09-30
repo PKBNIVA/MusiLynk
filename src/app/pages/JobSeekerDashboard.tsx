@@ -5,17 +5,17 @@ import { TourStrip } from '../components/ProductTour';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { WelcomeNextStep } from '../components/landing/WelcomeNextStep';
 import { HELP } from '../components/help/helpContent';
-import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
+import { JobCard } from '../components/JobCard';
+import { EmptyState } from '../components/kit/EmptyState';
+import { StatChips, plural } from '../components/kit/StatChips';
+import { formatWhen } from '../lib/format';
 import { apiGet } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { Link, useLocation } from 'react-router';
-import { Search, ArrowRight, MapPin, Sparkles, Siren } from 'lucide-react';
+import { Search, ArrowRight, Sparkles, Zap, MessageSquare, CalendarCheck } from 'lucide-react';
 import { VouchCard } from '../components/VouchCard';
-import { optionLabel } from '../components/ui/option-labels';
-import type { Job, JobSeekerDashboard } from '../lib/apiTypes';
-const plural = (n: number | undefined, word: string) => `${n || 0} ${word}${n === 1 ? '' : 's'}`;
+import type { Conversation, Job, JobSeekerDashboard } from '../lib/apiTypes';
 export default function JobSeekerDashboard() {
   const { user } = useAuth();
   const welcome = new URLSearchParams(useLocation().search).get('welcome') === '1';
@@ -31,7 +31,56 @@ export default function JobSeekerDashboard() {
       .catch(() => setState('error'));
   };
   useEffect(load, []);
-  const goodFits = d.recommendedJobs.filter((j) => (j.fitScore ?? 0) >= 60);
+  const [convs, setConvs] = useState<Conversation[]>([]);
+  useEffect(() => {
+    // Unread messages are a nicety: a failed fetch simply hides that tile.
+    apiGet<{ conversations?: Conversation[] }>('/conversations')
+      .then((x) => setConvs(x?.conversations || []))
+      .catch(() => undefined);
+  }, []);
+  const goodFits = d.recommendedJobs.filter((j) => (j.fitScore ?? 0) >= 60).slice(0, 3);
+  const unread = convs.reduce((n, c) => n + (c.unreadCount || 0), 0);
+  const latestUnread = convs
+    .filter((c) => (c.unreadCount || 0) > 0)
+    .sort((a, b) => String(b.lastMessageAt || '').localeCompare(String(a.lastMessageAt || '')))[0];
+  const urgent = d.urgentNearby;
+  const first = urgent?.items?.[0];
+  const tiles = [
+    urgent?.count
+      ? {
+          key: 'urgent',
+          urgent: true,
+          Icon: Zap,
+          title: `${urgent.count} urgent request${urgent.count === 1 ? '' : 's'} near you`,
+          line: first ? [first.roleName, first.city, formatWhen(first.startAt)].filter(Boolean).join(' · ') : '',
+          cta: 'Respond',
+          to: '/jobseeker/urgent',
+        }
+      : null,
+    unread > 0
+      ? {
+          key: 'messages',
+          urgent: false,
+          Icon: MessageSquare,
+          title: `${unread} unread message${unread === 1 ? '' : 's'}`,
+          line: latestUnread?.counterpartName || latestUnread?.employerName || '',
+          cta: 'Open',
+          to: '/jobseeker/messages',
+        }
+      : null,
+    d.interviews
+      ? {
+          key: 'interviews',
+          urgent: false,
+          Icon: CalendarCheck,
+          title: `${d.interviews} interview${d.interviews === 1 ? '' : 's'} scheduled`,
+          line: '',
+          cta: 'See applications',
+          to: '/jobseeker/applications',
+        }
+      : null,
+  ].filter((t): t is NonNullable<typeof t> => Boolean(t));
+  const isEmpty = tiles.length === 0 && goodFits.length === 0;
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -61,34 +110,45 @@ export default function JobSeekerDashboard() {
             </Button>
           </div>
         )}
-        {Boolean(d.urgentNearby?.count) && (
-          <Card className="bg-gradient-to-br from-orange-500/15 to-rose-500/[.06] border-orange-400/20 mb-8">
-            <CardContent className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="rounded-xl bg-orange-500/15 p-2.5 shrink-0">
-                  <Siren aria-hidden="true" size={20} className="text-orange-300" />
+        {tiles.length > 0 && (
+          <section aria-label="Needs you now" className="mb-8 grid gap-3 md:grid-cols-3" data-testid="needs-you-now">
+            {tiles.map((t) => (
+              <div
+                key={t.key}
+                className={`flex min-h-[96px] items-center gap-3 rounded-xl border border-white/10 bg-white/[.055] p-4 ${
+                  t.urgent ? 'border-l-4 border-l-amber-400' : ''
+                }`}
+              >
+                <span
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+                    t.urgent ? 'bg-amber-500/15 text-amber-300' : 'bg-white/10 text-slate-200'
+                  }`}
+                >
+                  <t.Icon aria-hidden="true" size={24} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-semibold">{t.title}</h2>
+                  {t.line && <p className="line-clamp-2 text-sm text-slate-400">{t.line}</p>}
                 </div>
-                <div>
-                  <h2 className="font-semibold flex items-center gap-2">
-                    Urgent near you
-                    <Badge className="bg-orange-500/20 text-orange-200">{d.urgentNearby?.count}</Badge>
-                  </h2>
-                  <p className="text-sm text-slate-400 mt-1">
-                    {d.urgentNearby?.items
-                      .slice(0, 2)
-                      .map((r) => `${r.roleName} in ${r.city}`)
-                      .join(' · ')}
-                    {(d.urgentNearby?.count || 0) > 2 ? ' and more' : ''}
-                  </p>
-                </div>
+                <Button asChild variant="outline" size="sm" className="shrink-0">
+                  <Link to={t.to}>{t.cta}</Link>
+                </Button>
               </div>
-              <Button asChild variant="outline" className="shrink-0">
-                <Link to="/jobseeker/urgent">
-                  Respond now <ArrowRight size={14} className="ml-2" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+            ))}
+          </section>
+        )}
+        {goodFits.length > 0 && (
+          <section aria-labelledby="best-fits" className="mb-8">
+            <h2 id="best-fits" className="mb-4 flex items-center gap-2 text-xl font-semibold">
+              <Sparkles aria-hidden="true" size={20} className="text-violet-300" />
+              Good fits
+            </h2>
+            <div className="grid gap-3 md:grid-cols-3">
+              {goodFits.map((j, i) => (
+                <JobCard key={j.id} job={j} index={i} to={`/jobseeker/jobs/${j.id}`} compact />
+              ))}
+            </div>
+          </section>
         )}
         {state === 'ready' && (d.profileScore ?? 0) < 80 && (
           <div
@@ -109,44 +169,22 @@ export default function JobSeekerDashboard() {
             <VouchCard />
           </div>
         )}
-        {goodFits.length > 0 && (
-          <section aria-labelledby="best-fits" className="mb-8">
-            <h2 id="best-fits" className="mb-4 flex items-center gap-2 text-2xl font-semibold">
-              <Sparkles aria-hidden="true" size={24} className="text-violet-300" />
-              Best current fits
-            </h2>
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {goodFits.map((j) => (
-                <Link key={j.id} to={`/jobseeker/jobs/${j.id}`}>
-                  <Card className="verse-lift h-full bg-white/[.055] border-white/10 hover:bg-white/[.075]">
-                    <CardContent className="p-5">
-                      <div className="flex justify-between gap-3">
-                        <Badge variant="secondary">{optionLabel(j.opportunity_kind || 'job')}</Badge>
-                        <Badge className="bg-emerald-500/10 text-emerald-200">Good fit</Badge>
-                      </div>
-                      <h3 className="font-semibold text-lg mt-4">{j.title}</h3>
-                      <p className="text-violet-300 text-sm mt-1">{j.company}</p>
-                      <p className="text-sm text-slate-400 mt-3 flex items-center gap-1.5">
-                        <MapPin aria-hidden="true" size={16} />
-                        {[j.location, j.workplace && optionLabel(j.workplace)].filter(Boolean).join(' · ')}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </section>
+        {state === 'ready' && isEmpty && (
+          <EmptyState
+            scene="stage"
+            title="Your first gig starts with your work"
+            hint="Hirers hear a sample before they message."
+            action={{ label: 'Add a work sample', to: '/jobseeker/library', variant: 'outline' }}
+          />
         )}
         {state === 'ready' && (
-          <p className="flex flex-wrap gap-2 text-sm" data-testid="dashboard-stats">
-            {[plural(d.applications, 'application'), plural(d.interviews, 'interview'), `${d.saved || 0} saved`].map(
-              (t) => (
-                <span key={t} className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1 text-slate-300">
-                  {t}
-                </span>
-              ),
-            )}
-          </p>
+          <StatChips
+            items={[
+              { label: plural(d.applications, 'application'), value: d.applications || 0 },
+              { label: plural(d.interviews, 'interview'), value: d.interviews || 0 },
+              { label: 'saved', value: d.saved || 0 },
+            ]}
+          />
         )}
       </main>
     </div>

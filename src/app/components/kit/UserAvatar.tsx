@@ -5,7 +5,10 @@ const FONT = { sm: 12, md: 14, lg: 20, xl: 34 } as const;
 export function avatarHue(id: string) {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return h % 360;
+  h ^= h >>> 13;
+  h = Math.imul(h, 0x5bd1e995) >>> 0;
+  h ^= h >>> 15;
+  return (h >>> 0) % 360;
 }
 
 /** One or two initials: first letters of the first and last words of the name. */

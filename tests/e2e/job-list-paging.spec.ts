@@ -65,7 +65,7 @@ const titles = (page: Page) => page.getByRole('heading', { level: 2, name: /Sess
 test('job search loads more opportunities, keeps the filters and moves focus to the new results', async ({ page }) => {
   const queries = await mockJobs(page, { signedIn: true });
   await page.goto('/jobseeker/jobs');
-  await expect(page.getByText('5 opportunities found')).toBeVisible();
+  await expect(page.getByText('5 opportunities · all cities · all formats')).toBeVisible();
   await expect(titles(page)).toHaveCount(2);
   await expect(page.getByRole('status').filter({ hasText: 'Showing 2 of 5 opportunities' })).toBeVisible();
 

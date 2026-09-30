@@ -1,16 +1,18 @@
 import { DemoBadge } from '../../components/DemoBadge';
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
 import { PublicNav } from '../../components/PublicNav';
 import { PublicDetailState } from '../../components/PublicDetailState';
 import { usePageMeta } from '../../components/PageMeta';
-import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet, apiPost } from '../../lib/api';
 import { trackProfileView } from '../../lib/analytics';
-import { MapPin, ShieldCheck, Flag, Zap } from 'lucide-react';
-import { WorkSamplePlayer } from '../../components/WorkSamplePlayer';
+import { MapPin, MessageSquare, ShieldCheck, Flag, Zap } from 'lucide-react';
+import { MediaTile } from '../../components/showcase/MediaTile';
+import { PlayChip } from '../../components/kit/PlayChip';
+import { UserAvatar } from '../../components/kit/UserAvatar';
 import { ReportDialog } from '../../components/ReportDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
 import { VerifiedBadge, verifiedBadgeCopy } from '../../components/VerifiedBadge';
@@ -35,9 +37,11 @@ function personJsonLd(p: Professional, id?: string) {
 export default function PublicProfile() {
   const { id } = useParams();
   const { user } = useAuth();
+  const nav = useNavigate();
   const [d, setD] = useState<{ professional: Professional; portfolio: PortfolioItem[] }>(),
     [loading, setLoading] = useState(true),
     [reporting, setReporting] = useState(false),
+    [bioOpen, setBioOpen] = useState(false),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,118 +83,194 @@ export default function PublicProfile() {
       />
     );
   const c = d.professional;
+  const samples = d.portfolio || [];
+  const capabilities = [
+    c.remoteRecording && 'Remote recording',
+    c.sightReading && 'Sight-reading',
+    c.travelsNationally && 'Travels nationally',
+    c.passportReady && 'Passport ready',
+  ].filter((x): x is string => Boolean(x));
+  const identity = [[...(c.roles || [])].slice(0, 3).join(', '), (c.genres || []).slice(0, 3).join(', ')]
+    .filter(Boolean)
+    .join(' · ');
+  const longBio = (c.bio || '').length > 200;
+  async function message() {
+    try {
+      const r = await apiPost<{ conversation: { id: string } }>('/conversations', { candidateId: c.id });
+      nav(`${user?.role === 'jobseeker' ? '/jobseeker' : '/employer'}/messages?conversation=${r.conversation.id}`);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
+    }
+  }
+  const actions = user ? (
+    <div className="flex flex-wrap gap-2">
+      <Button onClick={() => void message()}>
+        <MessageSquare size={16} aria-hidden="true" className="mr-2" />
+        Message
+      </Button>
+      {user.role !== 'admin' && (
+        <Button variant="outline" asChild>
+          <Link to={`${user.role === 'jobseeker' ? '/jobseeker' : '/employer'}/book-talent`}>Request a quote</Link>
+        </Button>
+      )}
+    </div>
+  ) : (
+    <Button asChild>
+      <Link to="/auth/employer" state={{ from: `/professionals/${id}` }}>
+        Sign in to hire or message
+      </Link>
+    </Button>
+  );
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
-      <main className="max-w-5xl mx-auto px-5 py-12">
-        <Card className="bg-white/[.055] border-white/10">
-          <CardContent className="p-7 md:p-10">
-            <div className="flex items-center gap-3">
-              <h1 className="text-4xl md:text-5xl font-bold break-words">{c.name}</h1>
-              <DemoBadge show={c.demo} />
-              {c.verified && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ShieldCheck
-                      className="text-emerald-300"
-                      aria-label={verifiedBadgeCopy(c.verification)}
-                      tabIndex={0}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>{verifiedBadgeCopy(c.verification)}</TooltipContent>
-                </Tooltip>
-              )}
-              {c.verified && c.verificationTier === 'verified_pro' && (
-                <VerifiedBadge verification={c.verification} tier={c.verificationTier} />
-              )}
-            </div>
-            <p className="text-xl text-violet-300 mt-2">{c.headline}</p>
-            {c.fastResponderBadge && (
-              <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-1 text-xs text-amber-200">
-                <Zap aria-hidden="true" size={12} />
-                Fast responder this week
-              </p>
-            )}
-            {(c.reviewsCount ?? 0) > 0 && (
-              <p className="mt-2 text-sm text-slate-300">
-                {c.reviewsAverage?.toFixed(1)} average · {c.reviewsCount} {c.reviewsCount === 1 ? 'review' : 'reviews'}
-              </p>
-            )}
-            {c.responseTimeMinutes != null && (
-              <p className="mt-1 text-sm text-slate-400">
-                Response time: usually within {c.responseTimeMinutes} minutes
-              </p>
-            )}
-            {c.location && (
-              <p className="text-slate-400 mt-3 flex">
-                <MapPin size={17} className="mr-2" />
-                {c.location}
-              </p>
-            )}
-            <p className="text-slate-300 leading-7 mt-6 whitespace-pre-line [overflow-wrap:anywhere]">{c.bio}</p>
-            <div className="grid md:grid-cols-2 gap-6 mt-8">
-              <div>
-                <h2 className="font-semibold">Roles & instruments</h2>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {[...(c.roles || []), ...(c.instruments || [])].map((x: string) => (
-                    <Badge key={x}>{x}</Badge>
-                  ))}
+      <main className="mx-auto max-w-5xl px-5 pb-28 pt-12 lg:pb-12">
+        <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
+          <div className="min-w-0">
+            <header className="flex items-start gap-4 sm:gap-5" data-testid="profile-hero">
+              <UserAvatar id={c.id} name={c.name} size="xl" />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-3xl font-bold break-words md:text-4xl">{c.name}</h1>
+                  <DemoBadge show={c.demo} />
+                  {c.verified && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ShieldCheck
+                          className="text-emerald-300"
+                          aria-label={verifiedBadgeCopy(c.verification)}
+                          tabIndex={0}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>{verifiedBadgeCopy(c.verification)}</TooltipContent>
+                    </Tooltip>
+                  )}
+                  {c.verified && c.verificationTier === 'verified_pro' && (
+                    <VerifiedBadge verification={c.verification} tier={c.verificationTier} />
+                  )}
+                </div>
+                {(c.headline || identity) && <p className="mt-1 text-lg text-violet-300">{c.headline || identity}</p>}
+                <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-slate-400">
+                  {c.headline && identity && <span>{identity}</span>}
+                  {c.location && (
+                    <span className="inline-flex items-center">
+                      <MapPin size={15} aria-hidden="true" className="mr-1" />
+                      {c.location}
+                    </span>
+                  )}
+                  {(c.reviewsCount ?? 0) > 0 && (
+                    <span>
+                      {c.reviewsAverage?.toFixed(1)} · {c.reviewsCount} {c.reviewsCount === 1 ? 'review' : 'reviews'}
+                    </span>
+                  )}
+                  {c.fastResponderBadge && (
+                    <span className="inline-flex items-center gap-1 text-amber-200">
+                      <Zap aria-hidden="true" size={12} />
+                      Fast responder
+                    </span>
+                  )}
+                </p>
+                {capabilities.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {capabilities.map((x) => (
+                      <Badge key={x} variant="outline" className="border-white/15 text-slate-300">
+                        {x}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {samples.length ? (
+                    samples.slice(0, 3).map((x) => <PlayChip key={x.id} sample={x} />)
+                  ) : (
+                    <span className="text-sm text-slate-400">No samples yet</span>
+                  )}
                 </div>
               </div>
-              <div>
-                <h2 className="font-semibold">Capabilities</h2>
-                <div className="text-sm text-slate-300 mt-3 space-y-1">
-                  {c.remoteRecording && <div>Remote recording ready</div>}
-                  {c.sightReading && <div>Sight-reading</div>}
-                  {c.travelsNationally && <div>Travels nationally</div>}
-                  {c.passportReady && <div>Passport / international touring ready</div>}
-                </div>
-              </div>
-            </div>
+            </header>
+            {c.bio && (
+              <section className="mt-8">
+                <p
+                  className={`text-slate-300 leading-7 whitespace-pre-line [overflow-wrap:anywhere] ${
+                    bioOpen ? '' : 'line-clamp-3'
+                  }`}
+                >
+                  {c.bio}
+                </p>
+                {longBio && (
+                  <button
+                    type="button"
+                    aria-expanded={bioOpen}
+                    className="mt-1 text-sm text-violet-300 hover:text-violet-200"
+                    onClick={() => setBioOpen(!bioOpen)}
+                  >
+                    {bioOpen ? 'Less' : 'More'}
+                  </button>
+                )}
+              </section>
+            )}
             {c.credits?.length > 0 && (
-              <div className="mt-8">
+              <section className="mt-8">
                 <h2 className="font-semibold">Selected credits</h2>
-                <div className="mt-3 space-y-2 text-sm text-slate-300">
+                <ul className="mt-3 grid gap-x-6 gap-y-1 text-sm text-slate-300 sm:grid-cols-2">
                   {c.credits.map((x: string) => (
-                    <div key={x}>• {x}</div>
+                    <li key={x} className="[overflow-wrap:anywhere]">
+                      {x}
+                    </li>
                   ))}
-                </div>
-              </div>
+                </ul>
+              </section>
             )}
-            <div className="mt-8">
+            <section className="mt-8">
               <h2 className="font-semibold">Work samples</h2>
-              {d.portfolio?.length ? (
-                <div className="mt-3 grid md:grid-cols-2 gap-3">
-                  {d.portfolio.map((x) => (
-                    <WorkSamplePlayer key={x.id} sample={x} />
+              {samples.length ? (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {samples.map((x) => (
+                    <figure key={x.id}>
+                      <MediaTile item={x} />
+                      <figcaption className="mt-1 truncate text-xs text-slate-400">{x.title}</figcaption>
+                    </figure>
                   ))}
                 </div>
               ) : (
                 <p className="mt-3 text-sm text-slate-400">No public work samples yet.</p>
               )}
-            </div>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild>
-                <Link to="/auth/employer" state={{ from: '/employer/candidates' }}>
-                  Sign in to hire or message
-                </Link>
-              </Button>
+            </section>
+            <div className="mt-8">
               {user ? (
-                <Button variant="outline" onClick={() => setReporting(true)}>
+                <Button variant="ghost" size="sm" onClick={() => setReporting(true)}>
                   <Flag size={15} aria-hidden="true" className="mr-2" />
                   Report profile
                 </Button>
               ) : (
-                <Button variant="outline" asChild>
+                <Button variant="ghost" size="sm" asChild>
                   <Link to="/auth/employer" state={{ from: `/professionals/${id}` }}>
                     Sign in to report this profile
                   </Link>
                 </Button>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <aside className="hidden lg:block">
+            <div
+              className="sticky top-24 rounded-2xl border border-white/10 bg-white/[.055] p-5"
+              data-testid="profile-aside"
+            >
+              <h2 className="font-semibold">Book or message</h2>
+              <div className="mt-4">{actions}</div>
+              {c.responseTimeMinutes != null && (
+                <p className="mt-3 text-xs text-slate-400">Usually replies within {c.responseTimeMinutes} minutes</p>
+              )}
+            </div>
+          </aside>
+        </div>
       </main>
+      <div
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-slate-950/95 p-3 backdrop-blur lg:hidden"
+        data-testid="profile-bottom-bar"
+      >
+        {actions}
+      </div>
       <ReportDialog
         open={reporting}
         onOpenChange={setReporting}

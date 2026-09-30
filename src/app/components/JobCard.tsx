@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { DemoBadge } from './DemoBadge';
 import { FormatGlyph } from './kit/FormatGlyph';
+import { CoverArt } from './media/CoverArt';
 import { formatDeadline, formatPay } from '../lib/format';
 import type { Job } from '../lib/apiTypes';
 import { optionLabel } from './ui/option-labels';
@@ -26,8 +27,8 @@ type Props = {
 };
 
 /**
- * One opportunity in a list, as a row: format glyph, title, company · city · workplace, pay as the
- * most prominent secondary fact, then genre / one skill and the closing date and applicant count.
+ * One opportunity in a list, as a row: generated cover art with the format glyph, title, company · city ·
+ * workplace, pay as the most prominent secondary fact, then genre / one skill and the closing date and applicant count.
  * Public and signed-in lists show the same facts (SRCH-13).
  */
 export function JobCard({ job, to, index, aside, compact = false }: Props) {
@@ -41,7 +42,19 @@ export function JobCard({ job, to, index, aside, compact = false }: Props) {
     <Card className="verse-lift min-w-0 bg-white/[.055] border-white/10 hover:bg-white/[.075]" data-testid="job-card">
       <CardContent className="p-3.5 md:p-4">
         <div className="flex items-start gap-3">
-          <FormatGlyph kind={job.opportunity_kind || 'job'} size={24} className="mt-0.5" />
+          <span className="relative shrink-0" data-testid="job-cover">
+            <CoverArt
+              seed={job.id}
+              kind={job.opportunity_kind || 'job'}
+              genres={job.genre ? [job.genre] : []}
+              size={compact ? 44 : 56}
+              rounded
+              bars={20}
+            />
+            <span className="absolute left-1 top-1 grid size-6 place-items-center rounded-full bg-black/40">
+              <FormatGlyph kind={job.opportunity_kind || 'job'} size={16} className="text-white!" />
+            </span>
+          </span>
           <Link
             className={`min-w-0 flex-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 flex flex-col gap-1 md:gap-4 ${compact ? '' : 'md:flex-row md:justify-between'}`}
             to={to}

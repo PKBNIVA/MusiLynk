@@ -41,7 +41,7 @@ test.describe('real frontend and Rails journeys', () => {
       const forbidden = await request.get(`${apiBase}/admin/stats`, { headers: { Authorization: `Bearer ${token}` } });
       expect(forbidden.status()).toBe(403);
 
-      // C5/CRAWL-03: the tour never auto-starts on the profile-setup page itself.
+      // The product tour never opens by itself, on the profile-setup page or anywhere else.
       const tour = page.getByRole('dialog').filter({ hasText: /Step \d+ of \d+/ });
       await expect(tour).toBeHidden();
 
@@ -59,12 +59,15 @@ test.describe('real frontend and Rails journeys', () => {
         })
         .toBe(true);
 
-      // The tour starts on the first dashboard visit after the profile is complete, and
-      // Escape closes it (CRAWL-03).
+      // The first dashboard visit shows the dismissible three-card strip, never a modal.
       await page.goto(`/${role}`);
-      await expect(tour).toBeVisible();
-      await page.keyboard.press('Escape');
       await expect(tour).toBeHidden();
+      const strip = page.getByTestId('tour-strip');
+      if ((page.viewportSize()?.width ?? 0) >= 768) {
+        await expect(strip).toBeVisible();
+        await strip.getByRole('button', { name: 'Got it' }).click();
+      }
+      await expect(strip).toBeHidden();
 
       await page.getByRole('button', { name: 'Open account menu' }).click();
       await page.getByRole('menuitem', { name: 'Sign out' }).click();

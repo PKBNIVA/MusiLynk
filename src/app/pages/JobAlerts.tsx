@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Bell, Pause, Play, Trash2 } from 'lucide-react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { apiDelete, apiGet, apiPatch } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -52,13 +53,7 @@ export default function JobAlerts() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-4xl mx-auto px-5 pt-28 pb-24">
-        <div className="flex items-start gap-3">
-          <Bell className="text-violet-300 mt-1" />
-          <div>
-            <h1 className="text-4xl font-bold">Job alerts</h1>
-            <p className="text-slate-400 mt-2">Control saved searches and how often Verse should notify you.</p>
-          </div>
-        </div>
+        <PageHeader title="Job alerts" />
         {loading && <p className="mt-8 text-slate-400">Loading alerts…</p>}
         {error && (
           <Card className="mt-8 bg-rose-500/10 border-rose-400/20">

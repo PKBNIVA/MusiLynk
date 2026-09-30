@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { apiGet, apiPost } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -108,16 +109,7 @@ export default function BuildMyCrew() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 pt-28 pb-16">
-        <div className="max-w-3xl">
-          <div className="text-xs uppercase tracking-[.2em] text-violet-300">Layman crew planner</div>
-          <h1 className="text-4xl md:text-5xl font-bold mt-2">
-            Tell Verse about the show. We’ll tell you who you need.
-          </h1>
-          <p className="text-slate-400 mt-3">
-            Useful when you know the event but not the correct industry job titles. Verse creates a practical starting
-            crew, which you can then hire seat by seat.
-          </p>
-        </div>
+        <PageHeader title="Build my crew" />
         <div className="grid lg:grid-cols-[.8fr_1.2fr] gap-6 mt-8">
           <Card className="bg-white/[.055] border-white/10">
             <CardContent className="p-6 space-y-6">

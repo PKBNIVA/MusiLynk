@@ -3,6 +3,7 @@ import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { apiGet, apiPost } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -330,10 +331,7 @@ export default function Bookings() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-4 sm:px-5 pt-28 pb-24">
-        <h1 className="text-3xl sm:text-4xl font-bold">Bookings</h1>
-        <p className="text-slate-400 mt-2">
-          Availability enquiries, complete commercial terms and payment records in one place.
-        </p>
+        <PageHeader title="Bookings" />
         {loading ? (
           <p className="text-slate-400 text-center py-16" role="status">
             Loading bookings…

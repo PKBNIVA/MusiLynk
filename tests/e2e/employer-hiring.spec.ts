@@ -197,7 +197,8 @@ test('interview scheduling and recruiter notes use in-page dialogs, not browser 
   await page.goto('/employer/applications');
   await expect(page.getByRole('heading', { name: 'Asha Rao' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Interview Scheduled' }).click();
+  await page.getByRole('button', { name: 'Move to…' }).click();
+  await page.getByRole('menuitem', { name: 'Interview Scheduled' }).click();
   const interview = page.getByRole('dialog', { name: 'Schedule interview' });
   await expect(interview).toBeVisible();
   await expect(interview.getByRole('button', { name: 'Schedule interview' })).toBeDisabled();

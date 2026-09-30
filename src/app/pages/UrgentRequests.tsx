@@ -1,6 +1,7 @@
 import { EmptyState } from '../components/help/EmptyState';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -177,25 +178,21 @@ export default function UrgentRequests() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-4 sm:px-5 pt-28 pb-16">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[.22em] text-orange-300">Urgent replacement network</p>
-            <h1 className="text-3xl sm:text-4xl font-bold mt-2">Need someone fast?</h1>
-            <p className="text-slate-400 mt-2">
-              Find a last-minute musician or production professional by role, city and exact time.
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              setFormError('');
-              setDraft({ ...emptyDraft });
-            }}
-            disabled={pending !== null}
-          >
-            <Zap size={16} className="mr-2" />
-            Post urgent need
-          </Button>
-        </div>
+        <PageHeader
+          title="Need someone by tomorrow"
+          actions={
+            <Button
+              onClick={() => {
+                setFormError('');
+                setDraft({ ...emptyDraft });
+              }}
+              disabled={pending !== null}
+            >
+              <Zap size={16} className="mr-2" />
+              Post urgent need
+            </Button>
+          }
+        />
         <form role="search" onSubmit={filter} className="grid md:grid-cols-[1fr_1fr_auto] gap-3 mt-7">
           <Input
             aria-label="Role"

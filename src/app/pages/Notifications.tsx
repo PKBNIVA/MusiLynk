@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { Bell, CheckCircle2 } from 'lucide-react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { Card, CardContent } from '../components/ui/card';
@@ -148,23 +149,22 @@ export default function Notifications() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-4xl mx-auto px-4 md:px-6 pt-28 pb-28 lg:pb-16">
-        <div className="flex flex-wrap items-end justify-between gap-3 mb-7">
-          <div>
-            <h1 className="text-4xl font-bold">Notifications</h1>
-            <p className="text-slate-400 mt-2">Hiring updates, bookings, moderation, verification and messages.</p>
-          </div>
-          {unread > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void readAll()}
-              disabled={markingAll}
-              aria-busy={markingAll}
-            >
-              Mark all as read
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          title="Notifications"
+          actions={
+            unread > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void readAll()}
+                disabled={markingAll}
+                aria-busy={markingAll}
+              >
+                Mark all as read
+              </Button>
+            )
+          }
+        />
         <Card className="bg-white/[.035] border-white/10 mb-6">
           <CardContent className="p-5 flex items-start justify-between gap-4">
             <div>

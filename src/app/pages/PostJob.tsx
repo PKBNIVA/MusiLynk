@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -890,39 +891,32 @@ export default function PostJob() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-5xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="mb-7 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">
-              {job ? `Edit opportunity · ${jobStatusLabel[job.status] || job.status}` : 'Create opportunity'}
-            </div>
-            <h1 className="text-4xl font-bold">
-              {job ? job.title || 'Untitled opportunity' : 'Describe the work, not just the title'}
-            </h1>
-            <p className="text-slate-400 mt-2 max-w-3xl">
-              Four short steps. Clear format, pay and dates bring better applicants and fewer back-and-forth messages.
-            </p>
-          </div>
-          <AiCreditsBadge />
-        </div>
-        {!job && (
-          <HelpCallout
-            id="post-job"
-            title="How posting works"
-            steps={[
-              { icon: PenLine, title: 'Describe the work', text: 'Four quick steps. Save a draft at any point.' },
-              {
-                icon: BadgeCheck,
-                title: 'We review it',
-                text: 'Our team checks every listing for clarity and safety before it goes live.',
-              },
-              {
-                icon: Inbox,
-                title: 'Applicants arrive',
-                text: 'Answers, samples and messages land in Applications, ready to shortlist.',
-              },
-            ]}
-          />
-        )}
+        <PageHeader
+          help={
+            job ? undefined : (
+              <HelpCallout
+                id="post-job"
+                title="How posting works"
+                steps={[
+                  { icon: PenLine, title: 'Describe the work', text: 'Four quick steps. Save a draft at any point.' },
+                  {
+                    icon: BadgeCheck,
+                    title: 'We review it',
+                    text: 'Our team checks every listing for clarity and safety before it goes live.',
+                  },
+                  {
+                    icon: Inbox,
+                    title: 'Applicants arrive',
+                    text: 'Answers, samples and messages land in Applications, ready to shortlist.',
+                  },
+                ]}
+              />
+            )
+          }
+          title={job ? job.title || 'Untitled opportunity' : 'Post an opportunity'}
+          hint={job ? `Editing · ${jobStatusLabel[job.status] || job.status}` : 'Four short steps'}
+          actions={<AiCreditsBadge />}
+        />
         {job?.status === 'published' && (
           <div
             role="note"

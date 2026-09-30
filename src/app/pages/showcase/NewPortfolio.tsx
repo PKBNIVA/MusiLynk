@@ -119,7 +119,6 @@ export default function NewPortfolio() {
   return (
     <ShowcaseShell
       title="New portfolio"
-      description="Start from everything you’ve made, then narrow it down."
       back={{ to: `${base}/portfolios`, label: 'All portfolios' }}
       help={SHOWCASE_HELP.newPortfolio}
     >

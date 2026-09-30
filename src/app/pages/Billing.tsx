@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { ApiError, apiGet, apiPost } from '../lib/api';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { Card, CardContent } from '../components/ui/card';
@@ -376,21 +377,18 @@ export default function Billing() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 pt-28 pb-16">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-[.2em] text-violet-300">SaaS billing</div>
-            <h1 className="text-4xl font-bold mt-2">Plan & billing</h1>
-            <p className="text-slate-400 mt-2">
-              Core candidate applications remain free. Paid plans unlock operating capacity for hiring, sourcing,
-              booking and teams.
-            </p>
-          </div>
-          {state && (
-            <Badge className="w-fit" data-testid="plan-badge">
-              {summary ? `${summary.planName} · ${STATUS_LABEL[summary.status]}` : `${state.plan?.name || 'Free'} plan`}
-            </Badge>
-          )}
-        </div>
+        <PageHeader
+          title="Billing"
+          actions={
+            state && (
+              <Badge className="w-fit" data-testid="plan-badge">
+                {summary
+                  ? `${summary.planName} · ${STATUS_LABEL[summary.status]}`
+                  : `${state.plan?.name || 'Free'} plan`}
+              </Badge>
+            )
+          }
+        />
 
         {notice && (
           <div

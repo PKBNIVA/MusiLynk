@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -162,14 +163,7 @@ export default function CandidateSearch() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="mb-7">
-          <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Talent network</div>
-          <h1 className="text-4xl md:text-5xl font-bold">Search by proof, skill and context</h1>
-          <p className="text-slate-400 mt-3 max-w-3xl">
-            Music careers are not resumés alone. Look for relevant credits, portfolio work, instruments, genres,
-            languages, location and availability.
-          </p>
-        </div>
+        <PageHeader title="Find talent" />
         <Card className="bg-white/[.055] border-white/10 mb-7">
           <CardContent className="p-4">
             <form onSubmit={submit} className="grid md:grid-cols-2 lg:grid-cols-5 gap-3" role="search">

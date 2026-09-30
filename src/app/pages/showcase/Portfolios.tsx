@@ -50,7 +50,6 @@ export default function Portfolios() {
   return (
     <ShowcaseShell
       title="Portfolios"
-      description="Each portfolio is a view of your work for one purpose. Add work once and every matching portfolio picks it up."
       help={SHOWCASE_HELP.portfolios}
       actions={
         <>

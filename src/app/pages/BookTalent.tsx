@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { apiGet, apiPost } from '../lib/api';
@@ -171,15 +172,7 @@ export default function BookTalent() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
-        <div>
-          <div className="text-xs uppercase tracking-[.2em] text-violet-300">Live entertainment marketplace</div>
-          <h1 className="text-3xl sm:text-4xl font-bold mt-2">Book an artist, duo, band or ensemble</h1>
-          <p className="text-slate-400 mt-2 max-w-3xl">
-            Search a bookable act, then send one structured event brief with date, venue, budget and production details.
-            Quotes stay comparable instead of disappearing into WhatsApp threads.
-          </p>
-        </div>
-        <HelpCallout {...HELP.bookTalent} />
+        <PageHeader title="Book talent" help={<HelpCallout {...HELP.bookTalent} />} />
         <ActSearchForm
           idPrefix="book-acts"
           values={filters}

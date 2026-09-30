@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CalendarPlus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Button } from '../components/ui/button';
@@ -112,11 +113,7 @@ export default function Availability() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-5xl mx-auto px-4 sm:px-5 pt-28 pb-16">
-        <h1 className="text-4xl font-bold">Availability calendar</h1>
-        <HelpCallout {...HELP.availability} />
-        <p className="text-slate-400 mt-2">
-          Publish when you are available, on hold, tentative, booked or unavailable.
-        </p>
+        <PageHeader title="Availability" help={<HelpCallout {...HELP.availability} />} />
         <Card className="bg-white/[.055] border-white/10 mt-7">
           <CardContent className="p-5">
             <form onSubmit={add} noValidate className="grid md:grid-cols-5 gap-3 items-start">

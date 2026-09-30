@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Button } from '../components/ui/button';
@@ -339,13 +340,33 @@ export default function ProfileSetup() {
       <Navigation />
       <main className="max-w-5xl mx-auto px-5 md:px-6 pt-28 pb-16">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-7">
-          <div>
-            <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Professional identity</div>
-            <h1 className="text-4xl font-bold">Build a proof-first music profile</h1>
-            <p className="text-slate-400 mt-2">
-              Credits, work samples and role-specific context matter more than generic profile completion.
-            </p>
-          </div>
+          <PageHeader
+            title="Your profile"
+            className="!mb-0"
+            help={
+              <HelpCallout
+                id="profile-setup"
+                title="How your profile gets you hired"
+                steps={[
+                  {
+                    icon: UserRound,
+                    title: 'Say what you do',
+                    text: 'A clear headline and base city put you in the right searches.',
+                  },
+                  {
+                    icon: Music,
+                    title: 'Show your sound',
+                    text: 'Skills, genres and credits are what hirers filter by.',
+                  },
+                  {
+                    icon: Search,
+                    title: 'Get found',
+                    text: 'Rates and links help bookers say yes without a long back-and-forth.',
+                  },
+                ]}
+              />
+            }
+          />
           <div className="flex gap-2 flex-wrap items-center">
             {f.profileComplete && f.id && (
               <Button variant="ghost" size="sm" asChild>
@@ -400,23 +421,6 @@ export default function ProfileSetup() {
             </Button>
           </div>
         )}
-        <HelpCallout
-          id="profile-setup"
-          title="How your profile gets you hired"
-          steps={[
-            {
-              icon: UserRound,
-              title: 'Say what you do',
-              text: 'A clear headline and base city put you in the right searches.',
-            },
-            { icon: Music, title: 'Show your sound', text: 'Skills, genres and credits are what hirers filter by.' },
-            {
-              icon: Search,
-              title: 'Get found',
-              text: 'Rates and links help bookers say yes without a long back-and-forth.',
-            },
-          ]}
-        />
         <form onSubmit={save} className="verse-surface rounded-3xl p-5 md:p-8" noValidate>
           <StepForm
             current={step}

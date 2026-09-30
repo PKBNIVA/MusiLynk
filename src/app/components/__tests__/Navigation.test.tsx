@@ -58,4 +58,25 @@ describe('Navigation unread counts', () => {
     expect(container.querySelector('[data-testid="unread-notifications-badge"]')?.textContent).toBe('3');
     expect(container.querySelector('[data-testid="unread-messages-badge"]')?.textContent).toBe('2');
   });
+
+  it('asks again when the route changes', async () => {
+    const router = createMemoryRouter([{ path: '/jobseeker/*', element: <Navigation /> }], {
+      initialEntries: ['/jobseeker'],
+    });
+    await act(async () => root.render(<RouterProvider router={router} />));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const unreadCalls = () => vi.mocked(apiGet).mock.calls.filter(([path]) => path === '/notifications/unread').length;
+    const before = unreadCalls();
+
+    await act(async () => {
+      await router.navigate('/jobseeker/saved');
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(unreadCalls()).toBeGreaterThan(before);
+  });
 });

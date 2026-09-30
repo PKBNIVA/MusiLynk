@@ -66,6 +66,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/public/stats", :public, { keys: %w[verifiedProfiles professionals cities openOpportunities urgentRequests generatedAt] }],
 
     [:get, "/api/jobs", :public, { keys: %w[jobs nextCursor total] }],
+    [:get, "/api/jobs/limits", :talent, { keys: %w[activeAllowed activeUsed plan planName] }],
     [:get, "/api/jobs/{job}", :public, { keys: %w[job], missing: :job }],
     [:get, "/api/jobs/{draft_job}", :public, { ok: { default: [200], admin: [200] }, anon: [404], idor: true, note: "drafts are visible to their owner and admins only" }],
     [:post, "/api/jobs", :talent, { ok: [201], params: job_params, bad: { title: "", status: "draft" }, bad_status: [422], keys: %w[id status moderationFlags] }],
@@ -271,7 +272,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:delete, "/api/organizations/{org}/members/{org_member}", :talent, { idor: true, missing: :org }],
     [:get, "/api/urgent-requests", :talent, { keys: %w[requests] }],
     [:get, "/api/urgent-requests/{urgent}", :talent, { keys: %w[request responseTimePromise], idor: true, missing: :urgent }],
-    [:post, "/api/urgent-requests", :talent, { ok: [201], params: ->(_w, _a) { { title: "Dep needed", roleName: "Drummer", city: "Pune", startAt: 2.days.from_now.iso8601 } }, bad: { title: "No city" }, bad_status: [422] }],
+    [:post, "/api/urgent-requests", :talent, { ok: [201], params: ->(_w, _a) { { title: "Dep needed", roleName: "Drummer", city: "Pune", startAt: 2.days.from_now.iso8601, budgetMin: 5_000, budgetMax: 10_000, note: "Two sets, gear provided." } }, bad: { title: "No city" }, bad_status: [422] }],
     [:patch, "/api/urgent-requests/{urgent}", :talent, { params: { status: "filled" }, idor: true, missing: :urgent, bad: { status: "open" }, bad_status: [400] }],
     [:put, "/api/urgent-requests/{urgent}", :talent, { params: { status: "cancelled" }, idor: true }],
     [:post, "/api/urgent-requests/{others_urgent}/respond", :talent, { ok: [201], params: { message: "Available" }, missing: :others_urgent }],

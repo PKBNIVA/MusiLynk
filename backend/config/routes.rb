@@ -56,6 +56,7 @@ Rails.application.routes.draw do
     post "library/import", to: "library_imports#create"
     get "public/stats", to: "public_stats#show"
 
+    get "jobs/limits", to: "jobs#limits"
     resources :jobs, only: %i[index show create] do
       member { post :apply }
     end

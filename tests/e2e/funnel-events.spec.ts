@@ -22,11 +22,11 @@ test('landing path, join start and account creation are tracked', async ({ page 
     .getByRole('link', { name: /I'm hiring/ })
     .click();
   await expect(page).toHaveURL(/\/join\/hiring$/);
-  await page.getByLabel('Event or wedding company').check();
-  await page.getByLabel('Company name').fill('Shaadi Beats Events');
-  await page.getByRole('button', { name: 'Next: your account' }).click();
-  await page.getByLabel('Your name').fill('Anita Kulkarni');
+  await page.getByLabel('Weddings and events').check();
+  await page.getByLabel('Organisation or team name').fill('Shaadi Beats Events');
   await page.getByLabel('Email').fill('anita@example.invalid');
+  await page.getByRole('button', { name: /More: your name/ }).click();
+  await page.getByLabel('Your name (optional)').fill('Anita Kulkarni');
   await page.getByRole('button', { name: 'Use a password instead' }).click();
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
   await page.getByLabel(/I agree to the Terms/).check();

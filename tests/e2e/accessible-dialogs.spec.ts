@@ -186,26 +186,28 @@ test.describe('in-app dialogs', () => {
     await expect(url).toBeFocused();
     expect(state.verificationRequests).toEqual([]);
 
-    await url.fill('');
+    // Escape cancels without a request.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(trigger).toBeFocused();
+    expect(state.verificationRequests).toHaveLength(0);
+
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeVisible();
+    await expect(url).toBeFocused();
     await page.keyboard.type('https://label.example/credits/asha');
     await expect(url).not.toHaveAttribute('aria-invalid', 'true');
     await page.keyboard.press('Enter');
     await expect(dialog).toBeHidden();
-    await expect(trigger).toBeFocused();
+    // The request leaves a visible pending state in place of the button.
+    await expect(page.getByTestId('verification-pending')).toBeVisible();
+    await expect(trigger).toHaveCount(0);
     expect(state.verificationRequests).toEqual([
       {
         kind: 'professional',
         evidenceUrl: 'https://label.example/credits/asha',
       },
     ]);
-
-    // Escape cancels without a request.
-    await page.keyboard.press('Enter');
-    await expect(dialog).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(dialog).toBeHidden();
-    await expect(trigger).toBeFocused();
-    expect(state.verificationRequests).toHaveLength(1);
     expect(state.nativeDialogs).toEqual([]);
     expect(state.pageErrors).toEqual([]);
   });
@@ -233,15 +235,9 @@ test.describe('in-app dialogs', () => {
   test('profile form fields are labelled', async ({ page }) => {
     await signInWithDialogFixtures(page);
     await page.goto('/jobseeker/profile');
-    // The profile is a stepped form; each step's fields are labelled once that step is open.
-    for (const [step, names] of [
-      [null, ['Professional headline', 'Base location', 'Bio']],
-      [/Music skills/, ['Skills']],
-      [/Rates & links/, ['Website', 'Phone']],
-    ] as const) {
-      if (step) await page.getByRole('button', { name: step }).first().click();
-      for (const name of names) await expect(page.getByLabel(name, { exact: true })).toBeVisible();
-    }
+    // The profile is one page of sections; every section's fields are labelled.
+    for (const name of ['Professional headline', 'Base location', 'Bio', 'Skills', 'Website', 'Phone'])
+      await expect(page.getByLabel(name, { exact: true })).toBeVisible();
     await expect(page.getByLabel('Currency')).toHaveAttribute('role', 'combobox');
     await expect(page.getByLabel('Professional headline', { exact: true })).toHaveValue('Session guitarist');
   });

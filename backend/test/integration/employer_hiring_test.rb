@@ -65,6 +65,59 @@ class EmployerHiringTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the limits endpoint reports the plan's active opportunity capacity" do
+    get "/api/jobs/limits", headers: auth
+    assert_response :success
+    assert_equal({ "activeAllowed" => 1, "activeUsed" => 0, "plan" => "free", "planName" => "Free" }, response.parsed_body)
+
+    @employer.jobs.create!(complete_attributes.merge(status: "pending"))
+    @employer.jobs.create!(complete_attributes.merge(title: "Draft only", status: "draft"))
+    get "/api/jobs/limits", headers: auth
+    assert_equal 1, response.parsed_body.fetch("activeUsed")
+
+    get "/api/jobs/limits"
+    assert_response :unauthorized
+  end
+
+  test "a listing with a template placeholder is refused, but a draft may keep it" do
+    post "/api/jobs", params: { status: "draft", title: "Session for {{project name}}" }, headers: auth, as: :json
+    assert_response :created
+    draft_id = response.parsed_body.fetch("id")
+
+    patch "/api/employer/jobs/#{draft_id}", params: { location: "Mumbai", description: "#{DESCRIPTION} Bring {{your instrument}}." }, headers: auth, as: :json
+    assert_response :success
+
+    patch "/api/employer/jobs/#{draft_id}", params: { status: "pending" }, headers: auth, as: :json
+    assert_response :unprocessable_content
+    fields = response.parsed_body.fetch("fields")
+    assert_includes fields.keys, "title"
+    assert_includes fields.keys, "description"
+    assert_equal "draft", Job.find(draft_id).status
+
+    patch "/api/employer/jobs/#{draft_id}", params: { title: "Session guitarist", description: DESCRIPTION, screeningQuestions: ["Free on {{date}}?"] }, headers: auth, as: :json
+    patch "/api/employer/jobs/#{draft_id}", params: { status: "pending" }, headers: auth, as: :json
+    assert_response :unprocessable_content
+    assert_includes response.parsed_body.fetch("fields").keys, "screeningQuestions"
+
+    post "/api/jobs", params: complete_job(status: "pending", title: "Hire {{who}}"), headers: auth, as: :json
+    assert_response :unprocessable_content
+  end
+
+  test "editing pay on a live opportunity keeps it live; editing its title sends it back to review" do
+    job = @employer.jobs.create!(complete_attributes.merge(status: "published", published_at: Time.current))
+
+    patch "/api/employer/jobs/#{job.id}", params: { compensationMin: 25_000, compensationMax: 40_000, compensationPeriod: "show", paid: true, startDate: "2030-01-15", slots: 2, requirements: job.requirements.to_s, title: job.title, description: job.description }, headers: auth, as: :json
+    assert_response :success
+    job.reload
+    assert_equal "published", job.status
+    assert_equal 25_000, job.compensation_min
+    assert_equal "published", response.parsed_body.dig("job", "status")
+
+    patch "/api/employer/jobs/#{job.id}", params: { title: "A different title" }, headers: auth, as: :json
+    assert_response :success
+    assert_equal "pending", job.reload.status
+  end
+
   test "editing a live opportunity sends it back to review and only the owner may edit" do
     job = @employer.jobs.create!(complete_attributes.merge(status: "published", published_at: Time.current))
 

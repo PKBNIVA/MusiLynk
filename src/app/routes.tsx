@@ -59,6 +59,7 @@ function publicRoutes(): RouteObject[] {
   const PublicActs = L(() => import('./pages/public/PublicActs'));
   const PublicAct = L(() => import('./pages/public/PublicAct'));
   const LegalPage = L(() => import('./pages/public/LegalPage'));
+  const CreditsPage = L(() => import('./pages/public/CreditsPage'));
   const UrgentRequests = L(() => import('./pages/UrgentRequests'));
   const UrgentHire = L(() => import('./pages/UrgentHire'));
   const UrgentAction = L(() => import('./pages/UrgentAction'));
@@ -238,6 +239,14 @@ function publicRoutes(): RouteObject[] {
       element: (
         <S>
           <LegalPage />
+        </S>
+      ),
+    },
+    {
+      path: '/credits',
+      element: (
+        <S>
+          <CreditsPage />
         </S>
       ),
     },

@@ -27,7 +27,7 @@ afterEach(() => {
 });
 
 const ROOT = join(__dirname, '../../../../..');
-const ALLOWED = ['CC0', 'Public domain', 'CC BY 2.0', 'CC BY 3.0', 'CC BY 4.0', 'CC BY-SA 4.0'];
+const ALLOWED = ['CC0', 'Public domain', 'CC BY 2.0', 'CC BY 3.0', 'CC BY 4.0', 'CC BY-SA 3.0', 'CC BY-SA 4.0'];
 
 describe('photo credits', () => {
   it('lists every photograph with author, licence and a Commons source', async () => {
@@ -78,6 +78,11 @@ describe('public/img', () => {
     }
   });
 
+  it('has between 20 and 30 photographs', () => {
+    expect(IMAGE_CREDITS.length).toBeGreaterThanOrEqual(20);
+    expect(IMAGE_CREDITS.length).toBeLessThanOrEqual(30);
+  });
+
   it('only uses licences the plan allows, with a Commons source and no duplicates', () => {
     const files = new Set<string>();
     for (const c of IMAGE_CREDITS) {
@@ -89,7 +94,12 @@ describe('public/img', () => {
       expect(files.has(c.file)).toBe(false);
       files.add(c.file);
     }
-    expect(IMAGE_CREDITS.filter((c) => c.licence === 'CC BY-SA 4.0').map((c) => c.file)).toEqual(['carnatic-vocalist']);
+    // CC BY-SA only where the subject had no CC0 / public-domain / CC BY candidate of any quality.
+    expect(IMAGE_CREDITS.filter((c) => c.licence.startsWith('CC BY-SA')).map((c) => c.file)).toEqual([
+      'carnatic-vocalist',
+      'college-fest',
+      'wedding-band',
+    ]);
   });
 
   it('matches docs/IMAGE_CREDITS.md row for row', () => {

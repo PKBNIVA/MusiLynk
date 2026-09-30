@@ -2,15 +2,17 @@
 
 Photographs under `public/img/` are editorial images for public pages (landing, join, hire and rates pages, pricing, about, guide). Each is a Wikimedia Commons file used under the licence shown; the same list is rendered at `/credits` from `src/app/pages/public/imageCredits.ts`. A test fails if a file, this table and that list drift apart.
 
-Rules: CC0, public domain and CC BY first; CC BY-SA only where no other candidate existed for the subject (Carnatic vocal). Photographs are never attached to a person's profile: a real face on another person's profile would be a lie. Generated artwork (`CoverArt`, `ArtAvatar`) is not a photograph and is not listed. Each photo exists at 800 and 1600 pixels wide as `<file>-800.webp` and `<file>-1600.webp`.
+Rules: CC0, public domain and CC BY first; CC BY-SA only where no other candidate existed for the subject (Carnatic vocal, college fest stage, Indian brass band). Photographs are never attached to a person's profile: a real face on another person's profile would be a lie. Generated artwork (`CoverArt`, `ArtAvatar`) is not a photograph and is not listed. Each photo exists at 800 and 1600 pixels wide as `<file>-800.webp` and `<file>-1600.webp`.
 
 Two of the photos (tabla, saxophone) carry a Commons "personality rights" note: they show identifiable people, so use them only as editorial images with the caption context, never to imply endorsement.
 
 | File | Subject | Title | Author | Licence | Source |
 |---|---|---|---|---|---|
 | `carnatic-vocalist` | Carnatic vocal | Sk Mahathi, during a Carnatic Music concert at Kakkengad, Kannur (183).jpg | Vinayaraj | CC BY-SA 4.0 | <https://commons.wikimedia.org/wiki/File:Sk_Mahathi,_during_a_Carnatic_Music_concert_at_Kakkengad,_Kannur_(183).jpg> |
+| `choir-stage` | Choir | The Singing Angels & the Gardiner Choir (29143776372).jpg | Yellowstone National Park (Neal Herbert) | Public domain | <https://commons.wikimedia.org/wiki/File:The_Singing_Angels_%26_the_Gardiner_Choir_(29143776372).jpg> |
+| `college-fest` | College fest stage | Pronites at Mood Indigo 2012.JPG | Parth loya | CC BY-SA 3.0 | <https://commons.wikimedia.org/wiki/File:Pronites_at_Mood_Indigo_2012.JPG> |
 | `dj-goa` | DJ | Vagator, Goa, India, DJ playing music on turntable.jpg | Vyacheslav Argenberg | CC BY 4.0 | <https://commons.wikimedia.org/wiki/File:Vagator,_Goa,_India,_DJ_playing_music_on_turntable.jpg> |
-| `drum-kit` | Drum kit | Pats drums (2941761250).jpg | Kuba Bożanowski | CC BY 2.0 | <https://commons.wikimedia.org/wiki/File:Pats_drums_(2941761250).jpg> |
+| `drummer-stage` | Drummer | Mom's Day drummer live in concert.jpg | Erik Albers | CC0 | <https://commons.wikimedia.org/wiki/File:Mom%27s_Day_drummer_live_in_concert.jpg> |
 | `festival-goa` | Festival stage | Sunburn Festival, Goa, Back Stage.jpg | Vyacheslav Argenberg | CC BY 4.0 | <https://commons.wikimedia.org/wiki/File:Sunburn_Festival,_Goa,_Back_Stage.jpg> |
 | `guitarist-stage` | Guitar | Moms Day lead guitarist live in concert.jpg | Erik Albers | CC0 | <https://commons.wikimedia.org/wiki/File:Moms_Day_lead_guitarist_live_in_concert.jpg> |
 | `hindustani-vocalist` | Hindustani vocal | Vikas Kashalkar in COncert.JPG | Gaikiakash | CC0 | <https://commons.wikimedia.org/wiki/File:Vikas_Kashalkar_in_COncert.JPG> |
@@ -24,6 +26,10 @@ Two of the photos (tabla, saxophone) carry a Commons "personality rights" note: 
 | `shehnai-wedding` | Shehnai, tabla and harmonium | Musician play Sambal, Shehnai, and harmonium at an Indian event (2022).jpg | Kiran891 | Public domain | <https://commons.wikimedia.org/wiki/File:Musician_play_Sambal,_Shehnai,_and_harmonium_at_an_Indian_event_(2022).jpg> |
 | `sitar-trio` | Sitar | Raga du soir au Collège des Bernardins (4730079050).jpg | dalbera | CC BY 2.0 | <https://commons.wikimedia.org/wiki/File:Raga_du_soir_au_Coll%C3%A8ge_des_Bernardins_(4730079050).jpg> |
 | `sound-desk` | Live sound desk | Monitor Mixing Setup.jpg | Sonicvibesolutions | CC BY 4.0 | <https://commons.wikimedia.org/wiki/File:Monitor_Mixing_Setup.jpg> |
+| `studio-vocalist` | Studio vocalist | Vocal recording 1, Enrolling Stones in the Studio, Studio A, Downtown Recording.jpg | Jason Meredith | CC BY 2.0 | <https://commons.wikimedia.org/wiki/File:Vocal_recording_1,_Enrolling_Stones_in_the_Studio,_Studio_A,_Downtown_Recording.jpg> |
 | `tabla-kolkata` | Tabla | Subhadrakalyan Rana Rehearsing Tabla with Sudhir Ghorai - Kolkata 2016-03-29 3183.JPG | Biswarup Ganguly | CC BY 3.0 | <https://commons.wikimedia.org/wiki/File:Subhadrakalyan_Rana_Rehearsing_Tabla_with_Sudhir_Ghorai_-_Kolkata_2016-03-29_3183.JPG> |
+| `veena-concert` | Veena | JayanthiKumaresh-Veena Artiste.jpg | FactEcho | CC BY 3.0 | <https://commons.wikimedia.org/wiki/File:JayanthiKumaresh-Veena_Artiste.jpg> |
+| `violinist` | Violin | Violinist performing with The Grand Stars Orchestra.jpg | @innervision.stage | CC BY 4.0 | <https://commons.wikimedia.org/wiki/File:Violinist_performing_with_The_Grand_Stars_Orchestra.jpg> |
+| `wedding-band` | Indian brass band | Brass band players in India IMG 8870.jpg | Sumita Roy Dutta | CC BY-SA 4.0 | <https://commons.wikimedia.org/wiki/File:Brass_band_players_in_India_IMG_8870.jpg> |
 
 To add a photo: find it on Commons (User-Agent `VerseMarketplace/1.0 (+https://verse-music-platform.vercel.app)`, one request per second), check `LicenseShortName` in `extmetadata`, convert to WebP at 1600 and 800 wide (`npx --yes sharp-cli`, 1600 variant at most 160 KB), add the row here and in `imageCredits.ts`. The whole set stays under 4 MB.

@@ -1,0 +1,85 @@
+# Name pools for the demo-showcase batch (SyntheticQa::Showcase). Twelve regional groups, 26 first
+# names and 10 surnames each (312 first names, 120 surnames). The seeder pairs a first name and a
+# surname from the same group and never repeats a full name inside the batch.
+regions:
+  marathi:
+    first: [Aniket, Swapnil, Omkar, Chinmay, Tanmay, Sanket, Nikhil, Amol, Rohit, Gaurav, Pratik, Onkar, Yashodhan,
+      Vaibhav, Sharvari, Mrunal, Rutuja, Snehal, Gauri, Apurva, Manasi, Aishwarya, Tejaswini, Pranali, Kalyani, Ketaki]
+    last: [Kulkarni, Deshmukh, Bhosale, Gaikwad, Kadam, Pawar, Jadhav, Sawant, Wagh, Phadke]
+  gujarati:
+    first: [Jigar, Hardik, Chirag, Dhruv, Parth, Krunal, Mitul, Bhavin, Nirav, Kalpesh, Hemant, Jaydeep, Rutvik,
+      Foram, Hetal, Khushbu, Dhwani, Nirali, Bhumi, Riddhi, Palak, Mansi, Krupa, Zalak, Ishani, Vrunda]
+    last: [Shah, Mehta, Desai, Trivedi, Parekh, Vyas, Thakkar, Doshi, Sheth, Kothari]
+  punjabi:
+    first: [Harleen, Simran, Gurleen, Jaspreet, Manpreet, Navneet, Rajveer, Ankush, Sahil, Mohit, Tarun, Kunal,
+      Rishabh, Lovleen, Ishmeet, Noor, Aashna, Ridhima, Sukhman, Vansh, Yuvraj, Karanveer, Tanvi, Sargam, Preet, Mehak]
+    last: [Khanna, Malhotra, Chopra, Bedi, Arora, Sethi, Bajaj, Suri, Grewal, Talwar]
+  bengali:
+    first: [Arnab, Sourav, Debojyoti, Abhijit, Tanmoy, Subhajit, Anirban, Rajarshi, Sayan, Partha, Ritwik, Aritra,
+      Ipsita, Sreeparna, Moumita, Paromita, Tanushree, Debolina, Srijita, Riya, Madhurima, Sohini, Anwesha, Shreya,
+      Oindrila, Bidisha]
+    last: [Banerjee, Chatterjee, Mukherjee, Bhattacharya, Chakraborty, Sengupta, Dasgupta, Lahiri, Mitra, Ghoshal]
+  tamil:
+    first: [Karthik, Arvind, Vignesh, Harish, Sriram, Balaji, Ganesh, Dinesh, Vasanth, Prakash, Shankar, Naveen,
+      Aravind, Lakshmi, Meenakshi, Divya, Janani, Kavitha, Nithya, Preethi, Swathi, Abirami, Harini, Sowmya, Deepika,
+      Thenmozhi]
+    last: [Iyer, Iyengar, Subramanian, Raghavan, Venkatesh, Krishnamurthy, Narayanan, Sundaram, Natarajan, Chandrasekar]
+  telugu:
+    first: [Srikanth, Venkat, Manoj, Sandeep, Vamsi, Praneeth, Harsha, Charan, Teja, Kiran, Bhargav, Pavan, Sindhu,
+      Swetha, Harika, Sravani, Lavanya, Anusha, Bhavana, Keerthi, Madhavi, Pooja, Ramya, Sirisha, Vasavi, Sai]
+    last: [Reddy, Naidu, Chowdary, Varma, Raju, Sastry, Murthy, Vemuri, Kolli, Gopisetty]
+  kannada:
+    first: [Suraj, Pradeep, Manjunath, Raghu, Vinay, Darshan, Girish, Mahesh, Nagesh, Chetan, Yogesh, Basavaraj,
+      Shashank, Ananya, Chaitra, Deepthi, Pallavi, Shruthi, Spoorthi, Nayana, Rashmi, Bhagya, Apoorva, Sowjanya,
+      Netra, Vidya]
+    last: [Gowda, Hegde, Shetty, Bhat, Kamath, Nayak, Acharya, Kini, Shenoy, Puranik]
+  malayali:
+    first: [Anoop, Jithin, Vishnu, Sreejith, Akhil, Nithin, Manu, Abhilash, Ajith, Unni, Midhun, Rahul, Sneha,
+      Athira, Anjana, Gayathri, Remya, Meera, Neethu, Aparna, Devika, Lekshmi, Sruthi, Amrutha, Nimisha, Arjun]
+    last: [Menon, Nair, Pillai, Kurup, Panicker, Warrier, Nambiar, Varghese, Kuriakose, Mathew]
+  goan:
+    first: [Joaquim, Anthony, Cyril, Ryan, Clive, Neville, Bosco, Melvyn, Ashley, Wilfred, Godfrey, Aaron, Elroy,
+      Sheryl, Maria, Priscilla, Natasha, Jessica, Vanessa, Lorna, Glenda, Sharon, Marisa, Rochelle, Denise, Alina]
+    last: ["D'Souza", Fernandes, Pereira, Rodrigues, Gomes, Lobo, Pinto, Dias, Colaco, Menezes]
+  parsi:
+    first: [Cyrus, Darius, Farhad, Jehangir, Kaizad, Rustom, Burzin, Behram, Xerxes, Adil, Firoze, Hoshang, Jamshed,
+      Zarine, Roshan, Perin, Shernaz, Dinaz, Tanaz, Freny, Khorshed, Meher, Yasmin, Nilufer, Delna, Persis]
+    last: [Irani, Contractor, Dastur, Mistry, Bharucha, Kapadia, Sethna, Vakil, Batliwala, Chothia]
+  muslim:
+    first: [Imran, Faiz, Arman, Zaid, Rehan, Nadeem, Farhan, Danish, Irfan, Tauseef, Wasim, Asad, Kabir, Zoya, Sana,
+      Ayesha, Rukhsar, Nazia, Sara, Mehreen, Afreen, Shabana, Tabassum, Fatima, Aliya, Hina]
+    last: [Qureshi, Ansari, Siddiqui, Sheikh, Khan, Pathan, Mirza, Ghazi, Kazmi, Hashmi]
+  sikh:
+    first: [Harpreet, Amarjeet, Jagjit, Baljeet, Gurpreet, Kuldeep, Parminder, Ravinder, Sukhdev, Tejinder, Balwinder,
+      Inderpal, Amritpal, Jasleen, Gurnoor, Harnoor, Arshdeep, Gagandeep, Ekam, Sehaj, Navjot, Rupinder, Jasmeet,
+      Kirandeep, Mandeep, Satnam]
+    last: [Singh, Kaur, Gill, Sandhu, Dhillon, Sidhu, Ahluwalia, Randhawa, Cheema, Brar]
+
+# Which regional groups are drawn for each city, in rotation. Mumbai draws from all twelve.
+city_regions:
+  Mumbai: [marathi, gujarati, punjabi, goan, muslim, parsi, marathi, tamil, bengali, sikh, malayali, telugu, kannada, marathi]
+  Pune: [marathi, marathi, gujarati, muslim, tamil]
+  Navi Mumbai: [marathi, malayali, goan, gujarati]
+  Thane: [marathi, gujarati, muslim, punjabi]
+  Delhi: [punjabi, sikh, muslim, bengali, gujarati]
+  Bengaluru: [kannada, tamil, malayali, telugu, kannada]
+  Goa: [goan, goan, marathi, kannada]
+  Kolkata: [bengali, bengali, muslim]
+  Chennai: [tamil, tamil, malayali]
+  Hyderabad: [telugu, muslim]
+  Jaipur: [punjabi, gujarati]
+
+# Languages a person from each group lists on their profile, in addition to English.
+region_languages:
+  marathi: [Marathi, Hindi]
+  gujarati: [Gujarati, Hindi]
+  punjabi: [Punjabi, Hindi]
+  bengali: [Bengali, Hindi]
+  tamil: [Tamil, Hindi]
+  telugu: [Telugu, Hindi]
+  kannada: [Kannada, Hindi]
+  malayali: [Malayalam, Hindi]
+  goan: [Konkani, Hindi]
+  parsi: [Gujarati, Hindi]
+  muslim: [Urdu, Hindi]
+  sikh: [Punjabi, Hindi]

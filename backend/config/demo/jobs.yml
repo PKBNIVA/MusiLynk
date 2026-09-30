@@ -1,0 +1,770 @@
+# The 45 demo-showcase opportunities (SyntheticQa::Showcase). Titles are unique, descriptions are in
+# the hirer's voice and at least 60 characters. `category` picks which kind of demo hirer posts the
+# listing (companies.yml); the location is that hirer's city. `pay` is [min, max] in INR per `period`.
+# status: published unless stated. start_in / deadline_in are days from the day the batch is seeded.
+jobs:
+  - title: Session drummer for a three-day jingle block
+    kind: session
+    category: studio
+    function: Recording & Studio
+    genre: Pop
+    contract: Freelance
+    skills: [Drummer, Session musician]
+    pay: [7000, 10000]
+    period: day
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 12
+    deadline_in: 8
+    description: "We are recording a block of three jingles over three consecutive days and need a drummer who can play to a click and deliver clean, dry takes. The studio has a tuned kit; bring your own snare and cymbals if you prefer them. Each day runs 10 am to 6 pm and we pay within seven days."
+    requirements: "Comfortable playing to a click. A short reel of recorded drums, even from a home setup, helps us decide quickly."
+    questions: ["Which recorded drum tracks can we listen to?"]
+  - title: Bassist for a two-day indie EP tracking session
+    kind: session
+    category: studio
+    function: Recording & Studio
+    genre: Indie
+    contract: Freelance
+    skills: [Bassist, Session musician]
+    pay: [6000, 9000]
+    period: day
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 20
+    deadline_in: 14
+    description: "An indie band is tracking a four-song EP live in our room and their bassist is unavailable on the dates. We will send charts and demos ten days ahead, and the band wants a supportive player who follows the drums. Two days, lunch included."
+    requirements: "Five-string not needed. A clean DI-friendly instrument and your own cables."
+    questions: ["Have you replaced a band member on a recording before?"]
+  - title: Tabla and sarangi accompanists for a ghazal album
+    kind: session
+    category: studio
+    function: Recording & Studio
+    genre: Ghazal
+    contract: Freelance
+    skills: [Tabla player, Violinist]
+    pay: [8000, 12000]
+    period: session
+    workplace: onsite
+    level: senior
+    slots: 2
+    start_in: 25
+    deadline_in: 18
+    description: "We are recording a ghazal album with live vocals, harmonium, tabla and a bowed string player. Each session is four hours with the singer in the room, and we will record two songs per session. We are looking for accompanists who can follow phrasing without a chart."
+    requirements: "Experience accompanying ghazal or light classical singers in a live room."
+    questions: ["Name two singers you have accompanied."]
+  - title: Vocal producer for a set of regional singles
+    kind: collaboration
+    category: studio
+    function: Music Production
+    genre: Folk
+    contract: Project-based
+    skills: [Music producer, Singer]
+    pay: [25000, 45000]
+    period: project
+    workplace: hybrid
+    level: senior
+    slots: 1
+    start_in: 30
+    deadline_in: 20
+    description: "Three regional-language singles need a vocal producer who can coach first-time recording artists, comp takes and deliver tuned, natural-sounding lead vocals. Studio time is provided for the tracking days, and the editing can be done remotely within two weeks."
+    requirements: "Proven vocal production credits and comfort working in Marathi, Hindi or Konkani."
+    questions: ["Which released vocal productions are yours?"]
+  - title: Vocalist for reference demos, weekday evenings
+    kind: session
+    category: studio
+    function: Recording & Studio
+    genre: Bollywood
+    contract: Freelance
+    skills: [Singer, Session musician]
+    pay: [3000, 5000]
+    period: session
+    workplace: onsite
+    level: entry
+    slots: 3
+    start_in: 7
+    deadline_in: 5
+    description: "Composers who work with us need guide vocals before the final singer is booked. Sessions are two hours on weekday evenings, you learn a song from a scratch demo and record two or three takes. We are building a list of dependable singers for repeat work."
+    requirements: "Reads lyrics in Hindi or English. Good pitch and timing matter more than range."
+    questions: ["Send a voice memo of a song you learned in under an hour."]
+  - title: Assistant recording engineer, part-time
+    kind: job
+    category: studio
+    function: Recording & Studio
+    genre: Rock
+    contract: Part-time
+    skills: [Sound engineer, Recording engineer]
+    pay: [18000, 24000]
+    period: month
+    workplace: onsite
+    level: entry
+    slots: 1
+    start_in: 21
+    deadline_in: 15
+    description: "Our studio needs an assistant engineer for four afternoons a week. You will set up microphones, label sessions, back up projects and sit in on tracking with the lead engineer. There is room to move into mixing work after six months."
+    requirements: "Basic signal-flow knowledge and reliable timekeeping. A home recording project is a good sample."
+    questions: ["Which DAW do you use most?"]
+  - title: Sangeet band for a two-night wedding in Lonavala
+    kind: gig
+    category: wedding
+    function: Booking & Events
+    genre: Bollywood
+    contract: Freelance
+    skills: [Singer, Keyboard player, Drummer]
+    pay: [45000, 70000]
+    period: show
+    workplace: travel
+    level: senior
+    slots: 1
+    start_in: 40
+    deadline_in: 25
+    description: "A wedding of 300 guests over two nights at a resort near Lonavala needs a five-piece band for the sangeet on night one and a shorter reception set on night two. We provide transport, rooms and a sound crew. The family wants a mix of Bollywood dance numbers and old film songs."
+    requirements: "A five-piece line-up with two vocalists, a clean set list of 30 songs and a sample video from a recent wedding."
+    questions: ["How many weddings has your band played this season?"]
+  - title: Dhol team for a baraat entry, Saturday afternoon
+    kind: gig
+    category: wedding
+    function: Booking & Events
+    genre: Bhangra
+    contract: Freelance
+    skills: [Dhol player, Percussionist]
+    pay: [12000, 20000]
+    period: show
+    workplace: onsite
+    level: intermediate
+    slots: 2
+    start_in: 18
+    deadline_in: 12
+    description: "We need two dhol players for a baraat that walks about 400 metres to a banquet hall, with the groom's family dancing in front. The entry takes 45 minutes and finishes at the hall gate. Please arrive 30 minutes early and bring your own dhols and sticks."
+    requirements: "Comfortable playing outdoors for 45 minutes without a break."
+    questions: ["Have you played baraats before? How many?"]
+  - title: Ghazal singer with harmonium for a wedding reception
+    kind: gig
+    category: wedding
+    function: Booking & Events
+    genre: Ghazal
+    contract: Freelance
+    skills: [Singer, Keyboard player]
+    pay: [20000, 35000]
+    period: show
+    workplace: onsite
+    level: senior
+    slots: 1
+    start_in: 35
+    deadline_in: 22
+    description: "For the family reception dinner, a singer with a harmonium player and a tabla player to perform ghazals and light classical songs for about 90 minutes at low volume, while guests dine. Around 180 guests, an indoor hall with a house PA."
+    requirements: "A set of well-known ghazals and a willingness to take a few requests."
+    questions: ["Share a short recording of a ghazal you perform."]
+  - title: Acoustic duo for a cocktail hour by the sea
+    kind: gig
+    category: wedding
+    function: Booking & Events
+    genre: Acoustic
+    contract: Freelance
+    skills: [Singer, Guitarist]
+    pay: [15000, 25000]
+    period: show
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 28
+    deadline_in: 16
+    description: "A guitar and vocal duo for a 60-minute cocktail hour on a sea-facing lawn, before the sun sets. We are after soft, familiar songs in English and Hindi, with a change of pace for the last three numbers. A PA is provided."
+    requirements: "Repertoire of 25 or more songs suited to a cocktail hour."
+    questions: ["What are three songs you would open with?"]
+  - title: Live saxophone and DJ for a wedding after-party
+    kind: gig
+    category: wedding
+    function: Booking & Events
+    genre: EDM
+    contract: Freelance
+    skills: [DJ, Saxophonist]
+    pay: [30000, 50000]
+    period: show
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 33
+    deadline_in: 20
+    description: "The after-party after the reception runs from 11 pm to 1 am, and the couple wants a DJ with a live saxophone player rather than a playlist. We would like deep house and Bollywood remixes to build slowly. Lighting and sound are provided."
+    requirements: "A DJ and saxophone pair who have played together before, with a video of a recent set."
+    questions: ["Have you worked as a pair? Please describe your set."]
+  - title: Violin and keys duo for the wedding entry
+    kind: gig
+    category: wedding
+    function: Booking & Events
+    genre: Western Classical
+    contract: Freelance
+    skills: [Violinist, Keyboard player]
+    pay: [18000, 30000]
+    period: show
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 26
+    deadline_in: 18
+    description: "For a church-style entry procession followed by a short garden ceremony, we want a violin and keyboard duo playing instrumental versions of romantic songs. Two arrangements will be agreed with the couple two weeks before the wedding. Total playing time is about 50 minutes."
+    requirements: "Ability to prepare two custom arrangements and rehearse once."
+    questions: ["Do you arrange your own pieces?"]
+  - title: Singer for the mehendi evening
+    kind: gig
+    category: wedding
+    function: Booking & Events
+    genre: Bollywood
+    contract: Freelance
+    skills: [Singer]
+    pay: [10000, 18000]
+    period: show
+    workplace: onsite
+    level: entry
+    slots: 1
+    start_in: 15
+    deadline_in: 9
+    description: "A singer for a relaxed mehendi afternoon of 80 guests, with a small speaker and a microphone. We want light, singalong Hindi songs for two hours with breaks. A backing track is fine if you do not have a band."
+    requirements: "Clear voice, patience with requests and a laptop or phone to run tracks."
+    questions: ["Do you perform with a backing track or live instruments?"]
+  - title: Resident DJ for a Saturday lounge night
+    kind: gig
+    category: agency
+    function: Booking & Events
+    genre: House
+    contract: Contract
+    skills: [DJ]
+    pay: [10000, 18000]
+    period: show
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 10
+    deadline_in: 6
+    description: "One of our lounge clients needs a resident DJ for Saturday nights from 9 pm to 1 am, starting next month, with a three-month trial. We are looking for house and Bollywood-house sets at an audience-friendly volume until midnight. Payment is per night, settled monthly."
+    requirements: "Two reference clubs or venues. A recorded set of one hour or more."
+    questions: ["Which venues have you played weekly?"]
+  - title: Backline technician for a five-city club tour
+    kind: tour
+    category: agency
+    function: Stage & Technical
+    genre: Rock
+    contract: Contract
+    skills: [Sound engineer, Backline technician]
+    pay: [6000, 9000]
+    period: day
+    workplace: travel
+    level: intermediate
+    slots: 1
+    start_in: 45
+    deadline_in: 30
+    description: "A five-city club tour for an indie rock band, ten days on the road with travel days paid at half rate. The technician sets the backline, restrings and tunes guitars and keeps a stage plot for each venue. Travel, stay and meals are covered."
+    requirements: "Experience setting up backline and running a stage in small clubs. Able to travel for ten days."
+    questions: ["Which touring acts have you worked with?"]
+  - title: Monitor engineer for a 12-date festival run
+    kind: tour
+    category: agency
+    function: Live Sound & Audio
+    genre: Indie
+    contract: Contract
+    skills: [Sound engineer, Monitor engineer]
+    pay: [9000, 14000]
+    period: day
+    workplace: travel
+    level: senior
+    slots: 1
+    start_in: 60
+    deadline_in: 40
+    description: "We are staffing a run of 12 festival and college dates across four states with a three-band package. The monitor engineer builds in-ear mixes for a six-piece and manages the changeover between bands. We provide a digital console and a stage rack."
+    requirements: "At least three touring seasons of monitor experience with in-ear mixes."
+    questions: ["Which consoles have you mixed monitors on?"]
+  - title: Cover band for a corporate awards night
+    kind: gig
+    category: agency
+    function: Booking & Events
+    genre: Pop
+    contract: Freelance
+    skills: [Singer, Guitarist, Drummer]
+    pay: [50000, 80000]
+    period: show
+    workplace: onsite
+    level: senior
+    slots: 1
+    start_in: 38
+    deadline_in: 24
+    description: "A financial services client has a 600-person awards night at a hotel ballroom and wants a live band for the dinner segment and the dance hour. Two 45-minute sets with a DJ in between. Sound and lights are supplied by the hotel, the band brings its own in-ear monitors."
+    requirements: "Corporate references and a clean set list with no explicit material."
+    questions: ["Send a link to a recent corporate performance."]
+  - title: House band audition for a supper club
+    kind: audition
+    category: agency
+    function: Performance
+    genre: Jazz
+    contract: Contract
+    skills: [Singer, Keyboard player, Bassist]
+    pay: [25000, 40000]
+    period: month
+    workplace: onsite
+    level: intermediate
+    slots: 3
+    start_in: 14
+    deadline_in: 10
+    description: "A supper club client wants a house trio of piano, bass and drums, and a rotating vocalist, for Friday and Saturday evenings. We are auditioning for the rhythm section first. Bring five standards and be ready to play a short blues in any key."
+    requirements: "Ability to read charts and comp for a vocalist. Audition slots are 20 minutes."
+    questions: ["Which standards will you bring to the audition?"]
+  - title: Sound engineer for a two-day college fest
+    kind: gig
+    category: agency
+    function: Live Sound & Audio
+    genre: Rock
+    contract: Freelance
+    skills: [Sound engineer, FOH engineer]
+    pay: [12000, 20000]
+    period: day
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 42
+    deadline_in: 28
+    description: "We need a front-of-house engineer to run the main stage at a two-day college fest with eight acts per day. A 32-channel digital console and a line-array system are already booked. Soundcheck is at noon, and the engineer coordinates changeovers with our stage manager."
+    requirements: "Experience mixing eight or more acts in a day on a digital console."
+    questions: ["What is the biggest stage you have mixed on?"]
+  - title: Beat maker for a debut rap EP
+    kind: collaboration
+    category: label
+    function: Music Production
+    genre: Hip-Hop
+    contract: Project-based
+    skills: [Music producer]
+    pay: [30000, 50000]
+    period: project
+    workplace: remote
+    level: intermediate
+    slots: 2
+    start_in: 20
+    deadline_in: 12
+    description: "A rapper we are signing is putting together a five-track debut EP in Hindi and English. We need two producers who can deliver original beats with room for a hook and a bridge. We pay per accepted beat and credit producers on the release."
+    requirements: "Send three original beats, exported as stems. Familiarity with Hindi hip-hop is useful."
+    questions: ["Link three beats you produced."]
+  - title: Session guitarist for a run of singles
+    kind: session
+    category: label
+    function: Recording & Studio
+    genre: Indie Pop
+    contract: Freelance
+    skills: [Guitarist, Session musician]
+    pay: [5000, 8000]
+    period: session
+    workplace: onsite
+    level: intermediate
+    slots: 2
+    start_in: 17
+    deadline_in: 10
+    description: "We release a single every three weeks and need session guitarists for acoustic and electric parts. Each session is one song, about three hours, with a producer in the room and a chart provided ahead of time. We book repeat players."
+    requirements: "Reliable tuning and timing, and your own instruments for clean and lightly overdriven tones."
+    questions: ["Share two released tracks with your guitar parts."]
+  - title: Mix engineer for a Bengali folk album
+    kind: collaboration
+    category: label
+    function: Recording & Studio
+    genre: Folk
+    contract: Project-based
+    skills: [Sound engineer, Mix engineer]
+    pay: [40000, 60000]
+    period: project
+    workplace: remote
+    level: senior
+    slots: 1
+    start_in: 30
+    deadline_in: 22
+    description: "Ten songs of Bengali folk with dotara, khamak, dhol and voices were recorded live. We need a mix engineer who will keep the natural feel and avoid heavy compression, delivering each song within a week. Two rounds of revisions are included."
+    requirements: "Experience mixing acoustic and folk recordings; send two before-and-after examples."
+    questions: ["Send a mix of acoustic material you finished."]
+  - title: Vocalist for a new duo project
+    kind: audition
+    category: label
+    function: Performance
+    genre: Indie Pop
+    contract: Project-based
+    skills: [Singer, Songwriter]
+    pay: [15000, 25000]
+    period: project
+    workplace: hybrid
+    level: intermediate
+    slots: 1
+    start_in: 24
+    deadline_in: 15
+    description: "One of our producers is forming a duo and needs a vocalist who writes toplines. The audition is a 30-minute session where you write and record a hook to a rough track. If it works out, we plan six songs and a launch show."
+    requirements: "Songwriting samples and a comfortable range in Hindi and English."
+    questions: ["Send one song you wrote and sang."]
+  - title: Visiting guitar instructor for evening batches
+    kind: job
+    category: college
+    function: Music Education
+    genre: Rock
+    contract: Part-time
+    skills: [Guitarist, Music teacher]
+    pay: [22000, 32000]
+    period: month
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 30
+    deadline_in: 20
+    description: "We need a guitar instructor for three evening batches a week, each with eight students from beginner to Grade 4. The syllabus is set by the academy and covers chords, scales and simple song arrangements. Classes run for a semester of four months, with a possible renewal."
+    requirements: "Teaching experience or a strong demo lesson. Able to prepare students for an end-of-semester show."
+    questions: ["Describe how you would plan a first lesson for a beginner."]
+  - title: Tabla teacher for weekend batches
+    kind: job
+    category: college
+    function: Music Education
+    genre: Hindustani
+    contract: Part-time
+    skills: [Tabla player, Music teacher]
+    pay: [15000, 22000]
+    period: month
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 21
+    deadline_in: 14
+    description: "Our academy is adding a tabla batch on Saturdays and Sundays, with ten students aged 10 to 40. The teacher prepares students for two graded exams a year and a small annual recital. Classes are held in our practice room; instruments are available."
+    requirements: "Formal training under a guru and a sincere interest in teaching beginners."
+    questions: ["Who did you train with, and for how many years?"]
+  - title: Audio production intern for one semester
+    kind: internship
+    category: college
+    function: Music Tech
+    genre: Electronic
+    contract: Part-time
+    skills: [Sound engineer, Music producer]
+    pay: [8000, 12000]
+    period: month
+    workplace: onsite
+    level: entry
+    slots: 2
+    start_in: 30
+    deadline_in: 20
+    description: "Two interns will support our recording lab for a semester, helping students book rooms, patching signals, and recording concerts. We supply training on the console and DAW software. Hours are 15 a week, scheduled around your classes."
+    requirements: "Enrolled or recently graduated in a music or audio programme. A short note about a recording you made."
+    questions: ["Which recording are you most proud of and why?"]
+  - title: Vocal coach for the music society
+    kind: job
+    category: college
+    function: Music Education
+    genre: Bollywood
+    contract: Part-time
+    skills: [Singer, Music teacher]
+    pay: [16000, 24000]
+    period: month
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 26
+    deadline_in: 17
+    description: "The university music society needs a vocal coach for its 35-member group and its two solo singers, twice a week on evenings. The coach runs warm-ups, teaches harmonies and helps prepare the annual fest performance. A one-semester contract with a review at the end."
+    requirements: "Experience with group singing and arranging harmonies, and calm patience with beginners."
+    questions: ["Tell us how you teach harmonies to a mixed group."]
+  - title: Bollywood band for an annual day with 400 guests
+    kind: gig
+    category: corporate
+    function: Booking & Events
+    genre: Bollywood
+    contract: Freelance
+    skills: [Singer, Keyboard player, Drummer, Guitarist]
+    pay: [55000, 85000]
+    period: show
+    workplace: onsite
+    level: senior
+    slots: 1
+    start_in: 50
+    deadline_in: 32
+    description: "Our annual day brings 400 employees and their families to a hotel banquet hall for dinner and dancing. We are looking for a five-piece band for two 45-minute sets, with a mix of Hindi film songs from the 90s to now. A signed contract, a run sheet and a payment schedule are provided."
+    requirements: "Family-friendly repertoire and references from earlier corporate work."
+    questions: ["Send a set list and a video of a recent corporate event."]
+  - title: Acoustic singer for a Diwali evening
+    kind: gig
+    category: corporate
+    function: Booking & Events
+    genre: Devotional
+    contract: Freelance
+    skills: [Singer, Guitarist]
+    pay: [15000, 25000]
+    period: show
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 55
+    deadline_in: 35
+    description: "Our office Diwali evening needs a singer with a guitar or harmonium to perform festive songs, a few bhajans and film songs for 75 minutes. About 250 people will be at the venue, with a house PA and a technician. We will share the running order a week before."
+    requirements: "A mix of devotional and light film songs, delivered at a moderate volume."
+    questions: ["What would your 75-minute set look like?"]
+  - title: DJ and MC for a two-day offsite
+    kind: gig
+    category: corporate
+    function: Booking & Events
+    genre: Pop
+    contract: Freelance
+    skills: [DJ, MC]
+    pay: [25000, 40000]
+    period: show
+    workplace: travel
+    level: intermediate
+    slots: 1
+    start_in: 36
+    deadline_in: 22
+    description: "We are hosting a two-day team offsite at a resort with 200 people. We want a DJ who can also host the games and prize segments on day one, and play a two-hour dance set on the second night. Travel and stay are provided."
+    requirements: "Experience hosting corporate events and a clean playlist policy."
+    questions: ["Describe a corporate event you hosted."]
+  - title: Sound engineer for a town hall and concert evening
+    kind: gig
+    category: corporate
+    function: Live Sound & Audio
+    genre: Pop
+    contract: Freelance
+    skills: [Sound engineer, FOH engineer]
+    pay: [18000, 28000]
+    period: day
+    workplace: onsite
+    level: senior
+    slots: 1
+    start_in: 44
+    deadline_in: 28
+    description: "One day of speeches followed by a live band at a 500-seat auditorium. The engineer sets up lapel and podium microphones, then switches to a band with in-ear monitors. Arrival is at 7 am, and the show ends by 9 pm."
+    requirements: "Experience switching between speech and band in a single day."
+    questions: ["Have you mixed a corporate town hall before?"]
+  - title: Friday night blues band residency
+    kind: gig
+    category: venue
+    function: Performance
+    genre: Blues
+    contract: Contract
+    skills: [Guitarist, Bassist, Drummer]
+    pay: [24000, 36000]
+    period: month
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 20
+    deadline_in: 12
+    description: "We want a blues band for a Friday residency, two 45-minute sets from 9 pm, starting next month for a three-month run. We pay a fixed fee per night, monthly, and offer dinner for the band. Volume should let people talk at the bar."
+    requirements: "A trio or four-piece with a repertoire of 40 blues and classic-rock songs."
+    questions: ["How long have you played together as a band?"]
+  - title: Acoustic duo for Wednesday evenings
+    kind: gig
+    category: venue
+    function: Performance
+    genre: Indie
+    contract: Contract
+    skills: [Singer, Guitarist]
+    pay: [4000, 7000]
+    period: show
+    workplace: onsite
+    level: entry
+    slots: 2
+    start_in: 9
+    deadline_in: 5
+    description: "Wednesday is our acoustic evening, from 7 to 8:30 pm. We look for a duo or a solo singer with a guitar, playing easy-listening songs while people have coffee and dinner. A small PA and a microphone are provided."
+    requirements: "Comfortable with a 90-minute set and a short break in the middle."
+    questions: ["Send a video or a live recording of you performing."]
+  - title: Saxophonist for sunset sets
+    kind: gig
+    category: venue
+    function: Performance
+    genre: Jazz
+    contract: Contract
+    skills: [Saxophonist]
+    pay: [8000, 14000]
+    period: show
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 16
+    deadline_in: 10
+    description: "Our terrace fills up at sunset. We want a saxophone player for a 60-minute set over a lounge playlist or with a resident guitarist, five evenings a week in the high season. Accommodation nearby is included for players travelling in."
+    requirements: "Own saxophone and a clip-on microphone or willingness to use ours."
+    questions: ["Are you available for the whole season?"]
+  - title: Bassist for a house rhythm section audition
+    kind: audition
+    category: venue
+    function: Performance
+    genre: Funk
+    contract: Contract
+    skills: [Bassist]
+    pay: [20000, 30000]
+    period: month
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 13
+    deadline_in: 9
+    description: "Our house band needs a bassist for Thursday to Saturday. The audition is a short groove test with the drummer and keys player, followed by three songs we send in advance. We rehearse on Tuesdays and the band changes its set list monthly."
+    requirements: "Fingerstyle and pick, comfortable with funk and soul."
+    questions: ["Send a short clip of a bass line you like to play."]
+  - title: Resident DJ, four nights a week
+    kind: job
+    category: venue
+    function: Performance
+    genre: Techno
+    contract: Full-time
+    skills: [DJ]
+    pay: [35000, 50000]
+    period: month
+    workplace: onsite
+    level: senior
+    slots: 1
+    start_in: 30
+    deadline_in: 20
+    description: "We are looking for a resident DJ for Wednesday to Saturday, 9 pm to 1 am, with a monthly salary and a share of special-night takings. The venue has a club-grade sound system and we agree music policy together every quarter."
+    requirements: "Three years of residencies or comparable club experience. Ability to build a peak-time set."
+    questions: ["Where have you held a residency and for how long?"]
+  - title: Tabla and dholak player for a web-series cue
+    kind: session
+    category: production
+    function: Recording & Studio
+    genre: Folk
+    contract: Freelance
+    skills: [Tabla player, Percussionist]
+    pay: [8000, 12000]
+    period: session
+    workplace: onsite
+    level: intermediate
+    slots: 1
+    start_in: 11
+    deadline_in: 7
+    description: "A web series needs live tabla and dholak layered over an existing cue. The session is three hours in a studio, and the composer will send the picture and a reference track beforehand. We can book a second session if the director asks for changes."
+    requirements: "Ability to play to picture and to a click track."
+    questions: ["Have you recorded percussion for a film or series?"]
+  - title: Composer for an eight-episode original series
+    kind: job
+    category: production
+    function: Composition & Songwriting
+    genre: Background Score
+    contract: Contract
+    skills: [Composer]
+    pay: [180000, 260000]
+    period: project
+    workplace: hybrid
+    level: senior
+    slots: 1
+    start_in: 45
+    deadline_in: 30
+    description: "We are commissioning a composer for an eight-episode series of 25 minutes each, with a theme and underscore for every episode. The schedule is ten weeks, delivered in stems, and a separate fee covers live musicians. We share locked cuts of the picture on a weekly basis."
+    requirements: "A showreel with scoring to picture and one long-form credit."
+    questions: ["Send a scoring-to-picture example."]
+  - title: String players for a scoring session
+    kind: audition
+    category: production
+    function: Recording & Studio
+    genre: Orchestral
+    contract: Freelance
+    skills: [Violinist, Session musician]
+    pay: [6000, 9000]
+    period: session
+    workplace: onsite
+    level: intermediate
+    slots: 6
+    start_in: 27
+    deadline_in: 18
+    description: "We are building a string section of six players for a film score and will audition sight-reading in a 30-minute slot. Successful players are booked for two recording days at the end of the month. Sheet music arrives 48 hours before each session."
+    requirements: "Ability to sight-read and to play in tune with a click in the headphones."
+    questions: ["Have you recorded in a string section before?"]
+  - title: Music department intern for a production house
+    kind: internship
+    category: production
+    function: Music Tech
+    genre: Film Score
+    contract: Part-time
+    skills: [Music producer, Composer]
+    pay: [10000, 15000]
+    period: month
+    workplace: hybrid
+    level: entry
+    slots: 1
+    start_in: 28
+    deadline_in: 18
+    description: "Our music department needs an intern for three months to organise cue sheets, track licences and prepare stems for the composer. You will learn how a film soundtrack is delivered. Two days a week in the office, the rest remote."
+    requirements: "Careful with spreadsheets and file names, and comfortable with a DAW."
+    questions: ["How would you name and organise 200 audio files?"]
+  - title: Sitar player for a documentary score
+    kind: collaboration
+    category: production
+    function: Composition & Songwriting
+    genre: Hindustani
+    contract: Project-based
+    skills: [Sitarist, Session musician]
+    pay: [30000, 45000]
+    period: project
+    workplace: hybrid
+    level: senior
+    slots: 1
+    start_in: 34
+    deadline_in: 22
+    description: "A 52-minute documentary on river communities needs a sitar player who will help build the score with the composer. The work involves two recording days and some improvised material in two ragas, and the sitarist will be credited in the titles."
+    requirements: "Concert-level Hindustani sitar and comfort recording to picture."
+    questions: ["Share a recording of your sitar in a solo or ensemble."]
+  - title: Bansuri and violin for a short-film score
+    kind: collaboration
+    category: production
+    function: Composition & Songwriting
+    genre: Folk
+    contract: Project-based
+    skills: [Bansuri player, Violinist]
+    pay: [20000, 32000]
+    period: project
+    workplace: onsite
+    level: intermediate
+    slots: 2
+    start_in: 19
+    deadline_in: 12
+    description: "A 22-minute short film set in the hills needs a bansuri player and a violinist to record melodic themes with the composer over two afternoons. The players will get the picture to watch and a set of guide melodies, then improvise from there."
+    requirements: "Comfortable improvising to picture."
+    questions: ["Have you improvised to a film clip before?"]
+  - title: Assistant to the live sound team, festival season
+    kind: internship
+    category: agency
+    function: Live Sound & Audio
+    genre: Rock
+    contract: Part-time
+    skills: [Sound engineer, FOH engineer]
+    pay: [9000, 14000]
+    period: month
+    workplace: onsite
+    level: entry
+    slots: 2
+    start_in: 22
+    deadline_in: 14
+    description: "Our live sound team needs two assistants for festival and college-fest season. You will run cables, label stage boxes, patch inputs and assist at soundcheck. Weekends are busy, weekdays are quiet, and we teach you the console."
+    requirements: "Physically comfortable with load-in work and evening shifts. Basic knowledge of audio signal flow."
+    questions: ["What audio work have you done, even at a small event?"]
+  - title: Tour manager for a six-city fusion tour
+    kind: tour
+    category: agency
+    function: Tour & Production Management
+    genre: Fusion
+    contract: Contract
+    skills: [Tour manager]
+    pay: [80000, 120000]
+    period: project
+    workplace: travel
+    level: senior
+    slots: 1
+    start_in: 65
+    deadline_in: 45
+    description: "A six-city tour for a seven-member fusion ensemble needs a tour manager to handle travel, hotel rooming lists, soundcheck timings and settlement with promoters. The tour lasts 14 days, and we can share the advance schedules and riders today."
+    requirements: "Previous tour management or production coordination experience and a clear record of settling show accounts."
+    questions: ["Which tours have you managed and how many people travelled?"]
+  - title: Front-of-house engineer for a two-week college circuit
+    kind: tour
+    category: agency
+    function: Live Sound & Audio
+    genre: Pop
+    contract: Contract
+    skills: [Sound engineer, FOH engineer]
+    pay: [8000, 12000]
+    period: day
+    workplace: travel
+    level: intermediate
+    slots: 1
+    start_in: 52
+    deadline_in: 34
+    description: "A two-week run of eight college fests in three states needs a front-of-house engineer who can adapt to a different PA every night. We provide the console, a stage box and a laptop for playback; you plan the input list with each band and lead soundcheck."
+    requirements: "Comfortable working with unfamiliar house systems and tight changeovers."
+    questions: ["Describe a night when the house system failed and what you did."]

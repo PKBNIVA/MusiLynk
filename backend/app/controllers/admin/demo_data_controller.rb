@@ -10,6 +10,7 @@ module Admin
         busy: SyntheticQa::DemoJobs.busy?,
         demoUsers: SyntheticQa::Demo.users.count,
         maxUsers: SyntheticQa::Demo::MAX_USERS,
+        showcaseBatch: SyntheticQa::Demo::SHOWCASE_BATCH,
         sizes: SyntheticQa::Demo::SIZES.transform_values { { artists: _1[:jobseekers], employers: _1[:employers] } }
       }
     end
@@ -32,7 +33,15 @@ module Admin
           :unprocessable_content, "DEMO_CAP_EXCEEDED")
       end
 
-      batch = SyntheticQa::Demo.next_batch_name
+      # The showcase has a fixed batch name, so it exists once; seeding it twice is refused up front.
+      if size == SyntheticQa::Demo::SHOWCASE_SIZE
+        batch = SyntheticQa::Demo::SHOWCASE_BATCH
+        if User.exists?(synthetic_batch: batch)
+          return render_error("The showcase is already on the site. Delete #{batch} first to seed it again.", :unprocessable_content, "SHOWCASE_EXISTS")
+        end
+      else
+        batch = SyntheticQa::Demo.next_batch_name
+      end
       enqueue(DemoDataSeedJob.new(batch:, size:, admin_id: current_user.id), kind: "seed", batch:, size:)
     end
 

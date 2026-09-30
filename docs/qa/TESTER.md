@@ -73,6 +73,10 @@ is tested by rendering the real pages in Vitest, under `src/app/**/__tests__/`.
   three opportunities and three acts (`populatedFixtures` in `tests/e2e/qa-helpers.ts`), so the
   axe sweep and the overflow and cursor checks see real cards. The fixtures are typed with the
   same interfaces the pages use (`src/app/lib/apiTypes.ts`); keep them that way when fields change.
+- **Axe over a seeded local stack (launch-2 acceptance).** With the API and web app running against a
+  seeded database (for example the `demo:showcase` batch), point the same sweep at it:
+  `QA_BASE_URL=http://127.0.0.1:4600 flock /tmp/verse-playwright.lock npx playwright test tests/e2e/accessibility.spec.ts tests/e2e/public-experience.spec.ts --project=chromium-desktop --project=chromium-mobile`.
+  A run with `QA_BASE_URL` starts no servers and uses no mocks, so it sees the real cards.
 - **Nightly live run.** `.github/workflows/qa-agent.yml` (`live-synthetic`) opens a GitHub issue
   labelled `qa-failure` when it fails and posts a summary comment on it. It runs the signed-in
   smoke only when the repository secrets `QA_SMOKE_EMAIL` and `QA_SMOKE_PASSWORD` exist (a

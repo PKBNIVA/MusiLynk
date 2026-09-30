@@ -1,5 +1,7 @@
 require "test_helper"
 require "digest"
+require "minitest/mock"
+require "aws-sdk-s3"
 
 # SyntheticQa::Showcase: the 150-account demo marketplace, checked against the brief and against what a
 # visitor's browser would find through the public API.
@@ -16,8 +18,8 @@ class ShowcaseSeedTest < ActionDispatch::IntegrationTest
   test "seeds 110 musicians, 40 hirers and the activity around them, and does nothing the second time" do
     result = SyntheticQa::Showcase.call
     assert_equal false, result.skipped
-    assert_equal({ jobseekers: 110, employers: 40, jobs: 45, applications: 60, conversations: 25, bookings: 6, acts: 12, urgent_requests: 8,
-                   reviews: 12, posts: 40 }, result.to_h.slice(:jobseekers, :employers, :jobs, :applications, :conversations, :bookings, :acts, :urgent_requests, :reviews, :posts))
+    assert_equal({ jobseekers: 110, employers: 40, jobs: 45, applications: 60, conversations: 25, bookings: 12, acts: 12, urgent_requests: 8,
+                   reviews: 18, posts: 40 }, result.to_h.slice(:jobseekers, :employers, :jobs, :applications, :conversations, :bookings, :acts, :urgent_requests, :reviews, :posts))
 
     assert_people
     assert_cities_languages_and_rates
@@ -35,6 +37,30 @@ class ShowcaseSeedTest < ActionDispatch::IntegrationTest
     again = SyntheticQa::Showcase.call
     assert again.skipped
     assert_equal before, User.synthetic(BATCH).count
+  end
+
+  test "with a bucket the samples play from the app's own copies of the tracks, not from ccMixter" do
+    keys = %w[AWS_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION AWS_ENDPOINT_URL_S3 AWS_PUBLIC_BASE_URL]
+    saved = keys.to_h { [_1, ENV.delete(_1)] }
+    ENV.update("AWS_BUCKET" => "verse-test", "AWS_ACCESS_KEY_ID" => "id", "AWS_SECRET_ACCESS_KEY" => "secret", "AWS_REGION" => "auto",
+      "AWS_ENDPOINT_URL_S3" => "https://acct.r2.cloudflarestorage.com", "AWS_PUBLIC_BASE_URL" => "https://media.verse.test")
+    client = Aws::S3::Client.new(stub_responses: true, region: "auto")
+    client.stub_responses(:head_object, "NotFound")
+    copied = []
+    client.stub_responses(:put_object, ->(context) { copied << context.params.fetch(:key) && {} })
+    mp3 = "ID3\x04\x00\x00\x00\x00\x00\x00".b + ("\x00".b * 20_000)
+
+    UploadStorage.stub(:client, client) do
+      SyntheticQa::TrackMirror.stub(:download, ->(_url) { mp3 }) { SyntheticQa::Showcase.call }
+    end
+
+    assert_equal 40, copied.uniq.size, "every curated track is copied before the first account exists"
+    items = PortfolioItem.where(user_id: User.synthetic(BATCH).select(:id))
+    assert_operator items.count, :>=, 110
+    assert(items.pluck(:url).all? { _1.match?(%r{\Ahttps://media\.verse\.test/demo/showcase/\d+\.mp3\z}) })
+    assert(items.pluck(:url).none? { _1.include?("ccmixter.org") })
+  ensure
+    keys.each { |name| saved[name].nil? ? ENV.delete(name) : ENV[name] = saved[name] }
   end
 
   test "is deterministic: the same seed gives the same people, words and numbers" do
@@ -115,7 +141,7 @@ class ShowcaseSeedTest < ActionDispatch::IntegrationTest
     assert_equal 0, VerificationRequest.where(status: "pending").count
     assert_equal 0, VerificationRequest.where(user_id: hirers.select(:id)).count
     pro = musicians.select { Verification::Tier.pro?(_1) }
-    assert_equal 3, pro.size, "Verified Pro is computed from three completed jobs and a review; the brief's activity supports three people"
+    assert_equal 5, pro.size, "Verified Pro is computed from three completed jobs and a review: five acts' owners, 5 percent of 110"
     assert(pro.all? { _1.profile.verified? })
   end
 
@@ -210,14 +236,14 @@ class ShowcaseSeedTest < ActionDispatch::IntegrationTest
     assert(acts.all? { _1.act_members.where(is_leader: true).one? })
     assert_equal acts.count, acts.map(&:min_fee).uniq.size, "acts do not all start at the same fee"
     bookings = BookingRequest.where(requester_id: hirers.select(:id))
-    assert_equal 6, bookings.count
+    assert_equal 12, bookings.count
     assert_equal ["completed"], bookings.distinct.pluck(:status)
-    assert_equal 6, BookingQuote.where(booking_request_id: bookings.select(:id), status: "accepted").count
+    assert_equal 12, BookingQuote.where(booking_request_id: bookings.select(:id), status: "accepted").count
     reviews = Review.where(status: "published")
-    assert_equal 12, reviews.count
-    assert_equal 12, reviews.distinct.count(:body)
-    assert_equal 6, reviews.where(author_id: hirers.select(:id)).count
-    assert_equal 6, reviews.where(employer_id: musicians.select(:id)).count
+    assert_equal 18, reviews.count
+    assert_equal 18, reviews.distinct.count(:body)
+    assert_equal 12, reviews.where(author_id: hirers.select(:id)).count
+    assert_equal 12, reviews.where(employer_id: musicians.select(:id)).count
   end
 
   def assert_stage

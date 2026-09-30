@@ -1,6 +1,7 @@
 # The 12 demo-showcase acts (SyntheticQa::Showcase). The leader is a demo musician of `leader`'s
-# role, the other members are demo musicians of the listed roles. `pro: true` marks the three acts
-# whose owners end up Verified Pro (three completed jobs and a published review, see reviews.yml).
+# role, the other members are demo musicians of the listed roles. `pro: true` marks the five acts
+# whose owners end up Verified Pro (three completed jobs and a published review, see reviews.yml): five people,
+# 5 percent of the 110 musicians.
 # Photos are left empty on purpose: the app draws art for demo acts.
 acts:
   - name: The Saffron Room Band
@@ -41,6 +42,7 @@ acts:
     bio: "Two dhol players, a tabla player and a DJ who plays along with them. We lead baraats of 45 minutes on foot and stay on for the first dance hour, with a small speaker for the DJ and no need for a house PA."
   - name: Blue Lantern Jazz Trio
     act_type: trio
+    pro: true
     leader: keyboard-player
     members: [bassist, drummer]
     genres: [Jazz, Blues]
@@ -52,6 +54,7 @@ acts:
     bio: "A piano, bass and drums trio playing jazz standards, blues and quiet arrangements of pop songs. Two 45-minute sets fit a dinner service well, and we can add a guest vocalist with a week's notice."
   - name: Raagini Fusion Collective
     act_type: fusion-group
+    pro: true
     leader: tabla-player
     members: [sitarist, bansuri-player, guitarist]
     genres: [Fusion, Hindustani]

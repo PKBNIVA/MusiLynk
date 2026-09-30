@@ -110,6 +110,8 @@ module SyntheticQa
       guard!
       return result(skipped: true) if User.synthetic(batch).exists?
 
+      # Before any account exists: a track that cannot be copied stops the seed instead of shipping samples that do not play.
+      TrackMirror.mirror!(content.tracks)
       ApplicationRecord.transaction do
         build_people
         create_musicians
@@ -330,7 +332,9 @@ module SyntheticQa
         item.roles |= found.roles
         item.genres |= found.genres
         item.instruments |= found.instruments
-        item.save!
+        # A copy in the app's own bucket is not "one of the user's uploads", which is what the model insists on for
+        # bucket URLs; the seeder vouches for it.
+        item.save!(validate: !TrackMirror.enabled?)
       end
     end
 
@@ -353,7 +357,7 @@ module SyntheticQa
       genres = person.entry.fetch("genres")
       {
         kind: "audio", title: "#{SAMPLE_LABELS[(person.index + position) % SAMPLE_LABELS.size]} — demo sample: '#{short}' by #{artist} (#{track.fetch('license')})",
-        url: track.fetch("url"), credited_as: "#{artist}, #{track.fetch('license')} (ccMixter)", visibility: "public", featured: position.zero?,
+        url: TrackMirror.url_for(track), credited_as: "#{artist}, #{track.fetch('license')} (ccMixter)", visibility: "public", featured: position.zero?,
         sort_order: position, year: track.fetch("year"), tags: [*genres.map(&:downcase), "demo sample"], genres:, roles: [spec.fetch("label")],
         instruments: spec.fetch("instruments"),
         description: "Demo sample for illustration only. Audio: '#{title}' by #{artist}, licensed #{track.fetch('license')} (#{track.fetch('license_url')}) " \
@@ -621,7 +625,7 @@ module SyntheticQa
     def round500(value) = (value / 500.0).round * 500
 
     # Musicians of the requested role, in the request's city where possible, in the order they replied.
-    # The three Verified Pro leaders answer (and win) the filled request of their role; open requests
+    # The Verified Pro leaders answer (and win) the filled request of their role; open requests
     # rotate through the role's musicians so the same few do not answer everything.
     def urgent_responders(spec, city)
       role = spec.fetch("role")
@@ -642,11 +646,11 @@ module SyntheticQa
 
     def create_bookings_and_reviews
       pro_acts = @acts.zip(@act_plans).select { |_act, plan| plan.dig(:act, "pro") }.map(&:first)
-      raise "The showcase needs three Verified Pro acts." unless pro_acts.size == 3
+      raise "The showcase needs five Verified Pro acts." unless pro_acts.size == 5
 
       booked = []
-      content.booking_reviews.each_with_index do |spec, index|
-        act = pro_acts.fetch(index / 2)
+      content.booking_reviews.each do |spec|
+        act = pro_acts.fetch(spec.fetch("pro_act"))
         hirer = (hirers_in(spec.fetch("hirer_category")) - booked).fetch(0)
         booked << hirer
         event_at = ago(days: rng.rand(8..50)).change(hour: 19)
@@ -658,7 +662,7 @@ module SyntheticQa
           currency: "INR", status: "accepted", inclusions: "Performance and sound check", exclusions: "Venue sound system",
           cancellation_terms: "Full refund of the advance up to 14 days before the event.", created_at: event_at - 25.days, updated_at: event_at - 20.days)
         create_review(hirer.user, act.owner, spec.fetch("hirer_review"), event_at + 2.days)
-        create_review(act.owner, hirer.user, spec.fetch("musician_review"), event_at + 3.days)
+        create_review(act.owner, hirer.user, spec.fetch("musician_review"), event_at + 3.days) if spec["musician_review"]
         count!("bookings")
       end
     end

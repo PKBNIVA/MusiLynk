@@ -1,8 +1,11 @@
-# The 12 demo-showcase reviews (SyntheticQa::Showcase): six completed bookings, one review from the
-# hirer about the act's owner (bookings 0-1 go to the first act, 2-3 to the second, 4-5 to the third) and one from the act's owner about the hirer. Text is unique and
-# specific; ratings are 4 or 5. `hirer_category` picks the kind of demo hirer who made the booking.
+# The demo-showcase reviews (SyntheticQa::Showcase): twelve completed bookings and 18 reviews. Every booking
+# carries a review from the hirer about the act's owner; the first six also carry one from the owner about the
+# hirer. `pro_act` is the position (0-4) among the acts marked `pro: true` in acts.yml: those five owners each end
+# up with three completed jobs and a published review, which makes them Verified Pro (5 percent of 110). Text is
+# unique and specific; ratings are 4 or 5. `hirer_category` picks the kind of demo hirer who made the booking.
 bookings:
   - event_name: Rooftop sangeet, 220 guests
+    pro_act: 0
     event_type: sangeet
     hirer_category: wedding
     audience: 220
@@ -20,6 +23,7 @@ bookings:
       title: Clear brief and payment on the day
       body: "The planner sent a run sheet a week ahead, arranged a green room and paid the balance before we packed up. Rare to work with a team that answers messages the same day."
   - event_name: Annual day dinner, 350 employees
+    pro_act: 0
     event_type: corporate
     hirer_category: corporate
     audience: 350
@@ -37,6 +41,7 @@ bookings:
       title: Well organised, slightly late soundcheck
       body: "The event team was polite and the hall was well prepared. The soundcheck started forty minutes late because the sound company was delayed, but we still finished in time."
   - event_name: Cocktail hour on a seaside lawn
+    pro_act: 1
     event_type: wedding
     hirer_category: wedding
     audience: 120
@@ -54,6 +59,7 @@ bookings:
       title: Considerate planners
       body: "The planners had shade, water and a power outlet ready for us, which is not always the case outdoors. They paid in full the same evening."
   - event_name: Friday lounge night with a live trio
+    pro_act: 1
     event_type: club
     hirer_category: venue
     audience: 90
@@ -71,6 +77,7 @@ bookings:
       title: A pleasure to play at this room
       body: "The stage is small but the sound system is well kept, and the owners gave us a meal between sets. Payment arrived by transfer before midnight."
   - event_name: Diwali evening for a bank's staff
+    pro_act: 2
     event_type: corporate
     hirer_category: corporate
     audience: 250
@@ -88,6 +95,7 @@ bookings:
       title: Friendly staff, one change on the day
       body: "The team changed the start time by thirty minutes on the day, but they informed us early and adjusted the fee for the extra wait. Good communication overall."
   - event_name: Baraat entry and reception dance hour
+    pro_act: 2
     event_type: wedding
     hirer_category: wedding
     audience: 400
@@ -104,3 +112,87 @@ bookings:
       rating: 5
       title: Organised and respectful
       body: "The planners sent a map of the walk and had water bottles for the team. The family was warm, and we were paid in cash and by transfer as agreed."
+  - event_name: Anniversary dinner in a hotel ballroom
+    pro_act: 3
+    event_type: hotel
+    hirer_category: venue
+    audience: 140
+    duration_minutes: 120
+    budget: [30000, 48000]
+    requirements: "Two 50-minute sets of jazz standards while guests dine, with a short piano interlude during speeches."
+    performance_fee: 36000
+    travel_fee: 0
+    hirer_review:
+      rating: 5
+      title: Kept the ballroom calm and the tables talking
+      body: "The trio set up in twenty minutes, played below the level of conversation and stopped cleanly for each speech. The pianist reworked two songs for the couple after a request at the interval."
+  - event_name: Chef's table evening at a rooftop restaurant
+    pro_act: 3
+    event_type: restaurant
+    hirer_category: venue
+    audience: 60
+    duration_minutes: 150
+    budget: [28000, 42000]
+    requirements: "Quiet jazz and blues for a seven-course menu, no drum kit, brushes only."
+    performance_fee: 32000
+    travel_fee: 0
+    hirer_review:
+      rating: 4
+      title: Right for the room, a little loud on the first set
+      body: "The drummer used brushes as asked and the bass carried the room well. The first set was louder than the kitchen wanted, and the trio turned it down within two songs once we mentioned it."
+  - event_name: Client evening for a law firm's partners
+    pro_act: 3
+    event_type: corporate
+    hirer_category: corporate
+    audience: 110
+    duration_minutes: 105
+    budget: [26000, 40000]
+    requirements: "Instrumental jazz during the reception, one vocal number chosen by the managing partner."
+    performance_fee: 33000
+    travel_fee: 2000
+    hirer_review:
+      rating: 5
+      title: Professional from the first email to the last note
+      body: "The band sent a tech rider, arrived at the agreed time and learned the partner's song from a phone recording. Our guests asked for the trio's card before the evening ended."
+  - event_name: Open-air weekend festival, second stage
+    pro_act: 4
+    event_type: festival
+    hirer_category: agency
+    audience: 900
+    duration_minutes: 60
+    budget: [55000, 80000]
+    requirements: "A 60-minute set on the second stage at dusk, changeover in 15 minutes, own instruments and in-ear monitors."
+    performance_fee: 62000
+    travel_fee: 6000
+    hirer_review:
+      rating: 5
+      title: A tight set that started on the minute
+      body: "The collective finished a sound check in ten minutes on a shared backline and opened at exactly the slot time. The sitar and bansuri passages drew a crowd from the main stage, and the crew had no complaints."
+  - event_name: College cultural night, main auditorium
+    pro_act: 4
+    event_type: concert
+    hirer_category: college
+    audience: 600
+    duration_minutes: 75
+    budget: [35000, 55000]
+    requirements: "A 75-minute concert of instrumental fusion, with a short talk about the instruments for first-year students."
+    performance_fee: 44000
+    travel_fee: 5000
+    hirer_review:
+      rating: 5
+      title: The students listened for seventy-five minutes
+      body: "The tabla player explained each instrument in plain words between pieces, and the whole hall stayed in their seats. Our faculty coordinator has asked for the group again for the next academic year."
+  - event_name: Screening night with a live score
+    pro_act: 4
+    event_type: cultural
+    hirer_category: production
+    audience: 180
+    duration_minutes: 90
+    budget: [40000, 60000]
+    requirements: "Play live to the final 25 minutes of a short film, then a 30-minute set in the foyer."
+    performance_fee: 46000
+    travel_fee: 0
+    hirer_review:
+      rating: 4
+      title: Careful with the cues, generous with the rehearsal
+      body: "They asked for the cut two weeks early and rehearsed to picture twice on their own time. One entry drifted by a second on the night, and the guitarist corrected it without anyone in the audience noticing."

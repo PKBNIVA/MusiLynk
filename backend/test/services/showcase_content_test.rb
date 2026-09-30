@@ -20,7 +20,7 @@ class ShowcaseContentTest < ActiveSupport::TestCase
     content.names.fetch("city_regions").each_value { |list| assert_empty list - regions.keys }
   end
 
-  test "bios: 110 distinct first-person bios of two to four sentences, no superlatives, no third person" do
+  test "bios: 110 distinct first-person bios of two to three sentences, no superlatives, no third person" do
     bios = content.bios.values.flatten
     assert_equal 110, bios.size
     assert_equal 110, bios.map { _1.fetch("text") }.uniq.size
@@ -31,7 +31,7 @@ class ShowcaseContentTest < ActiveSupport::TestCase
       assert_no_match BANNED_WORDS, text
       assert_no_match THIRD_PERSON, text
       assert_operator text.scan(/[.!?](?:\s|\z)/).size, :>=, 2, text
-      assert_operator text.scan(/[.!?](?:\s|\z)/).size, :<=, 4, text
+      assert_operator text.scan(/[.!?](?:\s|\z)/).size, :<=, 3, text
       assert_operator text.length, :>=, 120, text
       assert_empty bio.fetch("genres") - genres, "genres outside the taxonomy in: #{text}"
       assert_equal 2, bio.fetch("credits").size
@@ -116,11 +116,11 @@ class ShowcaseContentTest < ActiveSupport::TestCase
     assert_operator posts.count { _1.fetch("body").include?("?") }, :>=, 3, "questions for the community"
   end
 
-  test "reviews: six bookings, twelve distinct reviews rated 4 or 5" do
+  test "reviews: twelve bookings, eighteen distinct reviews rated 4 or 5" do
     bookings = content.booking_reviews
-    assert_equal 6, bookings.size
-    reviews = bookings.flat_map { [_1.fetch("hirer_review"), _1.fetch("musician_review")] }
-    assert_equal 12, reviews.map { _1.fetch("body") }.uniq.size
+    assert_equal 12, bookings.size
+    reviews = bookings.flat_map { [_1.fetch("hirer_review"), _1["musician_review"]].compact }
+    assert_equal 18, reviews.map { _1.fetch("body") }.uniq.size
     assert(reviews.all? { [4, 5].include?(_1.fetch("rating")) })
     bookings.each { assert_includes CatalogController::EVENT_TYPES, _1.fetch("event_type") }
   end
@@ -128,7 +128,8 @@ class ShowcaseContentTest < ActiveSupport::TestCase
   test "acts and cover notes" do
     assert_equal 12, content.acts.size
     assert_equal 12, content.acts.map { _1.fetch("name") }.uniq.size
-    assert_equal 3, content.acts.count { _1["pro"] }
+    assert_equal 5, content.acts.count { _1["pro"] }
+    assert_equal({ 0 => 2, 1 => 2, 2 => 2, 3 => 3, 4 => 3 }, content.booking_reviews.map { _1.fetch("pro_act") }.tally.sort.to_h)
     content.acts.each do |act|
       assert_includes CatalogController::ACT_TYPES, act.fetch("act_type")
       assert_includes content.bios.keys, act.fetch("leader")

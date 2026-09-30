@@ -2,9 +2,10 @@
 # SyntheticQa::Showcase. Only licence = Attribution (CC BY) tracks were picked, and every MP3 answered a
 # ranged request with HTTP 206 audio/mpeg when it was curated (2026-09-30). Note: ccMixter refuses
 # requests that carry no Referer or a Referer from another site (403); it serves the file when the
-# Referer is https://ccmixter.org/. `peaks` are 64 values 0-100: the maximum absolute sample in each
-# 1/64th of the track, decoded to mono 8 kHz and normalised to the loudest segment. Only these numbers
-# are stored; no audio is committed. `families` map a track to the kind of musician it suits.
+# Referer is https://ccmixter.org/. For that reason SyntheticQa::TrackMirror copies the files into the app's
+# bucket (demo/showcase/<id>.mp3) when the showcase is seeded, and the samples play from there.
+# `peaks` are 64 values 0-100: the maximum absolute sample in each 1/64th of the track, decoded to mono
+# 8 kHz and normalised to the loudest segment. Only these numbers are stored; no audio is committed. `families` map a track to the kind of musician it suits.
 tracks:
   - id: 28236
     title: "Freedom in my voice"

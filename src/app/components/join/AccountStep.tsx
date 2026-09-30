@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, useLocation } from 'react-router';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Field, FormError } from '../form/Field';
+import { MoreDetails } from '../help/MoreDetails';
 import { PasswordChecklist } from '../PasswordChecklist';
 import { CODE_LENGTH, CodeStep, focusField, useResendCooldown } from '../auth/CodeStep';
 import { apiPost, getSignInMethods, requestSignInCode } from '../../lib/api';
@@ -23,14 +24,29 @@ const ACCOUNT_FIELDS: AccountField[] = ['name', 'email', 'password', 'consent'];
  * The last sign-up step: name, email, then a password or an emailed code (the existing sign-in
  * paths), and the Terms and Privacy Policy box. Creates the account with the earlier answers:
  * sent with the password sign-up, or applied right after a code sign-up.
+ *
+ * `compact` is the one-screen hirer form: the caller's own fields come first (`lead`, checked by
+ * `validateLead` before this step's own checks), the name is optional and folded under "More"
+ * with the choice of a password, and a missing name falls back to `fallbackName()`.
  */
 export function AccountStep({
   role,
   starter,
   onBegin,
   onDone,
+  compact = false,
+  lead,
+  validateLead,
+  fallbackName,
 }: {
   role: 'jobseeker' | 'employer';
+  compact?: boolean;
+  /** Fields shown above the email (compact form). */
+  lead?: ReactNode;
+  /** Shows the lead fields' problems and focuses the first; returns whether they are all fine. */
+  validateLead?: () => boolean;
+  /** The account name when none was typed (compact form). */
+  fallbackName?: () => string;
   /** Called just before the account is created (the page stops treating the visitor as signed out). */
   onBegin?: () => void;
   /** The earlier steps' answers, read when the account is created. */
@@ -38,6 +54,7 @@ export function AccountStep({
   onDone: (user: User) => void;
 }) {
   const { register, verifyCode, setUser } = useAuth();
+  const location = useLocation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -88,18 +105,27 @@ export function AccountStep({
     setExists(false);
   };
 
+  // The name on the account: typed, else (compact form) the caller's fallback, such as the organisation.
+  const accountName = () => name.trim() || (compact ? (fallbackName?.() ?? '').trim() : '');
+
   /** Checks this step; shows every problem and focuses the first. */
   function validate() {
+    const leadOk = validateLead ? validateLead() : true;
     const next: Partial<Record<AccountField, string>> = {};
-    if (name.trim().length < 2) next.name = 'Enter your name (at least 2 letters).';
+    // With the caller's own fields incomplete the organisation may still supply the name, so wait for them.
+    if (accountName().length < 2 && (!compact || leadOk))
+      next.name = compact
+        ? 'Add your name under More, or fill in the organisation.'
+        : 'Enter your name (at least 2 letters).';
     if (!EMAIL_PATTERN.test(email.trim())) next.email = 'Enter your email address, like name@example.com.';
-    if (method === 'password' && !checkPasswordStrength(password, email, name).valid)
+    if (method === 'password' && !checkPasswordStrength(password, email, accountName()).valid)
       next.password = 'Choose a password that meets the checks below.';
     if (!consent) next.consent = 'Tick the box to agree to the Terms and Privacy Policy.';
     setErrors(next);
     const first = ACCOUNT_FIELDS.find((field) => next[field]);
-    if (first) focusField(`join-${first}`);
-    return !first;
+    // The caller's fields come first on the page, so their focus wins.
+    if (first && leadOk) focusField(`join-${first}`);
+    return !first && leadOk;
   }
 
   function showApiError(caught: unknown, fallback: string) {
@@ -129,7 +155,7 @@ export function AccountStep({
     setFormError('');
     try {
       const user = await register({
-        name: name.trim(),
+        name: accountName(),
         email: email.trim(),
         password,
         role,
@@ -149,7 +175,7 @@ export function AccountStep({
     setLoading(true);
     setFormError('');
     try {
-      const response = await requestSignInCode({ email: email.trim(), name: name.trim(), role, consent: true });
+      const response = await requestSignInCode({ email: email.trim(), name: accountName(), role, consent: true });
       setDebugCode(response.debugCode);
       setCode('');
       setCodeStep(true);
@@ -234,21 +260,44 @@ export function AccountStep({
     );
 
   const signInPath = `/auth/${role}`;
+  const nameField = (
+    <Field
+      id="join-name"
+      label={compact ? 'Your name (optional)' : 'Your name'}
+      error={errors.name}
+      hint={compact ? 'Shown to musicians. Defaults to your organisation.' : undefined}
+    >
+      <Input
+        autoComplete="name"
+        value={name}
+        maxLength={120}
+        onChange={(event) => {
+          setName(event.target.value);
+          clear('name');
+        }}
+        className="border-white/15 bg-black/20"
+      />
+    </Field>
+  );
+  const methodToggle = codesAvailable && passwordAvailable && (
+    <button
+      type="button"
+      onClick={() => {
+        touched.current = true;
+        setMethod(method === 'code' ? 'password' : 'code');
+        setErrors({});
+        setFormError('');
+      }}
+      className="min-h-11 w-full text-sm font-medium text-slate-300 hover:text-white"
+    >
+      {method === 'code' ? 'Use a password instead' : 'Email me a code instead'}
+    </button>
+  );
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4" aria-busy={loading}>
       {googleAvailable && <GoogleButton intent="signin" role={role} consent={consent} disabled={!consent} />}
-      <Field id="join-name" label="Your name" error={errors.name}>
-        <Input
-          autoComplete="name"
-          value={name}
-          maxLength={120}
-          onChange={(event) => {
-            setName(event.target.value);
-            clear('name');
-          }}
-          className="border-white/15 bg-black/20"
-        />
-      </Field>
+      {lead}
+      {!compact && nameField}
       <Field id="join-email" label="Email" error={errors.email}>
         <Input
           type="email"
@@ -263,8 +312,13 @@ export function AccountStep({
         />
       </Field>
       {exists && (
-        <p className="text-sm text-slate-300">
-          <Link to={signInPath} className="font-semibold text-violet-200 underline underline-offset-4">
+        <p role="status" className="rounded-xl border border-violet-300/30 bg-violet-500/10 p-3 text-sm text-slate-200">
+          You already have a Verse account with this email.{' '}
+          <Link
+            to={signInPath}
+            state={location.state}
+            className="font-semibold text-violet-200 underline underline-offset-4"
+          >
             Sign in instead
           </Link>
         </p>
@@ -301,6 +355,12 @@ export function AccountStep({
             </div>
           )}
         </Field>
+      )}
+      {compact && (
+        <MoreDetails label="More: your name, or a password instead of a code" forceOpen={!!errors.name}>
+          {nameField}
+          {methodToggle}
+        </MoreDetails>
       )}
       <div>
         <div className="flex items-start gap-3">
@@ -359,20 +419,7 @@ export function AccountStep({
           We email you a 6-digit code. No password to remember.
         </p>
       ) : null}
-      {codesAvailable && passwordAvailable && (
-        <button
-          type="button"
-          onClick={() => {
-            touched.current = true;
-            setMethod(method === 'code' ? 'password' : 'code');
-            setErrors({});
-            setFormError('');
-          }}
-          className="min-h-11 w-full text-sm font-medium text-slate-300 hover:text-white"
-        >
-          {method === 'code' ? 'Use a password instead' : 'Email me a code instead'}
-        </button>
-      )}
+      {!compact && methodToggle}
     </form>
   );
 }

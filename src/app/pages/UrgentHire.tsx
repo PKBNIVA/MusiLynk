@@ -1,19 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { PublicNav } from '../components/PublicNav';
 import { PhotoHeader } from '../components/landing/PhotoHeader';
 import { usePageMeta } from '../components/PageMeta';
 import { Card, CardContent } from '../components/ui/card';
-import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Field, textareaClass } from '../components/booking/BookingDialogs';
-import { AutocompleteInput } from '../components/ai/AutocompleteInput';
+import { UrgentRequestFields } from '../components/urgent/UrgentRequestFields';
+import { URGENT_PROMISE, useUrgentForm } from '../lib/urgentForm';
 import { apiGet, apiPost } from '../lib/api';
 import { errorMessage } from '../lib/errors';
 import { useAuth } from '../lib/authContext';
-import { saveUrgentDraft, type UrgentDraft } from '../lib/urgentDraft';
-import { defaultUrgentStartAt } from '../lib/landing';
+import { saveUrgentDraft } from '../lib/urgentDraft';
 import { toast } from 'sonner';
 import { CheckCircle2, Clock3, MessageCircle, Zap } from 'lucide-react';
 import type { UrgentRequest, UrgentRequestResponse } from '../lib/apiTypes';
@@ -35,73 +33,36 @@ export default function UrgentHire() {
   const [confirmed, setConfirmed] = useState<Confirmed | null>((location.state as LocationState)?.confirmed || null);
   // A hire page's "Post an urgent request" CTA prefills the role and city it was already showing.
   const prefill = new URLSearchParams(location.search);
-  const [roles, setRoles] = useState<string[]>(prefill.get('role') ? [prefill.get('role') as string] : []),
-    [city, setCity] = useState(prefill.get('city') ? [prefill.get('city') as string] : ['Mumbai']),
-    [venue, setVenue] = useState(''),
-    [startAt, setStartAt] = useState(() => {
-      // The landing page's "Need someone by tomorrow" band passes its date along.
-      const asked = prefill.get('startAt') || '';
-      return /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(asked) ? asked : defaultUrgentStartAt();
-    }),
-    [budgetMin, setBudgetMin] = useState(''),
-    [budgetMax, setBudgetMax] = useState(''),
-    [note, setNote] = useState(''),
-    [genres, setGenres] = useState<string[]>([]),
-    [error, setError] = useState(''),
-    [submitting, setSubmitting] = useState(false);
-
-  const problem = useMemo(() => {
-    if (!roles[0]?.trim() || !city[0]?.trim() || !startAt) return 'Add the role, city and when you need them.';
-    if (new Date(startAt).getTime() < Date.now() - 60_000) return 'Choose a time that has not already passed.';
-    for (const v of [budgetMin, budgetMax])
-      if (v.trim() && !/^\d+$/.test(v.trim())) return 'Budgets must be whole numbers.';
-    if (budgetMin.trim() && budgetMax.trim() && Number(budgetMax) < Number(budgetMin))
-      return 'Maximum budget must be at least the minimum.';
-    return '';
-  }, [roles, city, startAt, budgetMin, budgetMax]);
-
-  function draftPayload(): UrgentDraft {
-    return {
-      title: `${roles[0]} needed in ${city[0]}`,
-      roleName: roles[0],
-      city: city[0],
-      venue: venue.trim() || undefined,
-      startAt: new Date(startAt).toISOString(),
-      budgetMin: budgetMin.trim() || undefined,
-      budgetMax: budgetMax.trim() || undefined,
-      note: note.trim() || undefined,
-      genres: genres.length ? genres : undefined,
-    };
-  }
+  const urgent = useUrgentForm({ role: prefill.get('role') || undefined, city: prefill.get('city') || undefined });
+  const { form } = urgent;
+  const [submitting, setSubmitting] = useState(false);
+  // The landing page's "Need someone by tomorrow" band passes the date it showed along.
+  const askedStartAt = prefill.get('startAt') || '';
+  const setStartAt = urgent.set;
+  useEffect(() => {
+    if (/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(askedStartAt)) setStartAt('startAt', askedStartAt);
+  }, [askedStartAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit() {
-    if (problem) return setError(problem);
-    setError('');
-    const draft = draftPayload();
+    const body = urgent.validate();
+    if (!body) return;
     if (!user) {
       // Sign-in gated at submit: the draft survives the hop through the two-minute join flow (or
       // sign-in for existing hirers) and is submitted the moment they're signed in.
-      saveUrgentDraft(draft);
+      saveUrgentDraft(body);
       toast.message("Create a free hirer account and we'll post this right away.");
       navigate('/join/hiring');
       return;
     }
     setSubmitting(true);
     try {
-      const requirements = [draft.venue && `Venue/studio: ${draft.venue}`, draft.note].filter(Boolean).join('\n');
-      const d = await apiPost<{ id: string; notifiedCount: number; responseTimePromise: string }>('/urgent-requests', {
-        title: draft.title,
-        roleName: draft.roleName,
-        city: draft.city,
-        startAt: draft.startAt,
-        budgetMin: draft.budgetMin ? Number(draft.budgetMin) : null,
-        budgetMax: draft.budgetMax ? Number(draft.budgetMax) : null,
-        requirements: requirements || null,
-        genre: draft.genres?.join(', ') || null,
-      });
+      const d = await apiPost<{ id: string; notifiedCount: number; responseTimePromise: string }>(
+        '/urgent-requests',
+        body,
+      );
       setConfirmed({ id: d.id, notifiedCount: d.notifiedCount, responseTimePromise: d.responseTimePromise });
     } catch (e: unknown) {
-      setError(errorMessage(e, 'Could not publish this request. Please try again.'));
+      if (form.setFromApi(e, 'Could not publish this request. Please try again.')) form.focusFirst();
     } finally {
       setSubmitting(false);
     }
@@ -127,87 +88,20 @@ export default function UrgentHire() {
             </PhotoHeader>
             <Card className="bg-white/[.055] border-white/10 mt-6">
               <CardContent className="p-5 sm:p-6 space-y-4">
-                {error && (
+                {form.formError && (
                   <p role="alert" className="text-sm text-rose-300">
-                    {error}
+                    {form.formError}
                   </p>
                 )}
-                <AutocompleteInput
-                  id="urgent-role"
-                  field="roles"
-                  label="Role needed"
-                  multiple={false}
-                  values={roles}
-                  onChange={setRoles}
-                  placeholder="Drummer, wedding singer, live sound engineer…"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Date & time" htmlFor="urgent-start">
-                    <Input
-                      id="urgent-start"
-                      type="datetime-local"
-                      value={startAt}
-                      onChange={(e) => setStartAt(e.target.value)}
-                    />
-                  </Field>
-                  <AutocompleteInput
-                    id="urgent-city"
-                    field="cities"
-                    label="City"
-                    multiple={false}
-                    values={city}
-                    onChange={setCity}
-                  />
-                </div>
-                <Field label="Venue or studio (optional)" htmlFor="urgent-venue">
-                  <Input
-                    id="urgent-venue"
-                    value={venue}
-                    onChange={(e) => setVenue(e.target.value)}
-                    placeholder="e.g. Blue Frog, Lower Parel"
-                  />
-                </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Budget min (INR)" htmlFor="urgent-budget-min">
-                    <Input
-                      id="urgent-budget-min"
-                      type="number"
-                      min="0"
-                      value={budgetMin}
-                      onChange={(e) => setBudgetMin(e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Budget max (INR)" htmlFor="urgent-budget-max">
-                    <Input
-                      id="urgent-budget-max"
-                      type="number"
-                      min="0"
-                      value={budgetMax}
-                      onChange={(e) => setBudgetMax(e.target.value)}
-                    />
-                  </Field>
-                </div>
-                <AutocompleteInput
-                  id="urgent-genres"
-                  field="genres"
-                  label="Genres (optional)"
-                  values={genres}
-                  onChange={setGenres}
-                />
-                <Field label="Short note (optional)" htmlFor="urgent-note">
-                  <textarea
-                    id="urgent-note"
-                    className={textareaClass}
-                    maxLength={1000}
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="Anything they should know before saying yes—set list, dress code, load-in time."
-                  />
-                </Field>
+                <UrgentRequestFields values={urgent.values} errors={form.errors} onChange={urgent.set} />
                 <Button className="w-full" size="lg" disabled={submitting} onClick={() => void submit()}>
                   <Zap size={16} className="mr-2" />
                   {submitting ? 'Publishing…' : user ? 'Post urgent need' : 'Continue to sign up'}
                 </Button>
+                <p className="text-center text-sm text-slate-300" data-testid="urgent-promise">
+                  <Clock3 size={14} className="mr-1 inline" aria-hidden="true" />
+                  Expect a first response {URGENT_PROMISE}.
+                </p>
                 {!user && (
                   <p className="text-xs text-slate-500 text-center">
                     We'll save this and post it the moment your free hirer account is ready.

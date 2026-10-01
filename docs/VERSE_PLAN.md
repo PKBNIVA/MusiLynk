@@ -65,7 +65,7 @@ Resolved contradictions from the old plans (the code is the truth):
 | #140 | B8 musician flows (into `claude/launch-3`) | 2026-10-01 |
 | #143 | B10 admin console and integration one-liners (into `claude/launch-3`) | 2026-10-01 |
 | #145 | B6 copy and formatting sweep (into `claude/launch-3`) | 2026-10-01 |
-| #142 | A-16 server-side duplicate-submit guard on `POST /api/jobs` (B4's file): **open, not merged**; the client guard shipped in #141 | open |
+| #142 | A-16 server-side duplicate-submit guard on `POST /api/jobs` (B4's file; routed to launch-3 by the orchestrator; client guard in #141) (into `claude/launch-3`) | 2026-10-01 |
 | _(this PR)_ | Launch-3 → `production`: hirer and musician flows, admin fixes, copy sweep | on merge |
 
 ---
@@ -477,7 +477,7 @@ B0, B1, B4, B5, B9 start together (disjoint files). B2 and B3 start when B1 merg
 - **Day-30 rule:** ≥ 20 urgent fills and ≥ 5 deposits paid ⇒ open Delhi and Bengaluru; otherwise stay in Mumbai, fix the funnel, add no features.
 - **Monetisation gates:** ₹499 single post at day 30 if Pro conversion < 5 %; musician Pro (₹149–299) only at ≥ 70 % fill rate; booking fee 5–10 % only on completed live bookings > ₹50k; never sell musician visibility before delivering gigs.
 - **Weekly loop (owner + admin):** Monday pinned Stage thread, Tuesday digest, Friday fastest-responders post, a meetup a fortnight, badge-share nudge on every verification, review ask on every fill. Scorecard: sign-ups by source, % publishing within 24 h, verified count and median time, urgent fills within 24 h (target ≥ 70 %), median first response, digest open rate, active commenters, badge shares, reviews per fill.
-- **Parked from launch-3:** per-share OG image function (a Node serverless function `api/og/[type]/[id].ts` with a statically imported `@vercel/og`; 0.11.1 ran under Node, 1.0.x did not; keep the `/api/og/*` default-card rewrite until it passes deploy validation); PR #142 (A-16 server guard; needs a routing decision on B4's file); musician-level quote; `docs/API.md` for B2's filter params; personal first-fold imagery on Find work.
+- **Parked from launch-3:** per-share OG image function (a Node serverless function `api/og/[type]/[id].ts` with a statically imported `@vercel/og`; 0.11.1 ran under Node, 1.0.x did not; keep the `/api/og/*` default-card rewrite until it passes deploy validation); musician-level quote; `docs/API.md` for B2's filter params; personal first-fold imagery on Find work.
 - **Deferred, in order:** light mode; Instagram embeds (CSP + Meta review); YouTube channel and Spotify imports; WhatsApp OTP; admin merge tool; resumes/career record; Enterprise plan; native apps (not planned).
 - **Scale triggers:** search index audit at 20,000 members; second verification reviewer past ~150/week; two Puma processes + 2 GB at ~5 lakh members.
 - **Ambition check (kept from the 10-lakh assessment):** 10 lakh *users* in six months is not realistic for a professional marketplace; 25–50k professionals + 3–5k hirers with 10 lakh reach is the honest target, and the loops above are how it is earned.

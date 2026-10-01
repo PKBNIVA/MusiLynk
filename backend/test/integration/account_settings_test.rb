@@ -174,6 +174,7 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     codeonly = User.create!(name: "Code Only", email: "codeonly@example.com", password: SecureRandom.base58(32), role: "jobseeker", status: "active", email_verified: true)
     assert_not codeonly.password_set?
     token = session_for(codeonly)
+    other_device = session_for(codeonly)
 
     get "/api/me", headers: bearer(token)
     assert_equal false, response.parsed_body.dig("user", "passwordSet")
@@ -185,6 +186,8 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert codeonly.reload.password_set?
     assert AuditLog.exists?(actor: codeonly, action: "account.password_set")
+    get "/api/me", headers: bearer(other_device)
+    assert_response :success, "adding a first password does not sign out the other devices"
 
     post "/api/auth/login", params: { email: codeonly.email, password: "BrandNewPass456!" }, as: :json
     assert_response :success

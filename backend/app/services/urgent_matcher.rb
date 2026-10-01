@@ -13,23 +13,25 @@
 class UrgentMatcher
   Candidate = Struct.new(:user, :score, :reasons, keyword_init: true)
 
-  # Roles and instruments are compared as sets of whole words, never as substrings, so a Dholak
-  # player is not a "Dhol" player. Words that only say "someone who plays" are dropped, and the
-  # player form of an instrument is folded onto the instrument ("Drummer" = "Drum Kit").
+  # Roles and instruments are compared by meaning, never as substrings, so a Dholak player is not
+  # a "Dhol" player. Names are resolved through the shared search vocabulary (Search::Synonyms,
+  # config/search_synonyms.yml): "Gayak", "Vocalist" and "Playback Singer" are one role, as are
+  # "Tabla Vadak" and "Tablist", "Bansuri Player" and "Flautist", "Keys Player" and "Keyboardist".
+  # Words that only say "someone who plays" are dropped from names the vocabulary does not know.
   FILLER_WORDS = %w[player players artist artiste musician musicians the and of kit].freeze
-  INSTRUMENT_STEMS = {
-    "drummer" => "drum", "drums" => "drum", "guitarist" => "guitar", "guitars" => "guitar", "bassist" => "bass",
-    "keyboardist" => "keyboard", "keyboards" => "keyboard", "pianist" => "piano", "violinist" => "violin", "violist" => "viola",
-    "cellist" => "cello", "flautist" => "flute", "flutist" => "flute", "saxophonist" => "saxophone", "sitarist" => "sitar",
-    "trumpeter" => "trumpet", "trombonist" => "trombone", "clarinetist" => "clarinet", "harpist" => "harp", "organist" => "organ",
-    "vocalist" => "vocal", "vocals" => "vocal", "singer" => "vocal", "percussionist" => "percussion",
-    "accordionist" => "accordion", "oboist" => "oboe", "bongos" => "bongo", "congas" => "conga", "tablas" => "tabla"
-  }.freeze
 
-  # The comparable words of a role or instrument name ("Lead Vocalist" => {"lead", "vocal"}).
+  # The comparable parts of a role or instrument name: the vocabulary's canonical term when the
+  # whole name is known ("Lead Vocalist" => {"singer"}), otherwise its words, each resolved
+  # the same way ("Electric Guitarist" => {"electric", "guitarist"}).
   def self.role_tokens(text)
-    text.to_s.downcase.split(/[^[:alnum:]]+/).reject { _1.empty? || FILLER_WORDS.include?(_1) }
-      .map { INSTRUMENT_STEMS.fetch(_1, _1) }.to_set
+    phrase = text.to_s.downcase.split(/[^[:alnum:]]+/).reject(&:empty?).join(" ")
+    return Set.new if phrase.empty?
+    whole = Search::Synonyms.canonical(phrase)
+    return Set[whole] if whole
+    words = phrase.split.reject { FILLER_WORDS.include?(_1) }
+    stripped = Search::Synonyms.canonical(words.join(" "))
+    return Set[stripped] if stripped
+    words.map { Search::Synonyms.canonical(_1) || _1 }.to_set
   end
 
   # Whether two names mean the same thing: all the words of the shorter one appear in the other.

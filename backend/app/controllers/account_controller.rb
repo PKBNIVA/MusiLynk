@@ -113,7 +113,8 @@ class AccountController < ApplicationController
 
     current_user.update!(password: new_password, password_set_at: Time.current)
     current_user.email_tokens.usable("reset_password").update_all(used_at: Time.current)
-    revoke_other_sessions!
+    # Adding a first password does not sign anyone out; changing an existing one does.
+    revoke_other_sessions! unless first_password
     audit!(first_password ? "account.password_set" : "account.password_changed", current_user, { ip: request.remote_ip })
     render json: { ok: true, passwordSet: true }
   end

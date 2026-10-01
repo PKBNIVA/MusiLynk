@@ -35,6 +35,18 @@ class UrgentMatcherTest < ActiveSupport::TestCase
     assert_not UrgentMatcher.same_role?("", "Drummer")
   end
 
+  test "roles resolve through the search synonym groups, in English and Hindi" do
+    {
+      ["Gayak", "Vocalist"] => true, ["गायिका", "Singer"] => true, ["Playback Singer", "Lead Vocalist"] => true,
+      ["Tabla Vadak", "Tabla Player"] => true, ["Tablist", "Tabla"] => true, ["Bansuri Player", "Flautist"] => true,
+      ["Keys Player", "Keyboardist"] => true, ["Drum Kit", "Drummer"] => true,
+      ["Dholak Player", "Dhol Player"] => false, ["Bass Guitarist", "Electric Guitarist"] => false,
+      ["Tabla Player", "Flautist"] => false
+    }.each do |(a, b), expected|
+      assert_equal expected, UrgentMatcher.same_role?(a, b), "#{a} vs #{b}"
+    end
+  end
+
   test "excludes the requester even when their own profile would otherwise match" do
     @hirer.create_profile!(headline: "Also a drummer", location: "Mumbai", roles: ["Drummer"])
     assert_not_includes UrgentMatcher.call(@request).map { _1.user.id }, @hirer.id

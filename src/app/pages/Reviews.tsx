@@ -75,7 +75,7 @@ export default function Reviews() {
               <form onSubmit={submit} className={`space-y-3 ${employers.length === 0 ? 'hidden' : ''}`}>
                 {employers.length > 0 && (
                   <AppSelect
-                    aria-label="Employer"
+                    aria-label="Hirer"
                     value={employerId}
                     onValueChange={setEmployerId}
                     options={employers.map((e) => ({ value: e.id, label: e.companyName || e.name }))}

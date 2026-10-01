@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
-import { Gift } from 'lucide-react';
+import { UserAvatar } from '../components/kit/UserAvatar';
+import { useAuth } from '../lib/authContext';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
 import { Button } from '../components/ui/button';
@@ -10,6 +11,7 @@ import { usePageMeta } from '../components/PageMeta';
  * buy here and no hirer plans to show. (Hirers, and musicians who also hire, use /employer/billing.)
  */
 export default function MusicianBilling() {
+  const { user } = useAuth();
   usePageMeta('Plan & billing', 'Verse is free for musicians during the beta.');
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -21,9 +23,14 @@ export default function MusicianBilling() {
           data-testid="free-during-beta"
           className="flex gap-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/[.06] p-5"
         >
-          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-300">
-            <Gift aria-hidden="true" size={20} />
-          </span>
+          <UserAvatar
+            id={user?.id || 'me'}
+            name={user?.name || 'You'}
+            size="xl"
+            photoUrl={user?.photoUrl}
+            art={!user?.photoUrl}
+            eager
+          />
           <div>
             <h2 id="free-beta" className="text-lg font-semibold">
               Free during beta

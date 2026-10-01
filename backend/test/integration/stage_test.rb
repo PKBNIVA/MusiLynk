@@ -383,6 +383,21 @@ class StageTest < ActionDispatch::IntegrationTest
     assert_nil media.last["url"]
   end
 
+  test "a page of posts with photos looks the urls up in one query" do
+    posts = 4.times.map do |i|
+      upload = Upload.create!(user: @alice, storage: "s3", key: "uploads/#{@alice.id}/a/p#{i}.jpg", filename: "p#{i}.jpg", content_type: "image/jpeg",
+        byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/p#{i}.jpg")
+      Post.create!(author_type: "user", author_id: @alice.id, created_by_user_id: @alice.id, body: "Pic #{i}", media: [{ uploadId: upload.id, type: "image" }])
+    end
+    upload_selects = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, payload| upload_selects << payload[:sql] if payload[:sql].match?(/FROM "uploads"/) }
+    get "/api/stage/feed", headers: auth(@bob)
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+    urls = response.parsed_body["posts"].select { posts.map(&:id).include?(_1["id"]) }.map { _1["media"].first["url"] }
+    assert_equal 4, urls.compact.size
+    assert_operator upload_selects.size, :<=, 1, "uploads should be queried once per page, not once per post"
+  end
+
   test "stage post uploads are not swept as unreferenced" do
     upload = Upload.create!(user: @alice, storage: "s3", key: "uploads/#{@alice.id}/a/p.jpg", filename: "p.jpg", content_type: "image/jpeg",
       byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/p.jpg", created_at: 3.days.ago)

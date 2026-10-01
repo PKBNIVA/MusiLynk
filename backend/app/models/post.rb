@@ -139,9 +139,26 @@ class Post < ApplicationRecord
   def media_json
     items = Array(media).map { _1.is_a?(Hash) ? _1.stringify_keys : _1 }
     return items if items.empty? || created_by_user_id.blank?
-    ids = items.filter_map { _1["uploadId"] if _1.is_a?(Hash) }
-    urls = Upload.complete.where(id: ids, user_id: created_by_user_id).pluck(:id, :public_url).to_h
+    urls = @media_urls || Post.media_urls_for([self])
     items.map { |item| item.is_a?(Hash) && urls[item["uploadId"]].present? ? item.merge("url" => urls[item["uploadId"]]) : item }
+  end
+
+  # Resolves the media urls of a whole page of posts in one query, so serialising N posts does
+  # not run N Upload lookups. Call before api_json on each; returns the posts.
+  def self.preload_media_urls(posts)
+    urls = media_urls_for(posts)
+    posts.each { _1.instance_variable_set(:@media_urls, urls) }
+  end
+
+  # {upload_id => public_url} for the finished uploads that the posts' own authors attached.
+  def self.media_urls_for(posts)
+    pairs = posts.filter_map do |post|
+      next if post.created_by_user_id.blank?
+      Array(post.media).filter_map { |item| [item["uploadId"] || item[:uploadId], post.created_by_user_id] if item.is_a?(Hash) }
+    end.flatten(1).reject { _1.first.blank? }
+    return {} if pairs.empty?
+    Upload.complete.where(id: pairs.map(&:first).uniq, user_id: pairs.map(&:last).uniq).pluck(:id, :user_id, :public_url)
+      .select { |id, user_id, _| pairs.include?([id, user_id]) }.to_h { |id, _, url| [id, url] }
   end
 
   def event_json

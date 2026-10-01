@@ -52,14 +52,16 @@ export default function JobSearch() {
     const error = await list.search(query);
     if (error) toast.error(error);
   });
-  useEffect(() => {
-    void run();
-  }, [query, run]);
   // First visit with no search in the URL: start from the musician's own roles and city. They show
   // as chips below and are removed like any other filter; this runs once per visit, so removing
-  // them (or pressing Back) is never undone.
+  // them (or pressing Back) is never undone. The first fetch waits for them, so it is one request.
   const profileRoles = (user?.roles ?? []).filter(Boolean).slice(0, 6);
   const defaultsApplied = useRef(false);
+  const waitingForDefaults =
+    Boolean(user) && !defaultsApplied.current && !query && Boolean(user?.location || profileRoles[0]);
+  useEffect(() => {
+    if (!waitingForDefaults) void run();
+  }, [query, run, waitingForDefaults]);
   useEffect(() => {
     if (defaultsApplied.current || !user) return;
     defaultsApplied.current = true;

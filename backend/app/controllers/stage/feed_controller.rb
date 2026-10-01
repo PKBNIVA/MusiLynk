@@ -31,6 +31,7 @@ module Stage
       start_index = start_index_for(scored, decode_cursor(params[:cursor]))
       page = scored[start_index, PAGE_SIZE] || []
 
+      Post.preload_media_urls(page.map(&:last))
       applauded = applauded_post_ids(page.map(&:last))
       next_cursor = page.length == PAGE_SIZE && scored[start_index + PAGE_SIZE] ? encode_cursor(page.last, start_index + page.length) : nil
 

@@ -6,6 +6,9 @@ import MusicianBilling from '../MusicianBilling';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 vi.mock('../../components/Navigation', () => ({ Navigation: () => null }));
+vi.mock('../../lib/authContext', () => ({
+  useAuth: () => ({ user: { id: 'u1', name: 'Asha Rao', photoUrl: null } }),
+}));
 
 let container: HTMLDivElement;
 let root: Root;
@@ -29,6 +32,7 @@ describe('MusicianBilling', () => {
       ),
     );
     expect(container.querySelector('[data-testid="free-during-beta"]')?.textContent).toContain('Free during beta');
+    expect(container.querySelector('[data-testid="free-during-beta"] [data-testid="user-avatar"]')).not.toBeNull();
     expect(container.textContent).not.toMatch(/\b(Pro|Studio)\b|trial|upgrade/i);
   });
 });

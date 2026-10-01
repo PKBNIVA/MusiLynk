@@ -3,11 +3,14 @@ import { FEATURE_RESUMES, FEATURE_STAGE } from './lib/features';
 import React from 'react';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PageLoading } from './components/ExperienceStates';
+import { PublicPageLoading } from './components/PublicPageLoading';
 import { RouteErrorPage } from './components/RouteErrorPage';
 import type { Role } from './lib/authContext';
 const L = (f: () => Promise<{ default: React.ComponentType }>) => React.lazy(f);
+// Public pages wait on their chunk behind a quiet dark screen, not the "Preparing your workspace"
+// splash: that splash was the first paint (and so the LCP candidate) on every signed-out route.
 const S = ({ children }: { children: React.ReactNode }) => (
-  <React.Suspense fallback={<PageLoading />}>{children}</React.Suspense>
+  <React.Suspense fallback={<PublicPageLoading />}>{children}</React.Suspense>
 );
 /** Redirects to another path while keeping the query string and hash (e.g. /login?next=…). */
 const Redirect = ({ to }: { to: string }) => {
@@ -15,9 +18,9 @@ const Redirect = ({ to }: { to: string }) => {
   return <Navigate to={`${to}${search}${hash}`} replace />;
 };
 const P = ({ roles, children }: { roles: Role[]; children: React.ReactNode }) => (
-  <S>
+  <React.Suspense fallback={<PageLoading />}>
     <ProtectedRoute roles={roles}>{children}</ProtectedRoute>
-  </S>
+  </React.Suspense>
 );
 // The public marketplace. Its pages are declared inside the function so that the admin build,
 // which never calls it, emits none of their chunks.

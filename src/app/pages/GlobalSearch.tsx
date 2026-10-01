@@ -183,7 +183,7 @@ export default function GlobalSearch() {
             Search is taking a breather. Please try again in a moment.
           </div>
         )}
-        <div className="mt-8 grid gap-3" aria-live="polite">
+        <div className="mt-8 grid grid-cols-1 gap-3" aria-live="polite">
           {!searched || loading || error ? null : results.length === 0 ? (
             <div className="verse-surface rounded-2xl">
               <NoResults
@@ -201,7 +201,7 @@ export default function GlobalSearch() {
               const startsGroup = selectedType === 'all' && (index === 0 || results[index - 1].type !== r.type);
               const total = first?.totals?.[r.type];
               return (
-                <div key={`${r.type}-${r.id}`} className="grid gap-3">
+                <div key={`${r.type}-${r.id}`} className="grid grid-cols-1 gap-3">
                   {startsGroup && (
                     <div
                       className="mt-3 flex flex-wrap items-baseline justify-between gap-2"

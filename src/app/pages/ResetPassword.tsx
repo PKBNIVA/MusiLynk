@@ -32,6 +32,7 @@ export default function ResetPassword() {
   const [error, setError] = useState('');
   const [resendEmail, setResendEmail] = useState('');
   const [resendDone, setResendDone] = useState(false);
+  const [done, setDone] = useState(false);
   const strong = checkPasswordStrength(password).valid;
 
   useEffect(() => {
@@ -64,10 +65,15 @@ export default function ResetPassword() {
     setBusy(true);
     setError('');
     try {
-      const d = await apiPost<{ ok: boolean; user: User; accessToken: string }>('/auth/reset-password', {
-        token,
-        password,
-      });
+      const d = await apiPost<{ ok: boolean; user?: User; accessToken?: string; signInRequired?: boolean }>(
+        '/auth/reset-password',
+        { token, password },
+      );
+      /* Admins (and anyone else the API does not sign in) get no token: send them to sign in. */
+      if (d.signInRequired || !d.accessToken || !d.user) {
+        setDone(true);
+        return;
+      }
       setAccessToken(d.accessToken);
       setUser(d.user);
       toast.success('Password updated. You are signed in.');
@@ -103,13 +109,28 @@ export default function ResetPassword() {
       <main className="max-w-md mx-auto px-5 py-24">
         <h1 className="text-4xl font-bold">Choose a new password</h1>
 
-        {check === 'checking' && (
+        {done && (
+          <div className="mt-6 space-y-5">
+            <p role="status" className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 p-3 text-emerald-100">
+              {role === 'admin'
+                ? 'Password updated. Admins sign in at the admin site.'
+                : 'Password updated. Sign in with your new password.'}
+            </p>
+            {role !== 'admin' && (
+              <Button asChild className="w-full">
+                <Link to={`/auth/${role}`}>Sign in</Link>
+              </Button>
+            )}
+          </div>
+        )}
+
+        {!done && check === 'checking' && (
           <p className="text-slate-400 mt-3" aria-live="polite">
             Checking your link…
           </p>
         )}
 
-        {check === 'invalid' && (
+        {!done && check === 'invalid' && (
           <div className="mt-6 space-y-5">
             <p role="alert" className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-3 text-rose-200">
               This link has expired or was already used. Request a new one below.
@@ -143,7 +164,7 @@ export default function ResetPassword() {
           </div>
         )}
 
-        {check === 'valid' && (
+        {!done && check === 'valid' && (
           <form onSubmit={submit} className="mt-6 space-y-3" aria-busy={busy}>
             <Label htmlFor="reset-password" className="text-slate-200">
               New password

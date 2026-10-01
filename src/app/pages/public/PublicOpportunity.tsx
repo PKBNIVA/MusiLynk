@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
 import { PublicDetailState } from '../../components/PublicDetailState';
@@ -14,58 +14,7 @@ import { SimilarJobs } from '../../components/SimilarJobs';
 import { useAuth } from '../../lib/authContext';
 import { ShareToStageButton } from '../../components/stage/ShareToStageButton';
 import { FEATURE_STAGE } from '../../lib/features';
-
-const EMPLOYMENT_TYPES: Record<string, string> = {
-  'full-time': 'FULL_TIME',
-  'full time': 'FULL_TIME',
-  'part-time': 'PART_TIME',
-  'part time': 'PART_TIME',
-  contract: 'CONTRACTOR',
-  contractor: 'CONTRACTOR',
-  freelance: 'CONTRACTOR',
-  'project-based': 'CONTRACTOR',
-  temporary: 'TEMPORARY',
-  temp: 'TEMPORARY',
-};
-
-/** JobPosting structured data for a public opportunity, built from the same fields as the
- * backend share page (backend/app/controllers/share_pages_controller.rb). */
-function jobPostingJsonLd(j: Job) {
-  const employmentType = EMPLOYMENT_TYPES[(j.type || j.kind || '').toLowerCase()] || 'OTHER';
-  const ld: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': 'JobPosting',
-    title: j.title,
-    description: j.description || '',
-    datePosted: j.published_at || j.created_at,
-    employmentType,
-    hiringOrganization: { '@type': 'Organization', name: j.company },
-    directApply: true,
-    identifier: { '@type': 'PropertyValue', name: 'Verse', value: j.id },
-  };
-  if (j.application_deadline) ld.validThrough = j.application_deadline;
-  if (j.workplace === 'remote') {
-    ld.jobLocationType = 'TELECOMMUTE';
-  } else {
-    ld.jobLocation = {
-      '@type': 'Place',
-      address: { '@type': 'PostalAddress', addressLocality: j.location, addressCountry: 'IN' },
-    };
-  }
-  if (j.compensation_min != null || j.compensation_max != null) {
-    ld.baseSalary = {
-      '@type': 'MonetaryAmount',
-      currency: j.currency || 'INR',
-      value: {
-        '@type': 'QuantitativeValue',
-        minValue: j.compensation_min,
-        maxValue: j.compensation_max,
-        unitText: (j.compensation_period || 'MONTH').toUpperCase(),
-      },
-    };
-  }
-  return ld;
-}
+import { jobPostingJsonLd } from './jobPostingJsonLd';
 
 export default function PublicOpportunity() {
   const { id } = useParams();
@@ -89,10 +38,12 @@ export default function PublicOpportunity() {
   useEffect(() => {
     void load();
   }, [load]);
+  // Memoised: usePageMeta rewrites the head whenever this object changes identity.
+  const jsonLd = useMemo(() => (j ? jobPostingJsonLd(j) : undefined), [j]);
   usePageMeta(
     j?.title && `${j.title}${j.company ? ` at ${j.company}` : ''}`,
     j ? `${j.opportunity_kind || 'Opportunity'} in ${j.location || 'India'}. ${j.description || ''}` : undefined,
-    { canonicalPath: `/opportunities/${id}`, type: 'article', jsonLd: j ? jobPostingJsonLd(j) : undefined },
+    { canonicalPath: `/opportunities/${id}`, type: 'article', jsonLd },
   );
   if (loading || error || !j)
     return (

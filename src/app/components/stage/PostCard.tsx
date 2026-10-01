@@ -301,7 +301,7 @@ export function PostCard({ post, onChanged, onDeleted }: PostCardProps) {
         </ul>
       )}
 
-      <div className="mt-4 flex items-center gap-1 border-t border-white/10 pt-3 text-sm text-slate-300">
+      <div className="mt-4 flex flex-wrap items-center gap-1 border-t border-white/10 pt-3 text-sm text-slate-300">
         <Button
           type="button"
           variant="ghost"

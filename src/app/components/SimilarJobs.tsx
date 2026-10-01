@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { JobCard } from './JobCard';
 import { apiGet } from '../lib/api';
 import type { Job } from '../lib/apiTypes';
@@ -29,19 +29,38 @@ export function pickSimilar(
  */
 export function SimilarJobs({ job, basePath }: { job: Job; basePath: string }) {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const anchor = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let live = true;
+    let observer: IntersectionObserver | undefined;
     // No kind filter: pickSimilar ranks same kind first and falls back to city and genre.
-    apiGet<{ jobs?: Job[] }>('/jobs?limit=24')
-      .then((d) => live && setJobs(pickSimilar(job, d.jobs || [])))
-      .catch(() => live && setJobs([]));
+    const fetchSimilar = () =>
+      apiGet<{ jobs?: Job[] }>('/jobs?limit=24')
+        .then((d) => live && setJobs(pickSimilar(job, d.jobs || [])))
+        .catch(() => live && setJobs([]));
+    // The list is below the fold: wait until it is about to scroll into view so the 24-job fetch
+    // and the card render do not compete with the first paint of the opportunity itself.
+    if (anchor.current && typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          observer?.disconnect();
+          void fetchSimilar();
+        },
+        { rootMargin: '400px 0px' },
+      );
+      observer.observe(anchor.current);
+    } else {
+      void fetchSimilar();
+    }
     return () => {
       live = false;
+      observer?.disconnect();
     };
     // The list depends on which opportunity is open, not on every field of it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job.id]);
-  if (!jobs.length) return null;
+  if (!jobs.length) return <div ref={anchor} aria-hidden="true" />;
   return (
     <section aria-labelledby="similar-jobs" data-testid="similar-jobs">
       <h2 id="similar-jobs" className="text-xl font-semibold">

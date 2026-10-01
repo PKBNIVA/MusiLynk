@@ -6,7 +6,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User } from '../lib/authContext';
-import { consumeReturnTo, GOOGLE_AUTH_ERROR_MESSAGES, getSignInMethods, requestSignInCode } from '../lib/api';
+import { apiPost, consumeReturnTo, GOOGLE_AUTH_ERROR_MESSAGES, getSignInMethods, requestSignInCode } from '../lib/api';
 import { GoogleButton } from '../components/auth/GoogleButton';
 import { submitUrgentDraft } from '../lib/urgentDraft';
 import { toast } from 'sonner';
@@ -43,6 +43,9 @@ export default function AuthPage() {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  /* Set when the API refused a password sign-in because the email is not confirmed yet. */
+  const [unverified, setUnverified] = useState(false);
+  const [linkNote, setLinkNote] = useState('');
   const [cooldown, startCooldown] = useResendCooldown();
   /* Until the API says otherwise both paths are offered; an explicit `false` means email cannot be delivered. */
   const [codesAvailable, setCodesAvailable] = useState(true);
@@ -133,6 +136,8 @@ export default function AuthPage() {
     setCodeStep('email');
     setCode('');
     setError('');
+    setUnverified(false);
+    setLinkNote('');
     setChallenge(null);
   };
   const leaveChallenge = () => {
@@ -161,6 +166,8 @@ export default function AuthPage() {
   async function submitPassword() {
     setLoading(true);
     setError('');
+    setUnverified(false);
+    setLinkNote('');
     try {
       const result = await login(email, password);
       if (isSecondFactorChallenge(result)) {
@@ -171,7 +178,15 @@ export default function AuthPage() {
     } catch (e: unknown) {
       /* The API refuses admin passwords from this site once the admin site is live. */
       if (errorCode(e) === 'ADMIN_USE_ADMIN_SITE') setError(errorMessage(e, ADMIN_SITE_MESSAGE));
-      else if (errorCode(e) === 'USE_EMAIL_CODE') {
+      else if (errorCode(e) === 'EMAIL_VERIFICATION_REQUIRED') {
+        setError(
+          errorMessage(
+            e,
+            'Confirm your email address before signing in with a password. We can send the link again, or you can sign in with an emailed code.',
+          ),
+        );
+        setUnverified(true);
+      } else if (errorCode(e) === 'USE_EMAIL_CODE') {
         /* This account has no password: say so, and put the code step in front of them. */
         const message = errorMessage(e, 'This account uses email codes — send me a code.');
         switchMethod('code');
@@ -181,6 +196,20 @@ export default function AuthPage() {
         setError(errorMessage(e, 'Unable to continue'));
         focusField('auth-password');
       }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* The answer is always the same 200 message, so nothing here implies the account exists. */
+  async function resendVerification() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const r = await apiPost<{ ok?: boolean; message?: string }>('/auth/resend-verification', { email });
+      setLinkNote(r?.message || 'If this email can be used on Verse, a confirmation link is on its way.');
+    } catch (e: unknown) {
+      setLinkNote(errorMessage(e, 'Could not send the link. Try again.'));
     } finally {
       setLoading(false);
     }
@@ -363,6 +392,26 @@ export default function AuthPage() {
       {error && (
         <div id="auth-password-error">
           <FormError>{error}</FormError>
+        </div>
+      )}
+      {unverified && (
+        <div className="space-y-2" data-testid="unverified-actions">
+          {linkNote && (
+            <p
+              role="status"
+              className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100"
+            >
+              {linkNote}
+            </p>
+          )}
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button type="button" variant="outline" disabled={loading} onClick={() => void resendVerification()}>
+              Send the link again
+            </Button>
+            <Button type="button" variant="outline" disabled={loading} onClick={() => switchMethod('code')}>
+              Email me a code instead
+            </Button>
+          </div>
         </div>
       )}
       <Button disabled={loading} className="w-full border-0 bg-gradient-to-r from-fuchsia-600 to-violet-600">

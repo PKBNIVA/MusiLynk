@@ -43,7 +43,7 @@ export function NowOnVerse({ city }: { city: string }) {
         <h2 id="now-title" className="text-xl font-black md:text-2xl">
           Now on Verse in {city}
         </h2>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {people
             ? people.map((person) => <PersonCard key={person.id} person={person} />)
             : Array.from({ length: SHOWN }, (_, index) => (

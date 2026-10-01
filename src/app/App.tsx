@@ -1,9 +1,8 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense } from 'react';
 import { RouterProvider } from 'react-router';
 import { router } from './routes';
 import { AuthProvider } from './lib/authContext';
 import { AppErrorBoundary } from './components/ExperienceStates';
-import { installModalInert } from './lib/modalInert';
 import { PlanLimitPrompt } from './components/PlanLimitPrompt';
 
 // Dynamically imported so the analytics module (queueing, flush timers, sendBeacon wiring)
@@ -16,7 +15,6 @@ const Toaster = lazy(() => import('./components/ui/sonner').then((module) => ({ 
 
 // Animations are plain CSS; styles/index.css shortens them for prefers-reduced-motion.
 export default function App() {
-  useEffect(() => installModalInert(), []);
   return (
     <AppErrorBoundary>
       <AuthProvider>

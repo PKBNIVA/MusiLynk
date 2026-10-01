@@ -5,10 +5,12 @@ import { signInWithDialogFixtures } from './support/dialog-fixtures';
 // Cross-cutting accessibility of shared widgets: account menu, workspace-tools menu, and the page behind an open modal.
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
 
+// aria-hidden-focus is left out on purpose: Radix hides the page behind an open menu or dialog with
+// aria-hidden (still focus-trapped, so it cannot be reached). Making it inert as well kept the page
+// inert through the close animation, which swallowed typing and lost focus on close.
 const RULES = [
   'aria-required-children',
   'aria-required-parent',
-  'aria-hidden-focus',
   'listitem',
   'list',
   'label',

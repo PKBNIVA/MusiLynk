@@ -35,6 +35,7 @@ import {
   rememberMediaUrl,
   splitHashtags,
   groupFeed,
+  isSystemPost,
   unfollowActor,
   updatePost,
   useActingAs,
@@ -361,5 +362,14 @@ describe('groupFeed', () => {
     expect(entries.map((e) => e.kind)).toEqual(['system', 'post', 'post', 'post', 'system']);
     expect(entries[0].kind === 'system' && entries[0].posts.map((p) => p.id)).toEqual(['1', '2']);
     expect(entries[4].kind === 'system' && entries[4].posts).toHaveLength(3);
+  });
+
+  it('turns a feed of only system posts into one entry, so an empty Stage is not five identical cards', () => {
+    const feed = ['1', '2', '3', '4', '5'].map((id) => make(id, 'system', true));
+    const entries = groupFeed(feed);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].kind === 'system' && entries[0].posts).toHaveLength(5);
+    expect(feed.every(isSystemPost)).toBe(true);
+    expect(isSystemPost(make('6', 'update'))).toBe(false);
   });
 });

@@ -221,7 +221,7 @@ test('interview scheduling and recruiter notes use in-page dialogs, not browser 
   await page.getByRole('button', { name: 'Move to…' }).click();
   await page.getByRole('menuitem', { name: 'Rate / note' }).click();
   const notes = page.getByRole('dialog', { name: 'Rate and note' });
-  await notes.getByLabel('Recruiter note').fill('Great feel');
+  await notes.getByLabel('Private note').fill('Great feel');
   await chooseOption(notes.getByLabel('Internal rating'), '4 / 5');
   await notes.getByRole('button', { name: 'Save notes' }).click();
   await expect(notes).toBeHidden();
@@ -296,8 +296,8 @@ test('organization verification asks for a valid link in a dialog', async ({ pag
 test('compare without a selection guides back to talent search instead of erroring', async ({ page }) => {
   const { calls } = await signIn(page, 'jobseeker');
   await page.goto('/jobseeker/compare');
-  await expect(page.getByText(/(Pick|Select) two to four professionals/)).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Choose professionals' })).toHaveAttribute(
+  await expect(page.getByText(/(Pick|Select) two to four musicians/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Choose musicians' })).toHaveAttribute(
     'href',
     '/jobseeker/hiring/talent',
   );

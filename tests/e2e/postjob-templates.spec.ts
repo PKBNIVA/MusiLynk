@@ -161,7 +161,7 @@ test('a 402 plan limit on publish opens the plan-limit dialog instead of a toast
   );
   await expect(dialog).toContainText('We saved this opportunity as a draft.');
   await expect(dialog.getByRole('button', { name: 'See plans' })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Close another listing' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Close another opportunity' })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Keep as draft' })).toBeVisible();
   // No navigation until a button is clicked.
   await expect(page).toHaveURL(/\/employer\/post-job$/);

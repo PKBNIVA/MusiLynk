@@ -159,9 +159,9 @@ test('choosing not to disclose the pay hides the amounts and warns about fewer a
   await page.getByRole('combobox', { name: 'Location' }).press('Enter');
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
   // The warning is about hiding the pay, so the untouched "Show the pay" choice does not carry it.
-  await expect(page.getByText('Listings that don’t show the pay get fewer applicants.')).toHaveCount(0);
+  await expect(page.getByText('Opportunities that don’t show the pay get fewer applicants.')).toHaveCount(0);
   await page.getByLabel('Not disclosed').check();
-  await expect(page.getByText('Listings that don’t show the pay get fewer applicants.')).toBeVisible();
+  await expect(page.getByText('Opportunities that don’t show the pay get fewer applicants.')).toBeVisible();
   await expect(page.getByLabel('Minimum pay')).toHaveCount(0);
   await page.getByRole('button', { name: 'Next: Screen & review' }).click();
   await page
@@ -191,7 +191,7 @@ test('pay edits on a live listing say nothing about review; title edits warn', a
     .getByRole('button', { name: /Screen & review/ })
     .first()
     .click();
-  await expect(page.getByText('send the listing back to review')).toHaveCount(0);
+  await expect(page.getByText('send the opportunity back to review')).toHaveCount(0);
   const save = page.getByRole('button', { name: 'Save changes' });
   await expect(save).toBeEnabled();
 
@@ -205,7 +205,7 @@ test('pay edits on a live listing say nothing about review; title edits warn', a
     .first()
     .click();
   await expect(
-    page.getByText('Changes to the title, description or requirements send the listing back to review.'),
+    page.getByText('Changes to the title, description or requirements send the opportunity back to review.'),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save & resubmit for review' })).toBeVisible();
 

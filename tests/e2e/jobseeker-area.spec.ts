@@ -78,7 +78,7 @@ test('changing a filter re-runs the search without pressing Search', async ({ pa
   await expect.poll(() => queries.some((q) => q.includes('kind=audition'))).toBe(true);
 });
 
-test('the job detail "Message employer" button opens (or starts) a conversation about the job', async ({ page }) => {
+test('the job detail "Message hirer" button opens (or starts) a conversation about the job', async ({ page }) => {
   const posted: Record<string, unknown>[] = [];
   await signIn(page, (request, path) => {
     if (path === '/api/jobs/job-1') return { body: { job: job('job-1') } };
@@ -184,7 +184,7 @@ test('withdrawing an application asks first and titles link to the opportunity',
   });
   await page.getByRole('button', { name: 'Withdraw' }).click();
   const confirm = page.getByRole('alertdialog', { name: 'Withdraw your application for “Tour Drummer”?' });
-  await expect(confirm).toContainText('The employer will no longer see it.');
+  await expect(confirm).toContainText('The hirer will no longer see it.');
   await page.keyboard.press('Escape');
   await expect(confirm).toBeHidden();
   expect(deletes).toBe(0);
@@ -230,8 +230,8 @@ test('compare without a selection guides the user and skips the API', async ({ p
       : undefined,
   );
   await page.goto('/jobseeker/compare');
-  await expect(page.getByText('Select two to four professionals')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Choose professionals' })).toHaveAttribute(
+  await expect(page.getByText('Select two to four musicians')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Choose musicians' })).toHaveAttribute(
     'href',
     '/jobseeker/hiring/talent',
   );

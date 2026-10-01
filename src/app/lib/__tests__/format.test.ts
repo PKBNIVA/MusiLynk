@@ -152,8 +152,8 @@ describe('formatWhen', () => {
     expect(formatWhen('2026-09-28T18:00:00Z', opts)).toBe('Today 6 pm');
     expect(formatWhen('2026-09-29T18:30:00Z', opts)).toBe('Tomorrow 6:30 pm');
   });
-  it('uses the weekday and date further out', () => {
-    expect(formatWhen('2026-10-03T09:00:00Z', opts)).toBe('Sat 3 Oct 9 am');
+  it('uses the date and time further out', () => {
+    expect(formatWhen('2026-10-03T09:00:00Z', opts)).toBe('3 Oct, 9 am');
   });
   it('falls back for empty values', () => {
     expect(formatWhen(null, { fallback: '-' })).toBe('-');
@@ -206,6 +206,14 @@ describe('formatReplyTime', () => {
     expect(formatReplyTime(120)).toBe('Replies in ~2 h');
     expect(formatReplyTime(null)).toBe('');
     expect(formatReplyTime(undefined)).toBe('');
+  });
+});
+
+describe('formatWhen in another year', () => {
+  it('adds the year only when it differs from now', () => {
+    const now = new Date('2026-12-20T10:00:00Z');
+    expect(formatWhen('2027-01-09T13:00:00Z', { timeZone: 'UTC', now })).toBe('9 Jan 2027, 1 pm');
+    expect(formatWhen('2026-12-28T13:00:00Z', { timeZone: 'UTC', now })).toBe('28 Dec, 1 pm');
   });
 });
 
@@ -268,7 +276,7 @@ describe('September', () => {
     expect(formatDate('2026-09-05')).toBe('5 Sep 2026');
     expect(formatDateTime('2026-09-05T18:30:00Z', UTC)).toBe('5 Sep 2026, 6:30 pm');
     expect(formatWhen('2026-09-30T18:00:00Z', { timeZone: 'UTC', now: new Date('2026-09-01T00:00:00Z') })).toBe(
-      'Wed 30 Sep 6 pm',
+      '30 Sep, 6 pm',
     );
   });
 });

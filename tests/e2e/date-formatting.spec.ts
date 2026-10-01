@@ -94,3 +94,19 @@ test('signed-in job cards show the closing date', async ({ page }) => {
   await page.goto('/jobseeker/jobs');
   await expect(page.locator('[data-job-deadline]').first()).toHaveText('Closes 11 Nov 2026 · in 44 days');
 });
+
+test('native date and time inputs are echoed in Indian order beside the field', async ({ page }) => {
+  await mockApi(page, true);
+  await page.route('**/api/availability', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ windows: [] }) }),
+  );
+  await page.goto('/jobseeker/availability');
+  const start = page.getByLabel(/^Start/);
+  await start.fill('2026-11-14T18:00');
+  await expect(page.getByText('14 Nov 2026, 6 pm', { exact: true })).toBeVisible();
+  const end = page.getByLabel(/^End/);
+  await end.fill('2026-11-14T21:30');
+  await expect(page.getByText('14 Nov 2026, 9:30 pm', { exact: true })).toBeVisible();
+  await start.fill('');
+  await expect(page.getByText('14 Nov 2026, 6 pm', { exact: true })).toHaveCount(0);
+});

@@ -64,6 +64,9 @@ export function formatDateTime(value: DateInput, options: FormatOptions = {}): s
   );
 }
 
+const yearOf = (d: Date, timeZone?: string) =>
+  Number(new Intl.DateTimeFormat('en-CA', { year: 'numeric', timeZone }).format(d));
+
 /** The calendar day of `d` in `timeZone`, as a UTC timestamp at midnight, for day arithmetic. */
 function dayNumber(d: Date, timeZone?: string): number {
   const parts = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone })
@@ -206,7 +209,7 @@ export function formatPay(job: PayFields, fallback = 'Not disclosed'): string {
   return period ? `${range} / ${period}` : range;
 }
 
-/** "Today 6 pm", "Tomorrow 6:30 pm", otherwise "Sat 14 Nov 6 pm". Empty → `fallback`. */
+/** "Today 6 pm", "Tomorrow 6:30 pm", otherwise "14 Nov, 6 pm" ("14 Nov 2027, 6 pm" in another year). Empty → `fallback`. */
 export function formatWhen(value: DateInput, options: FormatOptions & { now?: Date } = {}): string {
   const d = toDate(value);
   if (!d) return options.fallback ?? '';
@@ -218,12 +221,16 @@ export function formatWhen(value: DateInput, options: FormatOptions & { now?: Da
     .replace(/\s?([ap])m/i, (_m, x: string) => ` ${x.toLowerCase()}m`);
   if (days === 0) return `Today ${time}`;
   if (days === 1) return `Tomorrow ${time}`;
+  const sameYear = yearOf(d, tz) === yearOf(options.now ?? new Date(), tz);
   const day = shortMonth(
-    new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz })
-      .format(d)
-      .replace(',', ''),
+    new Intl.DateTimeFormat(LOCALE, {
+      day: 'numeric',
+      month: 'short',
+      year: sameYear ? undefined : 'numeric',
+      timeZone: tz,
+    }).format(d),
   );
-  return `${day} ${time}`;
+  return `${day}, ${time}`;
 }
 
 // ---------------------------------------------------------------------------------------------

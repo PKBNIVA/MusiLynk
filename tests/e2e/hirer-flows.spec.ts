@@ -489,7 +489,7 @@ test.describe('posting and viewing an opportunity', () => {
     await page.goto('/employer/jobs/job1');
     const panel = page.getByTestId('owner-panel');
     await expect(panel.getByTestId('owner-status')).toHaveText('In review');
-    await expect(panel).toContainText('We review every listing within 24 hours');
+    await expect(panel).toContainText('We review every opportunity within 24 hours');
     await expect(panel.getByRole('link', { name: '3 applicants' })).toHaveAttribute(
       'href',
       /\/employer\/applications\?jobId=job1/,
@@ -512,7 +512,7 @@ test.describe('applicants and comparing', () => {
     });
     await page.goto('/employer/applications');
     await expect(page.getByRole('heading', { name: 'No applicants yet' })).toBeVisible();
-    await expect(page.getByText('Most listings get their first applicant within 48 hours')).toBeVisible();
+    await expect(page.getByText('Most opportunities get their first applicant within 48 hours')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Share this opportunity' })).toBeVisible();
   });
 
@@ -524,7 +524,7 @@ test.describe('applicants and comparing', () => {
       return false;
     });
     await page.goto('/employer/applications');
-    await expect(page.getByText('Your listing is in review')).toBeVisible();
+    await expect(page.getByText('Your opportunity is in review')).toBeVisible();
     await expect(page.getByText('within 48 hours')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Back to dashboard' })).toBeVisible();
   });

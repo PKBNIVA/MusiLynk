@@ -466,7 +466,7 @@ test.describe('admin console', () => {
     await expect(buttons).toHaveCount(2);
     await expect(buttons.nth(1)).toBeDisabled();
     await expect(page.getByRole('region', { name: 'Billing events' })).toContainText('payment.captured');
-    await expect(page.getByRole('region', { name: 'Billing events' })).toContainText('INR 2,500');
+    await expect(page.getByRole('region', { name: 'Billing events' })).toContainText('₹2,500');
     await buttons.first().click();
     await expect(page.getByText('Live billing is not configured.')).toBeVisible();
     expect(

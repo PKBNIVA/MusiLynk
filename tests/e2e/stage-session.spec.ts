@@ -88,3 +88,28 @@ test('the follower count on an author page moves when you follow and unfollow', 
   await page.getByRole('button', { name: 'Following' }).click();
   await expect(page.getByText('12 followers')).toBeVisible();
 });
+
+test('a Stage with only system posts shows one roundup card and says what to do next', async ({ page }) => {
+  const state: State = { signedIn: true, followers: 0, following: false };
+  await mockStage(page, state);
+  const post = (n: number) => ({
+    id: `sys_${n}`,
+    kind: 'system',
+    body: `Verse update number ${n}`,
+    author: { type: 'system', id: 'verse', name: 'Verse', system: true },
+    createdAt: '2026-09-30T10:00:00Z',
+  });
+  await page.route('**/api/stage/feed**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ posts: [1, 2, 3, 4, 5].map(post), nextCursor: null }),
+    }),
+  );
+  await page.goto('/stage');
+  await expect(page.getByTestId('system-roundup')).toHaveCount(1);
+  await expect(page.getByTestId('system-roundup')).toContainText('and 1 more');
+  await expect(
+    page.getByText('Nothing from musicians yet. Share an update above to start the conversation.'),
+  ).toBeVisible();
+});

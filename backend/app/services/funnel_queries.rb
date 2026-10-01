@@ -28,8 +28,9 @@ class FunnelQueries
   # Distinct anon_id counts for each step, in order. Not a strict per-user join funnel (an anon_id
   # can appear in any order), but a fast, honest read of "how many distinct visitors reached at
   # least this step" — accurate enough to see where the drop-off is.
-  def self.funnel(since)
-    events = organic_events.where(created_at: since..)
+  # `until_time` (optional, exclusive) closes the window, for a single past week.
+  def self.funnel(since, until_time = nil)
+    events = organic_events.where(created_at: since...until_time)
     counts = events.where(name: %w[landing_view path_chosen signup_completed] + FIRST_ACTION_NAMES + %w[booking_quote_accepted urgent_response_submitted])
       .group(:name).distinct.count(:anon_id)
     booking_or_urgent = events.where(name: %w[booking_quote_accepted urgent_response_submitted]).distinct.count(:anon_id)

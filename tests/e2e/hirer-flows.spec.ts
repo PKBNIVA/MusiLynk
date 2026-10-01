@@ -649,6 +649,37 @@ test.describe('applicants and comparing', () => {
     await expect(remove).toHaveAccessibleDescription('Comparing needs at least two musicians.');
     await expect(page.getByText('Comparing needs at least two musicians.')).toHaveCount(2);
   });
+
+  test('removing someone from the shortlist offers Undo', async ({ page }) => {
+    const person = (id: string, name: string, shortlisted: boolean) => ({
+      id,
+      name,
+      headline: 'Singer',
+      location: 'Mumbai',
+      roles: ['Singer'],
+      instruments: ['Vocals'],
+      skills: ['Vocals'],
+      verified: false,
+      shortlisted,
+      portfolio: [],
+      availability: [],
+    });
+    const calls = await mock(page, (path, _method, _body, route) => {
+      if (path === '/candidates/compare/list')
+        return (
+          json(route, { professionals: [person('m1', 'Dev Drummer', false), person('m2', 'Sia Singer', true)] }),
+          true
+        );
+      if (path === '/shortlists/m2') return (json(route, { ok: true }), true);
+      return false;
+    });
+    await page.goto('/employer/compare?ids=m1,m2');
+    const card = page.getByTestId('compare-card').nth(1);
+    await card.getByRole('button', { name: /Shortlisted|Remove from shortlist/ }).click();
+    await expect(page.getByText('Removed from shortlist')).toBeVisible();
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect.poll(() => calls.filter((c) => c.method === 'POST' && c.path === '/shortlists/m2').length).toBe(1);
+  });
 });
 
 test.describe('messages', () => {

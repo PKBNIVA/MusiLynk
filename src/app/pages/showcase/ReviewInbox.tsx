@@ -41,7 +41,9 @@ export default function ReviewInbox() {
       ? `${base}/portfolios/${s.target.id}`
       : s.target.type === 'resume'
         ? `${base}/resumes/${s.target.id}`
-        : `${base}/library`;
+        : base === '/employer'
+          ? `${base}/portfolios`
+          : `${base}/library`;
 
   async function decide(s: Suggestion, action: 'accept' | 'reject') {
     setBusy(s.id);
@@ -127,11 +129,17 @@ export default function ReviewInbox() {
           title={tab === 'pending' ? 'You’re all caught up' : 'Nothing here yet'}
           action={
             <Button variant="outline" asChild>
-              <Link to={`${base}/library`}>Go to my work</Link>
+              {base === '/employer' ? (
+                <Link to={`${base}/portfolios`}>Go to portfolios</Link>
+              ) : (
+                <Link to={`${base}/library`}>Go to my work</Link>
+              )}
             </Button>
           }
         >
-          New suggestions appear when you add or edit work, or your career record.
+          {base === '/employer'
+            ? 'New suggestions appear when you add or edit a portfolio.'
+            : 'New suggestions appear when you add or edit work, or your career record.'}
         </EmptyState>
       ) : (
         <ul className="space-y-3" aria-live="polite">

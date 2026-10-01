@@ -168,7 +168,7 @@ function ReferralCard() {
             Friends who hire on Verse get {referral.refereePercentOff ?? 20}% off with your code, and you earn free days
             when they pay.
           </p>
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-3">
             <code
               className="rounded-md bg-white/10 px-3 py-1.5 text-lg font-mono tracking-wider"
               data-testid="referral-code"
@@ -378,7 +378,7 @@ export default function Billing() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-5 pt-28 pb-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
         <PageHeader
           title="Billing"
           actions={
@@ -515,10 +515,10 @@ export default function Billing() {
                 )}
                 <div className="space-y-2 text-sm text-slate-300 mt-5">
                   {[
-                    `Up to ${p.activePosts} active opportunities`,
+                    `Up to ${p.activePosts} active ${p.activePosts === 1 ? 'opportunity' : 'opportunities'}`,
                     `${p.seats} team seat${p.seats === 1 ? '' : 's'}`,
-                    `${p.shortlist} saved talent capacity`,
-                    `${p.bookings} active booking enquiries`,
+                    `Save up to ${p.shortlist} musicians to your shortlist`,
+                    `${p.bookings} active booking ${p.bookings === 1 ? 'enquiry' : 'enquiries'}`,
                   ].map((x) => (
                     <div className="flex gap-2" key={x}>
                       <Check size={15} className="text-emerald-300 mt-0.5" />

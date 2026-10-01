@@ -117,7 +117,7 @@ export default function Workspace() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
-      <main className="max-w-6xl mx-auto px-5 pt-28 pb-16">
+      <main className="max-w-6xl mx-auto px-4 sm:px-5 pt-28 pb-16">
         <PageHeader title="Workspace & seats" />
         {loading ? (
           <p className="text-center text-slate-400 py-16" role="status">

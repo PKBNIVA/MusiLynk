@@ -35,6 +35,28 @@ class TalentRankingAndFiltersTest < ActionDispatch::IntegrationTest
     assert_operator names.index("Empty Newest"), :>, names.index("Complete No Rate")
   end
 
+  test "only a playable public sample (audio or video with a link) lifts a profile" do
+    plain = make_user("Plain Headline", profile: { headline: "Pianist" })
+    only_image = make_user("Image Only", profile: { headline: "Pianist" })
+    only_project = make_user("Project Only", profile: { headline: "Pianist" })
+    no_link = make_user("Audio No Link", profile: { headline: "Pianist" })
+    audio = make_user("Audio Sample", profile: { headline: "Pianist" })
+    video = make_user("Video Sample", profile: { headline: "Pianist" })
+    make_item(only_image, kind: "image", url: "https://example.com/cover.png")
+    make_item(only_project, kind: "project", url: "https://example.com/project")
+    make_item(no_link).update_columns(url: " ") # the model refuses a blank link; old rows may still have one
+    make_item(audio)
+    make_item(video, kind: "video", url: "https://example.com/clip.mp4")
+    [plain, only_image, only_project, no_link, audio, video].each { _1.update_columns(last_login_at: nil) }
+
+    get "/api/public/talent", params: { limit: 50 }
+    assert_response :success
+    mine = [plain, only_image, only_project, no_link, audio, video].map(&:name)
+    names = response.parsed_body.fetch("talent").pluck("name") & mine
+    assert_equal ["Audio Sample", "Video Sample"], names.first(2).sort
+    assert_equal ["Audio No Link", "Image Only", "Plain Headline", "Project Only"], names.drop(2).sort
+  end
+
   test "language, event type, genre and budget filters narrow /public/talent and /candidates" do
     hindi = make_user("Hindi Ghazal", profile: FULL.merge(languages: ["Hindi", "Urdu"], genres: ["Ghazal"], event_types: ["Wedding"], session_rate: 8000, day_rate: 20_000))
     marathi = make_user("Marathi Folk", profile: FULL.merge(languages: ["Marathi"], genres: ["Folk"], open_to: ["Corporate events"], show_rate: 30_000))

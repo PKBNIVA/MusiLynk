@@ -106,6 +106,15 @@ class NotificationEmail
       copy: ->(p) { "Leave a quick review for #{p['name']}. It helps other musicians and hirers on Verse." },
       action: "Write a review", path: "/reviews"
     },
+    # PaymentsOpenEmails: one email to each member who ticked "Email me when payments open". Its
+    # `path` is the full /pricing URL (it is the same page for musicians and hirers, so it must
+    # not get a workspace prefix).
+    "payments_open" => {
+      subject: ->(_) { "Payments are now open on Verse" },
+      heading: ->(_) { "Payments are now open on Verse" },
+      copy: ->(_) { "You asked us to tell you when payments open. You can now pay and get paid safely through Verse. See the plans and what each one costs." },
+      action: "See pricing"
+    },
     "verification_approved" => {
       subject: ->(_) { "You're verified on Verse" },
       heading: ->(_) { "You're verified on Verse" },

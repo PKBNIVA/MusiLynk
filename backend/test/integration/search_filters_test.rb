@@ -95,4 +95,54 @@ class SearchFiltersTest < ActionDispatch::IntegrationTest
   def create_user(name, email, role)
     User.create!(name:, email:, password: "StrongPass123!", role:, status: "active", profile_complete: true)
   end
+
+  test "jobs accept several roles at once and match any of them" do
+    employer = create_user("Roles Studio", "roles-studio@example.com", "employer")
+    employer.create_profile!(company_name: "Roles Studio")
+    make = lambda do |title, **extra|
+      Job.create!(employer:, title:, company: "Roles Studio", location: "Mumbai", kind: "Contract", genre: "Pop",
+        description: "A well described production with written terms, rehearsals and an experienced team.", status: "published", **extra)
+    end
+    drummer = make.call("Drummer for a wedding band")
+    vocalist = make.call("Lead vocalist needed")
+    engineer = make.call("Sound engineer for a festival")
+    pianist = make.call("Pianist for a lounge")
+
+    get "/api/jobs", params: { roles: "Drummer,Vocalist" }
+    assert_response :success
+    assert_equal [drummer.id, vocalist.id].sort, response.parsed_body.fetch("jobs").pluck("id").sort
+    assert_equal 2, response.parsed_body.fetch("total")
+
+    get "/api/jobs", params: { roles: "Sound engineer, Pianist" }
+    assert_equal [engineer.id, pianist.id].sort, response.parsed_body.fetch("jobs").pluck("id").sort, "a two-word role matches as a phrase"
+
+    get "/api/jobs", params: { roles: "Drummer" }
+    assert_equal [drummer.id], response.parsed_body.fetch("jobs").pluck("id")
+
+    get "/api/jobs", params: { roles: "Drummer,Vocalist", q: "wedding" }
+    assert_equal [drummer.id], response.parsed_body.fetch("jobs").pluck("id"), "roles narrow a typed search"
+
+    get "/api/jobs", params: { roles: "Drummer,Vocalist", location: "Delhi" }
+    assert_empty response.parsed_body.fetch("jobs"), "other filters still apply"
+
+    get "/api/jobs", params: { roles: " , ," }
+    assert_equal 4, response.parsed_body.fetch("total"), "blank roles filter nothing"
+
+    get "/api/jobs", params: { roles: "%$;" }
+    assert_empty response.parsed_body.fetch("jobs"), "roles that are nothing searchable match nothing"
+  end
+
+  test "roles must be a single text value and at most six are used" do
+    get "/api/jobs", params: { roles: %w[Drummer Vocalist] }
+    assert_response :bad_request
+    assert_equal "INVALID_FILTER", response.parsed_body["code"]
+
+    employer = create_user("Many Roles", "many-roles@example.com", "employer")
+    employer.create_profile!(company_name: "Many Roles")
+    late = Job.create!(employer:, title: "Tubaist wanted", company: "Many Roles", location: "Pune", kind: "Contract", genre: "Pop",
+      description: "A well described production with written terms, rehearsals and an experienced team.", status: "published")
+    get "/api/jobs", params: { roles: "drummer,vocalist,pianist,violinist,flautist,sitarist,tubaist" }
+    assert_response :success
+    assert_not_includes response.parsed_body.fetch("jobs").pluck("id"), late.id
+  end
 end

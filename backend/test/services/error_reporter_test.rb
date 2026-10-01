@@ -1,5 +1,7 @@
 require "test_helper"
 require "minitest/mock"
+require "open3"
+require "socket"
 require_relative "../support/sentry_test_support"
 
 class ErrorReporterTest < ActiveSupport::TestCase
@@ -136,5 +138,62 @@ class ErrorReporterTest < ActiveSupport::TestCase
       FlakyJob.new("artist@example.com", "sealed", "ok").perform_now
       assert_empty sentry_events
     end
+  end
+
+  REJECTING_SENTRY = <<~'RUBY'.freeze
+    require "socket"
+    server = TCPServer.new("127.0.0.1", 0)
+    port = server.addr[1]
+    Thread.new { loop { c = server.accept; (c.readpartial(65_536) rescue nil); c.write("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"); c.close } }
+    Sentry.init { |config| VerseSentry.configure(config, env: { "SENTRY_DSN" => "http://pub@127.0.0.1:#{port}/1", "SENTRY_TRACES_SAMPLE_RATE" => "0" }) }
+    Sentry.capture_message("task finished")
+    # A failed send leaves a client report that the SDK's at_exit hook flushes (this is what raised).
+    Sentry.get_current_client.transport.record_lost_event(:network_error, "error")
+    puts "task done"
+  RUBY
+
+  test "the SDK is configured with a transport that logs delivery failures instead of raising" do
+    config = Sentry::Configuration.new
+    VerseSentry.configure(config, env: { "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN })
+    assert_equal VerseSentry::Transport, config.transport.transport_class
+  end
+
+  test "a rejected DSN (403) is logged, not raised, from send_data and flush" do
+    server = TCPServer.new("127.0.0.1", 0)
+    port = server.addr[1]
+    thread = Thread.new do
+      loop do
+        client = server.accept
+        (client.readpartial(65_536) rescue nil)
+        client.write("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+        client.close
+      end
+    end
+    config = Sentry::Configuration.new
+    config.dsn = "http://pub@127.0.0.1:#{port}/1"
+    config.sdk_logger = ::Logger.new(nil)
+    transport = VerseSentry::Transport.new(config)
+    io = StringIO.new
+    original = Rails.logger
+    Rails.logger = ActiveSupport::Logger.new(io)
+    begin
+      assert_nothing_raised { transport.send_data("{}") }
+      transport.record_lost_event(:network_error, "error")
+      assert_nothing_raised { transport.flush }
+    ensure
+      Rails.logger = original
+      thread.kill
+      server.close
+    end
+    assert_includes io.string, "sentry_delivery_failed"
+    assert_includes io.string, "Sentry::ExternalError"
+    assert_not_includes io.string, "pub@"
+  end
+
+  test "a rails runner task exits 0 when Sentry rejects its events" do
+    output, status = Open3.capture2e({ "RAILS_ENV" => "test" }, Rails.root.join("bin/rails").to_s, "runner", REJECTING_SENTRY, chdir: Rails.root.to_s)
+    assert_includes output, "task done"
+    assert status.success?, "exit status #{status.exitstatus}: #{output.lines.last(6).join}"
+    assert_not_includes output, "ExternalError"
   end
 end

@@ -21,3 +21,9 @@ export function personLines({ headline, roles, genres, location }: PersonFields)
     .filter((x) => x && !seen.includes(x.toLowerCase()));
   return { primary, secondary: [...new Set(secondary)] };
 }
+
+/** True when `text` already names `place` (a headline such as "Session drummer · Mumbai"), so the city is not printed a second time. */
+export function mentionsPlace(text: string | null | undefined, place: string | null | undefined): boolean {
+  const city = (place || '').trim().toLowerCase();
+  return city !== '' && (text || '').toLowerCase().includes(city);
+}

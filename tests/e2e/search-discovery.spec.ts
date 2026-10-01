@@ -152,9 +152,6 @@ test('a landing role link opens a hire page whose "browse all" link opens a labe
   page,
 }) => {
   const calls = await mockApi(page, null, {
-    '/api/public/hire-pages/popular-searches': () => ({
-      items: [{ role: { slug: 'drummer', label: 'Drummer' }, city: { slug: 'mumbai', name: 'Mumbai' }, count: 10 }],
-    }),
     '/api/public/hire-pages/drummer/mumbai': () => ({
       role: { slug: 'drummer', label: 'Drummer' },
       city: { slug: 'mumbai', name: 'Mumbai' },

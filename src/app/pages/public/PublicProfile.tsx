@@ -10,7 +10,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet, apiPost } from '../../lib/api';
 import { trackProfileView } from '../../lib/analytics';
-import { personLines } from '../../lib/personLine';
+import { mentionsPlace, personLines } from '../../lib/personLine';
 import { MapPin, MessageSquare, Pencil, ShieldCheck, Star, Flag, Zap } from 'lucide-react';
 import { MediaTile } from '../../components/showcase/MediaTile';
 import { PlayChip } from '../../components/kit/PlayChip';
@@ -201,7 +201,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
                   {heroLine.secondary.filter((x) => x !== c.location).length > 0 && (
                     <span>{heroLine.secondary.filter((x) => x !== c.location).join(' · ')}</span>
                   )}
-                  {c.location && (
+                  {c.location && !mentionsPlace(`${heroLine.primary} ${heroLine.secondary.join(' ')}`, c.location) && (
                     <span className="inline-flex items-center">
                       <MapPin size={15} aria-hidden="true" className="mr-1" />
                       {c.location}

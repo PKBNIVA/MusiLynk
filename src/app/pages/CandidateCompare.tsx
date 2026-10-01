@@ -188,16 +188,21 @@ export default function CandidateCompare() {
                 <Button className="w-full mt-2" asChild>
                   <Link to={`/professionals/${p.id}`}>Open full profile</Link>
                 </Button>
-                {people.length > 2 && (
-                  <Button
-                    variant="ghost"
-                    className="w-full mt-2 text-slate-400"
-                    aria-label={`Remove ${p.name} from the comparison`}
-                    onClick={() => remove(p.id)}
-                  >
-                    <X aria-hidden="true" size={15} className="mr-1.5" />
-                    Remove
-                  </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full mt-2 text-slate-400"
+                  aria-label={`Remove ${p.name} from the comparison`}
+                  aria-describedby={people.length > 2 ? undefined : `compare-min-reason-${p.id}`}
+                  disabled={people.length <= 2}
+                  onClick={() => remove(p.id)}
+                >
+                  <X aria-hidden="true" size={15} className="mr-1.5" />
+                  Remove
+                </Button>
+                {people.length <= 2 && (
+                  <p id={`compare-min-reason-${p.id}`} className="mt-1 text-center text-xs text-slate-400">
+                    Comparing needs at least two musicians.
+                  </p>
                 )}
               </CardContent>
             </Card>

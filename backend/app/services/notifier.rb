@@ -93,7 +93,9 @@ class Notifier
     # refreshed (and moved to the top) as further messages arrive. An email goes out only
     # when a fresh notification is raised and none was raised for this conversation in the
     # last MESSAGE_EMAIL_INTERVAL. Never copies the message body anywhere.
-    def new_message(message)
+    # `in_app: false` sends only the email, for a message that another in-app notice already covers
+    # (the first note of an urgent response, UrgentRequestsController#respond).
+    def new_message(message, in_app: true)
       conversation = message.conversation
       sender = message.sender
       recipient = conversation.candidate_id == sender.id ? conversation.employer : conversation.candidate
@@ -101,6 +103,8 @@ class Notifier
 
       link = message_link(conversation)
       body = conversation.job ? "About #{conversation.job.title}." : "Open the conversation to reply."
+      return email(recipient, "new_message", name: sender.name, job: conversation.job&.title, path: link) unless in_app
+
       Notification.transaction do
         # Serialises concurrent sends in one conversation so only one unread row exists.
         conversation.lock!

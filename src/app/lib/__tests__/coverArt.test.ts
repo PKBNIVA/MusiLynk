@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BLOB_MAX_OPACITY,
+  BLOB_RADIUS,
   PALETTES,
   blobs,
   genreFamily,
@@ -60,6 +62,28 @@ describe('ribbonBars / blobs / gradientAngle', () => {
     expect(list).toHaveLength(3);
     expect(list.every((b) => b.cx >= 10 && b.cx <= 90 && b.cy >= 10 && b.cy <= 90 && b.r > 20)).toBe(true);
     expect(blobs('a')).toEqual(list);
+  });
+  it('never draws a dominant flat circle: radius and opacity stay inside the bounds for any seed', () => {
+    const seeds = [
+      'Saanjh',
+      'saanjh',
+      '',
+      'act-1',
+      ...Array.from({ length: 5000 }, (_, i) => `seed-${i}-${(i * 7919) % 104729}`),
+    ];
+    let widest = 0;
+    for (const seed of seeds) {
+      for (const b of blobs(seed)) {
+        widest = Math.max(widest, b.r);
+        expect(b.r).toBeGreaterThanOrEqual(BLOB_RADIUS.min);
+        expect(b.r).toBeLessThanOrEqual(BLOB_RADIUS.max);
+        expect(b.opacity).toBeGreaterThan(0);
+        expect(b.opacity).toBeLessThanOrEqual(BLOB_MAX_OPACITY);
+      }
+    }
+    // A circle of the largest radius covers at most half of the 100x100 field.
+    expect(Math.PI * widest ** 2).toBeLessThanOrEqual(0.51 * 100 * 100);
+    expect(widest).toBeGreaterThan(BLOB_RADIUS.max - 1); // the range is used, not collapsed
   });
   it('varies the angle per seed within 20-159 degrees', () => {
     const angle = gradientAngle('a');

@@ -216,6 +216,50 @@ test.describe('admin console', () => {
     await expect.poll(() => urls.some((u) => u.includes('page=1') && u.includes('status=published'))).toBe(true);
   });
 
+  test('changing the queue status shows a loading state, not the old list as if it were current', async ({ page }) => {
+    await mockApi(
+      page,
+      {
+        ...adminFixtures(),
+        '/api/admin/jobs': {
+          body: {
+            jobs: [
+              { id: 'job-1', title: 'Session Bassist', company: 'QA Studio', status: 'pending', description: 'x' },
+            ],
+            page: 1,
+            perPage: 100,
+            total: 1,
+          },
+        },
+      },
+      admin,
+    );
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    await page.route('**/api/admin/jobs?*status=published*', async (route) => {
+      await gate;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ jobs: [], page: 1, perPage: 100, total: 0 }),
+      });
+    });
+    await page.goto('/admin');
+    await expect(page.getByText('Session Bassist')).toBeVisible();
+    await expect(page.getByTestId('queue-loading')).toHaveCount(0);
+
+    await page.getByLabel('Status').click();
+    await page.getByRole('option', { name: 'Published' }).click();
+    await expect(page.getByTestId('queue-loading')).toHaveText('Loading opportunities…');
+    // The stale row is still drawn but cannot be acted on, and the empty message is not shown yet.
+    await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+    await expect(page.getByText('No opportunities with this status.')).toHaveCount(0);
+
+    release();
+    await expect(page.getByTestId('queue-loading')).toHaveCount(0);
+    await expect(page.getByText('No opportunities with this status.')).toBeVisible();
+  });
+
   test('one long unbroken report text wraps instead of widening the console', async ({ page }, testInfo) => {
     const fixtures = adminFixtures();
     fixtures['/api/admin/reports'] = {

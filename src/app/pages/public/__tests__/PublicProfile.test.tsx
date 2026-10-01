@@ -48,8 +48,8 @@ function signedInAs(user: { id: string; role: string } | null) {
   vi.mocked(useAuth).mockReturnValue({ user, status: user ? 'signedIn' : 'signedOut' } as ReturnType<typeof useAuth>);
 }
 
-async function mount(props: { shell?: 'public' | 'workspace' } = {}) {
-  vi.mocked(apiGet).mockResolvedValue({ professional, portfolio: [] });
+async function mount(props: { shell?: 'public' | 'workspace' } = {}, over: Partial<typeof professional> = {}) {
+  vi.mocked(apiGet).mockResolvedValue({ professional: { ...professional, ...over }, portfolio: [] });
   const router = createMemoryRouter([{ path: '/professionals/:id', element: <PublicProfile {...props} /> }], {
     initialEntries: ['/professionals/u1'],
   });
@@ -68,6 +68,22 @@ afterEach(() => {
 });
 
 describe('PublicProfile', () => {
+  it('prints the city once: a headline that already says it hides the location row', async () => {
+    signedInAs(null);
+    await mount({}, { headline: 'Playback singer · Mumbai' });
+    const hero = container.querySelector('h1')?.parentElement?.parentElement as HTMLElement;
+    expect(hero.textContent?.match(/Mumbai/g)).toHaveLength(1);
+    expect(hero.querySelector('svg.lucide-map-pin')).toBeNull();
+  });
+
+  it('still shows the city, once, when the headline does not say it', async () => {
+    signedInAs(null);
+    await mount({}, { headline: 'Playback singer' });
+    const hero = container.querySelector('h1')?.parentElement?.parentElement as HTMLElement;
+    expect(hero.textContent?.match(/Mumbai/g)).toHaveLength(1);
+    expect(hero.querySelector('svg.lucide-map-pin')).not.toBeNull();
+  });
+
   it('leads with the from price, reviews, bookings and reply time, and lists only the filled rates', async () => {
     signedInAs(null);
     await mount();

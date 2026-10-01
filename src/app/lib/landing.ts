@@ -1,5 +1,5 @@
 import { apiGet } from './api';
-import { formatMoney } from './format';
+import { formatFromRate, fromRate } from './format';
 
 // Live proof for the landing page. Only real counts from GET /api/public/stats are shown, and
 // only once they mean something; otherwise the page shows how Verse works and what it promises.
@@ -70,28 +70,13 @@ export function hireLinkText(label: string, city: string) {
   return `Hire ${article} ${roleNoun(label)} in ${city}`;
 }
 
-type RateFields = {
-  sessionRate?: number | null;
-  showRate?: number | null;
-  dayRate?: number | null;
-  tourDayRate?: number | null;
-  hourlyRate?: number | null;
-  currency?: string | null;
-};
-
-/** The lowest rate a person has filled in, or null: the "from" on a card. */
-export function lowestRate(person: RateFields): number | null {
-  const rates = [person.sessionRate, person.showRate, person.dayRate, person.tourDayRate, person.hourlyRate].filter(
-    (rate): rate is number => typeof rate === 'number' && Number.isFinite(rate) && rate > 0,
-  );
-  return rates.length ? Math.min(...rates) : null;
-}
-
-/** "from ₹5,000", or '' when no rate is filled in. */
-export function fromRateText(person: RateFields): string {
-  const rate = lowestRate(person);
-  return rate === null ? '' : `from ${formatMoney(rate, person.currency || 'INR')}`;
-}
+/**
+ * The "from" price on a landing or hire card is the one every card uses (format.ts): the lowest
+ * of the session, show, day and hourly rates that are filled in. Tour-day pay is a different
+ * kind of engagement and never counts.
+ */
+export const lowestRate = fromRate;
+export const fromRateText = formatFromRate;
 
 /** Tomorrow, 6 pm local, as a `datetime-local` value: the default "when" of an urgent request. */
 export function defaultUrgentStartAt(now = new Date()): string {

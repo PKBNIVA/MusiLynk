@@ -34,7 +34,7 @@ jobs:
       BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
       BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check secrets are configured
         run: |

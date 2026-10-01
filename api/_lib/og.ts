@@ -6,7 +6,7 @@
 //
 // This file holds everything that does not need the renderer, so it is unit-tested without it
 // (scripts/__tests__/og.test.mjs). The Vercel Node function api/og/[type]/[id].ts supplies the renderer
-// (@vercel/og, a STATIC import: a dynamic one is left unbundled and fails Vercel's deploy validation).
+// (satori + resvg, static imports).
 // The leading underscore keeps this folder from being deployed as a function of its own.
 // The card is described as plain { type, props } elements (no JSX, no React).
 import { blobs, gradientAngle, paletteFor, ribbonBars, type Palette } from '../../src/app/lib/coverArt.js';

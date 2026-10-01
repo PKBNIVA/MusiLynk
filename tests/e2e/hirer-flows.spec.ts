@@ -642,6 +642,12 @@ test.describe('applicants and comparing', () => {
     await page.getByRole('button', { name: 'Remove Raj Tabla from the comparison' }).click();
     await expect(page).toHaveURL(/ids=m1%2Cm2$/);
     await expect(page.getByRole('heading', { name: 'Raj Tabla' })).toHaveCount(0);
+    // With two left, Remove stays visible but disabled, and says why.
+    const remove = page.getByRole('button', { name: 'Remove Dev Drummer from the comparison' });
+    await expect(remove).toBeVisible();
+    await expect(remove).toBeDisabled();
+    await expect(remove).toHaveAccessibleDescription('Comparing needs at least two musicians.');
+    await expect(page.getByText('Comparing needs at least two musicians.')).toHaveCount(2);
   });
 });
 

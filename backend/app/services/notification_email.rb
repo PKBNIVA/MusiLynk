@@ -26,7 +26,7 @@ class NotificationEmail
     "application_status" => {
       subject: ->(p) { "Application update: #{p['job']}" },
       heading: ->(_) { "Your application was updated" },
-      copy: ->(p) { "Your application for #{p['job']} is now #{p['status'].to_s.downcase.tr('_', ' ')}." },
+      copy: ->(p) { "Your application for #{p['job']} is now marked as #{p['status'].to_s.tr('_', ' ')}." },
       action: "View applications", path: "/applications"
     },
     "new_message" => {
@@ -83,7 +83,7 @@ class NotificationEmail
       action: "Open your request", path: "/urgent"
     },
     "urgent_request_expired" => {
-      subject: ->(p) { "This request has expired" },
+      subject: ->(p) { "#{p['title']} has expired" },
       heading: ->(_) { "This request has expired" },
       copy: ->(p) { "\"#{p['title']}\" has expired. The hirer did not confirm a booking through Verse." },
       action: "See urgent requests", path: "/urgent"
@@ -102,9 +102,10 @@ class NotificationEmail
     },
     "review_prompt" => {
       subject: ->(p) { p["reminder"] == "true" ? "Still time to review #{p['name']}" : "How did it go with #{p['name']}?" },
-      heading: ->(p) { p["reminder"] == "true" ? "A quick reminder" : "Leave a review" },
-      copy: ->(p) { "Leave a quick review for #{p['name']}. It helps other musicians and hirers on Verse." },
-      action: "Write a review", path: "/reviews"
+      heading: ->(p) { p["reminder"] == "true" ? "A quick reminder" : (p["path"].to_s.include?("/reviews") ? "Leave a review" : "How did it go?") },
+      # Only musicians have a review form; a hirer's link is their dashboard, so the button says so.
+      copy: ->(p) { p["path"].to_s.include?("/reviews") ? "Leave a quick review for #{p['name']}. It helps other musicians and hirers on Verse." : "Your work with #{p['name']} is done. Open your dashboard to see how it went and what to do next." },
+      action: ->(p) { p["path"].to_s.include?("/reviews") ? "Write a review" : "Open your dashboard" }, path: "/reviews"
     },
     # PaymentsOpenEmails: one email to each member who ticked "Email me when payments open". Its
     # `path` is the full /pricing URL (it is the same page for musicians and hirers, so it must
@@ -132,7 +133,7 @@ class NotificationEmail
   # granular opt-out (LifecycleMailer). Left nil for the transactional templates in this
   # class, which only the master switch (email_notifications) can turn off.
   def self.deliverable_to?(user, category: nil)
-    EmailDelivery.configured? && user.email.present? && user.email_verified? && user.status == "active" && opted_in?(user) &&
+    EmailDelivery.configured? && user.synthetic_batch.nil? && user.email.present? && user.email_verified? && user.status == "active" && opted_in?(user) &&
       (category.nil? || user.profile.nil? || user.profile.email_category_enabled?(category)) &&
       !EmailSuppression.blocks_notifications?(user.email) && !EmailDelivery.skip_reserved?(user.email)
   end
@@ -153,11 +154,12 @@ class NotificationEmail
     copy = spec[:copy].call(params)
     token = CGI.escape(unsubscribe_token(user))
     unsubscribe_page = "#{frontend_url}/unsubscribe?token=#{token}"
+    action = spec[:action].respond_to?(:call) ? spec[:action].call(params) : spec[:action]
     links = spec[:links] ? spec[:links].call(params).select { |_, url| url.to_s.start_with?("http") } : []
     secondary_text = links.map { |label, url| "#{label}: #{url}" }.join("\n")
     {
-      subject:, html: html(heading:, copy:, action: spec[:action], link:, unsubscribe: unsubscribe_page, links:),
-      text: ["Verse", heading, copy, "#{spec[:action]}: #{link}", secondary_text.presence, "Turn off these emails: #{unsubscribe_page}"].compact.join("\n\n"),
+      subject:, html: html(heading:, copy:, action:, link:, unsubscribe: unsubscribe_page, links:),
+      text: ["Verse", heading, copy, "#{action}: #{link}", secondary_text.presence, "Turn off these emails: #{unsubscribe_page}"].compact.join("\n\n"),
       headers: unsubscribe_headers(token, unsubscribe_page)
     }
   end
@@ -184,6 +186,9 @@ class NotificationEmail
     { "List-Unsubscribe" => "<#{api_host}/api/notifications/unsubscribe?token=#{token}>", "List-Unsubscribe-Post" => "List-Unsubscribe=One-Click" }
   end
 
+  # The account settings page (sign-in methods, email preferences) in the person's own workspace.
+  def self.settings_link(user) = "#{frontend_url}#{workspace(user)}/settings"
+
   def self.workspace(user) = user.role == "employer" ? "/employer" : "/jobseeker"
 
   # A role-relative path ("/urgent") gets the recipient's workspace prefix; a path that already
@@ -202,7 +207,7 @@ class NotificationEmail
     extra = links.map { |label, url| %(<a href="#{h.call(url)}" style="color:#a78bfa">#{h.call(label)}</a>) }.join(" · ")
     extra = %(<p style="margin:16px 0 0;font-size:14px">#{extra}</p>) if extra.present?
     <<~HTML.squish
-      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:26px;margin:28px 0 12px">#{h.call(heading)}</h1><p style="color:#cbd5e1;line-height:1.6">#{h.call(copy)}</p>#{EmailDelivery.button_html(action, link)}#{extra}<p style="margin-top:28px;color:#94a3b8;font-size:13px">You are receiving this because of activity on your Verse account. <a href="#{h.call(unsubscribe)}" style="color:#a78bfa">Turn off these emails</a>.</p></div></body></html>
+      #{EmailDelivery.head_html(copy)}<div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:26px;margin:28px 0 12px">#{h.call(heading)}</h1><p style="color:#cbd5e1;line-height:1.6">#{h.call(copy)}</p>#{EmailDelivery.button_html(action, link)}#{extra}<p style="margin-top:28px;color:#94a3b8;font-size:13px">You are receiving this because of activity on your Verse account. <a href="#{h.call(unsubscribe)}" style="color:#a78bfa">Turn off these emails</a>.</p></div></body></html>
     HTML
   end
 

@@ -17,10 +17,7 @@ class WeeklyDigestJob < ApplicationJob
       next if sections.all? { |s| Array(s[:items]).blank? } && sections.none? { |s| s[:footnote].present? }
       next unless LifecycleEmail.record!(user, key)
 
-      largest = sections.max_by { |s| Array(s[:items]).size }
-      count = Array(largest&.dig(:items)).size
-      subject = count.positive? ? "#{count} #{largest[:heading].downcase} this week" : "This week on Verse"
-      WeeklyDigestDeliveryJob.perform_later(user.id, sections.as_json, subject)
+      WeeklyDigestDeliveryJob.perform_later(user.id, sections.as_json, WeeklyDigest.subject_for(sections))
     end
   end
 end

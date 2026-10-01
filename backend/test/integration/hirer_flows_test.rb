@@ -181,14 +181,16 @@ class HirerFlowsTest < ActionDispatch::IntegrationTest
     assert_response :created
     booking = BookingRequest.find(response.parsed_body.fetch("id"))
     assert_equal @drummer.id, booking.act.owner_id
-    assert_equal ["solo", "inactive"], [booking.act.act_type, booking.act.status]
+    assert_equal ["solo", "hidden"], [booking.act.act_type, booking.act.status]
     assert Notification.exists?(user: @drummer, kind: "booking")
 
-    # The hidden solo act is reused, and never shows up in the public acts list.
+    # The hidden solo act is reused, and never shows up in the public acts list or the musician's My acts.
     post "/api/bookings", params: { musicianId: @drummer.id, eventType: "corporate", city: "Mumbai", eventDate: 3.months.from_now.to_date.iso8601 }, headers: auth(@hirer), as: :json
     assert_equal 1, @drummer.owned_acts.count
     get "/api/public/acts"
     refute_includes response.parsed_body.fetch("acts").map { _1["id"] }, booking.act_id
+    get "/api/acts/me", headers: auth(@drummer)
+    assert_empty response.parsed_body.fetch("acts")
     get "/api/bookings", headers: auth(@drummer)
     assert_equal 2, response.parsed_body.fetch("bookings").size
   end

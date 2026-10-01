@@ -259,6 +259,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/acts/{act}/members", :talent, { ok: [201], params: { displayName: "Dep", roleName: "Keys" }, idor: true, missing: :act, bad: { roleName: "" }, bad_status: [422] }],
     [:delete, "/api/acts/{act}/members/{act_member}", :talent, { idor: true, missing: :act_member }],
     [:get, "/api/bookings", :talent, { keys: %w[bookings] }],
+    [:get, "/api/bookings/limits", :talent, { keys: %w[activeAllowed activeUsed plan planName] }],
     [:post, "/api/bookings", :talent, { ok: [201], params: ->(w, a) { { actId: w.refs[a == :js ? :js2 : :emp2][:act], eventType: "wedding", city: "Pune", eventDate: 2.months.from_now.to_date.iso8601 } }, bad: {}, bad_status: [404, 422] }],
     [:post, "/api/bookings/{owned_booking}/quote", :talent, { ok: [201], params: { performanceFee: 1000 }, idor: true, missing: :owned_booking, bad: { performanceFee: -5 }, bad_status: [422] }],
     [:post, "/api/bookings/{requested_booking}/status", :talent, { params: { status: "cancelled" }, idor: true, missing: :requested_booking, bad: { status: "bogus" }, bad_status: [400] }],
@@ -276,6 +277,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/urgent-requests/{urgent}", :talent, { params: { status: "filled" }, idor: true, missing: :urgent, bad: { status: "open" }, bad_status: [400] }],
     [:put, "/api/urgent-requests/{urgent}", :talent, { params: { status: "cancelled" }, idor: true }],
     [:post, "/api/urgent-requests/{others_urgent}/respond", :talent, { ok: [201], params: { message: "Available" }, missing: :others_urgent }],
+    [:post, "/api/urgent-requests/{urgent}/accept", :talent, { ok: [422], params: { userId: "nobody" }, idor: true, missing: :urgent, note: "choosing a responder is covered in HirerFlowsTest" }],
     [:get, "/api/urgent-requests/{urgent}/responses", :talent, { keys: %w[responses], idor: true, missing: :urgent }],
     [:get, "/api/urgent-requests/{urgent}/token-action", :public, {
       params: ->(w, actor) { { t: UrgentActionToken.generate(UrgentRequest.find(w.refs[actor][:urgent] || w.refs[:shared][:urgent]), "close") } },

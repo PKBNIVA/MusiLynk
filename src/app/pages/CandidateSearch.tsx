@@ -160,7 +160,7 @@ export default function CandidateSearch() {
       <Navigation />
       <main className={`max-w-7xl mx-auto px-5 md:px-6 pt-28 ${compare.length ? 'pb-32' : 'pb-16'}`}>
         <PageHeader title="Find talent" />
-        <form onSubmit={submit} className="mb-4 grid gap-3 md:grid-cols-[1fr_14rem_auto]" role="search">
+        <form onSubmit={submit} className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-[1fr_14rem_auto]" role="search">
           <Input
             aria-label="Skill, credit, gear or software"
             value={q}
@@ -235,7 +235,7 @@ export default function CandidateSearch() {
           )}
         </div>
         <TalentFacets values={f} update={update} />
-        <div className="mt-5 grid content-start gap-4 md:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 content-start gap-4 md:grid-cols-3">
           {loading ? (
             <Card className="bg-white/[.035] border-white/10 md:col-span-3">
               <CardContent className="p-8 text-center text-slate-400" role="status">

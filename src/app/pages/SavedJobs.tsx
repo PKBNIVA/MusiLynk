@@ -2,7 +2,7 @@ import { EmptyState as SceneEmptyState } from '../components/kit/EmptyState';
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
-import { apiDelete, apiGet } from '../lib/api';
+import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -27,11 +27,21 @@ export default function SavedJobs() {
   useEffect(() => {
     load();
   }, []);
-  async function remove(id: string) {
+  async function remove(job: Job) {
+    const id = job.id;
     try {
       await apiDelete(`/saved-jobs/${id}`);
       setJobs((x) => x.filter((j) => j.id !== id));
-      toast.success('Removed from saved');
+      toast.success('Removed from saved', {
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            apiPost(`/saved-jobs/${id}`)
+              .then(() => load())
+              .catch((e: unknown) => toast.error(errorMessage(e, 'Could not restore this opportunity')));
+          },
+        },
+      });
     } catch (e: unknown) {
       toast.error(errorMessage(e, 'Could not remove this opportunity'));
     }
@@ -76,7 +86,7 @@ export default function SavedJobs() {
                     variant="ghost"
                     size="icon"
                     aria-label={`Remove ${j.title} from saved`}
-                    onClick={() => remove(j.id)}
+                    onClick={() => remove(j)}
                   >
                     <BookmarkX />
                   </Button>

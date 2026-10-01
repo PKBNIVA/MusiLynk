@@ -15,6 +15,7 @@ import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { AppSelect } from '../components/ui/app-select';
 import { formatDateTime, formatInputEcho } from '../lib/format';
+import { useConfirm } from '../components/booking/BookingDialogs';
 import { optionLabel } from '../components/ui/option-labels';
 
 type SlotField = 'startAt' | 'endAt' | 'city' | 'status';
@@ -51,7 +52,7 @@ export default function Availability() {
   const [form, setForm] = useState<AvailabilityForm>({ status: 'available' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [removeError, setRemoveError] = useState('');
+  const { ask, element: confirmDialog } = useConfirm();
   const errors = useFormErrors<SlotField>({ ids: SLOT_IDS });
   const submit = useSubmitOnce();
   const saving = submit.busy;
@@ -100,16 +101,23 @@ export default function Availability() {
       }
     });
   }
-  async function remove(id: string) {
-    setRemoveError('');
-    try {
-      await apiDelete(`/availability/${id}`);
-      setItems((current) => current.filter((item) => item.id !== id));
-      toast.success('Availability removed.');
-    } catch (e: unknown) {
-      setRemoveError(errorMessage(e, 'Unable to remove availability.'));
-    }
-  }
+  const remove = (item: AvailabilityWindow) => {
+    ask({
+      title: 'Remove this availability?',
+      description: `${optionLabel(item.status)}, ${formatDateTime(item.startAt)} to ${formatDateTime(item.endAt)}${item.city ? ` in ${item.city}` : ''}. Hirers will no longer see this window. You can add it again later.`,
+      confirmLabel: 'Remove availability',
+      destructive: true,
+      action: async () => {
+        try {
+          await apiDelete(`/availability/${item.id}`);
+        } catch (e: unknown) {
+          throw new Error(errorMessage(e, 'Unable to remove availability.'));
+        }
+        setItems((current) => current.filter((i) => i.id !== item.id));
+        toast.success('Availability removed.');
+      },
+    });
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -180,7 +188,6 @@ export default function Availability() {
             </form>
           </CardContent>
         </Card>
-        <FormError message={removeError} className="mt-4" />
         {loading ? (
           <p className="text-slate-400 text-center py-14" role="status">
             Loading availability…
@@ -205,12 +212,7 @@ export default function Availability() {
                     {formatDateTime(item.startAt)} → {formatDateTime(item.endAt)} {item.city ? `· ${item.city}` : ''}
                   </div>
                 </div>
-                <Button
-                  aria-label="Remove availability"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => void remove(item.id)}
-                >
+                <Button aria-label="Remove availability" size="icon" variant="ghost" onClick={() => remove(item)}>
                   <Trash2 size={16} />
                 </Button>
               </div>
@@ -222,6 +224,7 @@ export default function Availability() {
           </p>
         )}
       </main>
+      {confirmDialog}
     </div>
   );
 }

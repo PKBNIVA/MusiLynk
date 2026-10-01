@@ -152,8 +152,8 @@ export default function JobDetails() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-44 lg:pb-16">
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6">
-          <div className="space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-6">
+          <div className="min-w-0 space-y-5">
             <Card className="bg-white/[.055] border-white/10">
               <CardContent className="p-6 md:p-8">
                 <JobHero
@@ -171,14 +171,14 @@ export default function JobDetails() {
                   <FileText aria-hidden="true" size={20} className="text-violet-300" />
                   About the opportunity
                 </h2>
-                <p className="text-slate-300 mt-4 whitespace-pre-wrap leading-7">{job.description}</p>
+                <p className="text-slate-300 mt-4 whitespace-pre-wrap break-words leading-7">{job.description}</p>
                 {job.requirements && (
                   <>
                     <h2 className="text-xl font-semibold mt-8 flex items-center gap-2">
                       <ListChecks aria-hidden="true" size={20} className="text-violet-300" />
                       Requirements
                     </h2>
-                    <p className="text-slate-300 mt-4 whitespace-pre-wrap leading-7">{job.requirements}</p>
+                    <p className="text-slate-300 mt-4 whitespace-pre-wrap break-words leading-7">{job.requirements}</p>
                   </>
                 )}
                 <div className="grid sm:grid-cols-2 gap-5 mt-8 pt-6 border-t border-white/10 text-sm">
@@ -227,7 +227,7 @@ export default function JobDetails() {
             </Card>
             {asSeeker && <SimilarJobs job={job} basePath="/jobseeker/jobs" />}
           </div>
-          <aside className="space-y-4">
+          <aside className="min-w-0 space-y-4">
             <Card id="apply-panel" className="bg-white/[.06] border-white/10 lg:sticky lg:top-24">
               <CardContent className="p-5">
                 {isOwner && (

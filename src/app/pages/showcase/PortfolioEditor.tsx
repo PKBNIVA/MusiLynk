@@ -373,7 +373,9 @@ export default function PortfolioEditor() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="text-slate-900">Keep it</AlertDialogCancel>
+            <AlertDialogCancel className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
+              Keep it
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-rose-600 hover:bg-rose-500"
               onClick={async () => {

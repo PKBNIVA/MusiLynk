@@ -45,7 +45,7 @@ export function JobHero({ job, actions }: { job: Job; actions?: ReactNode }) {
         {actions}
       </div>
       <h1 className="mt-3 text-3xl font-bold leading-tight break-words">{job.title}</h1>
-      <p className="mt-1 text-lg text-violet-300">{job.company}</p>
+      <p className="mt-1 break-words text-lg text-violet-300">{job.company}</p>
       <PostedBy postedAs={job.postedAs} className="mt-1" />
       <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {facts.map(({ Icon, label, value }) => (

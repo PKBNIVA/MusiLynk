@@ -197,7 +197,13 @@ describe('Availability', () => {
     await mount('/availability', '/availability', <Availability />);
     await settle();
     await click(container.querySelector<HTMLElement>('[aria-label="Remove availability"]')!);
-    expect(container.textContent).toContain('Unable to remove availability.');
+    // Removing now asks first; the failure shows inside the confirmation dialog.
+    const confirm = [...document.body.querySelectorAll<HTMLElement>('[role="alertdialog"] button')].find(
+      (b) => b.textContent === 'Remove availability',
+    )!;
+    await click(confirm);
+    await settle();
+    expect(document.body.textContent).toContain('Unable to remove availability.');
     expect(container.querySelector('[aria-label="Remove availability"]')).not.toBeNull();
   });
 });

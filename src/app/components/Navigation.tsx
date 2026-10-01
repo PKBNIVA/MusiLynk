@@ -196,9 +196,16 @@ export function Navigation() {
         aria-label="Workspace navigation"
       >
         <SkipLink />
-        <div className="mx-auto flex h-[72px] max-w-[1500px] items-center gap-4 px-4 md:px-6">
+        <div className="mx-auto flex h-[72px] max-w-[1500px] items-center gap-2 px-4 sm:gap-4 md:px-6">
           <Link to={baseUrl} aria-label="Verse dashboard" className="shrink-0">
-            <BrandMark />
+            {/* The tagline costs ~70px; below sm the header must also fit the identity switcher, bell,
+                account menu and the menu button inside 360px. */}
+            <span className="sm:hidden">
+              <BrandMark compact />
+            </span>
+            <span className="hidden sm:inline">
+              <BrandMark />
+            </span>
           </Link>
           <div className="ml-5 hidden items-center gap-1 lg:flex">
             <Button

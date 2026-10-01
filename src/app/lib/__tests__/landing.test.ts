@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { formatFromRate, fromRate } from '../format';
 import { defaultUrgentStartAt, fromRateText, lowestRate, roleNoun, urgentPath } from '../landing';
 
 describe('lowestRate / fromRateText', () => {
+  it('is the same "from" price every card uses: tour-day pay never counts', () => {
+    expect(lowestRate({ tourDayRate: 3000, dayRate: 9000 })).toBe(9000);
+    expect(lowestRate({ tourDayRate: 3000 })).toBeNull();
+    expect(lowestRate).toBe(fromRate);
+    expect(fromRateText).toBe(formatFromRate);
+    expect(fromRateText({ sessionRate: '7500', tourDayRate: 100 })).toBe('from ₹7,500');
+  });
   it('takes the lowest filled-in rate', () => {
     expect(lowestRate({ sessionRate: 8000, showRate: 25000, dayRate: 5000 })).toBe(5000);
     expect(lowestRate({ hourlyRate: 1500, tourDayRate: 9000 })).toBe(1500);

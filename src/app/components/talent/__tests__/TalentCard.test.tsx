@@ -46,6 +46,15 @@ function render(p: Professional) {
 }
 
 describe('TalentCard', () => {
+  it('prints the city once: a headline that already says it hides the location row', () => {
+    const repeated = render(person({ headline: 'Session drummer · Mumbai', location: 'Mumbai' }));
+    expect(repeated.textContent?.match(/Mumbai/g)).toHaveLength(1);
+    expect(repeated.querySelector('svg.lucide-map-pin')).toBeNull();
+    const plain = render(person({ headline: 'Session drummer', location: 'Mumbai' }));
+    expect(plain.textContent?.match(/Mumbai/g)).toHaveLength(1);
+    expect(plain.querySelector('svg.lucide-map-pin')).not.toBeNull();
+  });
+
   it('shows the facts a hirer compares: from price, reviews, bookings and reply time', () => {
     const host = render(person());
     expect(host.querySelector('h2')?.textContent).toBe('Asha Kulkarni');

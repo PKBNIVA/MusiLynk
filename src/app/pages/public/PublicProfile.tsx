@@ -1,11 +1,11 @@
 import { DemoBadge } from '../../components/DemoBadge';
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { Navigation } from '../../components/Navigation';
 import { PublicNav } from '../../components/PublicNav';
 import { PublicDetailState } from '../../components/PublicDetailState';
-import { usePageMeta } from '../../components/PageMeta';
+import { absoluteUrl, usePageMeta } from '../../components/PageMeta';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet, apiPost } from '../../lib/api';
@@ -15,7 +15,6 @@ import { MapPin, MessageSquare, Pencil, ShieldCheck, Star, Flag, Zap } from 'luc
 import { MediaTile } from '../../components/showcase/MediaTile';
 import { PlayChip } from '../../components/kit/PlayChip';
 import { UserAvatar } from '../../components/kit/UserAvatar';
-import { ReportDialog } from '../../components/ReportDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
 import { VerifiedBadge, verifiedBadgeCopy } from '../../components/VerifiedBadge';
 import { useAuth } from '../../lib/authContext';
@@ -23,13 +22,16 @@ import { errorMessage, errorStatus } from '../../lib/errors';
 import { formatFromRate, formatReplyTime, rateRows } from '../../lib/format';
 import type { PortfolioItem, Professional } from '../../lib/apiTypes';
 
+// The report form is only needed once someone opens it, so it stays out of the first render's work.
+const ReportDialog = lazy(() => import('../../components/ReportDialog').then((m) => ({ default: m.ReportDialog })));
+
 /** Person structured data for a public professional profile. */
 function personJsonLd(p: Professional, id?: string) {
   const ld: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Person',
     name: p.name,
-    url: `/professionals/${id}`,
+    url: absoluteUrl(`/professionals/${id}`),
   };
   if (p.headline) ld.jobTitle = p.headline;
   if (p.location) ld.address = { '@type': 'PostalAddress', addressLocality: p.location };
@@ -48,6 +50,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
   const [d, setD] = useState<{ professional: Professional; portfolio: PortfolioItem[] }>(),
     [loading, setLoading] = useState(true),
     [reporting, setReporting] = useState(false),
+    [reportMounted, setReportMounted] = useState(false),
     [bioOpen, setBioOpen] = useState(false),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const load = useCallback(async () => {
@@ -73,10 +76,12 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
   useEffect(() => {
     if (p?.id) trackProfileView(p.id);
   }, [p?.id]);
+  // Memoised: usePageMeta rewrites the head whenever this object changes identity.
+  const jsonLd = useMemo(() => (p ? personJsonLd(p, id) : undefined), [p, id]);
   usePageMeta(
     p?.name && `${p.name}${p.headline ? ` — ${p.headline}` : ''}`,
     p ? p.bio || `${p.name} on Verse${p.location ? `, ${p.location}` : ''}.` : undefined,
-    { canonicalPath: `/professionals/${id}`, type: 'profile', jsonLd: p ? personJsonLd(p, id) : undefined },
+    { canonicalPath: `/professionals/${id}`, type: 'profile', jsonLd },
   );
   if (loading || error || !p)
     return (
@@ -308,12 +313,13 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
                 </ul>
               </section>
             )}
-            <section className="mt-8">
+            {/* Players below the fold are laid out and painted only when scrolled near. */}
+            <section className="mt-8 [contain-intrinsic-size:auto_320px] [content-visibility:auto]">
               <h2 className="font-semibold">Work samples</h2>
               {samples.length ? (
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {samples.map((x) => (
-                    <figure key={x.id}>
+                    <figure key={x.id} className="min-w-0">
                       <MediaTile item={x} />
                       <figcaption className="mt-1 truncate text-xs text-slate-400">{x.title}</figcaption>
                     </figure>
@@ -325,7 +331,14 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
             </section>
             <div className="mt-8">
               {own ? null : user ? (
-                <Button variant="ghost" size="sm" onClick={() => setReporting(true)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setReportMounted(true);
+                    setReporting(true);
+                  }}
+                >
                   <Flag size={15} aria-hidden="true" className="mr-2" />
                   Report profile
                 </Button>
@@ -357,15 +370,19 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
       >
         {actions}
       </div>
-      <ReportDialog
-        open={reporting}
-        onOpenChange={setReporting}
-        title="Report this profile"
-        description="Tell our moderators what is wrong with this profile."
-        onSubmit={({ reason, details }) =>
-          apiPost('/reports', { entityType: 'user', entityId: c.id, reason, ...(details ? { details } : {}) })
-        }
-      />
+      {reportMounted && (
+        <Suspense fallback={null}>
+          <ReportDialog
+            open={reporting}
+            onOpenChange={setReporting}
+            title="Report this profile"
+            description="Tell our moderators what is wrong with this profile."
+            onSubmit={({ reason, details }) =>
+              apiPost('/reports', { entityType: 'user', entityId: c.id, reason, ...(details ? { details } : {}) })
+            }
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -155,9 +155,15 @@ export default function PublicTalent() {
         <TalentFacets values={values} update={update} />
         {!loading && <SearchNotice meta={meta} query={values.q} />}
         {loading ? (
-          <p className="text-slate-400 text-center py-16" role="status">
-            Loading musicians…
-          </p>
+          // Placeholder cards at the real card size, so the list does not jump when results arrive.
+          <div role="status" aria-label="Loading musicians" className="mt-6">
+            <div aria-hidden="true" className="grid min-h-[30rem] gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }, (_, i) => (
+                <div key={i} className="h-56 animate-pulse rounded-xl border border-white/10 bg-white/[.04]" />
+              ))}
+            </div>
+            <span className="sr-only">Loading musicians…</span>
+          </div>
         ) : error ? (
           <div className="text-center py-16" role="alert">
             <p className="text-rose-300">{error}</p>

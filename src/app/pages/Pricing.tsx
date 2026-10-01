@@ -177,15 +177,14 @@ export default function Pricing() {
             recruit, source, book and manage talent at higher volume.
           </p>
         </PhotoHeader>
-        {live === false && (
-          <p className="text-center text-xs text-slate-500 mt-6" role="status">
-            Showing standard plan limits. Your workspace billing page always shows the current terms.
-          </p>
-        )}
-        {annualAvailable && (
+        {/* The toggle only exists once the API says annual billing works. Its slot is held until the
+            answer is in, so the plans below do not jump down when it appears. */}
+        {annualAvailable ? (
           <div className="flex justify-center mt-8">
             <IntervalToggle value={interval} onChange={setInterval} />
           </div>
+        ) : (
+          live === null && <div aria-hidden="true" className="mt-8 h-[38px]" />
         )}
         <PromoCodeField plans={plans} interval={shownInterval} initialCode={initialCode} onApplied={onApplied} />
         <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mt-8" data-testid="pricing-plans">
@@ -240,6 +239,11 @@ export default function Pricing() {
             );
           })}
         </div>
+        {live === false && (
+          <p className="text-center text-xs text-slate-500 mt-6" role="status">
+            Showing standard plan limits. Your workspace billing page always shows the current terms.
+          </p>
+        )}
         <Card className="mt-6 bg-amber-500/[.05] border-amber-400/15" data-testid="flat-fee-note">
           <CardContent className="p-6 text-sm text-slate-300 space-y-2">
             <p>

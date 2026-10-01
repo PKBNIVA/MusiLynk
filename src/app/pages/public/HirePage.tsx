@@ -163,7 +163,7 @@ function HirePageContent({ data }: { data: HirePageData }) {
           <h2 id="featured-title" className="text-2xl font-black">
             Verified {roleNoun(role.label)}s in {city.name}
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6" data-testid="featured-grid">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6" data-testid="featured-grid">
             {featured.map((professional) => (
               <PersonCard key={professional.id} professional={professional} />
             ))}
@@ -192,7 +192,7 @@ function HirePageContent({ data }: { data: HirePageData }) {
         </Link>
       </section>
 
-      <div className="grid md:grid-cols-2 gap-10 mt-14">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-14">
         {relatedRoles.length > 0 && (
           <section aria-labelledby="related-roles-title">
             <h2 id="related-roles-title" className="text-lg font-bold">

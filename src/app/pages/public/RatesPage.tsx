@@ -131,7 +131,12 @@ export default function RatesPage() {
               <p className="mt-3 text-xs text-slate-300">Last updated {formatDate(data.updatedAt)}</p>
             </PhotoHeader>
 
-            <div className="overflow-x-auto mt-8">
+            <div
+              className="overflow-x-auto mt-8 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
+              role="region"
+              aria-label="Rates by role"
+              tabIndex={0}
+            >
               <table className="w-full text-left text-sm" data-testid="rates-table">
                 <thead>
                   <tr className="text-slate-400 border-b border-white/10">

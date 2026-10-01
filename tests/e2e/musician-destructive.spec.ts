@@ -54,7 +54,10 @@ test('removing availability asks first and only deletes on confirm', async ({ pa
   await page.getByRole('button', { name: 'Remove availability' }).click();
   const dialog = page.getByRole('alertdialog');
   await expect(dialog).toContainText('Hirers will no longer see this window');
-  if (process.env.UX_SHOT_DIR) await page.screenshot({ path: `${process.env.UX_SHOT_DIR}/availability-remove-confirm-${page.viewportSize()!.width}.png` });
+  if (process.env.UX_SHOT_DIR)
+    await page.screenshot({
+      path: `${process.env.UX_SHOT_DIR}/availability-remove-confirm-${page.viewportSize()!.width}.png`,
+    });
   await dialog.getByRole('button', { name: 'Keep as is' }).click();
   expect(deletes).toEqual([]);
   await expect(page.getByRole('button', { name: 'Remove availability' })).toBeVisible();

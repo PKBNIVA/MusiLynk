@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import {
   Bell,
   BookOpen,
+  HelpCircle,
   Briefcase,
   Building2,
   CalendarDays,
@@ -36,6 +37,7 @@ import { useAuth } from '../lib/authContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -47,7 +49,7 @@ import { toast } from 'sonner';
 import { SIGN_IN_CODE_TOAST } from '../lib/authToasts';
 import { apiGet } from '../lib/api';
 import { UNREAD_CHANGED_EVENT, useVisiblePolling } from '../lib/usePolling';
-import { TourLauncher } from './ProductTour';
+import { ProductTour } from './ProductTour';
 import { BrandMark } from './BrandMark';
 import { SkipLink } from './SkipLink';
 import type { UnreadCounts } from '../lib/apiTypes';
@@ -68,6 +70,7 @@ export function Navigation() {
   const isJobSeeker = user?.role === 'jobseeker';
   const baseUrl = isJobSeeker ? '/jobseeker' : '/employer';
   const [unread, setUnread] = useState(0);
+  const [tourOpen, setTourOpen] = useState(false);
   // The "check your email" toast is stale once the person is in and moving between pages (J-26).
   useEffect(() => {
     toast.dismiss(SIGN_IN_CODE_TOAST);
@@ -388,14 +391,14 @@ export function Navigation() {
               </DropdownMenuTrigger>
               {/* The items scroll; Sign out sits below them, never on top of them, so every item can be reached on a phone. */}
               <DropdownMenuContent align="end" className="flex max-h-[80vh] w-72 flex-col overflow-hidden">
-                <div className="min-h-0 flex-1 overflow-y-auto" data-testid="account-menu-items">
-                  <div className="px-2 py-2">
+                <div className="min-h-0 flex-1 overflow-y-auto" data-testid="account-menu-items" role="group" aria-label="Account" tabIndex={0}>
+                  <div className="px-2 py-2" role="group" aria-label="Signed in as">
                     <p className="text-sm font-semibold">{user?.name}</p>
                     <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
                   {accountGroups.map((group) => (
-                    <div key={group.label}>
+                    <DropdownMenuGroup key={group.label}>
                       <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
                         {group.label}
                       </DropdownMenuLabel>
@@ -418,7 +421,7 @@ export function Navigation() {
                         );
                       })}
                       <DropdownMenuSeparator />
-                    </div>
+                    </DropdownMenuGroup>
                   ))}
                   {!isJobSeeker && (
                     <>
@@ -467,13 +470,17 @@ export function Navigation() {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <div className="px-2 py-2">
-                    <TourLauncher role={isJobSeeker ? 'jobseeker' : 'employer'} />
-                    <Link to="/guide" className="mt-2 flex items-center gap-2 text-sm text-slate-400 hover:text-white">
-                      <BookOpen size={15} />
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">Help</DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => setTourOpen(true)} className="cursor-pointer">
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    Take product tour
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/guide">
+                      <BookOpen className="mr-2 h-4 w-4" />
                       How to use Verse
                     </Link>
-                  </div>
+                  </DropdownMenuItem>
                 </div>
                 <div className="shrink-0">
                   <DropdownMenuSeparator />
@@ -490,9 +497,9 @@ export function Navigation() {
                   <Menu size={20} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="max-h-[72vh] w-72 overflow-y-auto">
+              <DropdownMenuContent align="end" tabIndex={0} className="max-h-[72vh] w-72 overflow-y-auto">
                 {menuGroups.map((group) => (
-                  <div key={group.label}>
+                  <DropdownMenuGroup key={group.label}>
                     <DropdownMenuLabel className="text-[10px] uppercase tracking-widest">
                       {group.label}
                     </DropdownMenuLabel>
@@ -508,7 +515,7 @@ export function Navigation() {
                       );
                     })}
                     <DropdownMenuSeparator />
-                  </div>
+                  </DropdownMenuGroup>
                 ))}
                 {FEATURE_STAGE && (
                   <DropdownMenuItem asChild>
@@ -529,6 +536,7 @@ export function Navigation() {
           </div>
         </div>
       </nav>
+      {tourOpen && <ProductTour role={isJobSeeker ? 'jobseeker' : 'employer'} forceOpen onClose={() => setTourOpen(false)} />}
       <ActingAsChip />
       <nav
         className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-2xl border border-white/15 bg-[#101221]/94 p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden"

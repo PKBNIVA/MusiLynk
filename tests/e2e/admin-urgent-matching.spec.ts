@@ -89,3 +89,16 @@ test('admin marks a request filled', async ({ page }) => {
   await expect(page.getByText('Marked filled')).toBeVisible();
   expect(state.updated).toEqual([{ status: 'filled', filledByUserId: undefined }]);
 });
+
+test('a saved founder note is still there after the row is collapsed and opened again', async ({ page }) => {
+  const state = await openAdmin(page);
+  await page.getByRole('button', { name: 'Candidates' }).click();
+  await page.getByLabel('Founder notes').fill('Called the studio; they want a Friday drummer.');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Note saved')).toBeVisible();
+  expect(state.updated).toEqual([{ founderNotes: 'Called the studio; they want a Friday drummer.' }]);
+
+  await page.getByRole('button', { name: 'Hide candidates' }).click();
+  await page.getByRole('button', { name: 'Candidates' }).click();
+  await expect(page.getByLabel('Founder notes')).toHaveValue('Called the studio; they want a Friday drummer.');
+});

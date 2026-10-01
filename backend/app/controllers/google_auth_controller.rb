@@ -114,7 +114,7 @@ class GoogleAuthController < ApplicationController
 
   def notify_linked(user)
     return unless EmailDelivery.configured?
-    EmailDeliveryJob.enqueue(user:, template: "google_connected", link: "#{frontend_url}/account")
+    EmailDeliveryJob.enqueue(user:, template: "google_connected", link: NotificationEmail.settings_link(user))
   rescue StandardError => e
     Rails.logger.error({ event: "email_enqueue_failed", template: "google_connected", error: e.class.name }.to_json)
     ErrorReporter.capture(e, tags: { source: "email_enqueue_failed", template: "google_connected" })

@@ -74,6 +74,6 @@ class BillingRemindersJob < ApplicationJob
 
   def cancel_url(subscription)
     token = CGI.escape(BillingCancelToken.generate(subscription))
-    "#{NotificationEmail.frontend_url}/employer/billing?cancel=1&t=#{token}"
+    "#{NotificationEmail.frontend_url}#{NotificationEmail.workspace(subscription.user)}/billing?cancel=1&t=#{token}"
   end
 end

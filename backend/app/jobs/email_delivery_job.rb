@@ -61,6 +61,7 @@ class EmailDeliveryJob < ApplicationJob
   def perform(user_id, template, sealed_link, sealed_email = nil, sealed_name = nil)
     to = recipient_for(user_id, sealed_email)
     return log_skip("recipient_missing", template) if to.blank?
+    return log_skip("recipient_synthetic", template) if user_id.present? && User.where(id: user_id).where.not(synthetic_batch: nil).exists?
 
     secret = self.class.unseal(sealed_link)
     return log_skip("link_unreadable", template) unless secret

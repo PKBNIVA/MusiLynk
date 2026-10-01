@@ -190,21 +190,37 @@ class ApplicationController < ActionController::API
   # Call before mapping a list through public_profile: loads every row's ProfileStats in one go.
   def prime_profile_stats(users)
     @profile_stats = ProfileStats.batch(users)
+    @verification_tiers = Verification::Tier.batch(users)
+    @verification_summaries = batch_verification_summaries(users)
+  end
+
+  # { user_id => {checks:, verifiedAt:} } for the verified users among `users`: the newest approved request each.
+  def batch_verification_summaries(users)
+    ids = users.select { _1.profile&.verified? }.map(&:id)
+    return {} if ids.empty?
+    VerificationRequest.where(user_id: ids, status: "approved").order(reviewed_at: :desc, created_at: :desc)
+      .group_by(&:user_id).transform_values(&:first)
   end
 
   def public_profile(user)
     { "id" => user.id, "name" => user.name, "role" => user.role, "createdAt" => user.created_at }
       .merge((user.profile&.api_json || {}).slice(*PUBLIC_PROFILE_KEYS))
       .merge("demo" => SyntheticQa::Demo.user?(user), "verification" => verification_summary(user),
-        "verificationTier" => Verification::Tier.for(user))
+        "verificationTier" => verification_tier(user))
       .merge(@profile_stats&.dig(user.id) || ProfileStats.for(user))
+  end
+
+  # The batch computed by prime_profile_stats when the list was primed, else the per-user lookup.
+  def verification_tier(user)
+    return Verification::Tier.for(user) unless @verification_tiers
+    @verification_tiers[user.id]
   end
 
   # {checks:, verifiedAt:} for the public Verified badge tooltip, or nil when unverified /
   # nothing was actually recorded (older approvals, backfilled — see the migration).
   def verification_summary(user)
     return nil unless user.profile&.verified?
-    approved = user.verification_requests.where(status: "approved").order(reviewed_at: :desc, created_at: :desc).first
+    approved = @verification_summaries ? @verification_summaries[user.id] : user.verification_requests.where(status: "approved").order(reviewed_at: :desc, created_at: :desc).first
     return nil unless approved
     { "checks" => approved.checks, "verifiedAt" => approved.reviewed_at || approved.updated_at }
   end

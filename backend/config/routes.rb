@@ -40,6 +40,7 @@ Rails.application.routes.draw do
     delete "auth/connections/:id", to: "auth#destroy_connection"
     get "me", to: "auth#me"
     get "me/identities", to: "identities#index"
+    get "me/referral-code", to: "referrals#show"
     put "me/email-preferences", to: "notifications#update_email_preferences"
     get "account/export", to: "account#export"
     delete "account", to: "account#destroy"
@@ -55,6 +56,7 @@ Rails.application.routes.draw do
     post "library/import", to: "library_imports#create"
     get "public/stats", to: "public_stats#show"
 
+    get "jobs/limits", to: "jobs#limits"
     resources :jobs, only: %i[index show create] do
       member { post :apply }
     end
@@ -88,7 +90,10 @@ Rails.application.routes.draw do
       end
       resources :jobs, only: %i[index update]
       resources :reviews, only: %i[index update]
-      resources :verifications, only: %i[index update]
+      resources :verifications, only: %i[index update] do
+        get :stats, on: :collection
+        post :revoke, on: :member
+      end
       resources :reports, only: %i[index update] do
         member do
           get :context
@@ -98,6 +103,12 @@ Rails.application.routes.draw do
       get :operations, to: "operations#show"
       get :audit, to: "operations#audit"
       get :subscriptions, to: "operations#subscriptions"
+      get "promo-codes/export", to: "promo_codes#export", defaults: { format: "csv" }
+      resources :promo_codes, path: "promo-codes", only: %i[index create update] do
+        member { get :redemptions }
+      end
+      get "payments-open-email", to: "payments_open_emails#show"
+      post "payments-open-email", to: "payments_open_emails#create"
       get "billing-attempts", to: "operations#billing_attempts"
       post "billing-attempts/:id/reconcile", to: "operations#reconcile_billing_attempt"
       resources :billing_events, path: "billing-events", only: %i[index show]
@@ -215,6 +226,7 @@ Rails.application.routes.draw do
         delete "members/:member_id", to: "acts#remove_member"
       end
     end
+    get "bookings/limits", to: "bookings#limits"
     resources :bookings, only: %i[index create] do
       member do
         post :quote
@@ -234,6 +246,7 @@ Rails.application.routes.draw do
     resources :urgent_requests, path: "urgent-requests", only: %i[index show create update] do
       member do
         post :respond
+        post :accept
         get :responses
         get "token-action", to: "urgent_requests#action_from_token"
       end
@@ -255,6 +268,7 @@ Rails.application.routes.draw do
       get "feed", to: "feed#index"
       get "events", to: "events#index"
       get "authors/:type/:authorId/posts", to: "posts#by_author"
+      get "authors/:type/:id", to: "authors#show"
       get "authors/:type/:id/followers", to: "follows#followers"
       get "authors/:type/:id/following", to: "follows#following"
       get "tags/:tag", to: "tags#show"
@@ -276,6 +290,7 @@ Rails.application.routes.draw do
       post :checkout, to: "billing#checkout"
       post :cancel, to: "billing#cancel"
       get "cancel-link", to: "billing#verify_cancel_link"
+      post "codes/validate", to: "codes#validate"
       post "webhook/razorpay", to: "billing#razorpay_webhook"
     end
     # Local Razorpay simulator (RAZORPAY_SIMULATOR=true, test key, never production).

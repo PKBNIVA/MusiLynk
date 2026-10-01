@@ -13,9 +13,13 @@ export interface AutocompleteInputProps {
   multiple?: boolean;
   placeholder?: string;
   label: string;
+  /** Shows "*" (announced as "required") after the label, like the shared Field. */
+  required?: boolean;
   id?: string;
   className?: string;
   debounceMs?: number;
+  /** Longest value a person can type or commit (the server refuses longer ones). */
+  maxLength?: number;
 }
 
 const DEFAULT_DEBOUNCE_MS = 200;
@@ -35,9 +39,11 @@ export function AutocompleteInput({
   multiple = true,
   placeholder,
   label,
+  required,
   id,
   className,
   debounceMs = DEFAULT_DEBOUNCE_MS,
+  maxLength,
 }: AutocompleteInputProps) {
   const generatedId = useId();
   const inputId = id || generatedId;
@@ -99,7 +105,7 @@ export function AutocompleteInput({
   }
 
   function selectValue(next: string, refocus = true) {
-    const trimmed = next.trim();
+    const trimmed = (maxLength ? next.trim().slice(0, maxLength) : next.trim()).trim();
     if (!trimmed) return;
     if (multiple) {
       if (!values.includes(trimmed)) onChange([...values, trimmed]);
@@ -162,6 +168,14 @@ export function AutocompleteInput({
     <div className={cn('flex flex-col gap-1.5', className)}>
       <label htmlFor={inputId} className="text-sm font-medium text-slate-200">
         {label}
+        {required && (
+          <>
+            <span aria-hidden="true" className="ml-0.5 text-rose-300">
+              *
+            </span>
+            <span className="sr-only"> (required)</span>
+          </>
+        )}
       </label>
       {multiple && values.length > 0 && (
         <ul className="flex flex-wrap gap-1.5" aria-label={`Selected ${label.toLowerCase()}`}>
@@ -194,7 +208,9 @@ export function AutocompleteInput({
           aria-controls={listboxId}
           aria-activedescendant={activeOptionId}
           aria-autocomplete="list"
+          aria-required={required || undefined}
           placeholder={placeholder}
+          maxLength={maxLength}
           value={query}
           onChange={(event) => {
             const text = event.target.value;

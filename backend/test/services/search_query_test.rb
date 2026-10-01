@@ -142,4 +142,31 @@ class SearchQueryTest < ActiveSupport::TestCase
     assert list, "PostJob.tsx keeps its function list in `const functions = [...]` (update this check if it moves)"
     assert_equal Search::Taxonomy.function_areas, list.scan(/'([^']+)'/).flatten
   end
+
+  test "any_of ORs single-word roles into one token and keeps multi-word roles as phrases" do
+    query = Search::Query.any_of(["Drummer", "Vocalist"])
+    assert_equal 1, query.tokens.size
+    assert_includes query.tokens.first.alternatives, "drummer"
+    assert_includes query.tokens.first.alternatives, "vocalist"
+
+    phrase = Search::Query.any_of(["Sound engineer", "Drummer"])
+    assert_equal 1, phrase.tokens.size
+    assert_includes phrase.tokens.first.words, "sound engineer"
+
+    assert_equal "drummer", Search::Query.any_of(["Drummer"]).text
+    assert Search::Query.any_of([]).blank?
+    assert_not Search::Query.any_of([]).inert?
+    assert Search::Query.any_of(["%$;"]).inert?
+  end
+
+  test "and narrows one query by another and keeps an inert query inert" do
+    typed = Search::Query.new("wedding")
+    roles = Search::Query.any_of(%w[Drummer Vocalist])
+    both = typed.and(roles)
+    assert_equal 2, both.tokens.size
+    assert_equal roles.tokens, Search::Query.new("").and(roles).tokens
+    assert_equal typed.tokens, typed.and(Search::Query.new("")).tokens
+    assert typed.and(Search::Query.new("%$;")).inert?
+    assert Search::Query.new("%$;").and(roles).inert?
+  end
 end

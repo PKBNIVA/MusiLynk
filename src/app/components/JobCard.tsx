@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { Briefcase, CalendarDays, MapPin, Music, ShieldCheck, Users, Wallet } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { DemoBadge } from './DemoBadge';
+import { FormatGlyph } from './kit/FormatGlyph';
+import { CoverArt } from './media/CoverArt';
 import { formatDeadline, formatPay } from '../lib/format';
 import type { Job } from '../lib/apiTypes';
 import { optionLabel } from './ui/option-labels';
@@ -20,83 +22,90 @@ type Props = {
   index: number;
   /** Controls beside the card body (e.g. the save button). */
   aside?: ReactNode;
+  /** Dashboard grid: title, company and pay only. */
+  compact?: boolean;
 };
 
 /**
- * One opportunity in a list. Public and signed-in lists show the same facts in the same order:
- * type, trust badges, title, company, location · workplace, function, genre, pay, applicants and
- * the closing date (SRCH-13).
+ * One opportunity in a list, as a row: generated cover art with the format glyph, title, company · city ·
+ * workplace, pay as the most prominent secondary fact, then genre / one skill and the closing date and applicant count.
+ * Public and signed-in lists show the same facts (SRCH-13).
  */
-export function JobCard({ job, to, index, aside }: Props) {
+export function JobCard({ job, to, index, aside, compact = false }: Props) {
   const applicants = job.applicationsCount || 0;
+  const pay = formatPay(job, 'Pay not disclosed');
+  const undisclosed = pay === 'Pay not disclosed';
+  const payClass = undisclosed ? 'text-sm text-slate-500' : 'text-sm font-semibold text-emerald-200';
+  const place = [job.location, job.workplace && optionLabel(job.workplace)].filter(Boolean).join(' · ');
+  const chips = compact ? [] : [job.genre, job.function_area || job.skills?.[0]].filter((x): x is string => Boolean(x));
   return (
-    <Card className="verse-lift bg-white/[.055] border-white/10 hover:bg-white/[.075]" data-testid="job-card">
-      <CardContent className="p-5 md:p-6">
-        <div className="flex gap-4 justify-between">
+    <Card className="verse-lift min-w-0 bg-white/[.055] border-white/10 hover:bg-white/[.075]" data-testid="job-card">
+      <CardContent className="p-3.5 md:p-4">
+        <div className="flex flex-wrap items-start gap-3 md:flex-nowrap">
+          <span className="relative shrink-0" data-testid="job-cover">
+            <CoverArt
+              seed={job.id}
+              kind={job.opportunity_kind || 'job'}
+              genres={job.genre ? [job.genre] : []}
+              size={compact ? 44 : 56}
+              rounded
+              bars={20}
+            />
+            <span className="absolute left-1 top-1 grid size-6 place-items-center rounded-full bg-black/40">
+              <FormatGlyph kind={job.opportunity_kind || 'job'} size={16} className="text-white!" />
+            </span>
+          </span>
           <Link
-            className="min-w-0 flex-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+            className={`min-w-0 flex-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 flex flex-col gap-1 md:gap-4 ${compact ? '' : 'md:flex-row md:justify-between'}`}
             to={to}
             data-job-item={index}
           >
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <Badge variant="secondary">{optionLabel(job.opportunity_kind || 'job')}</Badge>
-              <DemoBadge show={job.demo} />
-              {job.employerVerified && (
-                <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-400/20">
-                  <ShieldCheck size={13} className="mr-1" />
-                  Verified
-                </Badge>
-              )}
-              {job.featured && <Badge>Featured</Badge>}
-              {job.fitScore ? (
-                <Badge className="bg-sky-500/15 text-sky-200 border-sky-400/20">{job.fitScore}% profile fit</Badge>
-              ) : null}
-            </div>
-            <h2 className="text-xl md:text-2xl font-semibold break-words">{job.title}</h2>
-            <p className="text-violet-300 mt-1">{job.company}</p>
-            <PostedBy postedAs={job.postedAs} link={false} className="mt-1" />
-            <div className="text-sm text-slate-400 mt-3 flex flex-wrap gap-x-4 gap-y-2" data-testid="job-facts">
-              <span className="flex items-center">
-                <MapPin size={15} className="mr-1" aria-hidden="true" />
-                {job.location}
-                {job.workplace ? ` · ${optionLabel(job.workplace)}` : ''}
-              </span>
-              {(job.function_area || job.type) && (
-                <span className="flex items-center">
-                  <Briefcase size={15} className="mr-1" aria-hidden="true" />
-                  {job.function_area || job.type}
-                </span>
-              )}
-              {job.genre && (
-                <span className="flex items-center">
-                  <Music size={15} className="mr-1" aria-hidden="true" />
-                  {job.genre}
-                </span>
-              )}
-              <span className="flex items-center">
-                <Wallet size={15} className="mr-1" aria-hidden="true" />
-                {formatPay(job, 'Pay not disclosed')}
-              </span>
-              <span className="flex items-center">
-                <Users size={15} className="mr-1" aria-hidden="true" />
-                {applicants} applicant{applicants === 1 ? '' : 's'}
-              </span>
-              <span className="flex items-center" data-job-deadline>
-                <CalendarDays size={15} className="mr-1" aria-hidden="true" />
-                {formatDeadline(job.application_deadline)}
-              </span>
-            </div>
-            {job.skills?.length ? (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {job.skills.slice(0, 6).map((skill) => (
-                  <Badge variant="outline" key={skill} className="border-white/15 text-slate-300">
-                    {skill}
-                  </Badge>
-                ))}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <h2 className="font-semibold text-base truncate">{job.title}</h2>
+                <DemoBadge show={job.demo} className="shrink-0" />
               </div>
-            ) : null}
+              <p className="text-sm text-slate-400 truncate flex items-center gap-1.5" data-testid="job-facts-place">
+                <span className="text-violet-300 truncate">{job.company}</span>
+                {!compact && job.employerVerified && (
+                  <span className="shrink-0 text-emerald-300" title="Verified hirer">
+                    <ShieldCheck size={14} aria-hidden="true" />
+                    <span className="sr-only">Verified hirer</span>
+                  </span>
+                )}
+                {!compact && place && <span className="truncate">· {place}</span>}
+              </p>
+              {!compact && <PostedBy postedAs={job.postedAs} link={false} className="mt-0.5 text-xs" />}
+              {chips.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {chips.map((c) => (
+                    <Badge
+                      variant="outline"
+                      key={c}
+                      className="border-white/15 px-1.5 py-0 text-[11px] leading-5 text-slate-300"
+                    >
+                      {c}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="shrink-0 md:text-right" data-testid="job-facts">
+              <p className={payClass}>{pay}</p>
+              {!compact && (
+                <p className="text-xs text-slate-400 mt-1">
+                  <span data-job-deadline>{formatDeadline(job.application_deadline)}</span>
+                  {' · '}
+                  {applicants} applicant{applicants === 1 ? '' : 's'}
+                </p>
+              )}
+            </div>
           </Link>
-          {aside && <div className="flex flex-col items-end gap-3 shrink-0">{aside}</div>}
+          {aside && (
+            <div className="flex w-full shrink-0 items-center justify-between gap-3 md:w-auto md:flex-col md:items-end">
+              {aside}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

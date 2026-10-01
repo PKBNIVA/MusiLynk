@@ -5,7 +5,7 @@ import { PublicNav } from '../../components/PublicNav';
 import { PublicDetailState } from '../../components/PublicDetailState';
 import { usePageMeta } from '../../components/PageMeta';
 import { JobCard } from '../../components/JobCard';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { apiGet } from '../../lib/api';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { Job } from '../../lib/apiTypes';
@@ -66,7 +66,7 @@ export default function PageJobs() {
         </header>
         {data.jobs.length === 0 ? (
           <EmptyState icon={Briefcase} title={`${page.name} has no open opportunities right now`}>
-            Check back soon, or browse every music job on Verse.
+            Check back soon, or browse every open opportunity on Verse.
           </EmptyState>
         ) : (
           <div className="space-y-4">

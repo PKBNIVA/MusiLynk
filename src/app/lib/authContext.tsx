@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, apiGet, apiPost, hasAccessToken, onAccessTokenChange, setAccessToken } from './api';
+import {
+  ApiError,
+  apiGet,
+  apiPost,
+  hasAccessToken,
+  onAccessTokenChange,
+  rememberSessionRole,
+  setAccessToken,
+} from './api';
 
 /**
  * A full-page "Continue with Google" round trip lands back on whatever page the backend
@@ -45,10 +53,18 @@ export interface User {
   verified?: boolean;
   skills?: string[];
   genres?: string[];
+  /** The roles on the musician's profile ("Tabla Player", …). */
+  roles?: string[];
   credits?: string[];
   openTo?: string[];
+  /** The photo the person uploaded (or their Google picture); UserAvatar falls back to initials. */
+  photoUrl?: string | null;
+  /** False for an account that signs in with an emailed code or Google and has no password yet. */
+  passwordSet?: boolean;
   phoneE164?: string | null;
   whatsappConsentedAt?: string | null;
+  verificationPending?: boolean;
+  verificationRequestedAt?: string | null;
 }
 /* Admin password sign-in answers with this instead of a session; the code emailed to the admin completes it. */
 export interface SecondFactorChallenge {
@@ -119,6 +135,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     void consumeGoogleRedirectCode().then(() => refresh());
   }, []);
+  /* An expired session on a role-less page (the Stage) signs in again as the same kind of account. The role (never the token) is remembered at sign-in, so a cold load whose token has already expired still knows it; only sign-out forgets it, not a failed or slow /me. */
+  useEffect(() => {
+    if (user) rememberSessionRole(user.role);
+  }, [user]);
   /* Sign-in or sign-out in another tab updates this one; a cleared token drops to signed-out state and protected routes send the user to sign-in. */
   useEffect(
     () =>
@@ -128,6 +148,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         generation.current += 1;
+        rememberSessionRole(null);
         setUser(null);
         setLoading(false);
       }),
@@ -141,6 +162,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (isSecondFactorChallenge(d)) return d;
     generation.current += 1;
     setAccessToken(d.accessToken);
+    rememberSessionRole(d.user.role);
     setUser(d.user);
     setLoading(false);
     return d.user;
@@ -149,6 +171,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const d = await apiPost<{ user: User; accessToken: string }>('/auth/register', payload);
     generation.current += 1;
     setAccessToken(d.accessToken);
+    rememberSessionRole(d.user.role);
     setUser(d.user);
     setLoading(false);
     return d.user;
@@ -158,6 +181,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const d = await apiPost<{ user: User; accessToken: string }>('/auth/otp/verify', { email, code });
       generation.current += 1;
       setAccessToken(d.accessToken);
+      rememberSessionRole(d.user.role);
       setUser(d.user);
       setLoading(false);
       return d.user;
@@ -166,6 +190,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const d = await apiPost<{ user: User; accessToken: string }>('/auth/second-factor', { challengeToken, code });
     generation.current += 1;
     setAccessToken(d.accessToken);
+    rememberSessionRole(d.user.role);
     setUser(d.user);
     setLoading(false);
     return d.user;
@@ -176,6 +201,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       generation.current += 1;
       setAccessToken(null);
+      rememberSessionRole(null);
       setUser(null);
     }
   };

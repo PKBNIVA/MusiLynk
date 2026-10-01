@@ -23,7 +23,12 @@ export function useFeedList(key: string, fetchPage: (cursor?: string | null) => 
     setError('');
     try {
       const page = await fetchRef.current(nextCursor);
-      setPosts((prev) => (replace ? page.posts : [...prev, ...page.posts]));
+      setPosts((prev) => {
+        if (replace) return page.posts;
+        // A re-ranked feed can serve a post again on a later page; show each post once.
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...page.posts.filter((p) => !seen.has(p.id))];
+      });
       setCursor(page.nextCursor);
       setDone(!page.nextCursor);
     } catch (e: unknown) {

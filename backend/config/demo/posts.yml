@@ -1,0 +1,265 @@
+# The 40 demo-showcase Stage posts (SyntheticQa::Showcase), oldest first, spread over the past 30
+# days. `by` is the role slug of the author (a demo musician of that role; Mumbai first) or `hirer`.
+# kind: update, performance, gig, release, looking_for, event. `comments` are short replies from a
+# musician of the role in `by` (or `any`). Hashtags come from the text itself.
+posts:
+  - by: drummer
+    kind: update
+    days_ago: 29
+    body: "Re-headed the kit today: coated ambassadors on the toms, a clear batter on the snare. It finally sits under the acoustic guitar in our Wednesday rehearsals. Do you tune toms up a fourth when you play with a guitar-led band? #drums #gearnotes"
+    comments:
+      - { by: drummer, body: "I go a third up and mute the floor tom with a bit of gaffer tape. Depends on the room." }
+      - { by: guitarist, body: "As the guitarist in that kind of band, I appreciate the lower snare. Cuts through less, sits better." }
+  - by: singer
+    kind: update
+    days_ago: 28
+    body: "Rehearsal note: we spent ninety minutes on the transition between a slow ghazal and an upbeat Punjabi number. Ended up dropping the key by a tone and adding a four-bar vamp. Sounds obvious now. #weddingband #rehearsal"
+    comments:
+      - { by: keyboard-player, body: "The vamp is the secret. Give the DJ a four-bar cue and the floor fills before the next verse." }
+  - by: hirer
+    hirer: Sixth Floor Sound
+    kind: looking_for
+    days_ago: 27
+    body: "We are looking for a drummer and a bassist for three days of tracking on an indie EP next month. Studio in Andheri, lunch provided, payment within a week. Send a link to a recording and your day rate through the listing. #sessionwork #mumbai"
+    comments:
+      - { by: drummer, body: "Sent through the listing. Thanks for including the payment terms in the post." }
+  - by: sound-engineer
+    kind: update
+    days_ago: 27
+    body: "Small thing that saved my Saturday: I now tape the input list to the top of the mixer and to the stage box. When a cable is swapped in the dark, anyone can read it in five seconds. #livesound"
+    comments:
+      - { by: sound-engineer, body: "Also label the patch cables at both ends. Learned that on a festival stage." }
+      - { by: guitarist, body: "As a player, please do this at every gig." }
+  - by: guitarist
+    kind: performance
+    days_ago: 26
+    body: "Played a three-hour set at a rooftop bar last night with a borrowed amp because mine failed at soundcheck. The tone was not mine, but the room did not mind. Always carry a DI. #guitar #gigstories"
+    comments:
+      - { by: bassist, body: "Same lesson for me last year. A DI box is the cheapest insurance." }
+  - by: tabla-player
+    kind: update
+    days_ago: 25
+    body: "Tuning question for other tabla players: my dayan drifts a little flat in humid weather even after hammering. Do you retune between songs or just accept the drift for a shorter set? #tabla"
+    comments:
+      - { by: tabla-player, body: "I retune between songs during monsoon. A sixty-second break, and I turn it into a short solo." }
+      - { by: violinist, body: "As a string player, I appreciate the retune. The audience hears a drift before we do." }
+  - by: music-producer
+    kind: release
+    days_ago: 24
+    body: "The four-song EP I produced for a Pune indie band is now on all platforms. Recorded live in a rented rehearsal room over two days, mixed at my place in ten. It is rough in places, and that is what the band wanted. #newrelease #indie"
+    comments:
+      - { by: drummer, body: "Listening now. The snare sound on the second track is good." }
+      - { by: singer, body: "Congratulations to the band and to you for keeping it live." }
+  - by: dj
+    kind: update
+    days_ago: 23
+    body: "Playlist prep for a sangeet next week: 90 minutes of must-plays from the family, 30 minutes of do-not-plays I am careful to avoid. Anyone else keep a separate list of songs you will not play, and why? #djlife #weddings"
+    comments:
+      - { by: dj, body: "Yes. Mine has anything with lyrics that could offend an older relative. It has saved me twice." }
+  - by: keyboard-player
+    kind: update
+    days_ago: 22
+    body: "Two months with a lightweight 61-key controller instead of my old 88-key stage piano. My back is happier, my left hand misses the hammer action. For wedding gigs I'd switch again; for jazz nights I'll keep the 88. #keys"
+    comments:
+      - { by: keyboard-player, body: "The same compromise here. I carry both on weekends when the taxi allows it." }
+  - by: singer
+    kind: gig
+    days_ago: 21
+    body: "Gig recap: a 250-guest anniversary dinner in a hotel ballroom. Two sets, one long request list, and a ninety-year-old who asked for a song from 1962. We did it in the key of the recording. The room went quiet, then applauded. #liveshow"
+    comments:
+      - { by: keyboard-player, body: "That is the kind of request I love. What did you sing?" }
+      - { by: singer, body: "It was an old film song. The family cried, I nearly did." }
+  - by: violinist
+    kind: update
+    days_ago: 20
+    body: "Ran my string quartet through a Bollywood medley for the first time with a click and a keyboard. Intonation took two run-throughs to settle, and the viola player suggested moving the second theme up a whole step. Better already. #strings"
+    comments:
+      - { by: keyboard-player, body: "Send me the chart and I will play the pads for the rehearsal." }
+  - by: bassist
+    kind: update
+    days_ago: 19
+    body: "Learned 150 songs by ear this year and my ears finally give up on some of them. I've started writing simple charts with the chord numbers only. The next bassist who fills in for me can read it in an hour. #bass"
+    comments:
+      - { by: guitarist, body: "Number charts are a great idea. I use them for every wedding band deputy." }
+  - by: hirer
+    hirer: The Verandah Lounge
+    kind: looking_for
+    days_ago: 19
+    body: "Our lounge is looking for a resident vocalist for Friday and Saturday evenings, with a house piano trio. Two 45-minute sets, fixed fee per night. Please send a recording of a live set through the listing. #mumbai #lounge"
+    comments:
+      - { by: singer, body: "Applied. Thanks for stating the fixed fee upfront." }
+  - by: saxophonist
+    kind: performance
+    days_ago: 18
+    body: "Played sax over a DJ set last night at a wedding after-party. The key of the last three songs was a problem: I had to change reeds to darken the sound. Agreeing keys with the DJ before the night helps a lot. #saxophone #weddings"
+    comments:
+      - { by: dj, body: "Send me your key list and I will match it before the event." }
+  - by: sound-engineer
+    kind: update
+    days_ago: 17
+    body: "Measured a banquet hall today: the reverb time is nearly 2.4 seconds when empty. I told the client we will need to roll off the low mids on the vocals and keep the band's stage volume down. Tuning the room with a measurement mic takes ten minutes and saves the night. #acoustics"
+    comments:
+      - { by: singer, body: "This is why we hire you. Vocals actually sound clear in halls you tune." }
+  - by: drummer
+    kind: performance
+    days_ago: 16
+    body: "Three-hour set at a pub: the venue asked for volume complaints to be ignored, and I refused. We played with brushes for the first hour and sticks after ten. The owner thanked us. #drums #gigs"
+  - by: singer
+    kind: update
+    days_ago: 15
+    body: "Voice notes for anyone singing four nights a week: warm-up for ten minutes, drink water the whole afternoon, and skip dairy on show days. Small things, but I've had zero cancellations since I started this. #vocalcare"
+    comments:
+      - { by: singer, body: "Adding steam for five minutes before a set. It does help." }
+      - { by: dj, body: "As someone who talks over loud music all night, thank you for this." }
+  - by: percussionist
+    kind: update
+    days_ago: 14
+    body: "Recording percussion for a short film tomorrow: cajon, shakers, and a frame drum. I always bring three shakers of different sizes because the director will say the first is 'too bright'. #percussion"
+    comments:
+      - { by: tabla-player, body: "Three shakers, always. And a towel for the cajon so it does not slide." }
+  - by: guitarist
+    kind: release
+    days_ago: 13
+    body: "The instrumental single I recorded with a tabla player and a bansuri player is out. Slide guitar in open D, played in raga Yaman. We recorded live in one room, four takes. #fusion #newmusic"
+    comments:
+      - { by: tabla-player, body: "Tabla and bansuri around slide guitar in Yaman works better than I expected." }
+      - { by: bansuri-player, body: "Slide guitar following the raga phrases like this is unusual. I like it." }
+  - by: hirer
+    hirer: Kalyani Music Academy
+    kind: looking_for
+    days_ago: 12
+    body: "We are recruiting a visiting tabla teacher for weekend batches at our academy. Ten students, ages 10 to 40, two exams a year. Teaching experience preferred. Details are in the listing. #teaching"
+    comments:
+      - { by: tabla-player, body: "Applied. Thank you for posting the batch size." }
+  - by: music-producer
+    kind: update
+    days_ago: 12
+    body: "A note on mix notes: when a client says 'make it warmer', I ask them to play me a song with the warmth they mean. Nine times out of ten it is a different frequency range than I assumed. #mixing"
+    comments:
+      - { by: sound-engineer, body: "Reference tracks save so much time. We never argue about adjectives after that." }
+  - by: dhol-player
+    kind: performance
+    days_ago: 11
+    body: "Baraat this Sunday: 45 minutes on foot under a hot sun, 400 metres. Bought a lighter set of straps and a shoulder pad. My shoulders thank me. Next time, water bottles in the plan. #dhol #baraat"
+    comments:
+      - { by: dhol-player, body: "Try a cloth pad under the strap. A folded towel worked for me for years." }
+  - by: keyboard-player
+    kind: gig
+    days_ago: 10
+    body: "Gig recap: a corporate annual day for 350 employees. The organiser gave us a run sheet, a green room and water. Two 45-minute sets, and we finished 10 minutes early. This is how it should always be. #corporate #liveband"
+    comments:
+      - { by: singer, body: "That is a rare organiser. Please share the name in the community." }
+  - by: sound-engineer
+    kind: update
+    days_ago: 9
+    body: "Question for live engineers: what do you do when a band arrives with in-ear monitors and no personal mixers? Rent, borrow, or ask them to use wedges? I have been renting for a small fee and it works, but wonder what others do. #monitors"
+    comments:
+      - { by: sound-engineer, body: "I bring two spare personal mixers and charge a small rental fee. Bands are happy to pay." }
+      - { by: drummer, body: "As a drummer, the rental is worth it. Please do not send us to wedges." }
+  - by: singer
+    kind: update
+    days_ago: 9
+    body: "Learned a new Sufi kalaam this week and sang it at a small gathering. Ten people, no mic, a harmonium. It reminded me why I began. #sufi #harmonium"
+    comments:
+      - { by: singer, body: "There is nothing like a room that leans in when you sing softly." }
+  - by: hirer
+    hirer: Copper Kettle Cafe
+    kind: event
+    days_ago: 8
+    event_title: Open mic night for acoustic acts
+    event_in_days: 9
+    event_venue: Copper Kettle Cafe
+    body: "Open mic night at our cafe. Ten slots of 12 minutes each, a small PA and a microphone are provided. Sign up on the day from 6 pm; the first act starts at 7 pm."
+    comments:
+      - { by: guitarist, body: "I will be there with two songs." }
+  - by: guitarist
+    kind: update
+    days_ago: 8
+    body: "Session guitar day: four songs, three different tones, and one producer who changed the brief at song three. Kept a log of every setting so I could go back to the original take. #sessionwork #guitar"
+    comments:
+      - { by: music-producer, body: "The log is what separates the professionals. Nice." }
+  - by: drummer
+    kind: update
+    days_ago: 7
+    body: "Tried an electronic kit at a rooftop gig where an acoustic kit was not allowed. It took three songs to get used to the rebound. Now I understand why session drummers own both. #edrums"
+    comments:
+      - { by: drummer, body: "Turn up the trigger sensitivity on the snare. It changes everything." }
+  - by: tabla-player
+    kind: gig
+    days_ago: 6
+    body: "Accompanied a Hindustani vocal recital yesterday: raga Bhairavi, two hours, forty guests. I was tired at the end, but the singer's last alaap made me forget it. The tihai landed on the sam. #tabla #classical"
+    comments:
+      - { by: violinist, body: "Beautiful. I hope to play with you soon." }
+  - by: music-producer
+    kind: looking_for
+    days_ago: 5
+    body: "Looking for a violinist and a tabla player for a folk-fusion album I am producing. Two days of recording, paid per session. Send me a short clip and your rate. Details on my profile. #producer #fusion"
+    comments:
+      - { by: violinist, body: "Sent you a message with a clip and my rate." }
+      - { by: tabla-player, body: "Sent. Thank you for posting it here." }
+  - by: singer
+    kind: performance
+    days_ago: 5
+    body: "Sang at a Diwali evening for a bank's staff, 250 people. The organisers asked for bhajans first, film songs after, and a final singalong. It went well. I forgot a line in the second bhajan and the crowd finished it for me. #diwali"
+    comments:
+      - { by: singer, body: "That is the best kind of mistake. Congratulations." }
+  - by: sound-engineer
+    kind: gig
+    days_ago: 4
+    body: "Mixed a two-day college fest, 16 acts, 2,000 students. The main lesson: write the changeover time on your hand, because the stage manager will change it three times. Everyone got a fair soundcheck. #collegefest #livesound"
+    comments:
+      - { by: drummer, body: "We played at this one. The sound was clean, thanks." }
+  - by: hirer
+    hirer: Ocean Reef Originals
+    kind: looking_for
+    days_ago: 4
+    body: "We are producing an eight-episode series and looking for a composer. Ten-week schedule, weekly locked cuts. Please send a showreel with scoring to picture. Link in the listing. #composer #film"
+    comments:
+      - { by: composer, body: "Sent the reel. Thank you for the clear schedule." }
+  - by: violinist
+    kind: update
+    days_ago: 3
+    body: "A tip for anyone recording strings at home: record the same part twice and pan them apart. It sounds like a section of four. And leave a small gap between the takes to rest your bow arm. #recording #strings"
+    comments:
+      - { by: music-producer, body: "The two-takes trick works. I have used it on three albums." }
+  - by: hirer
+    hirer: The Verandah Lounge
+    kind: event
+    days_ago: 3
+    event_title: Friday jazz evening at the lounge
+    event_in_days: 4
+    event_venue: The Verandah Lounge
+    body: "Our Friday jazz evening features a piano trio and a guest singer. Doors open at 8 pm, first set at 9. Entry is free; tables can be reserved by message."
+    comments:
+      - { by: keyboard-player, body: "I will stop by for the second set." }
+  - by: guitarist
+    kind: update
+    days_ago: 2
+    body: "Small pedalboard update: I removed the chorus and added a compressor after a year of playing weddings. The tone is less pretty, but every note now cuts through the dance floor. #pedalboard"
+    comments:
+      - { by: guitarist, body: "I did the same. The chorus is for the bedroom." }
+  - by: singer
+    kind: update
+    days_ago: 2
+    body: "I am putting together a new set list for the winter wedding season and would like advice. What are the three songs that never fail to fill a dance floor in your experience? #weddingseason"
+    comments:
+      - { by: dj, body: "Depends on the crowd, but a mid-tempo Punjabi song around 10 pm has never failed me." }
+      - { by: drummer, body: "Anything with a strong four on the floor. It lets the drummer relax too." }
+      - { by: keyboard-player, body: "A slow song from the 90s that everyone knows, then a fast one right after." }
+  - by: hirer
+    hirer: Afterglow Entertainment
+    kind: looking_for
+    days_ago: 1
+    body: "We need a keyboard player for a brand night next week with a live band: a rehearsal the evening before and a 90-minute set. Pop hits and some Bollywood. Details in the urgent request. #urgent"
+  - by: sound-engineer
+    kind: update
+    days_ago: 1
+    body: "Ringing out a small PA before doors: pink noise, one microphone at a time, and cut the frequencies that squeal. It takes five minutes and prevents most feedback. Not glamorous, but it works. #livesound"
+    comments:
+      - { by: singer, body: "I love it when the engineer does this. It makes me trust the monitors." }
+  - by: dhol-player
+    kind: update
+    days_ago: 0
+    body: "Teaching a new student this Sunday: first lesson is just how to hold the stick and keep a steady pulse for ten minutes. Everyone wants to play fast at once. Slow is where the power comes from. #dhol"
+    comments:
+      - { by: tabla-player, body: "Teaching pulse first is the right way. Good luck to your student." }

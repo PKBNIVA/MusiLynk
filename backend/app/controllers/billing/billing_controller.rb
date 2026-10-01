@@ -1,10 +1,10 @@
 module Billing
   class BillingController < ApplicationController
     PLANS = {
-      "free" => { code: "free", name: "Free", monthly: 0, trialDays: 0, activePosts: 1, seats: 1, shortlist: 20, bookings: 2 },
-      "pro" => { code: "pro", name: "Pro", monthly: 2499, trialDays: 14, activePosts: 10, seats: 2, shortlist: 250, bookings: 20 },
-      "studio" => { code: "studio", name: "Studio", monthly: 5999, trialDays: 14, activePosts: 50, seats: 8, shortlist: 2_000, bookings: 100 },
-      "enterprise" => { code: "enterprise", name: "Enterprise", monthly: nil, trialDays: 0, activePosts: 9999, seats: 999, shortlist: 99999, bookings: 9999 }
+      "free" => { code: "free", name: "Free", monthly: 0, annual: 0, trialDays: 0, activePosts: 1, seats: 1, shortlist: 20, bookings: 2 },
+      "pro" => { code: "pro", name: "Pro", monthly: 2499, annual: 24_990, trialDays: 14, activePosts: 10, seats: 2, shortlist: 250, bookings: 20 },
+      "studio" => { code: "studio", name: "Studio", monthly: 5999, annual: 59_990, trialDays: 14, activePosts: 50, seats: 8, shortlist: 2_000, bookings: 100 },
+      "enterprise" => { code: "enterprise", name: "Enterprise", monthly: nil, annual: nil, trialDays: 0, activePosts: 9999, seats: 999, shortlist: 99999, bookings: 9999 }
     }.freeze
 
     # Razorpay subscription events -> local status (allowed by the subscriptions_status_valid check).
@@ -24,7 +24,9 @@ module Billing
     # A Razorpay subscription in any of these states is a live recurring mandate.
     PAID_MANDATE_STATUSES = %w[active trialing pending past_due].freeze
 
-    def plans = render(json: { plans: PLANS.values })
+    # `annualAvailable` is false until every paid plan has its RAZORPAY_PLAN_<CODE>_ANNUAL id
+    # (see PlanPricing.annual_available?); the pricing page hides the interval toggle then.
+    def plans = render(json: { plans: PLANS.values, annualAvailable: PlanPricing.annual_available? })
 
     def subscription
       return unless authenticate!
@@ -50,19 +52,32 @@ module Billing
     def checkout
       return unless authenticate!("jobseeker", "employer")
       code = params[:planCode]; return render_error("Invalid plan", :bad_request) unless PLANS.key?(code) && code != "free"
+      interval = params[:interval].presence || "monthly"
+      return render_error("Invalid billing interval", :bad_request) unless interval.is_a?(String) && PlanPricing::INTERVALS.include?(interval)
       return render json: { salesAssisted: true, message: "Our team will contact you for Enterprise onboarding." } if code == "enterprise"
       return render_error("Live billing is not configured.", :service_unavailable) if RazorpayConfig.key_present? && !RazorpayConfig.usable?
+      return render_error("Live billing is not configured.", :service_unavailable) if !RazorpayConfig.key_present? && Rails.env.production?
+      return render_error("Annual billing is not configured yet", :service_unavailable) if interval == "annual" && !PlanPricing.annual_available?(code)
+      promo = checked_promo(code, interval) or return
+      if promo == :none
+        promo = nil
+      elsif promo.promo.kind == "early_access"
+        outcome = PromoCodes::Redeemer.call(promo: promo.promo, user: current_user, plan_code: code, interval:)
+        return render json: { subscription: outcome.subscription, checkout: { mode: "early_access" } }
+      end
       unless RazorpayConfig.key_present?
-        return render_error("Live billing is not configured.", :service_unavailable) if Rails.env.production?
-        trial_days = trial_days_for(code)
-        sub = replace_subscription!(plan_code: code, provider: "internal", status: trial_days.positive? ? "trialing" : "active", trial_started_at: trial_days.positive? ? Time.current : nil, trial_ends_at: trial_days.positive? ? trial_days.days.from_now : nil)
+        trial_days = trial_days_for(code, promo)
+        build = lambda do |result|
+          replace_subscription!(plan_code: code, interval:, provider: "internal", status: trial_days.positive? ? "trialing" : "active", trial_started_at: trial_days.positive? ? Time.current : nil, trial_ends_at: trial_days.positive? ? trial_days.days.from_now : nil, **promo_attributes(result))
+        end
+        sub = promo ? PromoCodes::Redeemer.call(promo: promo.promo, user: current_user, plan_code: code, interval:, &build).subscription : build.call(nil)
         return render json: { subscription: sub, checkout: { mode: "mock" } }
       end
-      plan_id = ENV["RAZORPAY_PLAN_#{code.upcase}"].presence or return render_error("Razorpay plan is not configured.", :service_unavailable)
+      plan_id = PlanPricing.provider_plan_id(code, interval) or return render_error("Razorpay plan is not configured.", :service_unavailable)
       gateway = RazorpayGateway.new
       attempt = sub = provider_sub = blocked = nil
       current_user.with_lock do
-        existing = Subscription.where(user: current_user, plan_code: code, status: %w[trialing pending], provider: "razorpay").where.not(provider_subscription_id: nil).order(created_at: :desc).first
+        existing = Subscription.where(user: current_user, plan_code: code, interval:, status: %w[trialing pending], provider: "razorpay").where.not(provider_subscription_id: nil).order(created_at: :desc).first
         if existing
           return render json: { subscription: existing, checkout: razorpay_checkout(existing.provider_subscription_id) }
         end
@@ -71,23 +86,32 @@ module Billing
         return render_attempt(prior_attempt) if prior_attempt
         blocked = checkout_blocker(code)
         unless blocked
-          trial_days = trial_days_for(code)
+          trial_days = trial_days_for(code, promo)
           trial_ends_at = trial_days.positive? ? trial_days.days.from_now : nil
-          sub = Subscription.create!(user: current_user, plan_code: code, provider: "razorpay", status: "pending", trial_started_at: nil, trial_ends_at:)
-          attempt = BillingAttempt.create!(user: current_user, operation: "subscription_create", provider: "razorpay", idempotency_key: key, state: "pending", resource_type: "Subscription", resource_id: sub.id, request_payload: { plan_id:, start_at: trial_ends_at&.to_i, plan_code: code }, last_attempted_at: Time.current)
+          build = lambda do |result|
+            Subscription.create!(user: current_user, plan_code: code, interval:, provider: "razorpay", status: "pending", trial_started_at: nil, trial_ends_at:, **promo_attributes(result))
+          end
+          sub = promo ? PromoCodes::Redeemer.call(promo: promo.promo, user: current_user, plan_code: code, interval:, &build).subscription : build.call(nil)
+          attempt = BillingAttempt.create!(user: current_user, operation: "subscription_create", provider: "razorpay", idempotency_key: key, state: "pending", resource_type: "Subscription", resource_id: sub.id, request_payload: { plan_id:, start_at: trial_ends_at&.to_i, plan_code: code, interval:, promo_code: promo&.promo&.code }.compact, last_attempted_at: Time.current)
         end
       end
       return render_error(*blocked) if blocked
-      provider_sub = gateway.create_subscription(plan_id:, start_at: sub.trial_ends_at&.to_i, notes: { user_id: current_user.id, plan_code: code, attempt_id: attempt.id })
+      provider_sub = gateway.create_subscription(plan_id:, start_at: sub.trial_ends_at&.to_i, total_count: interval == "annual" ? 10 : 100, offer_id: promo&.promo&.discount? ? promo.promo.offer_id : nil,
+        notes: { user_id: current_user.id, plan_code: code, interval:, attempt_id: attempt.id }.merge(promo_notes(sub)))
       attempt.update!(provider_resource_id: provider_sub.fetch("id"), response_payload: provider_sub)
       Subscription.transaction do
         sub.update!(provider_subscription_id: provider_sub.fetch("id"))
         attempt.succeed!(provider_resource_id: provider_sub.fetch("id"), response_payload: provider_sub)
       end
       render json: { subscription: sub, checkout: razorpay_checkout(provider_sub.fetch("id")) }
+    rescue PromoCodes::Redeemer::Refused => error
+      render_error(error.message, :unprocessable_content, "PROMO_#{error.result.reason.to_s.upcase}")
     rescue RazorpayGateway::GatewayError => error
       attempt&.fail_from!(error)
-      sub&.update!(status: "cancelled") unless error.ambiguous?
+      unless error.ambiguous?
+        sub&.update!(status: "cancelled")
+        PromoCodes::Redeemer.release(sub) if sub
+      end
       begin
         RazorpayGateway.new.cancel_subscription(provider_sub["id"]) if provider_sub&.key?("id") && !error.ambiguous?
       rescue RazorpayGateway::GatewayError => cleanup_error
@@ -158,6 +182,7 @@ module Billing
         sub&.update!(trial_started_at: event_at) if subscription_result == :applied && status == "trialing" && sub.trial_started_at.blank?
         sub&.apply_provider_period!(payload.dig("payload", "subscription", "entity") || {}) if status && subscription_result != :invalid_transition
         supersede_internal_subscriptions!(sub) if subscription_result == :applied && %w[trialing active].include?(status)
+        record_charge!(sub) if subscription_result == :applied && payload["event"] == "subscription.charged"
         payment, payment_result = process_booking_payment(payload, event_at:, event_id:)
         result = subscription_result || payment_result || (status ? :subscription_not_found : :ignored)
         BillingEvent.create!(provider: "razorpay", provider_event_id: event_id, user: sub&.user || payment&.payer, event_type: payload["event"], payload:, processing_result: result, processed_at: Time.current)
@@ -192,6 +217,8 @@ module Billing
       { status:, planCode: sub.plan_code, planName: PLANS.dig(sub.plan_code, :name) || sub.plan_code, provider: sub.provider,
         trialEndsAt: sub.trial_ends_at, currentPeriodStart: sub.current_period_start, currentPeriodEnd: sub.current_period_end,
         nextChargeAt: next_charge, accessEndsAt: access_ends, cancelAtPeriodEnd: sub.cancel_at_period_end, monthlyAmount: PLANS.dig(sub.plan_code, :monthly),
+        interval: sub.interval, amount: PlanPricing.amount(sub.plan_code, sub.interval), nextAmount: next_charge ? PlanPricing.next_amount(sub) : nil,
+        promo: promo_summary(sub),
         earlyAccess: sub.status == "early_access" ? { until: sub.trial_ends_at } : nil }
     end
 
@@ -206,8 +233,54 @@ module Billing
       end.uniq { _1[:paymentId] }
     end
 
-    def trial_days_for(code)
+    # An extended-trial code sets the trial length outright, even for someone who has had a trial
+    # before; otherwise only a first-time subscriber gets the plan's normal trial.
+    def trial_days_for(code, promo = nil)
+      override = promo&.effect&.dig(:trialDays)
+      return override if override
+
       Subscription.where(user: current_user).where.not(plan_code: "free").exists? ? 0 : PLANS[code][:trialDays]
+    end
+
+    # The validated code result, :none when no code was sent, or nil after rendering the refusal
+    # (an unknown, expired, already used ... code answers 422 with a PROMO_<REASON> code).
+    def checked_promo(code, interval)
+      return :none if params[:code].blank?
+
+      result = PromoCodes::Validator.call(code: params[:code].to_s, user: current_user, plan_code: code, interval:)
+      return result if result.valid?
+
+      render_error(result.message, :unprocessable_content, "PROMO_#{result.reason.to_s.upcase}")
+      nil
+    end
+
+    def promo_attributes(result)
+      return {} unless result
+
+      attributes = { promo_code: result.promo }
+      attributes.merge!(discount_percent: result.effect[:percentOff], discount_periods: result.effect[:durationPeriods]) if result.effect[:percentOff]
+      attributes
+    end
+
+    # Recorded on the Razorpay subscription for support; the simulator also prices from them.
+    def promo_notes(sub)
+      return {} unless sub.promo_code_id
+
+      { promo_code: sub.promo_code.code, discount_percent: sub.discount_percent.to_s, discount_periods: sub.discount_periods.to_s }.compact_blank
+    end
+
+    def promo_summary(sub)
+      return nil unless sub.promo_code
+
+      { code: sub.promo_code.code, kind: sub.promo_code.kind, percentOff: sub.discount_percent, periodsLeft: sub.discount_periods_left,
+        trialDays: PromoRedemption.where(subscription_id: sub.id).pick(:trial_days) }
+    end
+
+    # A subscription charge just cleared: use up one discounted period, and if this is the first
+    # payment of a referred user, reward whoever referred them.
+    def record_charge!(sub)
+      sub.increment!(:discount_periods_used) if sub.discount_active?
+      PromoCodes::ReferralReward.for_subscription(sub)
     end
 
     def billing_idempotency_key(operation)

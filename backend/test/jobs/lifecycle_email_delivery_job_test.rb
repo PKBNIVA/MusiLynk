@@ -28,6 +28,21 @@ class LifecycleEmailDeliveryJobTest < ActiveJob::TestCase
     assert_includes data["text"], "Manage which Verse emails you get: https://verse.example/unsubscribe?token="
   end
 
+  test "stamps delivered_at on the claimed row once the provider accepts the message, and not when it rejects" do
+    row = LifecycleEmail.record!(@user, "musician_day1_first_link") && LifecycleEmail.find_by!(user: @user, key: "musician_day1_first_link")
+    with_env("EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send") do
+      Faraday.stub(:post, capture([], status: 400)) do
+        LifecycleEmailDeliveryJob.perform_now(@user.id, "musician_day1_first_link", {})
+      end
+      assert_nil row.reload.delivered_at
+
+      Faraday.stub(:post, capture([])) do
+        LifecycleEmailDeliveryJob.perform_now(@user.id, "musician_day1_first_link", {})
+      end
+    end
+    assert_not_nil row.reload.delivered_at
+  end
+
   test "skips a recipient whose category preference is off, without calling the provider" do
     @user.profile.update!(email_preferences: @user.profile.email_preferences.merge("lifecycle" => false))
     called = false

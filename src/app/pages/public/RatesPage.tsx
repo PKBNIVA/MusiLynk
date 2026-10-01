@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
+import { PhotoHeader } from '../../components/landing/PhotoHeader';
 import { usePageMeta } from '../../components/PageMeta';
 import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { useAuth } from '../../lib/authContext';
 import { ratesPagePath } from '../../lib/seoPages';
+import { formatDate, formatMoney } from '../../lib/format';
 
 interface RateRange {
   median: number;
@@ -33,9 +35,7 @@ interface RatesPageData {
 }
 
 const formatRange = (range: RateRange | null) =>
-  range
-    ? `₹${Math.round(range.p25).toLocaleString('en-IN')}–₹${Math.round(range.p75).toLocaleString('en-IN')}`
-    : 'Not enough data yet';
+  range ? `${formatMoney(range.p25)}–${formatMoney(range.p75)}` : 'Not enough data yet';
 
 export default function RatesPage() {
   const { city = '' } = useParams<{ city: string }>();
@@ -53,7 +53,7 @@ export default function RatesPage() {
         if (alive) setData(body);
       })
       .catch((err) => {
-        if (alive) setError(errorMessage(err, 'This page could not be found.'));
+        if (alive) setError(errorMessage(err, 'This page could not be found. Check the link or pick another city.'));
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -65,14 +65,14 @@ export default function RatesPage() {
 
   const title = data ? `What musicians charge in ${data.city.name} | Verse` : 'Musician rates';
   const description = data
-    ? `Median session, show and day rates reported by verified and unverified professionals on Verse in ${data.city.name}. A guide, not a quote.`
+    ? `Median session, show and day rates reported by verified and unverified musicians on Verse in ${data.city.name}. A guide, not a quote.`
     : undefined;
   const jsonLd = data
     ? {
         '@context': 'https://schema.org',
         '@type': 'Dataset',
         name: `Musician and crew rates in ${data.city.name}`,
-        description: `Session, show and day rates reported by professionals on Verse in ${data.city.name}.`,
+        description: `Session, show and day rates reported by musicians on Verse in ${data.city.name}.`,
         spatialCoverage: { '@type': 'Place', name: data.city.name },
       }
     : undefined;
@@ -80,36 +80,40 @@ export default function RatesPage() {
   usePageMeta(title, description, {
     canonicalPath: ratesPagePath(city),
     type: 'website',
-    noindex: !data || !data.indexable,
+    // Indexable until the API has answered and says otherwise (too little data); a failed lookup is not a page.
+    noindex: data ? !data.indexable : Boolean(error),
     jsonLd,
   });
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
-      <main className="max-w-4xl mx-auto px-5 py-14">
+      <main className="max-w-5xl mx-auto px-5 py-14">
         {loading ? (
           <p className="text-slate-400 text-center py-16" role="status">
             Loading…
           </p>
         ) : error || !data ? (
           <div className="text-center py-16" role="alert">
-            <p className="text-rose-300">{error || 'This page could not be found.'}</p>
+            <p className="text-rose-300">
+              {error || 'This page could not be found. Check the link or pick another city.'}
+            </p>
             <Button variant="outline" className="mt-4" asChild>
-              <Link to="/music-professionals">Browse all professionals</Link>
+              <Link to="/music-professionals">Browse all musicians</Link>
             </Button>
           </div>
         ) : (
           <>
-            <p className="text-xs uppercase tracking-[.22em] text-violet-300">Rates guide</p>
-            <h1 className="text-4xl md:text-6xl font-bold mt-2">What musicians charge in {data.city.name}</h1>
-            <p className="text-slate-400 mt-4 max-w-2xl">
-              Ranges reported by verified and unverified professionals on Verse; they are a guide, not a quote.
-            </p>
-            <p className="text-xs text-slate-500 mt-3">
-              Last updated{' '}
-              {new Date(data.updatedAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
+            <PhotoHeader
+              photo="recording-studio"
+              eyebrow="Rates guide"
+              title={`What musicians charge in ${data.city.name}`}
+            >
+              <p className="max-w-2xl">
+                Ranges reported by verified and unverified musicians on Verse; they are a guide, not a quote.
+              </p>
+              <p className="mt-3 text-xs text-slate-300">Last updated {formatDate(data.updatedAt)}</p>
+            </PhotoHeader>
 
             <div className="overflow-x-auto mt-8">
               <table className="w-full text-left text-sm" data-testid="rates-table">

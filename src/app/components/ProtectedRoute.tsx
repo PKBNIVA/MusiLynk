@@ -6,7 +6,7 @@ import { IS_ADMIN_SITE, signInPath } from '../lib/appTarget';
 import { Button } from './ui/button';
 import { PageLoading } from './ExperienceStates';
 
-const ROLE_LABEL: Record<string, string> = { employer: 'employers', jobseeker: 'job seekers', admin: 'admins' };
+const ROLE_LABEL: Record<string, string> = { employer: 'hirers', jobseeker: 'musicians', admin: 'admins' };
 export function ProtectedRoute({ roles, children }: { roles: Role[]; children: React.ReactNode }) {
   const { user, loading, refresh } = useAuth();
   const location = useLocation();

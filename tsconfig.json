@@ -17,5 +17,5 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "tests/e2e", "vite.config.ts", "playwright.config.ts"]
+  "include": ["src", "api", "tests/e2e", "vite.config.ts", "playwright.config.ts"]
 }

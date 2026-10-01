@@ -5,7 +5,7 @@ import { BookOpenCheck, Plus, Printer, ScrollText, Star } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Field } from '../../components/form/Field';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { LoadState, Panel, ShowcaseShell, useWorkspaceBase } from '../../components/showcase/parts';
 import { RulesSentence } from '../../components/showcase/RulesEditor';
 import { SHOWCASE_HELP } from '../../components/showcase/help';
@@ -70,7 +70,6 @@ export default function Resumes() {
   return (
     <ShowcaseShell
       title="Resumes"
-      description="Each resume is a view of your career record for one kind of work. Update the record once and every resume follows."
       help={SHOWCASE_HELP.resumes}
       actions={
         <>

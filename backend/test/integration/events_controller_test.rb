@@ -76,11 +76,29 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "rate limits a burst of requests from the same IP" do
+    # The throttle bucket is a wall-clock minute; freeze it so the burst cannot straddle two buckets.
+    freeze_time
     EventsController::RATE_LIMIT_PER_MINUTE.times do
       post "/api/events", params: { events: [{ name: "landing_view", anonId: "anon-rl" }] }, as: :json
       assert_response :success
     end
     post "/api/events", params: { events: [{ name: "landing_view", anonId: "anon-rl" }] }, as: :json
     assert_response :too_many_requests
+  end
+
+  test "the four signup funnel events are accepted and counted by the admin funnel" do
+    post "/api/events", params: { events: [
+      { name: "landing_view", anonId: "anon-funnel" },
+      { name: "path_chosen", anonId: "anon-funnel", props: { path: "musician" } },
+      { name: "signup_started", anonId: "anon-funnel", props: { role: "jobseeker" } },
+      { name: "signup_completed", anonId: "anon-funnel", props: { role: "jobseeker" } },
+      { name: "profile_link_added", anonId: "anon-funnel", props: { kind: "youtube" } }
+    ] }, as: :json
+    assert_equal 5, response.parsed_body.fetch("accepted")
+
+    counts = FunnelQueries.funnel(1.day.ago).to_h { [_1[:step], _1[:count]] }
+    assert_equal 1, counts["path_chosen"]
+    assert_equal 1, counts["signup_completed"]
+    assert_equal 1, counts["first_action"]
   end
 end

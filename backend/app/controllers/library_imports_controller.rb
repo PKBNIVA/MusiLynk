@@ -43,7 +43,7 @@ class LibraryImportsController < ApplicationController
       provider = LinkPreview.provider_for(url)
       cached = LinkPreview.cached(url) || {}
       title = LinkPreview.clean_text(item["title"] || item[:title], LinkPreview::TITLE_LIMIT) || cached[:title] ||
-        "#{LinkPreview.label_for(provider)} work sample"
+        LinkPreview.default_title(url, provider)
       description = LinkPreview.clean_text(item["caption"] || item[:caption], 2_000)
       thumbnail = LinkPreview.clean_thumbnail(item["thumbnail"] || item[:thumbnail]) || cached[:thumbnail]
 

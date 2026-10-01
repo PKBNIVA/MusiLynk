@@ -1,34 +1,22 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
+import { TalentCard } from '../components/talent/TalentCard';
+import { FACET_KEYS, TalentFacets } from '../components/talent/TalentFacets';
+import { useHomeCityDefault } from '../components/talent/useHomeCity';
 import { Checkbox } from '../components/ui/checkbox';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
-import type {
-  Created,
-  ConversationCreated,
-  PortfolioItem,
-  Professional,
-  RecentActivity,
-  TalentFolder,
-} from '../lib/apiTypes';
+import type { Created, ConversationCreated, Professional, RecentActivity, TalentFolder } from '../lib/apiTypes';
 import { useLatestCallback } from '../lib/useLatestCallback';
-import {
-  Search,
-  MapPin,
-  BookmarkPlus,
-  BookmarkCheck,
-  MessageSquare,
-  ShieldCheck,
-  FolderPlus,
-  Folder,
-} from 'lucide-react';
-import { WorkSamplePlayer } from '../components/WorkSamplePlayer';
+import { Search, BookmarkPlus, BookmarkCheck, MessageSquare, FolderPlus, Folder } from 'lucide-react';
+import { UserAvatar } from '../components/kit/UserAvatar';
+import { EmptyState } from '../components/kit/EmptyState';
 import { Label } from '../components/ui/label';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { toastJobError } from '../components/OpportunityPipeline';
@@ -36,14 +24,31 @@ import { errorMessage } from '../lib/errors';
 import { usePagedList, type PageMeta } from '../lib/usePagedList';
 import { useUrlFilters } from '../lib/useUrlFilters';
 import { LoadMore } from '../components/LoadMore';
-import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../components/SearchFeedback';
+import { SearchNotice } from '../components/SearchFeedback';
 import { AppSelect } from '../components/ui/app-select';
 
 type CandidatePage = PageMeta & { candidates?: Professional[] };
 const pickCandidates = (page: CandidatePage) => page.candidates;
 // URL keys are the API's filter names, so the URL is the search.
-const FILTERS = ['q', 'location', 'role', 'instrument', 'verified', 'remoteRecording'] as const;
-const NOUN = ['professional', 'professionals'] as const;
+const FILTERS = ['q', 'location', 'role', 'instrument', 'verified', 'remoteRecording', ...FACET_KEYS] as const;
+const NOUN = ['musician', 'musicians'] as const;
+
+function FilterChip({ pressed, onClick, children }: { pressed: boolean; onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={`min-h-9 shrink-0 snap-start whitespace-nowrap rounded-full border px-3.5 text-sm ${
+        pressed
+          ? 'border-violet-400 bg-violet-500/20 text-white'
+          : 'border-white/15 bg-white/[.04] text-slate-300 hover:bg-white/[.08]'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function CandidateSearch() {
   const { user } = useAuth();
@@ -56,10 +61,6 @@ export default function CandidateSearch() {
   const { items, setItems, loading, error: loadError } = list;
   const [q, setQ] = useState(f.q),
     [location, setLocation] = useState(f.location),
-    [role, setRole] = useState(f.role),
-    [instrument, setInstrument] = useState(f.instrument),
-    [selected, setSelected] = useState<Professional | null>(null),
-    [portfolio, setPortfolio] = useState<PortfolioItem[]>([]),
     [folderFor, setFolderFor] = useState<Professional | null>(null),
     [folders, setFolders] = useState<TalentFolder[] | null>(null),
     [folderChoice, setFolderChoice] = useState(''),
@@ -68,16 +69,15 @@ export default function CandidateSearch() {
   useEffect(() => {
     setQ(f.q);
     setLocation(f.location);
-    setRole(f.role);
-    setInstrument(f.instrument);
-  }, [f.q, f.location, f.role, f.instrument]);
+  }, [f.q, f.location]);
+  const { city: homeCity, ready } = useHomeCityDefault('location');
   const load = useLatestCallback(() => list.search(query));
   useEffect(() => {
-    void load();
-  }, [query, load]);
+    if (ready) void load();
+  }, [ready, query, load]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!update({ q, location, role, instrument })) void load();
+    if (!update({ q, location })) void load();
   };
   useEffect(() => {
     apiGet<{ items?: RecentActivity[] }>('/recent-activity')
@@ -93,19 +93,6 @@ export default function CandidateSearch() {
       toast.success(c.shortlisted ? 'Removed from shortlist' : 'Added to talent shortlist');
     } catch (e: unknown) {
       toastJobError(e, user?.role === 'jobseeker' ? '/jobseeker/billing' : '/employer/billing', nav);
-    }
-  }
-  async function inspect(c: Pick<Professional, 'id'>) {
-    try {
-      const d = await apiGet<{ candidate: Professional; portfolio?: PortfolioItem[] }>(`/candidates/${c.id}`);
-      setSelected(d.candidate);
-      setPortfolio(d.portfolio || []);
-      /* On narrow screens the detail panel sits below the results; bring it into view. */ if (window.innerWidth < 1024)
-        requestAnimationFrame(() =>
-          document.getElementById('talent-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-        );
-    } catch (e: unknown) {
-      toast.error(errorMessage(e));
     }
   }
   async function message(c: Professional) {
@@ -160,278 +147,216 @@ export default function CandidateSearch() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="mb-7">
-          <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Talent network</div>
-          <h1 className="text-4xl md:text-5xl font-bold">Search by proof, skill and context</h1>
-          <p className="text-slate-400 mt-3 max-w-3xl">
-            Music careers are not resumés alone. Look for relevant credits, portfolio work, instruments, genres,
-            languages, location and availability.
-          </p>
-        </div>
-        <Card className="bg-white/[.055] border-white/10 mb-7">
-          <CardContent className="p-4">
-            <form onSubmit={submit} className="grid md:grid-cols-2 lg:grid-cols-5 gap-3" role="search">
-              <Input
-                aria-label="Skill, credit, gear or software"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Skill, credit, gear, DAW…"
-                className="bg-black/20 border-white/15"
-              />
-              <Input
-                aria-label="Location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Mumbai, Bengaluru…"
-                className="bg-black/20 border-white/15"
-              />
-              <Input
-                aria-label="Role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                placeholder="Role: FOH, singer…"
-                className="bg-black/20 border-white/15"
-              />
-              <Input
-                aria-label="Instrument"
-                value={instrument}
-                onChange={(e) => setInstrument(e.target.value)}
-                placeholder="Instrument"
-                className="bg-black/20 border-white/15"
-              />
-              <Button>
-                <Search size={16} className="mr-2" />
-                Search
-              </Button>
-            </form>
-            <div className="flex flex-wrap gap-5 mt-3">
-              <label className="flex items-center gap-2 text-sm text-slate-300">
-                <Checkbox
-                  checked={f.verified === 'true'}
-                  onCheckedChange={(v) => update({ verified: v ? 'true' : '' })}
-                />
-                Verified only
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-300">
-                <Checkbox
-                  checked={f.remoteRecording === 'true'}
-                  onCheckedChange={(v) => update({ remoteRecording: v ? 'true' : '' })}
-                />
-                Remote recording ready
-              </label>
-            </div>
-          </CardContent>
-        </Card>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
-          <div className="text-sm text-slate-500">
-            {recent.length ? (
-              <>
-                Recent:{' '}
-                {recent.slice(0, 4).map((r) => (
+      <main className={`max-w-7xl mx-auto px-5 md:px-6 pt-28 ${compare.length ? 'pb-32' : 'pb-16'}`}>
+        <PageHeader title="Find talent" />
+        <form onSubmit={submit} className="mb-4 grid gap-3 md:grid-cols-[1fr_14rem_auto]" role="search">
+          <Input
+            aria-label="Skill, credit, gear or software"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Skill, credit, gear, DAW…"
+            className="bg-black/20 border-white/15"
+          />
+          <Input
+            aria-label="Location"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="Mumbai, Bengaluru…"
+            className="bg-black/20 border-white/15"
+          />
+          <Button>
+            <Search size={16} className="mr-2" />
+            Search
+          </Button>
+        </form>
+        <div
+          className="-mx-5 flex snap-x flex-nowrap items-center gap-2 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+          role="group"
+          aria-label="Filters"
+        >
+          {homeCity && (
+            <>
+              <FilterChip
+                pressed={f.location.toLowerCase() === homeCity.toLowerCase()}
+                onClick={() => update({ location: homeCity })}
+              >
+                {homeCity}
+              </FilterChip>
+              <FilterChip pressed={!f.location} onClick={() => update({ location: '' })}>
+                All cities
+              </FilterChip>
+            </>
+          )}
+          <FilterChip
+            pressed={f.verified === 'true'}
+            onClick={() => update({ verified: f.verified === 'true' ? '' : 'true' })}
+          >
+            Verified only
+          </FilterChip>
+          <FilterChip
+            pressed={f.verified === 'pro'}
+            onClick={() => update({ verified: f.verified === 'pro' ? '' : 'pro' })}
+          >
+            Verified Pro
+          </FilterChip>
+          <FilterChip
+            pressed={f.remoteRecording === 'true'}
+            onClick={() => update({ remoteRecording: f.remoteRecording === 'true' ? '' : 'true' })}
+          >
+            Remote recording ready
+          </FilterChip>
+          {recent.some((r) => r.kind === 'search') && (
+            <span className="ml-2 text-sm text-slate-500">
+              Recent:{' '}
+              {recent
+                .filter((r) => r.kind === 'search')
+                .slice(0, 3)
+                .map((r) => (
                   <button
                     key={r.id}
                     className="ml-2 text-slate-300 hover:text-white"
-                    onClick={() => {
-                      if (r.kind === 'search') {
-                        update({ q: r.query || '' });
-                      } else if (r.entityId) {
-                        inspect({ id: r.entityId });
-                      }
-                    }}
+                    onClick={() => update({ q: r.query || '' })}
                   >
                     {r.label || r.query}
                   </button>
                 ))}
-              </>
-            ) : (
-              <>Select 2–4 people to compare proof and rates.</>
-            )}
-          </div>
-          {compare.length >= 2 && (
-            <Button
-              onClick={() =>
-                nav(`${user?.role === 'employer' ? '/employer' : '/jobseeker'}/compare?ids=${compare.join(',')}`)
-              }
-            >
-              Compare {compare.length} professionals
-            </Button>
+            </span>
           )}
         </div>
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_400px] gap-5">
-          <div className="grid md:grid-cols-2 gap-4 content-start">
-            {loading ? (
-              <Card className="bg-white/[.035] border-white/10 md:col-span-2">
-                <CardContent className="p-8 text-center text-slate-400" role="status">
-                  Loading talent…
-                </CardContent>
-              </Card>
-            ) : loadError ? (
-              <Card className="bg-white/[.035] border-white/10 md:col-span-2">
-                <CardContent className="p-8 text-center" role="alert">
-                  <p className="text-rose-300">{loadError}</p>
-                  <Button className="mt-4" variant="outline" onClick={() => void load()}>
-                    Try again
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              !items.length && (
-                <Card className="bg-white/[.035] border-white/10 md:col-span-2">
-                  <CardContent className="p-2">
-                    <NoResults
-                      noun="professionals"
-                      query={f.q}
-                      meta={list.meta}
-                      onSearch={(term) => update({ q: term })}
-                      suggestions={POPULAR_SEARCHES}
-                      onClear={query ? clear : undefined}
-                    />
-                  </CardContent>
-                </Card>
-              )
-            )}
-            {!loading && !loadError && items.length > 0 && (
-              <div className="md:col-span-2 -mt-2">
-                <SearchNotice meta={list.meta} query={f.q} />
-              </div>
-            )}
-            {!loading &&
-              !loadError &&
-              items.map((c, index) => (
-                <Card key={c.id} className="bg-white/[.055] border-white/10" data-list-item={index} tabIndex={-1}>
-                  <CardContent className="p-5">
-                    <div className="flex justify-between gap-3">
-                      <div className="flex gap-3 items-start">
-                        <Checkbox
-                          aria-label={`Compare ${c.name}`}
-                          className="tap-target-44"
-                          checked={compare.includes(c.id)}
-                          onCheckedChange={(v) =>
-                            setCompare((xs) =>
-                              v ? [...xs.filter((x) => x !== c.id), c.id].slice(-4) : xs.filter((x) => x !== c.id),
-                            )
-                          }
-                        />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-semibold">{c.name}</h2>
-                            {c.verified && <ShieldCheck size={17} className="text-emerald-300" />}
-                          </div>
-                          <p className="text-violet-300">{c.headline || 'Music professional'}</p>
-                        </div>
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label={c.shortlisted ? `Remove ${c.name} from shortlist` : `Shortlist ${c.name}`}
-                        aria-pressed={!!c.shortlisted}
-                        onClick={() => shortlist(c)}
-                      >
-                        {c.shortlisted ? <BookmarkCheck className="text-violet-300" /> : <BookmarkPlus />}
-                      </Button>
-                    </div>
-                    {c.location && (
-                      <div className="text-sm text-slate-400 mt-3 flex">
-                        <MapPin size={15} className="mr-1" />
-                        {c.location}
-                      </div>
-                    )}
-                    <p className="text-sm text-slate-300 mt-3 line-clamp-3">{c.bio || 'No bio added yet.'}</p>
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {c.skills?.slice(0, 6).map((s: string) => (
-                        <Badge variant="secondary" key={s}>
-                          {s}
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex gap-2 mt-5">
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => inspect(c)}>
-                        View proof
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        title="Add to folder"
-                        aria-label={`Add ${c.name} to a folder`}
-                        onClick={() => addFolder(c)}
-                      >
-                        <FolderPlus size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        title="Message"
-                        aria-label={`Message ${c.name}`}
-                        onClick={() => message(c)}
-                      >
-                        <MessageSquare size={16} />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            {!loading && !loadError && (
-              <div className="md:col-span-2">
-                <LoadMore
-                  shown={items.length}
-                  total={list.total}
-                  hasMore={list.hasMore}
-                  loading={list.loadingMore}
-                  error={list.moreError}
-                  onLoadMore={list.loadMore}
-                  noun={NOUN}
+        <TalentFacets values={f} update={update} />
+        <div className="mt-5 grid content-start gap-4 md:grid-cols-3">
+          {loading ? (
+            <Card className="bg-white/[.035] border-white/10 md:col-span-3">
+              <CardContent className="p-8 text-center text-slate-400" role="status">
+                Loading talent…
+              </CardContent>
+            </Card>
+          ) : loadError ? (
+            <Card className="bg-white/[.035] border-white/10 md:col-span-3">
+              <CardContent className="p-8 text-center" role="alert">
+                <p className="text-rose-300">{loadError}</p>
+                <Button className="mt-4" variant="outline" onClick={() => void load()}>
+                  Try again
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            !items.length && (
+              <div className="md:col-span-3" data-testid="no-results">
+                <EmptyState
+                  scene="search"
+                  title="No one matches yet"
+                  hint="Try fewer filters or another city"
+                  action={query ? { label: 'Clear filters', onClick: clear } : undefined}
                 />
               </div>
-            )}
-          </div>
-          <aside id="talent-detail" className="scroll-mt-24" aria-live="polite">
-            {selected ? (
-              <Card className="bg-white/[.06] border-white/10 sticky top-24">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-semibold">{selected.name}</h2>
-                    {selected.verified && <ShieldCheck className="text-emerald-300" />}
-                  </div>
-                  <p className="text-violet-300 mt-1">{selected.headline}</p>
-                  <p className="text-sm text-slate-300 mt-4 leading-6">{selected.bio}</p>
-                  {!!selected.credits?.length && (
-                    <div className="mt-5">
-                      <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">Credits</div>
-                      {selected.credits.slice(0, 8).map((x: string) => (
-                        <div className="text-sm py-1" key={x}>
-                          • {x}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-5">
-                    <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">Portfolio</div>
-                    {portfolio.length ? (
-                      <div className="space-y-2">
-                        {portfolio.map((p) => (
-                          <WorkSamplePlayer key={p.id} sample={p} compact />
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-slate-500">No portfolio items yet.</p>
-                    )}
-                  </div>
-                  <Button className="w-full mt-5" onClick={() => message(selected)}>
-                    <MessageSquare size={16} className="mr-2" />
-                    Message professional
+            )
+          )}
+          {!loading && !loadError && items.length > 0 && (
+            <div className="md:col-span-3 -mt-2">
+              <SearchNotice meta={list.meta} query={f.q} />
+            </div>
+          )}
+          {!loading &&
+            !loadError &&
+            items.map((c, index) => (
+              <TalentCard
+                key={c.id}
+                person={c}
+                index={index}
+                to={`/professionals/${encodeURIComponent(c.id)}`}
+                aside={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={c.shortlisted ? `Remove ${c.name} from shortlist` : `Shortlist ${c.name}`}
+                    aria-pressed={!!c.shortlisted}
+                    onClick={() => shortlist(c)}
+                  >
+                    {c.shortlisted ? <BookmarkCheck className="text-violet-300" /> : <BookmarkPlus />}
                   </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="bg-white/[.035] border-white/10">
-                <CardContent className="p-8 text-center text-slate-500">
-                  Select a professional to inspect portfolio and verified career proof.
-                </CardContent>
-              </Card>
-            )}
-          </aside>
+                }
+                footer={
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => message(c)}>
+                      <MessageSquare size={16} className="mr-2" />
+                      Message
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Add to folder"
+                      aria-label={`Add ${c.name} to a folder`}
+                      onClick={() => addFolder(c)}
+                    >
+                      <FolderPlus size={16} />
+                    </Button>
+                    <label className="flex items-center gap-1.5 text-sm text-slate-300">
+                      <Checkbox
+                        aria-label={`Compare ${c.name}`}
+                        className="tap-target-44"
+                        checked={compare.includes(c.id)}
+                        onCheckedChange={(v) =>
+                          setCompare((xs) =>
+                            v ? [...xs.filter((x) => x !== c.id), c.id].slice(-4) : xs.filter((x) => x !== c.id),
+                          )
+                        }
+                      />
+                      Compare
+                    </label>
+                  </div>
+                }
+              />
+            ))}
+          {!loading && !loadError && (
+            <div className="md:col-span-3">
+              <LoadMore
+                shown={items.length}
+                total={list.total}
+                hasMore={list.hasMore}
+                loading={list.loadingMore}
+                error={list.moreError}
+                onLoadMore={list.loadMore}
+                noun={NOUN}
+              />
+            </div>
+          )}
         </div>
+        {compare.length >= 1 && (
+          <div
+            className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/95 px-4 py-3 backdrop-blur max-md:bottom-16"
+            data-testid="compare-tray"
+          >
+            <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+              <ul className="flex items-center gap-2" aria-label="Selected to compare">
+                {compare.map((id) => {
+                  const c = items.find((x) => x.id === id);
+                  return (
+                    <li key={id}>
+                      <UserAvatar
+                        id={id}
+                        name={c?.name || 'Selected musician'}
+                        size="sm"
+                        photoUrl={c?.photoUrl}
+                        demo={c?.demo}
+                        genres={c?.genres}
+                      />
+                    </li>
+                  );
+                })}
+                {compare.length < 2 && <li className="text-sm text-slate-400">Pick one more to compare</li>}
+              </ul>
+              <Button
+                disabled={compare.length < 2}
+                onClick={() =>
+                  nav(`${user?.role === 'employer' ? '/employer' : '/jobseeker'}/compare?ids=${compare.join(',')}`)
+                }
+              >
+                Compare {compare.length}
+              </Button>
+            </div>
+          </div>
+        )}
         <FormDialog
           open={!!folderFor}
           onOpenChange={(o) => {

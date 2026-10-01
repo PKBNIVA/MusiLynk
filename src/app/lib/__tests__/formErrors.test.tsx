@@ -168,7 +168,7 @@ describe('useFormErrors', () => {
     act(() => {
       form().setFromApi(null, 'Could not save.');
     });
-    expect(container.querySelector('[data-testid="form-error"]')?.textContent).toBe('Could not save.');
+    expect(container.querySelector('[data-testid="form-error"]')?.textContent).toBe('Could not save. Try again.');
   });
 });
 

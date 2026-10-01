@@ -175,6 +175,44 @@ class AdminDemoDataTest < ActionDispatch::IntegrationTest
     assert_equal "succeeded", response.parsed_body.fetch("jobs").first.fetch("state")
   end
 
+  test "the showcase preset seeds the fixed demo-showcase batch once and can be deleted on its own" do
+    get "/api/admin/demo-data", headers: auth(@admin)
+    assert_equal({ "artists" => 110, "employers" => 40 }, response.parsed_body.dig("sizes", "showcase"))
+    assert_equal "demo-showcase", response.parsed_body.fetch("showcaseBatch")
+
+    post "/api/admin/demo-data", params: { size: "showcase" }, as: :json, headers: auth(@admin)
+    assert_response :accepted
+    assert_equal "demo-showcase", response.parsed_body.dig("job", "batch")
+    job_id = response.parsed_body.fetch("jobId")
+    perform_enqueued_jobs
+    summary = SyntheticQa::DemoJobs.find(job_id)
+    assert_equal "succeeded", summary[:state]
+    assert_equal({ "jobseekers" => 110, "employers" => 40, "jobs" => 45, "acts" => 12, "posts" => 40, "bookings" => 12 },
+      summary[:result].slice("jobseekers", "employers", "jobs", "acts", "posts", "bookings"))
+    assert_equal 150, User.synthetic("demo-showcase").count
+
+    get "/api/admin/demo-data", headers: auth(@admin)
+    assert_equal 150, response.parsed_body.fetch("demoUsers")
+    post "/api/admin/demo-data", params: { size: "showcase" }, as: :json, headers: auth(@admin)
+    assert_response :unprocessable_content
+    assert_equal "SHOWCASE_EXISTS", response.parsed_body.fetch("code")
+
+    # A second run of the job itself (a retry, or a race) is a harmless no-op.
+    again = DemoDataSeedJob.new(batch: "demo-showcase", size: "showcase", admin_id: @admin.id)
+    again.perform_now
+    repeated = SyntheticQa::DemoJobs.find(again.job_id)
+    assert_equal "succeeded", repeated[:state]
+    assert_equal true, repeated.dig(:result, "skipped")
+    assert_equal 150, User.synthetic("demo-showcase").count
+
+    delete "/api/admin/demo-data/demo-showcase", headers: auth(@admin)
+    assert_response :accepted
+    perform_enqueued_jobs
+    assert_equal 0, User.synthetic("demo-showcase").count
+    assert_equal 0, Post.count
+    assert_equal 0, Review.count
+  end
+
   test "delete one batch only removes that batch" do
     SyntheticQa::BatchSeeder.call(batch: "demo-20260101-0001", jobseekers: 2, employers: 1)
     SyntheticQa::BatchSeeder.call(batch: "demo-20260101-0002", jobseekers: 2, employers: 1)

@@ -1,13 +1,30 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const liveBaseUrl = process.env.QA_BASE_URL?.replace(/\/$/, '');
+// Local servers use four consecutive ports from QA_PORT_BASE (default 4173, which is what CI uses):
+//   base     the app under test (vite preview)      base + 1  the app built with a fake Sentry DSN
+//   base + 2 the stand-in Sentry ingest endpoint    base + 3  the separate admin site
+// Two runs on one machine (two worktrees, or two agents) must use different bases, e.g.
+// QA_PORT_BASE=4273 and QA_PORT_BASE=4373, or they will reuse each other's servers. Runs that share
+// a base must still be serial: see docs/qa/TESTER.md.
+const portBase = Number(process.env.QA_PORT_BASE || 4173);
+if (!Number.isInteger(portBase) || portBase < 1024 || portBase > 65_531) {
+  throw new Error(`QA_PORT_BASE must be a whole number from 1024 to 65531, got "${process.env.QA_PORT_BASE}".`);
+}
+const localOrigin = (offset: number) => `http://127.0.0.1:${portBase + offset}`;
+const appUrl = localOrigin(0);
+const sentryBuildUrl = localOrigin(1);
+const sentrySinkUrl = localOrigin(2);
+// error-monitoring.spec.ts reads these from the environment Playwright hands its workers.
+process.env.QA_SENTRY_BASE_URL ??= sentryBuildUrl;
+process.env.QA_SENTRY_SINK_URL ??= sentrySinkUrl;
 const fullMatrix = process.env.QA_FULL_MATRIX === 'true';
 const integrationRun = process.env.QA_INTEGRATION === 'true';
 // Request-only specs (no browser): live API health and the signed-in live smoke.
 const apiSpecs = /(api-health|live-account-smoke)\.spec\.ts/;
 // Admin site specs (tests/e2e/admin-*.spec.ts) run against the admin build (VITE_APP_TARGET=admin).
 const adminSpecs = /[\\/]admin-[^\\/]*\.spec\.ts$/;
-const adminSiteUrl = 'http://127.0.0.1:4176';
+const adminSiteUrl = localOrigin(3);
 // Mocked-API runs only: live and integration runs have no admin build to open.
 const adminSiteRun = !liveBaseUrl && !integrationRun;
 
@@ -50,7 +67,7 @@ export default defineConfig({
     ? [['line'], ['html', { open: 'never' }], ['json', { outputFile: 'test-results/qa-results.json' }]]
     : [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: liveBaseUrl || 'http://127.0.0.1:4173',
+    baseURL: liveBaseUrl || appUrl,
     actionTimeout: 8_000,
     navigationTimeout: 20_000,
     trace: 'retain-on-failure',
@@ -79,10 +96,10 @@ export default defineConfig({
     ? undefined
     : [
         {
-          command: 'npm run build && npm exec vite preview -- --host 127.0.0.1 --port 4173',
+          command: `npm run build && npm exec vite preview -- --host 127.0.0.1 --strictPort --port ${portBase}`,
           // The mocked suite exercises the launch-switched surfaces too, so build with them on.
           env: { ...process.env, VITE_FEATURE_STAGE: 'true', VITE_FEATURE_RESUMES: 'true' },
-          url: 'http://127.0.0.1:4173',
+          url: appUrl,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
         },
@@ -92,17 +109,16 @@ export default defineConfig({
           ? []
           : [
               {
-                command: 'node tests/e2e/support/sentry-sink.mjs 4175',
-                url: 'http://127.0.0.1:4175',
+                command: `node tests/e2e/support/sentry-sink.mjs ${portBase + 2}`,
+                url: sentrySinkUrl,
                 reuseExistingServer: !process.env.CI,
                 timeout: 30_000,
               },
               {
-                command:
-                  'npm exec vite build -- --outDir dist-qa-sentry && npm exec vite preview -- --outDir dist-qa-sentry --host 127.0.0.1 --port 4174',
-                url: 'http://127.0.0.1:4174',
+                command: `npm exec vite build -- --outDir dist-qa-sentry && npm exec vite preview -- --outDir dist-qa-sentry --host 127.0.0.1 --strictPort --port ${portBase + 1}`,
+                url: sentryBuildUrl,
                 env: {
-                  VITE_SENTRY_DSN: 'http://qapublickey@127.0.0.1:4175/1',
+                  VITE_SENTRY_DSN: `http://qapublickey@127.0.0.1:${portBase + 2}/1`,
                   VITE_SENTRY_ENVIRONMENT: 'qa',
                   VITE_RELEASE: 'qa-sentry-build',
                 },
@@ -111,12 +127,11 @@ export default defineConfig({
               },
               // The separate admin site: its own build with only the admin routes.
               {
-                command:
-                  'npm exec vite build -- --outDir dist-qa-admin && npm exec vite preview -- --outDir dist-qa-admin --host 127.0.0.1 --port 4176',
+                command: `npm exec vite build -- --outDir dist-qa-admin && npm exec vite preview -- --outDir dist-qa-admin --host 127.0.0.1 --strictPort --port ${portBase + 3}`,
                 url: adminSiteUrl,
                 // No public routes exist in this build, so entityLink (shared.tsx) needs the public
                 // site's own origin to link to a listing/profile/act absolutely.
-                env: { VITE_APP_TARGET: 'admin', VITE_PUBLIC_URL: 'http://127.0.0.1:4173' },
+                env: { VITE_APP_TARGET: 'admin', VITE_PUBLIC_URL: appUrl },
                 reuseExistingServer: !process.env.CI,
                 timeout: 120_000,
               },

@@ -83,4 +83,19 @@ describe('RatesPage', () => {
 
     expect(meta('name', 'robots')?.content).toBe('noindex, nofollow');
   });
+
+  it('is not noindex before the API answers', async () => {
+    vi.mocked(apiGet).mockReturnValue(new Promise(() => {}));
+    await mount('/rates/mumbai');
+    expect(container.textContent).toContain('Loading');
+    expect(meta('name', 'robots')?.content ?? '').not.toContain('noindex');
+  });
+
+  it('is not noindex when there is enough data, and has a photo header', async () => {
+    vi.mocked(apiGet).mockResolvedValue(RATES_DATA);
+    await mount('/rates/mumbai');
+    await act(async () => {});
+    expect(meta('name', 'robots')?.content ?? '').not.toContain('noindex');
+    expect(container.querySelector('[data-testid="photo-header"]')).not.toBeNull();
+  });
 });

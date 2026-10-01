@@ -28,6 +28,7 @@ import type {
 } from '../../lib/apiTypes';
 import { Inbox, type LucideIcon } from 'lucide-react';
 import { AdminSelect, InfoTip } from './ui';
+import { formatNumber, formatDate, formatDateTime } from '../../lib/format';
 
 // Shared state, helpers and small dialogs used by every admin tab. Kept in one
 // file (rather than one file per helper) so the tabs stay easy to scan.
@@ -117,6 +118,45 @@ export const reportsQuery = (filters: ReportFilters, page: number, perPage = 100
   return `${SOURCES.reports[0]}?${qs.toString()}`;
 };
 
+// The Opportunity queue's status filter. Applied server-side (Admin::JobsController#index) before
+// paging, so the pager's total counts exactly the rows being paged. "pending" is the working queue.
+export const JOB_STATUS_OPTIONS = [
+  { value: 'pending', label: 'Waiting for review' },
+  { value: 'published', label: 'Published' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'closed', label: 'Closed' },
+  { value: 'all', label: 'All statuses' },
+] as const;
+export type JobStatusFilter = (typeof JOB_STATUS_OPTIONS)[number]['value'];
+export const DEFAULT_JOB_STATUS: JobStatusFilter = 'pending';
+export const jobsQuery = (status: JobStatusFilter, page: number, perPage = 100) => {
+  const qs = new URLSearchParams({ page: String(page), perPage: String(perPage), status });
+  return `${SOURCES.jobs[0]}?${qs.toString()}`;
+};
+
+// The console's tabs, in display order. The active one lives in the URL (?tab=) so a reload
+// and a shared link both keep it. Unknown values fall back to the queue.
+export const ADMIN_TABS = [
+  'queue',
+  'verification',
+  'reports',
+  'users',
+  'reviews',
+  'signin',
+  'commerce',
+  'codes',
+  'operations',
+  'audit',
+  'demo',
+  'ai',
+  'urgent',
+  'funnel',
+] as const;
+export type AdminTab = (typeof ADMIN_TABS)[number];
+export const DEFAULT_ADMIN_TAB: AdminTab = 'queue';
+export const readAdminTab = (value: string | null): AdminTab =>
+  (ADMIN_TABS as readonly string[]).includes(value ?? '') ? (value as AdminTab) : DEFAULT_ADMIN_TAB;
+
 // Pagination envelope every paged admin list answers with (page/perPage/total).
 export type PageMeta = { page: number; perPage: number; total: number };
 export const readMeta = (d: Payload | null): PageMeta | null =>
@@ -154,8 +194,7 @@ export type AdminActions = {
 
 export const date = (value: string | null | undefined, withTime = false) => {
   if (!value) return '—';
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '—' : withTime ? d.toLocaleString() : d.toLocaleDateString();
+  return withTime ? formatDateTime(value, { fallback: '—' }) : formatDate(value, { fallback: '—' });
 };
 // On the admin build there is no public route to resolve a relative path against — those pages
 // simply don't exist in this bundle — so the link must be absolute to the public site instead.
@@ -215,7 +254,7 @@ export function Pager({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
       <p className="text-sm text-slate-400" aria-live="polite">
-        Showing {from.toLocaleString()}–{to.toLocaleString()} of {meta.total.toLocaleString()}
+        Showing {formatNumber(from)}–{formatNumber(to)} of {formatNumber(meta.total)}
       </p>
       <div className="flex items-center gap-2">
         <Button size="sm" variant="outline" disabled={meta.page <= 1 || loading} onClick={() => onPage(meta.page - 1)}>

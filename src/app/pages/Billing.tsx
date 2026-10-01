@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { ApiError, apiGet, apiPost } from '../lib/api';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { Card, CardContent } from '../components/ui/card';
@@ -16,11 +17,44 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
-import { AlertTriangle, Check, CreditCard, FlaskConical, ShieldCheck, Sparkles } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  ClipboardCheck,
+  CreditCard,
+  FlaskConical,
+  MessageCircle,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
-import type { BillingCancellation, BillingCheckout, BillingHistoryEntry, Plan, Subscription } from '../lib/apiTypes';
+import type {
+  BillingCancellation,
+  BillingCheckout,
+  BillingHistoryEntry,
+  BillingInterval,
+  BillingPlans,
+  BillingPromo,
+  Plan,
+  ReferralCode,
+  Subscription,
+} from '../lib/apiTypes';
+import { IntervalToggle } from '../components/IntervalToggle';
+import {
+  annualLine,
+  describePromo,
+  inr,
+  normaliseCode,
+  periodPrice,
+  storeCode,
+  storedCode,
+  whatsappShareUrl,
+} from '../lib/promo';
 import { loadAiUsage, type AiUsage } from '../lib/ai';
+import { formatDate, formatMoney } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
+import { PaymentsNotify } from '../components/PaymentsNotify';
 
 type Summary = {
   status: 'pending' | 'trialing' | 'active' | 'cancelling' | 'past_due' | 'cancelled' | 'early_access';
@@ -32,6 +66,10 @@ type Summary = {
   nextChargeAt?: string | null;
   accessEndsAt?: string | null;
   monthlyAmount?: number | null;
+  interval?: BillingInterval;
+  amount?: number | null;
+  nextAmount?: number | null;
+  promo?: BillingPromo | null;
   earlyAccess?: { until: string | null } | null;
 };
 type BillingState = {
@@ -47,25 +85,16 @@ type PaymentMode = 'live' | 'test' | 'mock' | 'disabled';
 
 // Banner copy per payment mode; live payments need no banner.
 const PAYMENT_MODE_NOTICE: Partial<Record<PaymentMode, [string, string]>> = {
-  test: [
-    'Test mode.',
-    'Payments on this environment use Razorpay test mode. No real money moves and no real cards are charged.',
-  ],
-  mock: [
-    'Demo billing.',
-    'Razorpay is not configured on this environment, so upgrades start without any payment step.',
-  ],
+  test: ['Test mode.', 'Payments here use test cards. No real money moves and no real cards are charged.'],
+  mock: ['Trial only.', 'Paid plans start without a payment step for now, so nothing is charged.'],
   disabled: [
-    'Payments unavailable.',
-    'Paid upgrades are paused while billing is being set up. Your current plan is not affected.',
+    'Payments open soon.',
+    'Turn on the email option below and we’ll tell you when they do. Your current plan is not affected. Early Access Pro, which needs no card, is going to our first hirers.',
   ],
 };
 
-const inr = (value: number) => `₹${Number(value).toLocaleString('en-IN')}`;
-const day = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-const money = (currency: string, value: number) =>
-  currency === 'INR' ? inr(value) : `${currency} ${Number(value).toLocaleString('en-IN')}`;
+const day = (value?: string | null) => formatDate(value);
+const money = (currency: string, value: number) => formatMoney(value, currency);
 
 const STATUS_LABEL: Record<Summary['status'], string> = {
   pending: 'Setup incomplete',
@@ -78,7 +107,8 @@ const STATUS_LABEL: Record<Summary['status'], string> = {
 };
 
 function statusCopy(s: Summary): string {
-  const amount = s.monthlyAmount ? inr(s.monthlyAmount) : 'the plan price';
+  const price = s.nextAmount ?? s.amount ?? s.monthlyAmount;
+  const amount = price ? `${inr(price)}${s.interval === 'annual' ? ' for the year' : ''}` : 'the plan price';
   switch (s.status) {
     case 'pending':
       return 'Checkout was not completed. Finish authorising the recurring payment to start your plan. Nothing has been charged.';
@@ -105,6 +135,81 @@ function newIdempotencyKey() {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// "Your referral code": the code is issued the first time this card loads. Hidden when the
+// programme is off or the API is unreachable, since billing works without it.
+function ReferralCard() {
+  const [referral, setReferral] = useState<ReferralCode | null>(null);
+  useEffect(() => {
+    let active = true;
+    apiGet<ReferralCode>('/me/referral-code')
+      .then((r) => {
+        if (active && r && typeof r.code === 'string') setReferral(r);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+  if (!referral) return null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(referral.code);
+      toast.success('Referral code copied');
+    } catch {
+      toast.error(`Copy failed. Your code is ${referral.code}.`);
+    }
+  };
+  return (
+    <Card className="mt-8 bg-violet-500/[.06] border-violet-400/20" data-testid="referral-card">
+      <CardContent className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-semibold">Your referral code</h2>
+          <p className="text-sm text-slate-300 mt-1">
+            Friends who hire on Verse get {referral.refereePercentOff ?? 20}% off with your code, and you earn free days
+            when they pay.
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <code
+              className="rounded-md bg-white/10 px-3 py-1.5 text-lg font-mono tracking-wider"
+              data-testid="referral-code"
+            >
+              {referral.code}
+            </code>
+            <Button variant="outline" size="sm" onClick={() => void copy()}>
+              <ClipboardCheck size={14} aria-hidden="true" className="mr-1.5" />
+              Copy
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a
+                href={whatsappShareUrl(referral.code, referral.shareUrl, referral.refereePercentOff ?? 20)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <MessageCircle size={14} aria-hidden="true" className="mr-1.5" />
+                Share on WhatsApp
+              </a>
+            </Button>
+          </div>
+        </div>
+        <dl className="flex gap-6 text-sm">
+          <div>
+            <dt className="text-slate-400">Redemptions</dt>
+            <dd className="text-2xl font-semibold" data-testid="referral-redemptions">
+              {referral.redemptions}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-400">Rewards earned</dt>
+            <dd className="text-2xl font-semibold" data-testid="referral-rewards">
+              {referral.rewardsEarned}
+            </dd>
+          </div>
+        </dl>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Billing() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [state, setState] = useState<BillingState | null>(null);
@@ -113,14 +218,22 @@ export default function Billing() {
   const [pendingPlan, setPendingPlan] = useState<string | null>(null);
   const [aiUsage, setAiUsage] = useState<AiUsage | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [annualAvailable, setAnnualAvailable] = useState(false);
+  const [interval, setInterval] = useState<BillingInterval>(
+    searchParams.get('interval') === 'annual' ? 'annual' : 'monthly',
+  );
+  // A code carried from the pricing page (?code=) or kept across sign-in; sent with checkout.
+  const [promoCode] = useState(() => normaliseCode(searchParams.get('code') || '') || storedCode());
+  const shownInterval: BillingInterval = annualAvailable ? interval : 'monthly';
   // One Idempotency-Key per checkout intent. It is kept after a network/gateway failure so a retry replays the same intent instead of creating a second subscription.
   const intentKeys = useRef<Record<string, string>>({});
   const inFlight = useRef(false);
 
   const load = () =>
-    Promise.all([apiGet<{ plans?: Plan[] }>('/billing/plans'), apiGet<BillingState>('/billing/subscription')]).then(
+    Promise.all([apiGet<Partial<BillingPlans>>('/billing/plans'), apiGet<BillingState>('/billing/subscription')]).then(
       ([p, s]) => {
         setPlans(p.plans || []);
+        setAnnualAvailable(p.annualAvailable === true);
         setState(s);
         return s;
       },
@@ -172,20 +285,27 @@ export default function Billing() {
     if (inFlight.current) return;
     inFlight.current = true;
     setPendingPlan(code);
-    const key = intentKeys.current[code] || (intentKeys.current[code] = newIdempotencyKey());
+    const intent = `${code}:${shownInterval}:${promoCode}`;
+    const key = intentKeys.current[intent] || (intentKeys.current[intent] = newIdempotencyKey());
     try {
       const d = await apiPost<BillingCheckout>(
         '/billing/checkout',
-        { planCode: code },
+        { planCode: code, interval: shownInterval, ...(promoCode ? { code: promoCode } : {}) },
         { headers: { 'Idempotency-Key': key } },
       );
-      delete intentKeys.current[code];
+      delete intentKeys.current[intent];
+      storeCode('');
       if (d.salesAssisted) {
         toast.info(d.message);
         return;
       }
+      if (d.checkout?.mode === 'early_access') {
+        toast.success('Early Access Pro is active. No card needed.');
+        await load();
+        return;
+      }
       if (d.checkout?.mode === 'mock') {
-        toast.success('Trial activated in development mode. Configure Razorpay environment keys for live billing.');
+        toast.success('Trial started. Nothing was charged.');
         await load();
         return;
       }
@@ -193,16 +313,17 @@ export default function Billing() {
         const plan = plans.find((p) => p.code === code);
         const result = await openRazorpayCheckout(d.checkout, {
           description: `${plan?.name || code} plan subscription`,
-          amountLabel: plan?.monthly
-            ? `${inr(plan.monthly)} / month${plan.trialDays ? ` after a ${plan.trialDays}-day trial` : ''}`
-            : '',
+          amountLabel:
+            plan && periodPrice(plan, shownInterval)
+              ? `${inr(periodPrice(plan, shownInterval)!)} / ${shownInterval === 'annual' ? 'year' : 'month'}${plan.trialDays ? ` after a ${plan.trialDays}-day trial` : ''}`
+              : '',
         });
         if (result.status === 'success') {
           toast.success('Payment method authorised. Activating your plan…');
           const activated = await waitForActivation();
           if (!activated)
             toast.info(
-              'Razorpay is still confirming your mandate. This page updates once the confirmation arrives; refresh in a minute.',
+              'Your bank is still confirming the payment setup. This page updates once it arrives; refresh in a minute.',
             );
         } else if (result.lastError) {
           toast.error(`Payment not completed: ${result.lastError}`);
@@ -214,8 +335,13 @@ export default function Billing() {
       }
     } catch (e: unknown) {
       const status = e instanceof ApiError ? e.status : 0;
-      if (status !== 0 && status !== 502) delete intentKeys.current[code];
-      toast.error(errorMessage(e));
+      if (status !== 0 && status !== 502) delete intentKeys.current[intent];
+      // A 503 is billing being switched off, not something to retry: say so in plain words.
+      toast.error(
+        status === 503
+          ? 'Payments open soon. Your current plan is not affected; turn on the email option on this page to hear when they do.'
+          : errorMessage(e),
+      );
     } finally {
       inFlight.current = false;
       setPendingPlan(null);
@@ -242,6 +368,8 @@ export default function Billing() {
 
   const sub = state?.subscription;
   const summary = state?.summary || null;
+  // Billing is switched off here (A-11): paid upgrades cannot start, so their buttons say why instead of failing.
+  const paymentsOff = state?.paymentMode === 'disabled';
   const notice = state ? PAYMENT_MODE_NOTICE[state.paymentMode || (state.testMode ? 'test' : 'live')] : undefined;
   const currentCode = summary && !['cancelled'].includes(summary.status) ? summary.planCode : 'free';
   const cancellable = summary && ['pending', 'trialing', 'active', 'past_due', 'early_access'].includes(summary.status);
@@ -251,30 +379,29 @@ export default function Billing() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 pt-28 pb-16">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-[.2em] text-violet-300">SaaS billing</div>
-            <h1 className="text-4xl font-bold mt-2">Plan & billing</h1>
-            <p className="text-slate-400 mt-2">
-              Core candidate applications remain free. Paid plans unlock operating capacity for hiring, sourcing,
-              booking and teams.
-            </p>
-          </div>
-          {state && (
-            <Badge className="w-fit" data-testid="plan-badge">
-              {summary ? `${summary.planName} · ${STATUS_LABEL[summary.status]}` : `${state.plan?.name || 'Free'} plan`}
-            </Badge>
-          )}
-        </div>
+        <PageHeader
+          title="Billing"
+          actions={
+            state && (
+              <Badge className="w-fit" data-testid="plan-badge">
+                {summary
+                  ? `${summary.planName} · ${STATUS_LABEL[summary.status]}`
+                  : `${state.plan?.name || 'Free'} plan`}
+              </Badge>
+            )
+          }
+        />
 
         {notice && (
           <div
             role="status"
+            id="payments-notice"
             className="mt-6 flex gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100"
           >
             <FlaskConical className="shrink-0 text-amber-300" size={18} />
             <span>
               <b>{notice[0]}</b> {notice[1]}
+              {paymentsOff && <PaymentsNotify />}
             </span>
           </div>
         )}
@@ -307,6 +434,12 @@ export default function Billing() {
                   <p className="text-sm text-slate-300 mt-1 max-w-3xl" data-testid="billing-status-copy">
                     {statusCopy(summary)}
                   </p>
+                  {summary.promo && (
+                    <p className="text-sm text-emerald-300 mt-2 flex items-center gap-1.5" data-testid="billing-promo">
+                      <Sparkles size={14} aria-hidden="true" />
+                      {describePromo(summary.promo)}
+                    </p>
+                  )}
                   {summary.nextChargeAt && (
                     <p className="text-xs text-slate-400 mt-2">
                       Next charge date: <span data-testid="next-charge-date">{day(summary.nextChargeAt)}</span>
@@ -316,7 +449,11 @@ export default function Billing() {
               </div>
               <div className="flex gap-2 flex-wrap">
                 {summary.status === 'pending' && (
-                  <Button disabled={pendingPlan !== null} onClick={() => choose(summary.planCode)}>
+                  <Button
+                    disabled={pendingPlan !== null || paymentsOff}
+                    aria-describedby={paymentsOff ? 'payments-notice' : undefined}
+                    onClick={() => choose(summary.planCode)}
+                  >
                     Complete setup
                   </Button>
                 )}
@@ -335,6 +472,18 @@ export default function Billing() {
           </Card>
         )}
 
+        {(annualAvailable || promoCode) && (
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            {annualAvailable && <IntervalToggle value={interval} onChange={setInterval} />}
+            {promoCode && (
+              <span className="text-sm text-slate-300 flex items-center gap-1.5" data-testid="billing-code-note">
+                <Sparkles size={14} aria-hidden="true" className="text-violet-300" />
+                Code <b>{promoCode}</b> is applied at checkout
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mt-7">
           {plans.map((p) => (
             <Card
@@ -345,9 +494,20 @@ export default function Billing() {
               <CardContent className="p-5">
                 <h2 className="text-xl font-semibold">{p.name}</h2>
                 <div className="text-3xl font-bold mt-3">
-                  {p.monthly === null ? 'Custom' : p.monthly === 0 ? 'Free' : inr(p.monthly)}{' '}
-                  {(p.monthly ?? 0) > 0 && <span className="text-xs font-normal text-slate-500">/month</span>}
+                  {p.monthly === null
+                    ? 'Custom'
+                    : p.monthly === 0
+                      ? 'Free'
+                      : inr(periodPrice(p, shownInterval) ?? p.monthly)}{' '}
+                  {(p.monthly ?? 0) > 0 && (
+                    <span className="text-xs font-normal text-slate-500">
+                      {shownInterval === 'annual' && p.annual ? '/year' : '/month'}
+                    </span>
+                  )}
                 </div>
+                {shownInterval === 'annual' && !!p.annual && (
+                  <div className="text-sm text-emerald-300 mt-1">{annualLine(p.annual)}</div>
+                )}
                 {p.trialDays > 0 && (
                   <div className="text-sm text-emerald-300 mt-1">
                     {p.trialDays}-day free trial for your first paid plan
@@ -366,7 +526,7 @@ export default function Billing() {
                     </div>
                   ))}
                 </div>
-                {p.code !== 'free' && (
+                {p.code !== 'free' && !(paymentsOff && p.code !== 'enterprise' && currentCode !== p.code) && (
                   <Button
                     className="w-full mt-6"
                     variant={currentCode === p.code ? 'secondary' : 'default'}
@@ -387,6 +547,11 @@ export default function Billing() {
                               : 'Start free trial'}
                   </Button>
                 )}
+                {paymentsOff && p.code !== 'free' && p.code !== 'enterprise' && currentCode !== p.code && (
+                  <p className="mt-2 text-xs text-slate-400" data-testid={`plan-${p.code}-unavailable`}>
+                    Available when payments open.
+                  </p>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -399,6 +564,8 @@ export default function Billing() {
             {aiUsage.period === 'month' ? ' this month.' : ', a one-time allowance for your account.'}
           </p>
         )}
+
+        <ReferralCard />
 
         {(state?.history?.length || 0) > 0 && (
           <Card className="mt-8 bg-white/[.04] border-white/10">
@@ -419,9 +586,7 @@ export default function Billing() {
                       <tr key={h.paymentId} className="border-t border-white/10">
                         <td className="py-2 pr-4">{day(h.at)}</td>
                         <td className="py-2 pr-4">{money(h.currency, h.amount)}</td>
-                        <td className="py-2 pr-4">
-                          {h.status === 'captured' ? 'Paid' : h.status === 'failed' ? 'Failed' : h.status}
-                        </td>
+                        <td className="py-2 pr-4">{h.status === 'captured' ? 'Paid' : optionLabel(h.status)}</td>
                         <td className="py-2 font-mono text-xs text-slate-400">{h.invoiceId || h.paymentId}</td>
                       </tr>
                     ))}
@@ -433,8 +598,8 @@ export default function Billing() {
         )}
 
         <div className="mt-8 text-xs text-slate-500 max-w-4xl">
-          Plan changes: cancel your current plan first; you can subscribe to another plan once it has ended. Payment
-          state is confirmed by signed Razorpay webhooks; closing or refreshing checkout never charges you twice.
+          To change plans, cancel your current plan first, then subscribe to another once it has ended. Closing or
+          refreshing checkout never charges you twice.
         </div>
       </main>
 

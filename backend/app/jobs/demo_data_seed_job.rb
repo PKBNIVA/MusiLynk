@@ -1,5 +1,7 @@
 # Seeds one publicly visible demo batch (see SyntheticQa::Demo). Enqueued by
-# Admin::DemoDataController; progress is recorded through SyntheticQa::DemoJobs.
+# Admin::DemoDataController; progress is recorded through SyntheticQa::DemoJobs. The "showcase" size
+# builds the hand-written Verse showcase (SyntheticQa::Showcase, batch demo-showcase, idempotent);
+# the other sizes build generated batches (SyntheticQa::BatchSeeder).
 class DemoDataSeedJob < ApplicationJob
   queue_as :default
 
@@ -7,7 +9,11 @@ class DemoDataSeedJob < ApplicationJob
     SyntheticQa::DemoJobs.record!(job_id, "running", actor_id: admin_id)
     counts = SyntheticQa::Demo::SIZES.fetch(size)
     admin = User.admin.active.find(admin_id)
-    result = SyntheticQa::BatchSeeder.call(batch:, jobseekers: counts[:jobseekers], employers: counts[:employers], authorized_by: admin)
+    result = if size == SyntheticQa::Demo::SHOWCASE_SIZE
+      SyntheticQa::Showcase.call(batch:, authorized_by: admin)
+    else
+      SyntheticQa::BatchSeeder.call(batch:, jobseekers: counts[:jobseekers], employers: counts[:employers], authorized_by: admin)
+    end
     SyntheticQa::DemoJobs.record!(job_id, "succeeded", actor_id: admin_id, result: result.to_h.except(:batch))
   rescue StandardError => error
     Rails.logger.error({ event: "demo_data.seed_failed", jobId: job_id, batch:, error: error.class.name }.to_json)

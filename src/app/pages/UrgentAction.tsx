@@ -42,7 +42,7 @@ export default function UrgentAction() {
             <p className="text-slate-400 mt-2">
               {status === 'filled'
                 ? "Thanks — we've let the request page know."
-                : 'This request no longer appears to professionals.'}
+                : 'This request no longer appears to musicians.'}
             </p>
           </>
         )}

@@ -1,7 +1,8 @@
-import { EmptyState } from '../components/help/EmptyState';
+import { EmptyState } from '../components/kit/EmptyState';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
@@ -18,6 +19,8 @@ import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { errorMessage } from '../lib/errors';
 import type { Act, ActMember, Taxonomy } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
+import { formatMoney, periodLabel } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
 
 const FALLBACK_ACT_TYPES = ['solo', 'duo', 'trio', 'band', 'ensemble', 'dj'];
 // Inputs hand back strings, so the lineup size holds whatever was typed until it is submitted.
@@ -181,14 +184,7 @@ export default function ActsManager() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
-        <div className="mb-7">
-          <div className="text-xs uppercase tracking-[.2em] text-violet-300">Roster & booking identity</div>
-          <h1 className="text-3xl sm:text-4xl font-bold mt-2">Your acts</h1>
-          <p className="text-slate-400 mt-2">
-            Create a solo, duo, band or ensemble once, then use that identity for enquiries, quotes and bookings.
-          </p>
-        </div>
-        <HelpCallout {...HELP.acts} />
+        <PageHeader title="My acts" help={<HelpCallout {...HELP.acts} />} />
         <div className="grid lg:grid-cols-[.9fr_1.1fr] gap-6">
           <Card className="bg-white/[.055] border-white/10">
             <CardContent className="p-6">
@@ -325,8 +321,8 @@ export default function ActsManager() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-xl font-semibold break-words">{a.name}</h3>
-                          <Badge variant="secondary">{a.act_type}</Badge>
-                          <Badge className="capitalize">{a.status}</Badge>
+                          <Badge variant="secondary">{optionLabel(a.act_type)}</Badge>
+                          <Badge>{optionLabel(a.status)}</Badge>
                         </div>
                         <p className="text-slate-400 text-sm mt-2">
                           {a.city || 'Location not set'} · lineup {a.lineup_size}
@@ -339,8 +335,9 @@ export default function ActsManager() {
                     </div>
                     {Boolean(a.min_fee || a.max_fee) && (
                       <div className="mt-4 text-sm text-emerald-300">
-                        Indicative ₹{Number(a.min_fee || 0).toLocaleString('en-IN')} – ₹
-                        {Number(a.max_fee || a.min_fee || 0).toLocaleString('en-IN')} / {a.fee_basis}
+                        Indicative {formatMoney(a.min_fee || 0, a.currency || undefined)} –{' '}
+                        {formatMoney(a.max_fee || a.min_fee || 0, a.currency || undefined)} /{' '}
+                        {periodLabel(a.fee_basis) || 'event'}
                       </div>
                     )}
                     <div className="mt-5 border-t border-white/10 pt-4">

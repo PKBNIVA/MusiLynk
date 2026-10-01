@@ -13,6 +13,9 @@ describe('build target', () => {
     expect(IS_ADMIN_SITE).toBe(false);
     expect(signInPath('employer')).toBe('/auth/employer');
     expect(PROTECTED_AREA.test('/jobseeker/messages')).toBe(true);
+    expect(PROTECTED_AREA.test('/stage')).toBe(true);
+    expect(PROTECTED_AREA.test('/stage/posts/p1')).toBe(true);
+    expect(PROTECTED_AREA.test('/stagecraft')).toBe(false);
     expect(PROTECTED_AREA.test('/admin')).toBe(false);
   });
 

@@ -49,7 +49,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/auth/reset-password/check", :public, { params: { token: "not-a-token" }, keys: %w[valid] }],
     [:get, "/api/me", :any, { keys: %w[user] }],
     [:get, "/api/me/identities", :talent, { keys: %w[identities] }],
-    [:put, "/api/me/email-preferences", :any, { params: { emailPreferences: { digest: false } }, bad: { emailPreferences: { spam: false } }, bad_status: [400], keys: %w[emailPreferences] }],
+    [:put, "/api/me/email-preferences", :any, { params: { emailPreferences: { digest: false } }, bad: { emailPreferences: { spam: false } }, bad_status: [400], keys: %w[emailPreferences paymentsNotify] }],
     [:get, "/api/account/export", :any, { keys: %w[format version account profile conversations] }],
     # Without the typed email the request is refused, so the matrix never erases its own users.
     [:delete, "/api/account", :any, { ok: [422], params: { confirmEmail: "someone-else@example.com" } }],
@@ -57,7 +57,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     # An unchanged/bogus request never starts a real change, so the matrix never erases its own users' sign-in.
     [:post, "/api/account/email/request", :any, { ok: [422], params: ->(w, a) { { email: w.user(a).email } } }],
     [:post, "/api/account/email/confirm", :any, { ok: [422], params: { changeToken: "not-a-token", code: "000000" } }],
-    [:post, "/api/account/password", :any, { ok: [403], params: { currentPassword: "wrong-current-password", newPassword: "BrandNewPass456!" } }],
+    [:post, "/api/account/password", :any, { ok: { default: [200], admin: [403] }, params: { currentPassword: "wrong-current-password", newPassword: "BrandNewPass456!" } }],
     [:put, "/api/profile", :talent, { params: { headline: "Updated headline" }, bad: { website: "javascript:alert(1)" }, bad_status: [422], keys: %w[user] }],
     [:post, "/api/onboarding/starter", :talent, { params: { city: "Mumbai" }, bad: { yearsExperience: 500 }, bad_status: [422], keys: %w[user starter] }],
     [:post, "/api/link-previews", :public, { params: { url: "https://myband.example/epk" }, bad: { url: "javascript:alert(1)" }, bad_status: [422], keys: %w[provider kind label url title author thumbnail] }],
@@ -66,6 +66,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/public/stats", :public, { keys: %w[verifiedProfiles professionals cities openOpportunities urgentRequests generatedAt] }],
 
     [:get, "/api/jobs", :public, { keys: %w[jobs nextCursor total] }],
+    [:get, "/api/jobs/limits", :talent, { keys: %w[activeAllowed activeUsed plan planName] }],
     [:get, "/api/jobs/{job}", :public, { keys: %w[job], missing: :job }],
     [:get, "/api/jobs/{draft_job}", :public, { ok: { default: [200], admin: [200] }, anon: [404], idor: true, note: "drafts are visible to their owner and admins only" }],
     [:post, "/api/jobs", :talent, { ok: [201], params: job_params, bad: { title: "", status: "draft" }, bad_status: [422], keys: %w[id status moderationFlags] }],
@@ -110,6 +111,8 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/admin/reviews/{review}", :admin, { params: { status: "rejected" }, missing: :review, bad: { status: "x" }, bad_status: [400] }],
     [:put, "/api/admin/reviews/{review}", :admin, { params: { status: "published" }, missing: :review }],
     [:get, "/api/admin/verifications", :admin, { keys: %w[requests] }],
+    [:get, "/api/admin/verifications/stats", :admin, { keys: %w[days7 days30] }],
+    [:post, "/api/admin/verifications/{verification}/revoke", :admin, { ok: [422], missing: :verification }],
     [:patch, "/api/admin/verifications/{verification}", :admin, { params: { status: "approved", checks: ["work_links"] }, missing: :verification, bad: { status: "x" }, bad_status: [400] }],
     [:put, "/api/admin/verifications/{verification}", :admin, { params: { status: "rejected" }, missing: :verification }],
     [:get, "/api/admin/reports", :admin, { keys: %w[reports] }],
@@ -131,17 +134,19 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/admin/billing-attempts/{billing_attempt}/reconcile", :admin, { ok: [503], missing: :billing_attempt, note: "fails closed (503 PAYMENTS_NOT_CONFIGURED) without Razorpay keys" }],
     [:get, "/api/admin/bookings", :admin, { keys: %w[bookings] }],
     [:post, "/api/admin/search/reindex", :admin, { keys: %w[count] }],
+    [:get, "/api/admin/payments-open-email", :admin, { keys: %w[usable waiting sendable] }],
+    [:post, "/api/admin/payments-open-email", :admin, { ok: [503], note: "fails closed (503 PAYMENTS_NOT_CONFIGURED) until Razorpay is usable" }],
     [:get, "/api/admin/refunds", :admin, { keys: %w[refunds] }],
     [:patch, "/api/admin/refunds/{refund}", :admin, { params: { note: "Reviewed" }, missing: :refund, keys: %w[status] }],
     [:put, "/api/admin/refunds/{refund}", :admin, { params: { note: "Reviewed" }, missing: :refund, keys: %w[status] }],
     [:get, "/api/admin/funnel", :admin, { keys: %w[windowDays funnel weekly medianFirstResponseMinutes retentionWeek1] }],
     [:get, "/api/admin/emails", :admin, { keys: %w[windowDays sentByKey optOutRates] }],
 
-    [:get, "/api/portfolio", :jobseeker, { keys: %w[items] }],
-    [:post, "/api/portfolio", :jobseeker, { ok: [201], params: { type: "audio", title: "Live take", url: "https://example.com/a.mp3" }, bad: { title: "No url" }, bad_status: [422], keys: %w[id item] }],
-    [:patch, "/api/portfolio/{portfolio}", :jobseeker, { params: { title: "Retitled" }, idor: true, missing: :portfolio, bad: { url: "javascript:alert(1)" }, bad_status: [422], keys: %w[item] }],
-    [:put, "/api/portfolio/{portfolio}", :jobseeker, { params: { title: "Retitled" }, idor: true }],
-    [:delete, "/api/portfolio/{portfolio}", :jobseeker, { idor: true, missing: :portfolio }],
+    [:get, "/api/portfolio", :talent, { keys: %w[items] }],
+    [:post, "/api/portfolio", :talent, { ok: [201], params: { type: "audio", title: "Live take", url: "https://example.com/a.mp3" }, bad: { title: "No url" }, bad_status: [422], keys: %w[id item] }],
+    [:patch, "/api/portfolio/{portfolio}", :talent, { params: { title: "Retitled" }, idor: true, missing: :portfolio, bad: { url: "javascript:alert(1)" }, bad_status: [422], keys: %w[item] }],
+    [:put, "/api/portfolio/{portfolio}", :talent, { params: { title: "Retitled" }, idor: true }],
+    [:delete, "/api/portfolio/{portfolio}", :talent, { idor: true, missing: :portfolio }],
     [:get, "/api/portfolios", :talent, { keys: %w[portfolios limit] }],
     [:post, "/api/portfolios", :talent, { ok: [201], params: { title: "Film scoring", purpose: "film-scoring", rules: { any: { genres: ["Score"] } } }, bad: { title: "" }, bad_status: [422], keys: %w[id portfolio] }],
     [:post, "/api/portfolios/draft", :talent, { params: { goal: "Jazz guitar for live gigs" }, bad: { goal: "" }, bad_status: [422], keys: %w[draft] }],
@@ -177,7 +182,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/pages/act/{inactive_act}/jobs", :public, { ok: [404], anon: [404], note: "only active Pages have a public job list" }],
     [:get, "/api/notifications/unread", :any, { keys: %w[unread] }],
     [:post, "/api/notifications/read-all", :any, { keys: %w[ok updated] }],
-    [:get, "/api/notifications/preferences", :any, { keys: %w[emailNotifications] }],
+    [:get, "/api/notifications/preferences", :any, { keys: %w[emailNotifications paymentsNotify] }],
     [:patch, "/api/notifications/preferences", :any, { params: { emailNotifications: false }, bad: { emailNotifications: "no" }, bad_status: [400], keys: %w[emailNotifications] }],
     [:get, "/api/notifications/unsubscribe", :public, { ok: [400], params: { token: "not-a-token" }, note: "valid tokens are covered in messaging_notifications_test" }],
     [:post, "/api/notifications/unsubscribe", :public, { ok: [400], params: { token: "not-a-token" } }],
@@ -256,6 +261,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/acts/{act}/members", :talent, { ok: [201], params: { displayName: "Dep", roleName: "Keys" }, idor: true, missing: :act, bad: { roleName: "" }, bad_status: [422] }],
     [:delete, "/api/acts/{act}/members/{act_member}", :talent, { idor: true, missing: :act_member }],
     [:get, "/api/bookings", :talent, { keys: %w[bookings] }],
+    [:get, "/api/bookings/limits", :talent, { keys: %w[activeAllowed activeUsed plan planName] }],
     [:post, "/api/bookings", :talent, { ok: [201], params: ->(w, a) { { actId: w.refs[a == :js ? :js2 : :emp2][:act], eventType: "wedding", city: "Pune", eventDate: 2.months.from_now.to_date.iso8601 } }, bad: {}, bad_status: [404, 422] }],
     [:post, "/api/bookings/{owned_booking}/quote", :talent, { ok: [201], params: { performanceFee: 1000 }, idor: true, missing: :owned_booking, bad: { performanceFee: -5 }, bad_status: [422] }],
     [:post, "/api/bookings/{requested_booking}/status", :talent, { params: { status: "cancelled" }, idor: true, missing: :requested_booking, bad: { status: "bogus" }, bad_status: [400] }],
@@ -269,10 +275,17 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:delete, "/api/organizations/{org}/members/{org_member}", :talent, { idor: true, missing: :org }],
     [:get, "/api/urgent-requests", :talent, { keys: %w[requests] }],
     [:get, "/api/urgent-requests/{urgent}", :talent, { keys: %w[request responseTimePromise], idor: true, missing: :urgent }],
-    [:post, "/api/urgent-requests", :talent, { ok: [201], params: ->(_w, _a) { { title: "Dep needed", roleName: "Drummer", city: "Pune", startAt: 2.days.from_now.iso8601 } }, bad: { title: "No city" }, bad_status: [422] }],
+    [:post, "/api/urgent-requests", :talent, { ok: [201], params: ->(_w, _a) { { title: "Dep needed", roleName: "Drummer", city: "Pune", startAt: 2.days.from_now.iso8601, budgetMin: 5_000, budgetMax: 10_000, note: "Two sets, gear provided." } }, bad: { title: "No city" }, bad_status: [422] }],
     [:patch, "/api/urgent-requests/{urgent}", :talent, { params: { status: "filled" }, idor: true, missing: :urgent, bad: { status: "open" }, bad_status: [400] }],
     [:put, "/api/urgent-requests/{urgent}", :talent, { params: { status: "cancelled" }, idor: true }],
     [:post, "/api/urgent-requests/{others_urgent}/respond", :talent, { ok: [201], params: { message: "Available" }, missing: :others_urgent }],
+    [:post, "/api/urgent-requests/{urgent}/accept", :talent, { ok: [200], params: ->(w, a) {
+      next({}) unless w.refs[a][:urgent]
+
+      responder = w.user(a == :js ? :emp2 : :js2)
+      UrgentRequestResponse.find_or_create_by!(urgent_request_id: w.refs[a][:urgent], user_id: responder.id) { _1.message = "Available" }
+      { userId: responder.id }
+    }, idor: true, missing: :urgent, bad: { userId: "nobody" }, bad_status: [422] }],
     [:get, "/api/urgent-requests/{urgent}/responses", :talent, { keys: %w[responses], idor: true, missing: :urgent }],
     [:get, "/api/urgent-requests/{urgent}/token-action", :public, {
       params: ->(w, actor) { { t: UrgentActionToken.generate(UrgentRequest.find(w.refs[actor][:urgent] || w.refs[:shared][:urgent]), "close") } },
@@ -320,6 +333,14 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:delete, "/api/uploads/{upload}", :any, { idor: true, missing: :upload }],
     [:get, "/api/admin/billing-events", :admin, { keys: %w[events nextBefore] }],
     [:get, "/api/admin/billing-events/{billing_event}", :admin, { missing: :billing_event, keys: %w[event] }],
+    [:post, "/api/billing/codes/validate", :any, { params: { code: "NO-SUCH-CODE", planCode: "pro", interval: "monthly" }, bad: { code: "X", planCode: "platinum" }, bad_status: [400], keys: %w[valid reason kind effect message] }],
+    [:get, "/api/me/referral-code", :talent, { keys: %w[code shareUrl redemptions rewardsEarned] }],
+    [:get, "/api/admin/promo-codes", :admin, { keys: %w[codes programme page perPage total] }],
+    [:post, "/api/admin/promo-codes", :admin, { ok: [201], params: ->(_w, _a) { { kind: "discount_percent", code: "MTX#{SecureRandom.hex(3)}", percentOff: 10 } }, bad: { kind: "referral" }, bad_status: [422], keys: %w[code] }],
+    [:patch, "/api/admin/promo-codes/{promo_code}", :admin, { params: { notes: "Matrix note" }, missing: :promo_code, bad: {}, bad_status: [400], keys: %w[code] }],
+    [:put, "/api/admin/promo-codes/{promo_code}", :admin, { params: { notes: "Matrix note" }, missing: :promo_code }],
+    [:get, "/api/admin/promo-codes/{promo_code}/redemptions", :admin, { missing: :promo_code, keys: %w[redemptions] }],
+    [:get, "/api/admin/promo-codes/export", :admin, { note: "CSV download; the .csv suffix form is covered in AdminPromoCodesTest" }],
     [:get, "/api/admin/demo-data", :admin, { keys: %w[batches jobs busy demoUsers maxUsers sizes] }],
     [:post, "/api/admin/demo-data", :admin, { ok: [202], params: { size: "small" }, bad: { size: "enormous" }, bad_status: [422], keys: %w[jobId job] }],
     [:delete, "/api/admin/demo-data", :admin, { ok: [202], keys: %w[jobId job] }],
@@ -332,6 +353,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/stage/posts/{stage_post}", :any, { params: { body: "Matrix edited stage post" }, missing: :stage_post, bad: { body: "x" * 3001 }, bad_status: [422], keys: %w[post] }],
     [:put, "/api/stage/posts/{stage_post}", :any, { params: { body: "Matrix edited stage post (put)" }, missing: :stage_post, keys: %w[post] }],
     [:delete, "/api/stage/posts/{stage_post}", :any, { missing: :stage_post }],
+    [:get, "/api/stage/authors/user/{self}", :public, { keys: %w[author] }],
     [:get, "/api/stage/authors/user/{self}/posts", :public, { keys: %w[posts nextCursor] }],
     [:post, "/api/stage/posts/{stage_post}/applause", :any, { ok: [201], missing: :stage_post, keys: %w[ok applauseCount] }],
     [:delete, "/api/stage/posts/{stage_post}/applause", :any, { missing: :stage_post, keys: %w[ok applauseCount] }],
@@ -471,6 +493,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     end
     world.refs[:shared][:stage_post] = world.refs[:js][:stage_post]
     world.refs[:shared][:stage_comment] = world.refs[:js][:stage_comment]
+    world.refs[:shared][:promo_code] = PromoCode.create!(code: "MATRIX#{SecureRandom.hex(3)}", kind: "discount_percent", percent_off: 15).id
     world.refs[:shared][:stage_follow_target] = User.create!(name: "Matrix Stage Followable", email: "matrix-stage-follow-#{SecureRandom.hex(4)}@example.com",
       password: ApiMatrixWorld::PASSWORD, role: "jobseeker", status: "active", profile_complete: true).id
     world.refs[:shared][:stage_tag_post] = Post.create!(author_type: "user", author_id: world.user(:js).id, created_by_user_id: world.user(:js).id,

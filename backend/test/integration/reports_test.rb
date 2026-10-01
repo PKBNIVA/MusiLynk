@@ -53,6 +53,19 @@ class ReportsTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a stale client sending the old reason value is still accepted" do
+    post "/api/reports", params: { entityType: "job", entityId: @job.id, reason: "Misleading listing" }, headers: auth(@reporter), as: :json
+    assert_response :created
+  end
+
+  test "a user cannot report their own account" do
+    post "/api/reports", params: { entityType: "user", entityId: @reporter.id, reason: "Spam or scam" }, headers: auth(@reporter), as: :json
+    assert_response :unprocessable_content
+    assert_equal "CANNOT_REPORT_SELF", response.parsed_body["code"]
+    assert_equal "You can't report your own account.", response.parsed_body["error"]
+    assert_not Report.exists?(reporter_id: @reporter.id, entity_type: "user")
+  end
+
   test "a second open report on the same entity by the same reporter is rejected with a friendly message" do
     post "/api/reports", params: { entityType: "job", entityId: @job.id, reason: "Spam or scam" }, headers: auth(@reporter), as: :json
     assert_response :created

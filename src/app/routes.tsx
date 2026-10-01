@@ -1,4 +1,4 @@
-import { createBrowserRouter, type RouteObject } from 'react-router';
+import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
 import { FEATURE_RESUMES, FEATURE_STAGE } from './lib/features';
 import React from 'react';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -9,6 +9,11 @@ const L = (f: () => Promise<{ default: React.ComponentType }>) => React.lazy(f);
 const S = ({ children }: { children: React.ReactNode }) => (
   <React.Suspense fallback={<PageLoading />}>{children}</React.Suspense>
 );
+/** Redirects to another path while keeping the query string and hash (e.g. /login?next=…). */
+const Redirect = ({ to }: { to: string }) => {
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to}${search}${hash}`} replace />;
+};
 const P = ({ roles, children }: { roles: Role[]; children: React.ReactNode }) => (
   <S>
     <ProtectedRoute roles={roles}>{children}</ProtectedRoute>
@@ -27,7 +32,6 @@ function publicRoutes(): RouteObject[] {
   const JobDetails = L(() => import('./pages/JobDetails'));
   const ProfileSetup = L(() => import('./pages/ProfileSetup'));
   const CompanyProfile = L(() => import('./pages/CompanyProfile'));
-  const Portfolio = L(() => import('./pages/Portfolio'));
   const ApplicationTracking = L(() => import('./pages/ApplicationTracking'));
   const EmployerApplications = L(() => import('./pages/EmployerApplications'));
   const PostJob = L(() => import('./pages/PostJob'));
@@ -54,6 +58,7 @@ function publicRoutes(): RouteObject[] {
   const PublicActs = L(() => import('./pages/public/PublicActs'));
   const PublicAct = L(() => import('./pages/public/PublicAct'));
   const LegalPage = L(() => import('./pages/public/LegalPage'));
+  const CreditsPage = L(() => import('./pages/public/CreditsPage'));
   const UrgentRequests = L(() => import('./pages/UrgentRequests'));
   const UrgentHire = L(() => import('./pages/UrgentHire'));
   const UrgentAction = L(() => import('./pages/UrgentAction'));
@@ -69,6 +74,7 @@ function publicRoutes(): RouteObject[] {
   const InvoicePrint = L(() => import('./pages/InvoicePrint'));
   const BandBuilder = L(() => import('./pages/BandBuilder'));
   const Billing = L(() => import('./pages/Billing'));
+  const MusicianBilling = L(() => import('./pages/MusicianBilling'));
   const AccountData = L(() => import('./pages/AccountData'));
   const AccountSettings = L(() => import('./pages/AccountSettings'));
   // ---- Showcase (one library, many views; one account, many hats) — begin ----
@@ -237,6 +243,14 @@ function publicRoutes(): RouteObject[] {
       ),
     },
     {
+      path: '/credits',
+      element: (
+        <S>
+          <CreditsPage />
+        </S>
+      ),
+    },
+    {
       path: '/terms',
       element: (
         <S>
@@ -332,6 +346,9 @@ function publicRoutes(): RouteObject[] {
         </S>
       ),
     },
+    { path: '/login', element: <Redirect to="/auth/jobseeker" /> },
+    { path: '/signup', element: <Redirect to="/join/musician" /> },
+    { path: '/join', element: <Redirect to="/join/musician" /> },
     {
       path: '/auth/:userType',
       element: (
@@ -387,12 +404,9 @@ function publicRoutes(): RouteObject[] {
           ),
         },
         {
+          // The old "Work samples" page was folded into My work; keep the address working.
           path: 'portfolio',
-          element: (
-            <P roles={['jobseeker']}>
-              <Portfolio />
-            </P>
-          ),
+          element: <Redirect to="/jobseeker/library" />,
         },
         {
           path: 'applications',
@@ -566,7 +580,7 @@ function publicRoutes(): RouteObject[] {
           path: 'billing',
           element: (
             <P roles={['jobseeker']}>
-              <Billing />
+              <MusicianBilling />
             </P>
           ),
         },

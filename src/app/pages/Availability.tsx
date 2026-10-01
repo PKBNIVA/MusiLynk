@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CalendarPlus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Button } from '../components/ui/button';
@@ -13,6 +14,8 @@ import type { AvailabilityWindow } from '../lib/apiTypes';
 import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { AppSelect } from '../components/ui/app-select';
+import { formatDateTime, formatInputEcho } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
 
 type SlotField = 'startAt' | 'endAt' | 'city' | 'status';
 const SLOT_IDS: Record<SlotField, string> = {
@@ -112,15 +115,17 @@ export default function Availability() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-5xl mx-auto px-4 sm:px-5 pt-28 pb-16">
-        <h1 className="text-4xl font-bold">Availability calendar</h1>
-        <HelpCallout {...HELP.availability} />
-        <p className="text-slate-400 mt-2">
-          Publish when you are available, on hold, tentative, booked or unavailable.
-        </p>
+        <PageHeader title="Availability" help={<HelpCallout {...HELP.availability} />} />
         <Card className="bg-white/[.055] border-white/10 mt-7">
           <CardContent className="p-5">
             <form onSubmit={add} noValidate className="grid md:grid-cols-5 gap-3 items-start">
-              <Field id={SLOT_IDS.startAt} label="Start" required error={errors.errors.startAt}>
+              <Field
+                id={SLOT_IDS.startAt}
+                label="Start"
+                required
+                error={errors.errors.startAt}
+                hint={formatInputEcho(form.startAt, true)}
+              >
                 <Input
                   type="datetime-local"
                   min={localNow()}
@@ -129,7 +134,13 @@ export default function Availability() {
                   className="bg-white/5 border-white/15"
                 />
               </Field>
-              <Field id={SLOT_IDS.endAt} label="End" required error={errors.errors.endAt}>
+              <Field
+                id={SLOT_IDS.endAt}
+                label="End"
+                required
+                error={errors.errors.endAt}
+                hint={formatInputEcho(form.endAt, true)}
+              >
                 <Input
                   type="datetime-local"
                   min={form.startAt || localNow()}
@@ -189,10 +200,9 @@ export default function Availability() {
                 className="flex items-center justify-between gap-3 p-4 rounded-xl bg-white/5 border border-white/10"
               >
                 <div>
-                  <b className="capitalize">{item.status}</b>
+                  <b>{optionLabel(item.status)}</b>
                   <div className="text-sm text-slate-400">
-                    {new Date(item.startAt).toLocaleString()} → {new Date(item.endAt).toLocaleString()}{' '}
-                    {item.city ? `· ${item.city}` : ''}
+                    {formatDateTime(item.startAt)} → {formatDateTime(item.endAt)} {item.city ? `· ${item.city}` : ''}
                   </div>
                 </div>
                 <Button

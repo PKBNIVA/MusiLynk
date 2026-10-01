@@ -2,7 +2,7 @@ class JobsController < ApplicationController
   include JobAuthoring
   include ListPaging
   include ActingAs
-  FILTER_PARAMS = %i[q location kind function workplace experience paid verified limit cursor].freeze
+  FILTER_PARAMS = %i[q roles location kind function workplace experience paid verified limit cursor].freeze
   LIST_LIMIT = 200
   # The public listing is paged with a keyset cursor: `?limit=` (default PAGE_SIZE, at most
   # MAX_PAGE_SIZE; anything else falls back to the default) and `?cursor=` from the previous
@@ -17,6 +17,8 @@ class JobsController < ApplicationController
   # (defensively) has no published_at; a published job is given one when it is approved, so this
   # only guards against that invariant ever slipping.
   BROWSE_SENTINEL = "-infinity"
+  # `?roles=Drummer,Vocalist` finds opportunities for any of those roles (a musician's own roles).
+  MAX_ROLES = 6
   LOCATION_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["jobs.location"])
 
   def index
@@ -36,7 +38,7 @@ class JobsController < ApplicationController
     jobs = jobs.where(paid: true) if params[:paid] == "true"
     jobs = jobs.joins(employer: :profile).where(profiles: { verified: true }) if params[:verified] == "true"
 
-    query = Search::Query.new(params[:q])
+    query = search_query
     if query.blank? && !query.inert?
       # Browsing: newest first, keyset cursor over (published_at, id) (V-16).
       jobs = jobs.reorder(*BROWSE_ORDER.map { Arel.sql(_1) })
@@ -85,6 +87,19 @@ class JobsController < ApplicationController
     render json: { job: job.api_json(current_user).merge(applied:, saved:) }
   end
 
+  # The poster's plan capacity for active opportunities, read by the post-opportunity page so it
+  # can say so before the first field is filled (J-01) instead of after the last step.
+  def limits
+    return unless authenticate!("jobseeker", "employer")
+    entitlements = Entitlements.for(current_user)
+    render json: {
+      activeAllowed: entitlements.limit(:active_posts),
+      activeUsed: current_user.jobs.where(status: ACTIVE_STATUSES).count,
+      plan: entitlements.plan_code,
+      planName: entitlements.plan.fetch(:name)
+    }
+  end
+
   def create
     return unless authenticate!("jobseeker", "employer")
     return unless require_scalar_params!(:status, :company)
@@ -100,7 +115,15 @@ class JobsController < ApplicationController
     if !draft && (error = submission_error(job))
       return render_error(error, :unprocessable_content)
     end
+    repeat = nil
     Job.transaction do
+      # One submission per click (A-16): the same listing sent again within seconds, say by a
+      # double-click or a retry, answers with the one just created. The user row lock makes the
+      # second request wait for the first to commit.
+      current_user.lock! unless draft
+      repeat = recent_duplicate(job) unless draft
+      next if repeat
+
       if !draft && (limit_error = active_post_limit_error)
         render_error(limit_error, :payment_required, "PLAN_LIMIT")
         raise ActiveRecord::Rollback
@@ -108,6 +131,8 @@ class JobsController < ApplicationController
       job.save!
     end
     return if performed?
+    return render json: { id: repeat.id, status: repeat.status, moderationFlags: repeat.moderation_note.to_s.split("; "), postedAs: repeat.posted_as_json(current_user) }, status: :created if repeat
+
     audit!("job.create", job, { postedAs: (job.posted_as_page && actor.key) }.compact)
     render json: { id: job.id, status: job.status, moderationFlags: flags, postedAs: job.posted_as_json(current_user) }, status: :created
   end
@@ -119,8 +144,8 @@ class JobsController < ApplicationController
     return render_error("The application deadline has passed.", :conflict) if job.application_deadline&.past?
     return render_error("This opportunity requires at least one portfolio item.", :conflict) if job.portfolio_required? && current_user.portfolio_items.none?
     cover_letter = params[:coverLetter]
-    return render_error("The note to the employer must be text.", :unprocessable_content) unless cover_letter.nil? || cover_letter.is_a?(String)
-    return render_error("The note to the employer must be 5,000 characters or fewer.", :unprocessable_content) if cover_letter.to_s.length > 5_000
+    return render_error("The note to the hirer must be text.", :unprocessable_content) unless cover_letter.nil? || cover_letter.is_a?(String)
+    return render_error("The note to the hirer must be 5,000 characters or fewer.", :unprocessable_content) if cover_letter.to_s.length > 5_000
     answers = screening_answers_for(job)
     return if performed?
     portfolio, resume = chosen_materials
@@ -159,6 +184,21 @@ class JobsController < ApplicationController
   end
 
   private
+
+  # The typed search, narrowed to any of the `roles` when given.
+  def search_query
+    query = Search::Query.new(params[:q])
+    roles = params[:roles].to_s.split(",").map { _1.squish.first(40) }.reject(&:blank?).uniq.first(MAX_ROLES)
+    roles.any? ? query.and(Search::Query.any_of(roles)) : query
+  end
+
+  DUPLICATE_WINDOW = 15.seconds
+
+  # A submitted (not draft) listing by this person that matches `job` and was made moments ago.
+  def recent_duplicate(job)
+    current_user.jobs.where(status: %w[pending published], created_at: DUPLICATE_WINDOW.ago..)
+      .find_by(title: job.title, description: job.description, company: job.company, location: job.location)
+  end
 
   # The portfolio and resume the applicant chose to send (portfolioId/resumeId, both optional).
   # Only the applicant's own: a personal portfolio or one of a Page they manage (not hidden by a

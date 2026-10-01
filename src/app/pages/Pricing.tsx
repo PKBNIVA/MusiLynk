@@ -1,17 +1,23 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
-import { Check, ShieldCheck, Sparkles, Users, CalendarDays, BriefcaseBusiness } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
+import { Check, Sparkles, Users, CalendarDays, BriefcaseBusiness } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { PublicNav } from '../components/PublicNav';
+import { PhotoHeader } from '../components/landing/PhotoHeader';
 import { usePageMeta } from '../components/PageMeta';
+import { IntervalToggle } from '../components/IntervalToggle';
+import { PromoCodeField } from '../components/PromoCodeField';
 import { apiGet } from '../lib/api';
+import type { BillingInterval } from '../lib/apiTypes';
+import { annualLine, inr, normaliseCode, storedCode } from '../lib/promo';
 import type { LucideIcon } from 'lucide-react';
 
 export type ApiPlan = {
   code: string;
   name: string;
   monthly: number | null;
+  annual?: number | null;
   trialDays: number;
   activePosts: number;
   seats: number;
@@ -22,12 +28,33 @@ export type ApiPlan = {
 // Mirrors Billing::BillingController::PLANS so the page still renders if the API is unreachable.
 // The API is the source of truth: whatever /billing/plans returns replaces these values.
 export const FALLBACK_PLANS: ApiPlan[] = [
-  { code: 'free', name: 'Free', monthly: 0, trialDays: 0, activePosts: 1, seats: 1, shortlist: 20, bookings: 2 },
-  { code: 'pro', name: 'Pro', monthly: 2499, trialDays: 14, activePosts: 10, seats: 2, shortlist: 250, bookings: 20 },
+  {
+    code: 'free',
+    name: 'Free',
+    monthly: 0,
+    annual: 0,
+    trialDays: 0,
+    activePosts: 1,
+    seats: 1,
+    shortlist: 20,
+    bookings: 2,
+  },
+  {
+    code: 'pro',
+    name: 'Pro',
+    monthly: 2499,
+    annual: 24990,
+    trialDays: 14,
+    activePosts: 10,
+    seats: 2,
+    shortlist: 250,
+    bookings: 20,
+  },
   {
     code: 'studio',
     name: 'Studio',
     monthly: 5999,
+    annual: 59990,
     trialDays: 14,
     activePosts: 50,
     seats: 8,
@@ -38,6 +65,7 @@ export const FALLBACK_PLANS: ApiPlan[] = [
     code: 'enterprise',
     name: 'Enterprise',
     monthly: null,
+    annual: null,
     trialDays: 0,
     activePosts: 9999,
     seats: 999,
@@ -88,26 +116,47 @@ export function planFeatures(p: ApiPlan) {
   ];
 }
 
-function price(p: ApiPlan) {
-  return isCustom(p) ? 'Custom' : p.monthly === 0 ? 'Free' : `₹${n(p.monthly!)}`;
+function price(p: ApiPlan, interval: BillingInterval) {
+  if (isCustom(p)) return 'Custom';
+  if (p.monthly === 0) return 'Free';
+  return inr(interval === 'annual' && p.annual ? p.annual : p.monthly!);
+}
+
+// Where a paid plan's call-to-action lands after sign-in: the billing page, carrying the
+// chosen interval and any code so checkout can use them.
+function billingReturnPath(plan: string, interval: BillingInterval, code: string) {
+  const query = new URLSearchParams({ plan, interval });
+  if (code) query.set('code', code);
+  return `/employer/billing?${query.toString()}`;
 }
 
 export default function Pricing() {
   usePageMeta(
     'Pricing',
-    'Verse plans for music hiring and booking teams. Professionals build profiles and apply free; paid plans add capacity, seats and trials.',
+    'Verse plans for music hiring and booking teams. Musicians build profiles and apply free; paid plans add capacity, seats and trials.',
     { canonicalPath: '/pricing' },
   );
   const [plans, setPlans] = useState<ApiPlan[]>(FALLBACK_PLANS);
   const [live, setLive] = useState<boolean | null>(null);
+  const [searchParams] = useSearchParams();
+  const [annualAvailable, setAnnualAvailable] = useState(false);
+  const [interval, setInterval] = useState<BillingInterval>(
+    searchParams.get('interval') === 'annual' ? 'annual' : 'monthly',
+  );
+  const [initialCode] = useState(() => normaliseCode(searchParams.get('code') || '') || storedCode());
+  const [appliedCode, setAppliedCode] = useState('');
+  const onApplied = useCallback((code: string) => setAppliedCode(code), []);
+  // The toggle only exists when the API says annual billing works; otherwise stay monthly.
+  const shownInterval: BillingInterval = annualAvailable ? interval : 'monthly';
   useEffect(() => {
     let active = true;
-    apiGet<{ plans: ApiPlan[] }>('/billing/plans', { skipAuthRedirect: true })
+    apiGet<{ plans: ApiPlan[]; annualAvailable?: boolean }>('/billing/plans', { skipAuthRedirect: true })
       .then((d) => {
         if (!active) return;
         const valid = (d?.plans || []).filter((p) => p && typeof p.code === 'string' && typeof p.name === 'string');
         if (valid.length) {
           setPlans(valid);
+          setAnnualAvailable(d.annualAvailable === true);
           setLive(true);
         } else setLive(false);
       })
@@ -122,23 +171,24 @@ export default function Pricing() {
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
       <main className="max-w-7xl mx-auto px-5 md:px-6 py-16">
-        <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-400/20 px-3 py-1.5 text-sm text-emerald-200">
-            <ShieldCheck size={15} aria-hidden="true" />
-            SaaS plans with server-enforced trials
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold mt-5">Pay for operating capacity, not the right to apply</h1>
-          <p className="text-lg text-slate-400 mt-4">
-            Music professionals can build a profile and apply without a subscription. Paid plans are for teams using
-            Verse to recruit, source, book and manage talent at higher volume.
+        <PhotoHeader photo="college-fest" title="Pay for operating capacity, not the right to apply">
+          <p className="text-lg">
+            Musicians can build a profile and apply without a subscription. Paid plans are for teams using Verse to
+            recruit, source, book and manage talent at higher volume.
           </p>
-        </div>
+        </PhotoHeader>
         {live === false && (
           <p className="text-center text-xs text-slate-500 mt-6" role="status">
             Showing standard plan limits. Your workspace billing page always shows the current terms.
           </p>
         )}
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mt-10" data-testid="pricing-plans">
+        {annualAvailable && (
+          <div className="flex justify-center mt-8">
+            <IntervalToggle value={interval} onChange={setInterval} />
+          </div>
+        )}
+        <PromoCodeField plans={plans} interval={shownInterval} initialCode={initialCode} onApplied={onApplied} />
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mt-8" data-testid="pricing-plans">
           {plans.map((p) => {
             const c = copy[p.code] || { who: '', extras: [], cta: 'Get started', to: '/auth/employer' };
             const featured = p.code === 'pro';
@@ -151,9 +201,18 @@ export default function Pricing() {
                   <h2 className="text-xl font-semibold">{p.code === 'free' ? 'Starter' : p.name}</h2>
                   <p className="text-xs text-slate-400 mt-1 min-h-8">{c.who}</p>
                   <div className="text-3xl font-bold mt-4">
-                    {price(p)}
-                    {!!p.monthly && <span className="text-xs font-normal text-slate-400"> / month</span>}
+                    {price(p, shownInterval)}
+                    {!!p.monthly && (
+                      <span className="text-xs font-normal text-slate-400">
+                        {shownInterval === 'annual' && p.annual ? ' / year' : ' / month'}
+                      </span>
+                    )}
                   </div>
+                  {shownInterval === 'annual' && !!p.annual && (
+                    <div className="text-sm text-emerald-300 mt-1" data-testid={`annual-line-${p.code}`}>
+                      {annualLine(p.annual)}
+                    </div>
+                  )}
                   {p.trialDays > 0 && <div className="text-sm text-emerald-300 mt-1">{p.trialDays}-day free trial</div>}
                   {p.code === 'enterprise' && <div className="text-sm text-emerald-300 mt-1">Pilot available</div>}
                   <ul className="space-y-2.5 mt-5 flex-1">
@@ -167,7 +226,11 @@ export default function Pricing() {
                   <Button className="w-full mt-6" variant={featured ? 'default' : 'secondary'} asChild>
                     <Link
                       to={c.to}
-                      state={c.to.startsWith('/auth') && p.code !== 'free' ? { from: '/employer/billing' } : undefined}
+                      state={
+                        c.to.startsWith('/auth') && p.code !== 'free'
+                          ? { from: billingReturnPath(p.code, shownInterval, appliedCode) }
+                          : undefined
+                      }
                     >
                       {c.cta}
                     </Link>
@@ -212,9 +275,9 @@ export default function Pricing() {
         </div>
         <Card className="mt-8 bg-amber-500/[.05] border-amber-400/15">
           <CardContent className="p-6 text-sm text-slate-300">
-            <b>How billing works:</b> recurring plans are billed through Razorpay Subscriptions with server-side
-            credentials and signed webhooks. Trials are enforced by the server. Booking deposits for live acts are a
-            separate payment flow with their own quote, cancellation and refund rules—see{' '}
+            <b>How billing works:</b> paid plans are billed through Razorpay, renew on the date shown on your Billing
+            page, and can be cancelled at any time. A free trial charges nothing until it ends. Booking deposits for
+            live acts are a separate payment flow with their own quote, cancellation and refund rules—see{' '}
             <Link className="text-violet-300 underline underline-offset-4" to="/refund-policy">
               payments &amp; refunds
             </Link>

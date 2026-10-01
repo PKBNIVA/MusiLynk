@@ -18,7 +18,8 @@ class OperationsSnapshot
       requests: requests,
       jobs: jobs,
       payments: payments,
-      email: email
+      email: email,
+      legal: { unfilled: LegalConfig.unfilled_fields }
     }
   end
 

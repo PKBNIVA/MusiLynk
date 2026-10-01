@@ -1,7 +1,9 @@
 import { DemoBadge } from '../../components/DemoBadge';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
+import { Navigation } from '../../components/Navigation';
 import { PublicNav } from '../../components/PublicNav';
+import { ActCover } from '../../components/talent/ActCard';
 import { PublicDetailState } from '../../components/PublicDetailState';
 import { usePageMeta } from '../../components/PageMeta';
 import { Card, CardContent } from '../../components/ui/card';
@@ -12,7 +14,9 @@ import { ShieldCheck, Flag } from 'lucide-react';
 import { ReportDialog } from '../../components/ReportDialog';
 import { useAuth } from '../../lib/authContext';
 import { errorMessage, errorStatus } from '../../lib/errors';
+import { formatMoney, formatPay } from '../../lib/format';
 import type { Act } from '../../lib/apiTypes';
+import { optionLabel } from '../../components/ui/option-labels';
 
 /** MusicGroup structured data for a public act. */
 function musicGroupJsonLd(a: Act, id?: string) {
@@ -27,7 +31,8 @@ function musicGroupJsonLd(a: Act, id?: string) {
   return ld;
 }
 
-export default function PublicAct() {
+/** A bookable act. `shell="workspace"` renders it inside the signed-in app; unset, a signed-in hirer or musician gets that. */
+export default function PublicAct({ shell }: { shell?: 'public' | 'workspace' } = {}) {
   const { id } = useParams(),
     { user } = useAuth();
   const [a, setA] = useState<Act>(),
@@ -68,20 +73,37 @@ export default function PublicAct() {
     );
   // Carry the act into the booking flow so the requester lands on the right enquiry.
   const actQuery = `?act=${encodeURIComponent(a.id ?? id ?? '')}`;
+  const workspace = (shell ?? (user && user.role !== 'admin' ? 'workspace' : 'public')) === 'workspace';
+  const from = a.min_fee ? `from ${formatMoney(a.min_fee, a.currency || 'INR')}` : '';
+  const range = formatPay(
+    {
+      compensation_min: a.min_fee,
+      compensation_max: a.max_fee,
+      currency: a.currency,
+      compensation_period: a.fee_basis,
+    },
+    'Quote on request',
+  );
   const bookingPath = `${user?.role === 'jobseeker' ? '/jobseeker' : '/employer'}/book-talent${actQuery}`;
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <PublicNav />
-      <main className="max-w-5xl mx-auto px-5 py-12">
-        <Card className="bg-white/[.055] border-white/10">
+      {workspace ? <Navigation /> : <PublicNav />}
+      <main className={`max-w-5xl mx-auto px-5 pb-12 ${workspace ? 'pt-28' : 'pt-12'}`}>
+        <Card className="gap-0 overflow-hidden border-white/10 bg-white/[.055] p-0">
+          <ActCover act={a} height={220} />
           <CardContent className="p-6 md:p-8">
             <div className="flex gap-2 items-center">
-              <Badge>{a.act_type}</Badge>
+              <Badge>{optionLabel(a.act_type)}</Badge>
               <DemoBadge show={a.demo} />
               {a.verified && <ShieldCheck className="text-emerald-300" size={18} aria-label="Verified act" />}
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mt-4 break-words">{a.name}</h1>
             {a.tagline && <p className="text-violet-300 mt-2">{a.tagline}</p>}
+            {from && (
+              <p className="mt-3 text-lg font-semibold text-emerald-200" data-testid="from-rate">
+                {from}
+              </p>
+            )}
             <p className="text-slate-300 mt-6 leading-7">{a.bio}</p>
             <div className="grid md:grid-cols-2 gap-6 mt-8">
               <div>
@@ -104,11 +126,7 @@ export default function PublicAct() {
               </div>
               <div>
                 <h2 className="font-semibold">Booking range</h2>
-                <p className="text-slate-300 mt-3">
-                  {a.min_fee || a.max_fee
-                    ? `${a.currency || 'INR'} ${a.min_fee || '—'}${a.max_fee ? `–${a.max_fee}` : ''}${a.fee_basis ? ` / ${a.fee_basis}` : ''}`
-                    : 'Quote on request'}
-                </p>
+                <p className="text-slate-300 mt-3">{range}</p>
                 <div className="flex flex-wrap gap-2 mt-5">
                   {a.genres?.map((x: string) => (
                     <Badge variant="secondary" key={x}>

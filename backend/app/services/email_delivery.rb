@@ -63,15 +63,40 @@ class EmailDelivery
       notice: true,
       footer: "If you made this change, nothing else is needed. If you did not, sign in right away and change your password, or contact support."
     },
+    # data: { detail: the account email }. Sent when a code-only or Google account sets its first
+    # password (AccountController#change_password).
+    "account_password_set" => {
+      subject: "A password was added to your Verse account",
+      heading: "Password added",
+      copy: "A password was just added to your Verse account, so you can now also sign in with it. The account is:",
+      action: nil,
+      notice: true,
+      footer: "If you made this change, nothing else is needed. If you did not, sign in right away with an emailed code and change your password, or contact support."
+    },
     # data: { link:, name: }. Sent to the invitee's address; they may not have a Verse account yet.
     "vouch_invite" => {
       subject: "You were vouched for on Verse",
       heading: ->(d) { "#{d[:name]} vouched for you on Verse" },
-      copy: ->(d) { "#{d[:name]} vouched for you on Verse — verified musicians get reviewed first. Follow the link below to join." },
+      copy: ->(d) { "#{d[:name]} vouched for you on Verse. A vouch helps hirers trust your profile. Use the button below to join." },
       action: "Join Verse"
     }
   }.freeze
   DEFAULT_FOOTER = "If you did not request this, you can safely ignore this email.".freeze
+  # Security and account emails cannot be switched off, so they carry no unsubscribe link; they
+  # say why instead. The notification, lifecycle and digest emails (NotificationEmail,
+  # LifecycleMailer) carry an unsubscribe / manage-emails link.
+  SERVICE_NOTE = "This is a service email about your Verse account, so it cannot be turned off.".freeze
+
+  # The brand header every email starts with: the V mark and the name. Inline styles only;
+  # mail clients ignore style sheets.
+  def self.brand_header_html
+    %(<div style="font-size:0;line-height:0"><span style="display:inline-block;width:32px;height:32px;line-height:32px;border-radius:10px;background:#7c3aed;color:#ffffff;text-align:center;font-size:18px;font-weight:800;vertical-align:middle">V</span><span style="display:inline-block;margin-left:10px;font-size:22px;line-height:32px;font-weight:800;color:#a78bfa;vertical-align:middle">Verse</span></div>)
+  end
+
+  # The one primary button of an email (a link, styled as a button).
+  def self.button_html(label, url)
+    %(<a href="#{ERB::Util.html_escape(url)}" style="display:inline-block;margin-top:18px;padding:13px 20px;border-radius:12px;background:#7c3aed;color:#ffffff;text-decoration:none;font-weight:700">#{ERB::Util.html_escape(label)}</a>)
+  end
 
   # Returns a result hash. Network and configuration errors are reported as an
   # unsuccessful delivery unless raise_errors is true (used by EmailDeliveryJob
@@ -195,13 +220,15 @@ class EmailDelivery
   def self.render_value(value, data) = value.respond_to?(:call) ? value.call(data) : value
 
   def self.email_text(content:, data:)
-    "#{render_value(content[:heading], data)}\n\n#{render_value(content[:copy], data)}\n\n#{email_body_value(content:, data:)}\n\n#{content[:footer] || DEFAULT_FOOTER}"
+    value = email_body_value(content:, data:)
+    value = "#{content[:action]}: #{value}" if content[:action]
+    "Verse\n\n#{render_value(content[:heading], data)}\n\n#{render_value(content[:copy], data)}\n\n#{value}\n\n#{content[:footer] || DEFAULT_FOOTER}\n#{SERVICE_NOTE}"
   end
 
   def self.email_html(content:, data:)
     value = ERB::Util.html_escape(email_body_value(content:, data:))
     body = if content[:action]
-      %(<a href="#{value}" style="display:inline-block;margin-top:18px;padding:13px 20px;border-radius:12px;background:#7c3aed;color:white;text-decoration:none;font-weight:700">#{content[:action]}</a>)
+      button_html(content[:action], email_body_value(content:, data:))
     elsif content[:notice]
       %(<p style="margin:18px 0 0;font-size:18px;font-weight:700;color:#f8fafc">#{value}</p>)
     else
@@ -211,7 +238,7 @@ class EmailDelivery
     heading = ERB::Util.html_escape(render_value(content[:heading], data))
     copy = ERB::Util.html_escape(render_value(content[:copy], data))
     <<~HTML.squish
-      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px"><div style="font-size:22px;font-weight:800;color:#a78bfa">VERSE</div><h1 style="font-size:28px;margin:28px 0 12px">#{heading}</h1><p style="color:#cbd5e1;line-height:1.6">#{copy}</p>#{body}<p style="margin-top:28px;color:#94a3b8;font-size:13px">#{footer}</p></div></body></html>
+      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px">#{brand_header_html}<h1 style="font-size:28px;margin:28px 0 12px">#{heading}</h1><p style="color:#cbd5e1;line-height:1.6">#{copy}</p>#{body}<p style="margin-top:28px;color:#94a3b8;font-size:13px">#{footer}</p><p style="margin-top:8px;color:#94a3b8;font-size:13px">#{SERVICE_NOTE}</p></div></body></html>
     HTML
   end
 

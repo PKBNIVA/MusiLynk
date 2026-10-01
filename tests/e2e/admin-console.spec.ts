@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test';
 import { assertNoHorizontalOverflow } from './qa-helpers';
 import { mockApi } from './mock-api';
 
+// The public preview is the first local server (playwright.config.ts): QA_PORT_BASE.
+const portBase = Number(process.env.QA_PORT_BASE || 4173);
+
 // Mocked-API regressions for the admin console on the admin site (moved from public-admin-hardening.spec.ts).
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
 
@@ -148,6 +151,144 @@ test.describe('admin console', () => {
     expect(errors).toEqual([]);
   });
 
+  test('tab badges show the server totals, not the rows on the loaded page', async ({ page }) => {
+    await mockApi(
+      page,
+      {
+        ...adminFixtures(),
+        '/api/admin/stats': {
+          body: { stats: { users: 2, pendingJobs: 621, verificationQueue: 303, pendingReviews: 17, openReports: 9 } },
+        },
+      },
+      admin,
+    );
+    await page.goto('/admin');
+    await expect(page.getByRole('tab', { name: 'Opportunity queue (621)' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Verification (303)' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Reviews (17)' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Reports (9)' })).toBeVisible();
+  });
+
+  test('the active tab lives in the URL and survives a reload', async ({ page }) => {
+    await mockApi(page, adminFixtures(), admin);
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: /Reports/ }).click();
+    await expect(page).toHaveURL(/\/admin\?tab=reports$/);
+    await page.reload();
+    await expect(page.getByRole('tab', { name: /Reports/ })).toHaveAttribute('aria-selected', 'true');
+    await page.getByRole('tab', { name: /Opportunity queue/ }).click();
+    await expect(page).toHaveURL(/\/admin$/);
+    await page.goto('/admin?tab=users');
+    await expect(page.getByRole('tab', { name: 'Users' })).toHaveAttribute('aria-selected', 'true');
+    await page.goto('/admin?tab=nonsense');
+    await expect(page.getByRole('tab', { name: /Opportunity queue/ })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('the opportunity queue asks the server for one status and pages what it filters', async ({ page }) => {
+    const urls: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/api/admin/jobs?')) urls.push(new URL(request.url()).search);
+    });
+    await mockApi(
+      page,
+      {
+        ...adminFixtures(),
+        '/api/admin/jobs': {
+          body: {
+            jobs: [
+              { id: 'job-1', title: 'Session Bassist', company: 'QA Studio', status: 'pending', description: 'x' },
+            ],
+            page: 1,
+            perPage: 1,
+            total: 3,
+          },
+        },
+      },
+      admin,
+    );
+    await page.goto('/admin');
+    await expect(page.getByText('Showing 1–1 of 3')).toBeVisible();
+    expect(urls[0]).toContain('status=pending');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect.poll(() => urls.some((u) => u.includes('page=2') && u.includes('status=pending'))).toBe(true);
+    await page.getByLabel('Status').click();
+    await page.getByRole('option', { name: 'Published' }).click();
+    await expect.poll(() => urls.some((u) => u.includes('page=1') && u.includes('status=published'))).toBe(true);
+  });
+
+  test('changing the queue status shows a loading state, not the old list as if it were current', async ({ page }) => {
+    await mockApi(
+      page,
+      {
+        ...adminFixtures(),
+        '/api/admin/jobs': {
+          body: {
+            jobs: [
+              { id: 'job-1', title: 'Session Bassist', company: 'QA Studio', status: 'pending', description: 'x' },
+            ],
+            page: 1,
+            perPage: 100,
+            total: 1,
+          },
+        },
+      },
+      admin,
+    );
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    await page.route('**/api/admin/jobs?*status=published*', async (route) => {
+      await gate;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ jobs: [], page: 1, perPage: 100, total: 0 }),
+      });
+    });
+    await page.goto('/admin');
+    await expect(page.getByText('Session Bassist')).toBeVisible();
+    await expect(page.getByTestId('queue-loading')).toHaveCount(0);
+
+    await page.getByLabel('Status').click();
+    await page.getByRole('option', { name: 'Published' }).click();
+    await expect(page.getByTestId('queue-loading')).toHaveText('Loading opportunities…');
+    // The stale row is still drawn but cannot be acted on, and the empty message is not shown yet.
+    await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+    await expect(page.getByText('No opportunities with this status.')).toHaveCount(0);
+
+    release();
+    await expect(page.getByTestId('queue-loading')).toHaveCount(0);
+    await expect(page.getByText('No opportunities with this status.')).toBeVisible();
+  });
+
+  test('one long unbroken report text wraps instead of widening the console', async ({ page }, testInfo) => {
+    const fixtures = adminFixtures();
+    fixtures['/api/admin/reports'] = {
+      body: {
+        reports: [
+          {
+            id: 'rep-long',
+            status: 'open',
+            entity_type: 'Job',
+            entity_id: 'job-1',
+            reason: 'Scam',
+            details: 'A'.repeat(40_000),
+            created_at: '2026-09-01T00:00:00Z',
+          },
+        ],
+        page: 1,
+        perPage: 100,
+        total: 1,
+      },
+    } as never;
+    await mockApi(page, fixtures, admin);
+    await page.goto('/admin?tab=reports');
+    const review = page.getByRole('button', { name: 'Review report: Scam' });
+    await expect(review).toBeVisible();
+    const box = await review.boundingBox();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(1440);
+    await assertNoHorizontalOverflow(page, testInfo);
+  });
+
   test('a report links to the listing on the public site, absolutely, since the admin build has no public routes', async ({
     page,
   }) => {
@@ -158,7 +299,7 @@ test.describe('admin console', () => {
     await expect(link).toBeVisible();
     // VITE_PUBLIC_URL for the admin build under test is set to the public preview's own origin
     // (playwright.config.ts) — see src/app/lib/appTarget.ts's toPublicUrl.
-    await expect(link).toHaveAttribute('href', 'http://127.0.0.1:4173/opportunities/job-1');
+    await expect(link).toHaveAttribute('href', `http://127.0.0.1:${portBase}/opportunities/job-1`);
     await expect(link).toHaveAttribute('target', '_blank');
   });
 
@@ -185,6 +326,84 @@ test.describe('admin console', () => {
     const patch = calls.find((call) => call.method === 'PATCH' && call.path === '/api/admin/jobs/job-1');
     expect(patch?.body).toEqual({ status: 'rejected', note: 'Please add the fee range.' });
     expect(nativeDialog).toBe(false);
+  });
+
+  test('verification queue shows the evidence score and approves in one click with the suggested checks', async ({
+    page,
+  }) => {
+    const request = (id: string, name: string, score: number, extra: Record<string, unknown> = {}) => ({
+      id,
+      user_id: `u-${id}`,
+      kind: 'professional',
+      status: 'pending',
+      created_at: '2026-09-01T00:00:00Z',
+      name,
+      email: `${id}@example.invalid`,
+      role: 'jobseeker',
+      evidence_score: score,
+      ...extra,
+    });
+    const calls = await mockApi(
+      page,
+      {
+        ...adminFixtures(),
+        '/api/admin/verifications': {
+          body: {
+            requests: [
+              request('v-1', 'Rahul Drums', 82, {
+                summary: 'Name matches YouTube channel.\n1 vouch from verified Priya S.',
+                evidence_breakdown: {
+                  identity: { score: 30, max: 30 },
+                  links: { score: 20, max: 30 },
+                  community: { score: 10, max: 20 },
+                },
+              }),
+              request('v-2', 'Mid Person', 55, { flags: ['duplicate_links'] }),
+              request('v-3', 'Low Person', 10),
+              request('v-4', 'Auto Person', 90, {
+                status: 'approved',
+                auto_decision: 'auto_approved',
+                audit_sample: true,
+              }),
+            ],
+            page: 1,
+            perPage: 100,
+            total: 4,
+          },
+        },
+        '/api/admin/verifications/stats': {
+          body: {
+            days7: { total: 8, autoApproved: 2, autoApprovalRate: 25, auditSample: 1 },
+            days30: { total: 30, autoApproved: 9, autoApprovalRate: 30, auditSample: 3 },
+          },
+        },
+        'PATCH /api/admin/verifications/v-1': { body: { ok: true } },
+      },
+      admin,
+    );
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: /Verification/ }).click();
+    await expect(page.getByLabel('Evidence score 82 out of 100')).toHaveAttribute('data-band', 'green');
+    await expect(page.getByLabel('Evidence score 55 out of 100')).toHaveAttribute('data-band', 'amber');
+    await expect(page.getByLabel('Evidence score 10 out of 100')).toHaveAttribute('data-band', 'grey');
+    await expect(page.getByText('Duplicate links')).toBeVisible();
+    await expect(page.getByText('1 vouch from verified Priya S.')).toBeVisible();
+    await expect(page.getByTestId('verification-stats')).toContainText(
+      '7 days: 2 of 8 auto-approved (25%), 1 in audit sample',
+    );
+
+    await page.getByRole('button', { name: 'Approve', exact: true }).first().click();
+    await expect
+      .poll(() => calls.find((c) => c.method === 'PATCH' && c.path === '/api/admin/verifications/v-1')?.body)
+      .toEqual({
+        status: 'approved',
+        checks: ['identity', 'work_links', 'credits'],
+      });
+
+    await page.getByRole('button', { name: /Audit sample/ }).click();
+    await expect(page.getByText('Auto Person')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Revoke' })).toBeVisible();
+    await expect(page.getByText('Mid Person')).toBeHidden();
   });
 
   test('users tab searches the server and pages through the rest instead of filtering only what loaded', async ({
@@ -291,7 +510,7 @@ test.describe('admin console', () => {
     await expect(buttons).toHaveCount(2);
     await expect(buttons.nth(1)).toBeDisabled();
     await expect(page.getByRole('region', { name: 'Billing events' })).toContainText('payment.captured');
-    await expect(page.getByRole('region', { name: 'Billing events' })).toContainText('INR 2,500');
+    await expect(page.getByRole('region', { name: 'Billing events' })).toContainText('₹2,500');
     await buttons.first().click();
     await expect(page.getByText('Live billing is not configured.')).toBeVisible();
     expect(

@@ -25,6 +25,7 @@ module Stage
       )
       Post.where(id: post.id).update_all("comment_count = comment_count + 1")
       Notifier.stage_comment(post, comment, actor) if post.created_by_user_id != current_user.id
+      Notifier.stage_reply(post, parent, comment, actor) if parent&.active? && !blocked_pair?(parent.created_by_user_id, current_user.id)
       flags = ScamSignals.detect(comment.body, from_hiring_side: true, early: true)
       audit!("stage.comment.create", comment, flags.present? ? { safetyFlags: flags } : {})
       render json: { id: comment.id, comment: comment.api_json }, status: :created

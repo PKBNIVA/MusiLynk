@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Wand2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
+import { withArticle } from '../../lib/format';
 
 /**
  * BioBuilder assembles a profile headline and bio entirely from the fields already on the
@@ -43,7 +44,7 @@ const joinAnd = (values: string[]) =>
   values.length <= 1 ? values[0] || '' : `${values.slice(0, -1).join(', ')} and ${values[values.length - 1]}`;
 
 function roleLine(roles: string[]) {
-  return roles.length ? joinAnd(roles) : 'music professional';
+  return roles.length ? joinAnd(roles) : 'musician';
 }
 
 /** Pure and deterministic: the same input always builds the same three variants. Exported so it
@@ -64,27 +65,27 @@ export function buildBioVariants(input: BioBuilderInput): BioBuilderVariant[] {
     warm: [genreText ? `${roleText} bringing ${genreText} to life` : roleText, city && `in ${city}`]
       .filter(Boolean)
       .join(' '),
-    confident: [yearsText && `${yearsText} as a`, roleText, genreText && `across ${genreText}`]
+    confident: [yearsText && `${yearsText} as`, withArticle(roleText), genreText && `across ${genreText}`]
       .filter(Boolean)
       .join(' '),
   };
 
   const bios: Record<BioTone, string> = {
     plain: sentences([
-      `I'm a ${roleText}${city ? ` based in ${city}` : ''}.`,
+      `I'm ${withArticle(roleText)}${city ? ` based in ${city}` : ''}.`,
       genreText && `I work across ${genreText}.`,
       yearsText && `${yearsText} of experience.`,
       creditText && `Credits include ${creditText}.`,
       "Open to new projects — message me about what you're working on.",
     ]),
     warm: sentences([
-      `I'm a ${roleText}${city ? `, based in ${city}` : ''}, and I love bringing music to life${genreText ? ` in ${genreText}` : ''}.`,
+      `I'm ${withArticle(roleText)}${city ? `, based in ${city}` : ''}, and I love bringing music to life${genreText ? ` in ${genreText}` : ''}.`,
       yearsText && `I've spent ${yearsText} doing what I love.`,
       creditText && `Some of the work I'm proudest of: ${creditText}.`,
       "I'd love to hear about your next project — let's talk.",
     ]),
     confident: sentences([
-      `${yearsText ? `With ${yearsText} of experience, ` : ''}I'm a ${roleText}${genreText ? ` specializing in ${genreText}` : ''}${city ? `, working out of ${city}` : ''}.`,
+      `${yearsText ? `With ${yearsText} of experience, ` : ''}I'm ${withArticle(roleText)}${genreText ? ` specializing in ${genreText}` : ''}${city ? `, working out of ${city}` : ''}.`,
       creditText && `My work includes ${creditText}.`,
       'I bring reliability, sharp musicianship and a fast turnaround to every session.',
     ]),
@@ -93,7 +94,7 @@ export function buildBioVariants(input: BioBuilderInput): BioBuilderVariant[] {
   return (['plain', 'warm', 'confident'] as const).map((tone) => ({
     tone,
     label: TONE_LABELS[tone],
-    headline: capitalize(headlines[tone]) || 'Music professional',
+    headline: capitalize(headlines[tone]) || 'Musician',
     bio: bios[tone],
   }));
 }

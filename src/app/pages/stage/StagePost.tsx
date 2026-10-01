@@ -25,7 +25,10 @@ export default function StagePostPage() {
       const d = await fetchPost(id);
       setPost(d.post);
     } catch (e: unknown) {
-      setError({ message: errorMessage(e, 'This post is unavailable.'), status: errorStatus(e) });
+      setError({
+        message: errorMessage(e, 'This post is no longer available. Go back to the Stage.'),
+        status: errorStatus(e),
+      });
     } finally {
       setLoading(false);
     }

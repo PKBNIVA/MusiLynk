@@ -5,7 +5,7 @@ import { PublicNav } from '../../components/PublicNav';
 import { PublicDetailState } from '../../components/PublicDetailState';
 import { usePageMeta } from '../../components/PageMeta';
 import { Button } from '../../components/ui/button';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { MediaTile } from '../../components/showcase/MediaTile';
 import { apiGet } from '../../lib/api';
 import { errorMessage, errorStatus } from '../../lib/errors';
@@ -78,7 +78,7 @@ export default function PublicPortfolio() {
         error={error || (!loading && !p ? { message: 'Not found', status: 404 } : null)}
         noun="portfolio"
         backTo="/music-professionals"
-        backLabel="Browse professionals"
+        backLabel="Browse musicians"
         onRetry={() => void load()}
       />
     );
@@ -138,7 +138,9 @@ export default function PublicPortfolio() {
             Work
           </h2>
           {items.length === 0 ? (
-            <EmptyState icon={FileAudio} title="No public work here yet" className="mt-4" />
+            <EmptyState icon={FileAudio} title="No public work here yet" className="mt-4">
+              Check back soon, or browse other musicians.
+            </EmptyState>
           ) : (
             <ul className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {items.map(({ item }) => (

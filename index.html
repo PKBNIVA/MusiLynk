@@ -1,21 +1,52 @@
-
-  <!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="dark">
-    <head>
-      
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Verse — Music Careers, Hiring & Booking</title>
-      <meta name="description" content="Find music jobs, gigs, sessions, touring work, musicians, bands and live production professionals. Hire, build a band or book talent on Verse." />
-      <meta name="robots" content="index, follow, max-image-preview:large" />
-      <style>html { height: 100%; } body { min-height: 100%; margin: 0; } #root { min-height: 100%; }</style>
-      
-    </head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verse — Music Careers, Hiring & Booking</title>
+    <meta
+      name="description"
+      content="Find music jobs, gigs, sessions, touring work, musicians, bands and live production professionals. Hire, build a band or book talent on Verse."
+    />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/verse-mark.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#070813" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <!-- Defaults for any page that sets no head of its own. Each page replaces them (PageMeta.tsx
+         in the browser, scripts/prerender-heads.mjs at build time). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Verse" />
+    <meta property="og:title" content="Verse — Music Careers, Hiring & Booking" />
+    <meta
+      property="og:description"
+      content="Find music jobs, gigs, sessions, touring work, musicians, bands and live production professionals. Hire, build a band or book talent on Verse."
+    />
+    <meta property="og:image" content="https://verse-music-platform.vercel.app/og-default.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Verse — Music Careers, Hiring & Booking" />
+    <meta
+      name="twitter:description"
+      content="Find music jobs, gigs, sessions, touring work, musicians, bands and live production professionals. Hire, build a band or book talent on Verse."
+    />
+    <meta name="twitter:image" content="https://verse-music-platform.vercel.app/og-default.png" />
+    <style>
+      html {
+        height: 100%;
+      }
+      body {
+        min-height: 100%;
+        margin: 0;
+      }
+      #root {
+        min-height: 100%;
+      }
+    </style>
+  </head>
 
-    <body>
-      
-      <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
-      
-    </body>
-  </html>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

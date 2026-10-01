@@ -96,6 +96,18 @@ describe('HirePage', () => {
     expect(container.textContent).toContain('Hire a verified drummer in Mumbai');
   });
 
+  it("names a person's city at most once on the card (the page heading already says it)", async () => {
+    vi.mocked(apiGet).mockResolvedValue({
+      ...HIRE_PAGE_DATA,
+      featured: [{ ...HIRE_PAGE_DATA.featured[0], headline: 'Session drummer · Mumbai', location: 'Mumbai' }],
+    });
+    await mount('/hire/drummer/mumbai');
+    await act(async () => {});
+    const card = container.querySelector('[data-testid="featured-grid"]')?.textContent ?? '';
+    expect(card.match(/Mumbai/g)).toHaveLength(1);
+    expect(container.querySelector('[data-testid="featured-grid"] svg.lucide-map-pin')).toBeNull();
+  });
+
   it('prefills the urgent CTA with role and city', async () => {
     vi.mocked(apiGet).mockResolvedValue(HIRE_PAGE_DATA);
     await mount('/hire/drummer/mumbai');
@@ -117,11 +129,41 @@ describe('HirePage', () => {
     expect(meta('name', 'robots')?.content).toBe('noindex, nofollow');
   });
 
+  it('is never noindex before the API answers', async () => {
+    vi.mocked(apiGet).mockReturnValue(new Promise(() => {}));
+    await mount('/hire/drummer/mumbai');
+    expect(container.textContent).toContain('Loading');
+    expect(meta('name', 'robots')?.content ?? '').not.toContain('noindex');
+  });
+
+  it('stays indexable when the page qualifies', async () => {
+    vi.mocked(apiGet).mockResolvedValue(HIRE_PAGE_DATA);
+    await mount('/hire/drummer/mumbai');
+    await act(async () => {});
+    expect(container.textContent).toContain('Hire a verified drummer in Mumbai');
+    expect(meta('name', 'robots')?.content ?? '').not.toContain('noindex');
+  });
+
+  it('shows the role photograph, and art rather than a face for demo people', async () => {
+    vi.mocked(apiGet).mockResolvedValue({
+      ...HIRE_PAGE_DATA,
+      featured: [{ ...HIRE_PAGE_DATA.featured[0], demo: true, sessionRate: 9000 }],
+    });
+    await mount('/hire/drummer/mumbai');
+    await act(async () => {});
+    const header = container.querySelector('[data-testid="photo-header"] img');
+    expect(header?.getAttribute('src')).toBe('/img/drummer-stage-1600.webp');
+    const card = container.querySelector('[data-testid="featured-grid"] a');
+    expect(card?.textContent).toContain('from ₹9,000');
+    expect(card?.querySelector('img')).toBeNull();
+  });
+
   it('shows a not-found message when the API 404s', async () => {
     vi.mocked(apiGet).mockRejectedValue(new Error('Not found'));
     await mount('/hire/nope/nowhere');
     await act(async () => {});
 
     expect(container.textContent).toContain('Not found');
+    expect(meta('name', 'robots')?.content).toBe('noindex, nofollow');
   });
 });

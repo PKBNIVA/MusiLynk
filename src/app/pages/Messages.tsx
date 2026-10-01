@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { EmptyState as SceneEmptyState } from '../components/kit/EmptyState';
 import { Link, useSearchParams } from 'react-router';
 import { ArrowLeft, Ban, Flag, MessageSquare, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { UserAvatar } from '../components/kit/UserAvatar';
 import { ReportDialog } from '../components/ReportDialog';
 import { useConfirm } from '../components/booking/BookingDialogs';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
@@ -15,6 +18,7 @@ import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { errorCode, errorMessage as messageOf, errorStatus } from '../lib/errors';
 import { announceUnreadChanged, useVisiblePolling } from '../lib/usePolling';
 import { linkify } from '../lib/linkify';
+import { formatWhen, formatNumber } from '../lib/format';
 import type { Conversation, Message, MessagePage } from '../lib/apiTypes';
 
 const MESSAGE_MAX_LENGTH = 5000;
@@ -27,11 +31,7 @@ const errorMessage = (e: unknown, fallback: string) => {
   return messageOf(e, fallback);
 };
 const byTime = (a: Message, b: Message) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
-const formatTime = (value?: string | null) => {
-  if (!value) return '';
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString();
-};
+const formatTime = (value?: string | null) => formatWhen(value);
 const isDesktop = () =>
   typeof window !== 'undefined' &&
   typeof window.matchMedia === 'function' &&
@@ -72,6 +72,24 @@ function SafetyNotice({ flags }: { flags: string[] }) {
     </div>
   );
 }
+
+/** One person and every thread with them: threads made before the one-per-pair rule stay reachable (J-19). */
+type Person = { primary: Conversation; threads: Conversation[]; unread: number };
+
+function groupByPerson(convs: Conversation[]): Person[] {
+  const people = new Map<string, Person>();
+  for (const c of convs) {
+    const key = c.counterpartId || c.id;
+    const person = people.get(key);
+    if (person) {
+      person.threads.push(c);
+      person.unread += c.unreadCount || 0;
+    } else people.set(key, { primary: c, threads: [c], unread: c.unreadCount || 0 });
+  }
+  return [...people.values()];
+}
+
+const contextLabel = (c: Conversation) => c.jobTitle || 'General';
 
 export default function Messages() {
   const { user } = useAuth();
@@ -312,7 +330,7 @@ export default function Messages() {
     const body = text.trim();
     if (!id || !body || sending) return;
     if (body.length > MESSAGE_MAX_LENGTH) {
-      setSendError(`Messages can be at most ${MESSAGE_MAX_LENGTH.toLocaleString()} characters.`);
+      setSendError(`Messages can be at most ${formatNumber(MESSAGE_MAX_LENGTH)} characters.`);
       return;
     }
     setSending(true);
@@ -360,6 +378,8 @@ export default function Messages() {
         (c.viewerSide === 'candidate' ? c.employerName : c.viewerSide === 'employer' ? c.candidateName : undefined) ||
         'Verse member';
   const active = convs.find((c) => c.id === activeId);
+  const people = useMemo(() => groupByPerson(convs), [convs]);
+  const activePerson = active ? people.find((p) => p.threads.some((t) => t.id === active.id)) : undefined;
   const trimmedLength = text.trim().length;
   const lastMineId = [...msgs].reverse().find((m) => m.senderId === user?.id)?.id;
   // Why the composer is closed for the open thread, if it is.
@@ -377,9 +397,12 @@ export default function Messages() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-4 md:px-6 pt-24 md:pt-28 pb-28 lg:pb-16">
-        <h1 className={`text-3xl md:text-4xl font-bold mb-5 md:mb-7 ${activeId ? 'hidden md:block' : ''}`}>Messages</h1>
+        <PageHeader
+          title="Messages"
+          help={<HelpCallout {...HELP.messages} />}
+          className={activeId ? 'hidden md:flex' : ''}
+        />
         {/* Tips show on the inbox itself; an open thread keeps the whole panel for the conversation. */}
-        {!activeId && <HelpCallout {...HELP.messages} />}
         <Card className="bg-white/[.05] border-white/10 overflow-hidden">
           {/* The single grid row is capped at the panel height so the message list scrolls instead of growing past it. */}
           <CardContent className="p-0 grid md:grid-cols-[320px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:h-[640px]">
@@ -388,8 +411,20 @@ export default function Messages() {
               className={`md:border-r border-white/10 md:h-full md:overflow-y-auto ${activeId ? 'hidden md:block' : ''}`}
             >
               {convsLoading ? (
-                <div className="p-6 text-sm text-slate-400" role="status">
-                  Loading conversations…
+                <div role="status" data-testid="messages-skeleton" aria-busy="true">
+                  <span className="sr-only">Loading conversations…</span>
+                  <div aria-hidden="true">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex animate-pulse gap-3 border-b border-white/10 p-4">
+                        <div className="size-10 shrink-0 rounded-full bg-white/10" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="h-3 w-2/3 rounded bg-white/10" />
+                          <div className="h-2.5 w-1/3 rounded bg-white/[.07]" />
+                          <div className="h-2.5 w-5/6 rounded bg-white/[.07]" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : convsError && convs.length === 0 ? (
                 <div className="p-6 text-sm" role="alert">
@@ -405,6 +440,15 @@ export default function Messages() {
                   >
                     Try again
                   </Button>
+                </div>
+              ) : convs.length === 0 && user?.role !== 'employer' ? (
+                <div data-testid="messages-empty">
+                  <SceneEmptyState
+                    scene="inbox"
+                    title="No conversations yet"
+                    hint="Apply or respond to an urgent request to start one"
+                    action={{ label: 'Explore opportunities', to: '/jobseeker/jobs' }}
+                  />
                 </div>
               ) : convs.length === 0 ? (
                 <div className="p-6 text-sm text-slate-400" data-testid="messages-empty">
@@ -437,38 +481,47 @@ export default function Messages() {
                 </div>
               ) : (
                 <ul>
-                  {convs.map((c) => (
-                    <li key={c.id}>
-                      <button
-                        type="button"
-                        onClick={() => select(c.id)}
-                        aria-current={activeId === c.id ? 'true' : undefined}
-                        className={`w-full text-left p-4 border-b border-white/10 ${activeId === c.id ? 'bg-violet-500/10' : 'hover:bg-white/5'}`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="font-semibold truncate" data-testid="conversation-name">
-                            {nameOf(c)}
-                          </span>
-                          {(c.unreadCount || 0) > 0 && (
-                            <span
-                              className="shrink-0 rounded-full bg-fuchsia-700 px-2 py-0.5 text-[11px] font-bold text-white"
-                              aria-label={`${c.unreadCount} unread`}
-                            >
-                              {c.unreadCount}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-violet-300 mt-1 truncate">
-                          {c.jobTitle || 'General conversation'}
-                        </div>
-                        <div
-                          className={`text-sm mt-2 truncate ${(c.unreadCount || 0) > 0 ? 'text-slate-200 font-medium' : 'text-slate-500'}`}
+                  {people.map(({ primary: c, threads, unread }) => {
+                    const isActive = threads.some((t) => t.id === activeId);
+                    const contexts = [...new Set(threads.map(contextLabel))];
+                    return (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          onClick={() => select(c.id)}
+                          aria-current={isActive ? 'true' : undefined}
+                          className={`w-full text-left p-4 border-b border-white/10 ${isActive ? 'bg-violet-500/10' : 'hover:bg-white/5'}`}
                         >
-                          {c.lastMessage ? `${c.lastMessageFromMe ? 'You: ' : ''}${c.lastMessage}` : 'No messages yet'}
-                        </div>
-                      </button>
-                    </li>
-                  ))}
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="flex min-w-0 items-center gap-2.5">
+                              <UserAvatar id={c.counterpartId || c.id} name={nameOf(c)} size="sm" />
+                              <span className="font-semibold truncate" data-testid="conversation-name">
+                                {nameOf(c)}
+                              </span>
+                            </span>
+                            {unread > 0 && (
+                              <span
+                                className="shrink-0 rounded-full bg-fuchsia-700 px-2 py-0.5 text-[11px] font-bold text-white"
+                                aria-label={`${unread} unread`}
+                              >
+                                {unread}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-violet-300 mt-1 truncate">
+                            {c.jobTitle || contexts.length > 1 ? contexts.join(' · ') : 'General conversation'}
+                          </div>
+                          <div
+                            className={`text-sm mt-2 truncate ${unread > 0 ? 'text-slate-200 font-medium' : 'text-slate-500'}`}
+                          >
+                            {c.lastMessage
+                              ? `${c.lastMessageFromMe ? 'You: ' : ''}${c.lastMessage}`
+                              : 'No messages yet'}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </aside>
@@ -476,6 +529,14 @@ export default function Messages() {
               aria-label="Conversation"
               className={`flex-col min-w-0 md:h-full md:min-h-0 ${activeId ? 'flex' : 'hidden md:flex'}`}
             >
+              {convsLoading && !activeId && (
+                <div aria-hidden="true" className="hidden flex-1 animate-pulse flex-col gap-4 p-6 md:flex">
+                  <div className="h-4 w-1/3 rounded bg-white/10" />
+                  <div className="h-10 w-2/3 rounded-2xl bg-white/[.07]" />
+                  <div className="ml-auto h-10 w-1/2 rounded-2xl bg-white/[.07]" />
+                  <div className="h-10 w-3/5 rounded-2xl bg-white/[.07]" />
+                </div>
+              )}
               {activeId && (
                 <header className="flex items-center gap-3 border-b border-white/10 p-3 md:p-4">
                   <Button
@@ -488,13 +549,34 @@ export default function Messages() {
                   >
                     <ArrowLeft size={18} />
                   </Button>
+                  {active && <UserAvatar id={active.counterpartId || active.id} name={nameOf(active)} size="md" />}
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold truncate" data-testid="thread-name">
                       {active ? nameOf(active) : threadState === 'missing' ? 'Conversation' : ' '}
                     </div>
                     {active && (
-                      <div className="text-xs text-violet-300 truncate">
-                        {active.jobTitle || 'General conversation'}
+                      <div className="mt-1 flex flex-wrap gap-1.5" data-testid="thread-context">
+                        {activePerson && activePerson.threads.length > 1 ? (
+                          activePerson.threads.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              aria-pressed={t.id === active.id}
+                              onClick={() => select(t.id)}
+                              className={`max-w-full truncate rounded-full border px-2.5 py-0.5 text-xs ${
+                                t.id === active.id
+                                  ? 'border-violet-400 bg-violet-500/20 text-white'
+                                  : 'border-white/15 text-violet-300 hover:bg-white/[.06]'
+                              }`}
+                            >
+                              {contextLabel(t)}
+                            </button>
+                          ))
+                        ) : (
+                          <span className="max-w-full truncate rounded-full border border-white/15 px-2.5 py-0.5 text-xs text-violet-300">
+                            {active.jobTitle ? `About: ${active.jobTitle}` : 'General conversation'}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -681,7 +763,7 @@ export default function Messages() {
                         className={trimmedLength > MESSAGE_MAX_LENGTH ? 'text-rose-300' : ''}
                         data-testid="message-counter"
                       >
-                        {trimmedLength.toLocaleString()} / {MESSAGE_MAX_LENGTH.toLocaleString()}
+                        {formatNumber(trimmedLength)} / {formatNumber(MESSAGE_MAX_LENGTH)}
                       </span>
                     )}
                   </div>

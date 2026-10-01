@@ -4,6 +4,7 @@ class Subscription < ApplicationRecord
   # PROVIDER_TRANSITIONS/STATUS_PRIORITY below, which apply_provider_status! uses.
   STATUSES = %w[pending trialing active past_due cancelled early_access].freeze
   PROVIDERS = %w[internal razorpay].freeze
+  INTERVALS = %w[monthly annual].freeze
   PROVIDER_TRANSITIONS = {
     "pending" => %w[pending trialing active past_due cancelled],
     "trialing" => %w[trialing active past_due cancelled],
@@ -14,10 +15,21 @@ class Subscription < ApplicationRecord
   STATUS_PRIORITY = { "pending" => 0, "trialing" => 1, "past_due" => 2, "active" => 3, "cancelled" => 4 }.freeze
 
   belongs_to :user
+  belongs_to :promo_code, optional: true
 
   validates :plan_code, :provider, :status, presence: true
   validates :provider, inclusion: { in: PROVIDERS }
   validates :status, inclusion: { in: STATUSES }
+  validates :interval, inclusion: { in: INTERVALS }
+
+  def annual? = interval == "annual"
+
+  # A code's discount still applies to the next charge while it has periods left (nil = forever).
+  def discount_active?
+    discount_percent.to_i.positive? && (discount_periods.nil? || discount_periods_used < discount_periods)
+  end
+
+  def discount_periods_left = discount_periods && [discount_periods - discount_periods_used, 0].max
 
   def apply_provider_status!(new_status:, event_at:, event_id:)
     raise ArgumentError, "unsupported provider status" unless STATUSES.include?(new_status)

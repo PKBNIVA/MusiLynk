@@ -22,6 +22,7 @@ class ProfilesController < ApplicationController
   def update
     return unless authenticate!("jobseeker", "employer")
     attributes = profile_params
+    attributes["photo_url"] = nil if attributes.key?("photo_url") && attributes["photo_url"].blank?
     field_errors = request_field_errors(attributes)
     profile = current_user.profile || current_user.build_profile
     # Out-of-range numbers must not reach the model (ActiveModel::RangeError on save).
@@ -61,6 +62,10 @@ class ProfilesController < ApplicationController
       errors["currency"] = ["Currency must be one of #{CURRENCIES.join(', ')}"]
     end
     # Employers are shown to candidates by their organization name, so it cannot be cleared.
+    photo = attributes["photo_url"]
+    if photo.present? && photo != current_user.profile&.photo_url && !Upload.photo_owned_by?(current_user, photo)
+      errors["photoUrl"] = ["Upload a JPEG, PNG or WebP photo first, then save."]
+    end
     if current_user.employer? && attributes.key?("company_name") && attributes["company_name"].to_s.strip.empty?
       errors["companyName"] = ["Enter your company, label or studio name."]
     end
@@ -79,8 +84,8 @@ class ProfilesController < ApplicationController
     source = params.permit(:headline, :bio, :phone, :location, :experience, :website, :portfolioUrl, :availability,
       :companyName, :companyWebsite, :companySize, :companyDescription, :yearsExperience, :travelRadiusKm,
       :travelsNationally, :travelsInternationally, :remoteRecording, :sightReading, :passportReady,
-      :hourlyRate, :sessionRate, :showRate, :tourDayRate, :dayRate, :currency, :shareVerificationPublicly,
-      skills: [], genres: [], instruments: [], languages: [], credits: [], openTo: [], roles: [], gear: [], software: [])
+      :hourlyRate, :sessionRate, :showRate, :tourDayRate, :dayRate, :currency, :shareVerificationPublicly, :photoUrl,
+      skills: [], genres: [], instruments: [], languages: [], credits: [], openTo: [], roles: [], gear: [], software: [], eventTypes: [])
     source.to_h.transform_keys { _1.underscore }.slice(*Profile.column_names)
   end
 end

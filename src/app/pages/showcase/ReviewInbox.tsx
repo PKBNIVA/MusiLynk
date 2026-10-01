@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { Check, CheckCheck, Inbox, Sparkles, Tags, X } from 'lucide-react';
 import { Button } from '../../components/ui/button';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { LoadState, ShowcaseShell, useWorkspaceBase } from '../../components/showcase/parts';
 import { SHOWCASE_HELP } from '../../components/showcase/help';
 import { apiGet, apiPost } from '../../lib/api';
@@ -85,7 +85,6 @@ export default function ReviewInbox() {
   return (
     <ShowcaseShell
       title="Review changes"
-      description="When new work almost fits a portfolio, or its description mentions something it isn’t tagged with, we ask here first."
       help={SHOWCASE_HELP.review}
       actions={
         tab === 'pending' &&

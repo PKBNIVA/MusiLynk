@@ -5,14 +5,14 @@ import { Card, CardContent } from '../components/ui/card';
 import { Briefcase, Building2, Music, Search, UserPlus, Users, Zap, ArrowRight } from 'lucide-react';
 const intents = [
   [
-    'Create a professional account',
-    'Showcase your work, apply to jobs and get discovered by employers.',
+    'Create a musician account',
+    'Showcase your work, apply to jobs and get discovered by hirers.',
     '/join/musician',
     UserPlus,
     null,
   ],
   [
-    'Create an employer account',
+    'Create a hirer account',
     'Post jobs, search talent and book acts for your next show.',
     '/join/hiring',
     Building2,

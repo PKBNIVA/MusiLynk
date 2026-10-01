@@ -54,6 +54,10 @@ export interface ProfileFields {
   dayRate?: number | null;
   availability?: string | null;
   currency?: string | null;
+  /** The person's uploaded (or Google) picture. Demo accounts never have one: they render generated art. */
+  photoUrl?: string | null;
+  /** Kinds of event they take (wedding, corporate…); the directory's event-type filter reads it. */
+  eventTypes?: string[];
   /** Consent to announce a verification approval on The Stage and generate a share card
    * (Post::SYSTEM_KINDS "verified", ShareCardsController). Defaults true. */
   shareVerificationPublicly?: boolean;
@@ -69,6 +73,9 @@ export interface AccountUser extends ProfileFields {
   profileComplete: boolean;
   emailVerified: boolean;
   last_login_at?: string | null;
+  /** GET /me: a verification request is waiting for review, and when it was sent. */
+  verificationPending?: boolean;
+  verificationRequestedAt?: string | null;
 }
 
 /** ApplicationController#verification_summary: what the Verified badge's tooltip says. */
@@ -76,6 +83,9 @@ export interface VerificationSummary {
   checks: string[];
   verifiedAt?: string | null;
 }
+
+/** Verification::Tier: null when unverified. */
+export type VerificationTier = 'verified' | 'verified_pro';
 
 /** ApplicationController#public_profile: a professional as other people see them. */
 export interface Professional extends ProfileFields {
@@ -87,11 +97,14 @@ export interface Professional extends ProfileFields {
   shortlisted?: boolean;
   /** Present (non-null) only when verified; see VerifiedBadge. */
   verification?: VerificationSummary | null;
+  verificationTier?: VerificationTier | null;
   /** ProfileStats: published reviews, urgent-response median (null under 3 samples), this week's badge. */
   reviewsCount?: number;
   reviewsAverage?: number | null;
   responseTimeMinutes?: number | null;
   fastResponderBadge?: boolean;
+  /** TalentController: completed bookings across the acts they own (absent from other payloads). */
+  bookingsCount?: number;
 }
 
 /** TalentController#compare: a professional with their public work and upcoming availability. */
@@ -409,6 +422,8 @@ export interface Act {
   tech_rider_url?: string | null;
   hospitality_rider_url?: string | null;
   promo_url?: string | null;
+  /** The act's uploaded picture; demo acts have none and render generated art. */
+  photo_url?: string | null;
   bio?: string | null;
   genres: string[];
   languages: string[];
@@ -793,6 +808,8 @@ export interface UrgentRequest {
   /** Set only for the viewer's own row when they were notified about this request. */
   myMatchReasons?: string[];
   filledByName?: string | null;
+  /** The viewer's conversation with the requester, when there is one. */
+  conversationId?: string | null;
 }
 
 /** Admin::UrgentRequestsController#index row: the above plus founder-facing fields. */
@@ -835,6 +852,7 @@ export interface UrgentRequestResponse {
   updated_at?: string;
   name: string;
   headline?: string | null;
+  photoUrl?: string | null;
 }
 
 /** VouchesController: a vouches row (Vouch#api_json), token omitted. */
@@ -882,6 +900,8 @@ export interface Plan {
   code: string;
   name: string;
   monthly: number | null;
+  /** Price for a year (10 x monthly). Null for Enterprise. */
+  annual?: number | null;
   trialDays: number;
   activePosts: number;
   seats: number;
@@ -917,12 +937,109 @@ export interface BillingHistoryEntry {
   event: string;
 }
 
+export type BillingInterval = 'monthly' | 'annual';
+
+/** GET /billing/plans. `annualAvailable` is false until every paid plan has an annual Razorpay plan id. */
+export interface BillingPlans {
+  plans: Plan[];
+  annualAvailable?: boolean;
+}
+
+export type PromoKind = 'discount_percent' | 'extended_trial' | 'early_access' | 'referral';
+
+export interface PromoEffect {
+  percentOff: number | null;
+  durationPeriods: number | null;
+  trialDays: number | null;
+  earlyAccessDays: number | null;
+}
+
+/** POST /billing/codes/validate. */
+export interface PromoValidation {
+  valid: boolean;
+  reason?: string | null;
+  kind: PromoKind | null;
+  effect: PromoEffect;
+  message: string;
+}
+
+/** GET /me/referral-code. */
+export interface ReferralCode {
+  code: string;
+  shareUrl: string;
+  redemptions: number;
+  rewardsEarned: number;
+  refereePercentOff?: number;
+}
+
+/** The code behind the current subscription's discount, trial or Early Access (billing summary). */
+export interface BillingPromo {
+  code: string;
+  kind: PromoKind;
+  percentOff: number | null;
+  periodsLeft: number | null;
+  trialDays: number | null;
+}
+
+/** A promo_codes row as the admin Codes tab reads it. */
+export interface AdminPromoCode {
+  id: string;
+  code: string;
+  kind: PromoKind;
+  percentOff: number | null;
+  durationPeriods: number | null;
+  trialDays: number | null;
+  planCodes: string[];
+  intervals: string[];
+  razorpayOfferId: string | null;
+  maxRedemptions: number | null;
+  redemptionsCount: number;
+  perUserLimit: number;
+  startsAt: string | null;
+  expiresAt: string | null;
+  active: boolean;
+  ownerUserId: string | null;
+  notes: string | null;
+  batchId: string | null;
+  needsOffer: boolean;
+  createdAt: string;
+}
+
+export interface AdminPromoProgramme {
+  referral: {
+    enabled: boolean;
+    refereePercentOff: number;
+    refereeDurationPeriods: number;
+    referrerRewardDays: number;
+    referrerRewardCap: number;
+    offerConfigured: boolean;
+  };
+  codeFormat: string;
+  codeAlphabet: string;
+  earlyAccess: { days: number; seats: number; granted: number };
+  offerRequired: boolean;
+  editNote: string;
+}
+
+export interface AdminPromoRedemption {
+  id: string;
+  userId: string;
+  name: string | null;
+  email: string | null;
+  subscriptionId: string | null;
+  kind: PromoKind;
+  percentOff: number | null;
+  trialDays: number | null;
+  redeemedAt: string;
+  referrerReward: { days: number; appliedAt: string | null; userId: string } | null;
+}
+
 /** POST /billing/checkout: a sales hand-off for Enterprise, otherwise the subscription and how to pay. */
 export interface BillingCheckout {
   salesAssisted?: boolean;
   message?: string;
   subscription?: Subscription;
-  checkout?: RazorpayCheckoutConfig | { mode: 'mock' };
+  checkout?: RazorpayCheckoutConfig | { mode: 'mock' | 'early_access' };
   idempotent?: boolean;
 }
 
@@ -989,6 +1106,38 @@ export interface AdminVerification {
   companyName?: string | null;
   checks?: string[];
   vouchedByName?: string | null;
+  /** Verification::Evidence: 0-100, with its per-component breakdown (null until first scored). */
+  evidence_score?: number | null;
+  evidence_breakdown?: EvidenceBreakdown;
+  flags?: string[];
+  auto_decision?: 'auto_approved' | 'needs_more_proof' | null;
+  audit_sample?: boolean;
+  summary?: string | null;
+}
+
+export interface EvidenceComponent {
+  score: number;
+  max: number;
+}
+/** Verification::Evidence#call: component scores (the facts behind the summary stay server-side in use). */
+export interface EvidenceBreakdown {
+  identity?: EvidenceComponent;
+  links?: EvidenceComponent;
+  signals?: EvidenceComponent;
+  community?: EvidenceComponent;
+  total?: number;
+}
+
+/** Admin::VerificationsController#stats. */
+export interface VerificationWindowStats {
+  total: number;
+  autoApproved: number;
+  autoApprovalRate: number;
+  auditSample: number;
+}
+export interface AdminVerificationStats {
+  days7: VerificationWindowStats;
+  days30: VerificationWindowStats;
 }
 
 /** Admin::ReportsController#index: a reports row plus the reporter's name. */

@@ -14,11 +14,20 @@ test.describe('real frontend and Rails journeys', () => {
       const name = role === 'jobseeker' ? 'Integration Artist' : 'Integration Studio';
       const profilePath = `/${role}/profile`;
 
-      // The two-minute sign-up, skipping the questions ("complete my profile later").
+      // The two-minute sign-up. Musicians skip the questions ("complete my profile later"); hirers
+      // fill the one-screen join (what they hire for, organisation) and open "More" for the name
+      // and the password choice.
       await page.goto(`/auth/${role}`);
       await page.getByRole('link', { name: 'New to Verse? Join in two minutes' }).click();
-      await page.getByRole('button', { name: 'Complete my profile later' }).click();
-      await page.getByLabel('Your name').fill(name);
+      if (role === 'jobseeker') {
+        await page.getByRole('button', { name: 'Complete my profile later' }).click();
+        await page.getByLabel('Your name').fill(name);
+      } else {
+        await page.getByLabel('Studio sessions').check();
+        await page.getByLabel('Organisation or team name').fill(name);
+        await page.getByRole('button', { name: /More: your name/ }).click();
+        await page.getByLabel('Your name (optional)').fill(name);
+      }
       await page.getByLabel('Email').fill(email);
       await page.getByRole('button', { name: 'Use a password instead' }).click();
       await page.getByLabel('Password', { exact: true }).fill(password);
@@ -41,7 +50,7 @@ test.describe('real frontend and Rails journeys', () => {
       const forbidden = await request.get(`${apiBase}/admin/stats`, { headers: { Authorization: `Bearer ${token}` } });
       expect(forbidden.status()).toBe(403);
 
-      // C5/CRAWL-03: the tour never auto-starts on the profile-setup page itself.
+      // The product tour never opens by itself, on the profile-setup page or anywhere else.
       const tour = page.getByRole('dialog').filter({ hasText: /Step \d+ of \d+/ });
       await expect(tour).toBeHidden();
 
@@ -59,12 +68,18 @@ test.describe('real frontend and Rails journeys', () => {
         })
         .toBe(true);
 
-      // The tour starts on the first dashboard visit after the profile is complete, and
-      // Escape closes it (CRAWL-03).
+      // The first dashboard visit never opens a modal. A new musician gets the dismissible
+      // three-card strip; a new hirer gets the two choice cards once instead, with no strip repeating them.
       await page.goto(`/${role}`);
-      await expect(tour).toBeVisible();
-      await page.keyboard.press('Escape');
       await expect(tour).toBeHidden();
+      const strip = page.getByTestId('tour-strip');
+      if (role === 'employer') {
+        await expect(page.getByText('Need someone by tomorrow?')).toBeVisible();
+      } else if ((page.viewportSize()?.width ?? 0) >= 768) {
+        await expect(strip).toBeVisible();
+        await strip.getByRole('button', { name: 'Got it' }).click();
+      }
+      await expect(strip).toBeHidden();
 
       await page.getByRole('button', { name: 'Open account menu' }).click();
       await page.getByRole('menuitem', { name: 'Sign out' }).click();

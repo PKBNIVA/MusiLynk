@@ -1,6 +1,7 @@
-import { EmptyState } from '../components/help/EmptyState';
+import { EmptyState as SceneEmptyState } from '../components/kit/EmptyState';
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
@@ -10,9 +11,11 @@ import { apiDelete, apiGet } from '../lib/api';
 import { toast } from 'sonner';
 import { Link } from 'react-router';
 import { useConfirm } from '../components/booking/BookingDialogs';
-import { MapPin, Calendar, BriefcaseBusiness, Send, Search } from 'lucide-react';
+import { MapPin, Calendar, BriefcaseBusiness } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { Application } from '../lib/apiTypes';
+import { formatDate, formatDateTime } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
 const ordered = ['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Offer', 'Hired'];
 export default function ApplicationTracking() {
   const [apps, setApps] = useState<Application[]>([]),
@@ -32,7 +35,7 @@ export default function ApplicationTracking() {
   function withdraw(id: string, title: string) {
     confirm.ask({
       title: `Withdraw your application for “${title}”?`,
-      description: 'The employer will no longer see it.',
+      description: 'The hirer will no longer see it.',
       confirmLabel: 'Withdraw',
       destructive: true,
       action: async () => {
@@ -46,14 +49,7 @@ export default function ApplicationTracking() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-5xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="mb-7">
-          <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Your pipeline</div>
-          <h1 className="text-4xl font-bold">Applications</h1>
-          <p className="text-slate-400 mt-2">
-            Track every application from submission through interview, offer and hire.
-          </p>
-        </div>
-        <HelpCallout {...HELP.applications} />
+        <PageHeader title="Applications" help={<HelpCallout {...HELP.applications} />} />
         {error ? (
           <Card className="bg-rose-500/10 border-rose-400/20" role="alert">
             <CardContent className="p-6">
@@ -73,20 +69,12 @@ export default function ApplicationTracking() {
         ) : loading ? (
           <p className="text-slate-400">Loading applications…</p>
         ) : apps.length === 0 ? (
-          <EmptyState
-            icon={Send}
-            title="You have not applied to an opportunity yet."
-            action={
-              <Button asChild>
-                <Link to="/jobseeker/jobs">
-                  <Search aria-hidden="true" size={16} className="mr-2" />
-                  Browse opportunities
-                </Link>
-              </Button>
-            }
-          >
-            Find a gig, session or role you like and apply with your profile in a couple of minutes.
-          </EmptyState>
+          <SceneEmptyState
+            scene="inbox"
+            title="No applications yet"
+            hint="Find a gig, session or role and apply in minutes."
+            action={{ label: 'Find work', to: '/jobseeker/jobs' }}
+          />
         ) : (
           <div className="space-y-4">
             {apps.map((a) => (
@@ -95,7 +83,7 @@ export default function ApplicationTracking() {
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary">{a.opportunityKind || 'job'}</Badge>
+                        <Badge variant="secondary">{optionLabel(a.opportunityKind || 'job')}</Badge>
                         <h2 className="text-xl font-semibold">
                           <Link to={`/jobseeker/jobs/${a.jobId || a.job_id}`} className="hover:text-violet-200">
                             {a.title}
@@ -111,13 +99,13 @@ export default function ApplicationTracking() {
                         </span>
                         <span className="flex items-center">
                           <BriefcaseBusiness size={15} className="mr-1" />
-                          {a.workplace}
+                          {optionLabel(a.workplace)}
                         </span>
-                        <span>Applied {new Date(a.createdAt).toLocaleDateString()}</span>
+                        <span>Applied {formatDate(a.createdAt)}</span>
                         {a.interviewDate && (
                           <span className="flex text-emerald-300">
                             <Calendar size={15} className="mr-1" />
-                            {new Date(a.interviewDate).toLocaleString()}
+                            {formatDateTime(a.interviewDate)}
                           </span>
                         )}
                       </div>
@@ -130,7 +118,7 @@ export default function ApplicationTracking() {
                   </div>
                   {a.status === 'Offer' && (
                     <p className="mt-4 text-sm text-emerald-200">
-                      You have an offer. Confirm terms with the employer in{' '}
+                      You have an offer. Confirm terms with the hirer in{' '}
                       <Link to="/jobseeker/messages" className="underline">
                         Messages
                       </Link>

@@ -52,7 +52,7 @@ class AiOrchestrator
       raise
     end
 
-    cost_inr = AiPricing.estimate_cost_inr(input_tokens: result[:inputTokens], output_tokens: result[:outputTokens])
+    cost_inr = AiPricing.estimate_cost_inr(input_tokens: result[:inputTokens], output_tokens: result[:outputTokens], cached_input_tokens: result[:cachedInputTokens])
     Array(rows).first&.update!(tokens_in: result[:inputTokens], tokens_out: result[:outputTokens], cost_inr:)
 
     cacheable = { suggestion: result[:suggestion], model: result[:model] }

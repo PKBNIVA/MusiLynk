@@ -10,14 +10,15 @@ class RatesController < ApplicationController
     return render_error("Unknown city.", :not_found) unless city_name
 
     expires_in CACHE_TTL, public: true
-    body = Rails.cache.fetch("rates-page/v1/#{city_slug}", expires_in: CACHE_TTL) { build_payload(city_slug, city_name) }
+    body = Rails.cache.fetch("rates-page/v2/#{city_slug}", expires_in: CACHE_TTL) { build_payload(city_slug, city_name) }
     render json: body
   end
 
   private
 
   def build_payload(city_slug, city_name)
-    summaries = Seo::Rates.for_city(city_name)
+    # Numbers shown to visitors include the badged demo profiles; indexability counts organic ones only.
+    summaries = Seo::Rates.for_city(city_name, include_demo: true)
     roles = summaries.map do |slug, summary|
       { slug:, label: Seo::Pages.role_label(slug), n: summary.n, hasData: summary.hasData,
         sessionRate: summary.sessionRate, showRate: summary.showRate, dayRate: summary.dayRate }
@@ -25,7 +26,7 @@ class RatesController < ApplicationController
     {
       city: { slug: city_slug, name: city_name },
       roles:,
-      indexable: roles.count { _1[:hasData] } >= INDEXABLE_MIN_ROLES_WITH_DATA,
+      indexable: Seo::Rates.for_city(city_name).values.count(&:hasData) >= INDEXABLE_MIN_ROLES_WITH_DATA,
       updatedAt: Time.current.iso8601
     }
   end

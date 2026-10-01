@@ -29,6 +29,18 @@ class ShowcaseSuggestionsTest < ActionDispatch::IntegrationTest
     assert_equal({ "type" => "portfolio_item", "id" => item.id, "title" => "Late set" }, row["subject"])
   end
 
+  test "editing the text withdraws suggestions that cited words which are gone" do
+    item = make_item(@me, "Late set", description: "A jazz trio recording on Tabla")
+    pending = ShowcaseSuggestion.pending.where(subject_id: item.id)
+    assert_equal %w[include tags], pending.pluck(:kind).sort
+    assert_match(/mentions .*Tabla/i, ShowcaseSuggestion.find_by!(kind: "tags", target_id: item.id).reason)
+
+    item.update!(description: "A quiet evening at home")
+    assert_empty ShowcaseSuggestion.pending.where(subject_id: item.id).where(kind: %w[include tags]).where.not(target_id: item.id).to_a
+    assert_equal ["obsolete"], ShowcaseSuggestion.where(subject_id: item.id, kind: "include").pluck(:status).uniq
+    assert_equal "obsolete", ShowcaseSuggestion.find_by!(kind: "tags", target_id: item.id).status
+  end
+
   test "accepting tags updates the item, which then joins by rule and settles the include suggestion" do
     item = make_item(@me, "Late set", description: "Jazz standards")
     tags = ShowcaseSuggestion.find_by!(kind: "tags", target_id: item.id)

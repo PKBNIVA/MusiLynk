@@ -44,6 +44,19 @@ describe('useUrlFilters', () => {
     expect(hook.query).toBe('q=vocalist');
   });
 
+  it('can rewrite the current entry instead of adding one', async () => {
+    mount('/jobs');
+    act(() => {
+      hook.update({ location: 'Pune' }, { replace: true });
+    });
+    expect(search()).toBe('?location=Pune');
+    await act(async () => {
+      await router.navigate(-1);
+    });
+    expect(router.state.location.pathname).toBe('/jobs');
+    expect(search()).toBe('?location=Pune');
+  });
+
   it('pushes one history entry per change, so Back undoes it', async () => {
     mount('/jobs?q=vocalist');
     let changed = false;

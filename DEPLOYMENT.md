@@ -175,6 +175,22 @@ Before enabling each integration, configure and test its variables:
 - Razorpay: key ID, key secret, webhook secret, and plan IDs
 - Brevo: API key and verified sender
 
+### AI provider (`AI_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL`)
+
+AI writing help runs on OpenAI by default (`provider: openai` in `backend/config/ai_pricing.yml`,
+model `gpt-5.6-luna`). On the Railway web service (and the worker, which runs the verification
+summaries and link-import drafting) set:
+
+- `OPENAI_API_KEY`: platform.openai.com, API keys, create a project key. Blank means AI is
+  reported disabled in `GET /api/ai/status` and every feature uses its deterministic fallback.
+- `OPENAI_MODEL` (optional): override the model id from the yml.
+- `AI_PROVIDER` (optional): `openai` or `anthropic`. `anthropic` switches back to the previous
+  provider and needs `ANTHROPIC_API_KEY` instead; no deploy of code is needed, only the variable.
+
+Set a monthly usage limit in OpenAI billing that matches the app's ₹1,500 hard cap. Admin, AI
+spend shows the active provider and model. The Anthropic Message Batches queue
+(`classify_portfolio_item`, launch-disabled) only submits when the provider is `anthropic`.
+
 ### Email sign-in codes and `PASSWORD_LOGIN_ENABLED`
 
 Email sign-in codes are the primary sign-in path; password sign-in stays available as a
@@ -389,7 +405,7 @@ Checklist:
    no `problems` (codes such as `missing_credentials`, `missing_public_base_url`,
    `insecure_endpoint`; values are never echoed). The admin tester's "Upload storage" check
    shows the same. Then, in the browser, upload an image, an MP3 and a PDF on
-   `/jobseeker/portfolio`, play them, confirm a renamed `.txt → .png` is rejected, delete each
+   `/jobseeker/library`, play them, confirm a renamed `.txt → .png` is rejected, delete each
    sample and confirm the object is gone from the bucket.
 8. **After migrating.** Remove `PERSISTENT_UPLOADS` and the volume only after existing
    `/rails/active_storage/...` work samples have been re-uploaded or accepted as lost; the
@@ -410,6 +426,9 @@ Set these on the Railway **API service** (production environment). Never in Verc
 | `RAZORPAY_WEBHOOK_SECRET` | Account & Settings → Webhooks → your webhook → **Secret** (you choose it; use `openssl rand -hex 32`) |
 | `RAZORPAY_PLAN_PRO` | Subscriptions → Plans → the Pro plan's **Plan ID** (`plan_…`): Monthly, every 1 month, **INR 2,499.00** |
 | `RAZORPAY_PLAN_STUDIO` | Subscriptions → Plans → the Studio plan's **Plan ID**: Monthly, every 1 month, **INR 5,999.00** |
+| `RAZORPAY_PLAN_PRO_ANNUAL` | Subscriptions → Plans → the Pro annual plan's **Plan ID**: every 12 months, **INR 24,990.00**. Until both annual ids are set the pricing page hides the monthly/annual toggle and annual checkout answers 503 |
+| `RAZORPAY_PLAN_STUDIO_ANNUAL` | Subscriptions → Plans → the Studio annual plan's **Plan ID**: every 12 months, **INR 59,990.00** |
+| `RAZORPAY_REFERRAL_OFFER_ID` | Offers → the referral offer (20% off for 3 billing cycles) → **Offer ID** (`offer_…`). Referral codes are refused at live checkout without it. Each discount code's own offer id is pasted in the admin Codes tab |
 | `RAZORPAY_ALLOW_TEST_MODE` | not a dashboard field: set `true` **only** during the test-mode rehearsal below, then delete |
 | `RAZORPAY_SIMULATOR` | must **not** exist on Railway (it is ignored in production and `GET /api/admin/health` reports `checks.payments.ok: false` if present) |
 
@@ -480,28 +499,38 @@ The same flows run in `backend/test/integration/razorpay_simulator_flows_test.rb
 
 ## Release gate
 
-Every release must pass:
+Every release must pass exactly what CI runs (`.github/workflows/rails-and-web.yml`). From the
+repository root:
 
 ```bash
 npm ci
 npm audit --omit=dev --audit-level=high
-npm run build
+npm run typecheck && npm run lint && npm run format:check
+npm run build && npm run check:bundle && npm run check:split
 npm run test:all
 npm run test:unit -- --coverage
 npm run qa:e2e
-cd backend
+```
+
+Then, in `backend/` (test database as in the README):
+
+```bash
 bundle install
 bin/rails db:prepare
 bin/rails test
 bin/rails zeitwerk:check
-bundle exec brakeman --no-pager --exit-on-warn
+bundle exec brakeman --no-pager --exit-on-warn --exit-on-error
 bundle exec bundler-audit check --update
 ```
 
-CI (`.github/workflows/rails-and-web.yml`) runs these as the `frontend`, `rails`, `security`
-and `integrated-journeys` jobs. The `rails` job also migrates an empty database and fails if
-`backend/db/schema.rb` differs from the committed file. `npm run test:all` runs only the
-frontend source smoke tests; the legacy Node server and its tests were removed.
+After any migration, regenerate `db/schema.rb` the way CI does: drop the database,
+delete `db/schema.rb`, run `bin/rails db:create db:migrate`, and commit the result.
+
+CI runs these as the `frontend` (npm audit, typecheck, lint, format, build, bundle budget,
+public/admin split, `test:all`, unit tests), `rails` (an empty-database migration, the
+`db/schema.rb` drift check, the test suite, `zeitwerk:check`), `security` (Brakeman,
+bundler-audit) and `integrated-journeys` jobs. `npm run test:all` runs only the frontend source
+smoke tests; the legacy Node server and its tests were removed.
 
 Coverage floors: `bin/rails test` measures line and branch coverage with SimpleCov
 (`backend/coverage/index.html`) and, on CI, fails when either drops below the floor in

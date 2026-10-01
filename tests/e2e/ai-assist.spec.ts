@@ -92,7 +92,8 @@ test('a job description suggestion can be inserted, with no Improve button (impr
   await page.getByLabel('Title').fill('Session guitarist');
   await page.getByRole('combobox', { name: 'Location' }).fill('Mumbai');
   await page.getByRole('combobox', { name: 'Location' }).press('Enter');
-  await page.getByRole('button', { name: 'Next: Details' }).click();
+  await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
+  await page.getByRole('button', { name: 'Next: Screen & review' }).click();
 
   // Write with AI (job_description) always replaces — no draft text yet to insert alongside.
   await page.getByRole('button', { name: 'Write with AI' }).click();
@@ -131,7 +132,8 @@ test('AI buttons and the usage hint are absent when AI assist is disabled', asyn
   await page.getByLabel('Title').fill('Session guitarist');
   await page.getByRole('combobox', { name: 'Location' }).fill('Mumbai');
   await page.getByRole('combobox', { name: 'Location' }).press('Enter');
-  await page.getByRole('button', { name: 'Next: Details' }).click();
+  await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
+  await page.getByRole('button', { name: 'Next: Screen & review' }).click();
 
   await expect(page.getByRole('button', { name: 'Write with AI' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Improve with AI' })).toHaveCount(0);
@@ -164,7 +166,7 @@ test('a profile headline and bio suggestion can each be inserted, and the usage 
   await page.getByRole('button', { name: 'Write with AI' }).first().click();
   await expect(page.getByText('Session guitarist, Hindi and English rock')).toBeVisible();
   await page.getByRole('button', { name: 'Replace' }).click();
-  await expect(page.getByLabel('Professional headline')).toHaveValue('Session guitarist, Hindi and English rock');
+  await expect(page.getByLabel('Headline')).toHaveValue('Session guitarist, Hindi and English rock');
 
   await page.getByRole('button', { name: 'Write with AI' }).nth(1).click();
   await expect(page.getByText('I play guitar.')).toBeVisible();

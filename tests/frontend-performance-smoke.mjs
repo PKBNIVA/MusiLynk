@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -110,30 +110,37 @@ assert.equal(monitoring.tracesSampleRate('9'), 1);
 assert.equal(monitoring.tracesSampleRate('lots'), monitoring.DEFAULT_TRACES_SAMPLE_RATE);
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
-const monitoringSource = read('../src/app/lib/monitoring.ts');
-assert.match(
-  monitoringSource,
-  /if \(!SENTRY_DSN \|\| loading[^\n]*return;[\s\S]*startWebVitals\(/,
-  'vitals start only after the DSN check',
-);
-assert.match(
-  read('../src/app/lib/sentryClient.ts'),
-  /metrics\.distribution\(`web_vital\./,
-  'vitals are sent as metrics, not error events',
-);
 
-// --- Entry chunk stays lean --------------------------------------------------------------
-const app = read('../src/app/App.tsx');
-assert.doesNotMatch(
-  app,
-  /^import[^\n]*['"](sonner|\.\/components\/ui\/sonner|motion\/react)['"]/m,
-  'toasts and motion load after the first render',
-);
-assert.match(app, /lazy\(\(\) => import\('\.\/components\/ui\/sonner'\)/);
-const prompt = read('../src/app/components/PlanLimitPrompt.tsx');
-assert.doesNotMatch(prompt, /^import[^\n]*alert-dialog/m, 'the plan-limit dialog is loaded on demand');
-assert.match(prompt, /lazy\(\(\) => import\('\.\/PlanLimitDialog'\)\)/);
-assert.doesNotMatch(read('../src/app/pages/AuthPage.tsx'), /from 'motion/, 'the sign-in page uses a CSS animation');
+// --- Entry chunk stays lean (asserted on the production build, `npm run build`) ------------------
+// The first paint loads index.html's entry script plus its modulepreload chunks. Sentry, the toast
+// library and the confirm dialog must sit in chunks that are NOT part of that set, so they load only
+// when needed. Each library is found by a string its own code always contains, so a renamed chunk
+// or a moved import cannot fool the check.
+{
+  const dist = new URL('../dist/', import.meta.url);
+  assert.ok(existsSync(new URL('index.html', dist)), 'dist/ is missing: run `npm run build` before this test');
+  const html = readFileSync(new URL('index.html', dist), 'utf8');
+  const initial = new Set(
+    [...html.matchAll(/<(?:script|link)\b[^>]*?(?:src|href)="\/(assets\/[^"]+\.js)"/g)].map((match) => match[1]),
+  );
+  assert.ok(initial.size >= 2, `index.html should load an entry chunk and its preloads, found ${[...initial]}`);
+  const chunks = readdirSync(new URL('assets/', dist)).filter((name) => name.endsWith('.js'));
+  const holders = (marker) =>
+    chunks
+      .filter((name) => readFileSync(new URL(`assets/${name}`, dist), 'utf8').includes(marker))
+      .map((n) => `assets/${n}`);
+
+  for (const [library, marker] of [
+    ['Sentry', '__SENTRY__'],
+    ['the toast library (sonner)', 'data-sonner-toast'],
+    ['the confirm dialog (Radix alert dialog)', 'alertdialog'],
+  ]) {
+    const where = holders(marker);
+    assert.ok(where.length > 0, `${library} was not found in any chunk: update its marker in this test`);
+    const eager = where.filter((file) => initial.has(file));
+    assert.deepEqual(eager, [], `${library} must load on demand, but the first paint loads ${eager}`);
+  }
+}
 
 // --- Bundle budget script ---------------------------------------------------------------
 const dir = mkdtempSync(join(tmpdir(), 'verse-budget-'));

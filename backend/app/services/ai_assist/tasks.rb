@@ -473,6 +473,57 @@ module AiAssist::Tasks
     }
   )
 
-  PUBLIC_TASKS = (REGISTRY.keys - ["autocomplete"]).freeze
+
+  # Admin-only (system-initiated by Verification::Summarizer, never reachable through
+  # POST /api/ai/suggest: it is left out of PUBLIC_TASKS). Its own INR budget line lives in
+  # config/ai_pricing.yml (`verification_summary_monthly_budget_inr`).
+  VERIFICATION_SUMMARY_PROMPT = <<~PROMPT.squish.freeze
+    You write a short summary of verification evidence for a Verse admin deciding whether to
+    verify a musician. Use only the facts provided. Do not infer or invent. Reply in plain text:
+    at most 3 short lines, factual, no markdown, no preamble.
+  PROMPT
+
+  REGISTRY["verification_summary"] = Task.new(
+    key: "verification_summary",
+    system_prompt: VERIFICATION_SUMMARY_PROMPT,
+    fields: { facts: Field.new(type: :string, max: 2000, required: true) },
+    max_output_tokens: 120, max_output_chars: 400, long: false,
+    template: ->(c) { "Facts:\n#{c[:facts]}" }
+  )
+
+  ADMIN_TASKS = %w[verification_summary].freeze
+  PUBLIC_TASKS = (REGISTRY.keys - ["autocomplete"] - ADMIN_TASKS).freeze
   REGISTRY.freeze
+
+  # Strict JSON Schemas for the tasks whose output is structured. Providers with native
+  # structured output (OpenAI) enforce them; others rely on the prompt alone. `render`, when set,
+  # turns the parsed JSON back into the plain text the task has always returned; when nil the raw
+  # JSON text is returned as-is (and validated by its caller, e.g. LinkImport::ProfileDraft).
+  STR = { type: "string" }.freeze
+  STR_LIST = { type: "array", items: STR }.freeze
+  JsonSchema = Struct.new(:name, :schema, :render, keyword_init: true)
+
+  JSON_SCHEMAS = {
+    "job_screening_questions" => JsonSchema.new(
+      name: "screening_questions",
+      schema: {
+        type: "object", additionalProperties: false, required: %w[questions],
+        properties: { questions: { type: "array", items: { type: "string" } } }
+      },
+      render: ->(json) { Array(json["questions"]).map { _1.to_s.strip }.reject(&:blank?).join("\n") }
+    ),
+    "profile_from_links" => JsonSchema.new(
+      name: "profile_draft",
+      schema: {
+        type: "object", additionalProperties: false,
+        required: %w[headline bio roles genres instruments credits items],
+        properties: {
+          headline: STR, bio: STR, roles: STR_LIST, genres: STR_LIST, instruments: STR_LIST,
+          credits: { type: "array", items: { type: "object", additionalProperties: false, required: %w[text source_url], properties: { text: STR, source_url: STR } } },
+          items: { type: "array", items: { type: "object", additionalProperties: false, required: %w[url title caption], properties: { url: STR, title: STR, caption: STR } } }
+        }
+      },
+      render: nil
+    )
+  }.freeze
 end

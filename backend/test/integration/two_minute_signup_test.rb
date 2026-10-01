@@ -122,7 +122,7 @@ class TwoMinuteSignupTest < ActionDispatch::IntegrationTest
     user = User.find_by!(email: body.dig("user", "email"))
     assert_in_delta Time.current, user.consented_at, 5.seconds
     items = user.portfolio_items.order(:sort_order)
-    assert_equal ["Tum Hi Ho (live cover)", "Blue Frog set", "Spotify work sample"], items.map(&:title)
+    assert_equal ["Tum Hi Ho (live cover)", "Blue Frog set", "Spotify track"], items.map(&:title)
     assert_equal %w[video audio audio], items.map(&:kind)
     assert_equal ["https://i.ytimg.com/vi/x/hqdefault.jpg", nil, nil], items.map(&:thumbnail_url)
     assert_equal [true, false, false], items.map(&:featured)

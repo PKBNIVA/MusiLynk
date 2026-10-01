@@ -8,14 +8,16 @@ module Seo
 
     RateSummary = Struct.new(:n, :sessionRate, :showRate, :dayRate, :hasData, keyword_init: true)
 
-    def self.for_city(city_name)
+    # `include_demo: true` is what a browser sees (badged demo-* profiles count); the default is organic
+    # profiles only, which is what indexability and the sitemap use.
+    def self.for_city(city_name, include_demo: false)
       Seo::Pages.roles.to_h do |slug, label|
-        [slug, summary_for(label, city_name)]
+        [slug, summary_for(label, city_name, include_demo:)]
       end
     end
 
-    def self.summary_for(role_label, city_name)
-      scope = Seo::HireStats.scope_for(role_label, city_name)
+    def self.summary_for(role_label, city_name, include_demo: false)
+      scope = Seo::HireStats.scope_for(role_label, city_name, include_demo:)
         .where("profiles.currency IS NULL OR profiles.currency = ?", "INR")
         .where("profiles.session_rate IS NOT NULL OR profiles.show_rate IS NOT NULL OR profiles.day_rate IS NOT NULL")
       rows = scope.pluck(:session_rate, :show_rate, :day_rate)

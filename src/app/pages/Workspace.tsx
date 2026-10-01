@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Building2, Plus, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -12,6 +13,7 @@ import { useConfirm } from '../components/booking/BookingDialogs';
 import { errorMessage } from '../lib/errors';
 import type { Organization, OrganizationMember } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
+import { optionLabel } from '../components/ui/option-labels';
 
 export default function Workspace() {
   const { user } = useAuth();
@@ -116,14 +118,7 @@ export default function Workspace() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-5 pt-28 pb-16">
-        <div className="mb-7">
-          <div className="text-xs uppercase tracking-[.2em] text-violet-300">Team SaaS workspace</div>
-          <h1 className="text-4xl font-bold mt-2">Workspace & seats</h1>
-          <p className="text-slate-400 mt-2">
-            Bring recruiters, bookers and finance into the same operating account. Seat limits are enforced by the
-            workspace owner's plan.
-          </p>
-        </div>
+        <PageHeader title="Workspace & seats" />
         {loading ? (
           <p className="text-center text-slate-400 py-16" role="status">
             Loading workspaces…
@@ -234,7 +229,7 @@ export default function Workspace() {
                               <div className="text-xs text-slate-500">{member.email}</div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge variant="secondary">{member.role}</Badge>
+                              <Badge variant="secondary">{optionLabel(member.role)}</Badge>
                               {member.role !== 'owner' &&
                                 (selected.memberRole === 'owner' ||
                                   (selected.memberRole === 'admin' &&

@@ -13,7 +13,7 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
   setup do
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
-    @user = User.create!(name: "Maya Session", email: "maya@example.com", password: PASSWORD, role: "jobseeker", status: "active")
+    @user = User.create!(name: "Maya Session", email: "maya@example.com", password: PASSWORD, role: "jobseeker", status: "active", password_set_at: Time.current)
     @other_user = User.create!(name: "Other Member", email: "other@example.com", password: PASSWORD, role: "employer", status: "active")
     @token = session_for(@user)
     @other_browser = session_for(@user)
@@ -168,6 +168,69 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     assert_response :success
     get "/api/me", headers: bearer(@other_browser)
     assert_response :unauthorized
+  end
+
+  test "an account with no password of its own sets a first one without a current password" do
+    codeonly = User.create!(name: "Code Only", email: "codeonly@example.com", password: SecureRandom.base58(32), role: "jobseeker", status: "active", email_verified: true)
+    assert_not codeonly.password_set?
+    token = session_for(codeonly)
+    other_device = session_for(codeonly)
+
+    get "/api/me", headers: bearer(token)
+    assert_equal false, response.parsed_body.dig("user", "passwordSet")
+
+    post "/api/account/password", params: { newPassword: "short" }, headers: bearer(token), as: :json
+    assert_response :unprocessable_content
+
+    with_env(PROVIDER_ENV) do
+      assert_enqueued_jobs 1, only: EmailDeliveryJob do
+        post "/api/account/password", params: { newPassword: "BrandNewPass456!" }, headers: bearer(token), as: :json
+      end
+    end
+    assert_response :success
+    assert codeonly.reload.password_set?
+    notice = enqueued_jobs.find { _1[:job] == EmailDeliveryJob }
+    _uid, notice_template, sealed_detail, sealed_notice_email = ActiveJob::Arguments.deserialize(notice[:args])
+    assert_equal "account_password_set", notice_template
+    assert_equal "codeonly@example.com", EmailDeliveryJob.unseal(sealed_detail)
+    assert_equal "codeonly@example.com", EmailDeliveryJob.unseal(sealed_notice_email, purpose: EmailDeliveryJob::RECIPIENT_PURPOSE)
+    assert AuditLog.exists?(actor: codeonly, action: "account.password_set")
+    get "/api/me", headers: bearer(other_device)
+    assert_response :success, "adding a first password does not sign out the other devices"
+
+    post "/api/auth/login", params: { email: codeonly.email, password: "BrandNewPass456!" }, as: :json
+    assert_response :success
+
+    change_password("WrongPass123!x", "AnotherNewPass789!", token:)
+    assert_response :forbidden, "once a password exists the current one is required"
+
+    clear_enqueued_jobs
+    with_env(PROVIDER_ENV) do
+      assert_no_enqueued_jobs only: EmailDeliveryJob do
+        change_password("BrandNewPass456!", "AnotherNewPass789!", token:)
+      end
+    end
+    assert_response :success
+  end
+
+  test "the password-added notice renders the account and a recovery path without a link" do
+    content = EmailDelivery::TEMPLATES.fetch("account_password_set")
+    text = EmailDelivery.send(:email_text, content:, data: { detail: "codeonly@example.com" })
+    assert_includes text, "A password was just added"
+    assert_includes text, "codeonly@example.com"
+    assert_includes text, "If you did not"
+    assert_no_match %r{https?://}, text
+  end
+
+  test "signing in with a password to a code-only account says it uses email codes" do
+    codeonly = User.create!(name: "Code Only", email: "codeonly2@example.com", password: SecureRandom.base58(32), role: "jobseeker", status: "active", email_verified: true)
+    post "/api/auth/login", params: { email: codeonly.email, password: "GuessedPass123!" }, as: :json
+    assert_response :unauthorized
+    assert_equal "USE_EMAIL_CODE", response.parsed_body["code"]
+    assert_match(/email codes/, response.parsed_body["error"])
+
+    post "/api/auth/login", params: { email: @user.email, password: "wrong-password" }, as: :json
+    assert_equal "Incorrect email or password.", response.parsed_body["error"]
   end
 
   test "wrong current passwords are limited per account" do

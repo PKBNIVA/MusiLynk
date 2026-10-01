@@ -1,0 +1,206 @@
+import { describe, expect, it, vi } from 'vitest';
+import {
+  actCard,
+  cardTree,
+  clip,
+  defaultCard,
+  loadCard,
+  lowestRate,
+  money,
+  opportunityCard,
+  parseRequest,
+  professionalCard,
+  respond,
+  safePhotoUrl,
+} from '../../api/_lib/og.ts';
+
+const text = (node) =>
+  typeof node === 'string'
+    ? node
+    : Array.isArray(node)
+      ? node.map(text).join('|')
+      : node?.props
+        ? text(node.props.children)
+        : '';
+
+describe('og helpers', () => {
+  it('formats rupees with Indian grouping and other currencies with their code', () => {
+    expect(money(5000)).toBe('₹5,000');
+    expect(money(1250000)).toBe('₹12,50,000');
+    expect(money(300, 'usd')).toBe('USD 300');
+  });
+  it('takes the lowest filled-in rate', () => {
+    expect(lowestRate({ sessionRate: 8000, dayRate: '5000', showRate: 0, hourlyRate: null })).toBe(5000);
+    expect(lowestRate({})).toBeNull();
+  });
+  it('clips long text and squeezes whitespace', () => {
+    expect(clip('a  b\nc', 10)).toBe('a b c');
+    expect(clip('x'.repeat(20), 10)).toBe(`${'x'.repeat(9)}…`);
+  });
+  it('accepts only https photo URLs', () => {
+    expect(safePhotoUrl('https://cdn.example/a.jpg')).toBe('https://cdn.example/a.jpg');
+    expect(safePhotoUrl('http://cdn.example/a.jpg')).toBeUndefined();
+    expect(safePhotoUrl('javascript:alert(1)')).toBeUndefined();
+    expect(safePhotoUrl(null)).toBeUndefined();
+  });
+  it('validates type and id, dropping a .png suffix and rejecting odd ids', () => {
+    expect(parseRequest('professional', 'abc-123.png')).toEqual({ type: 'professional', id: 'abc-123' });
+    expect(parseRequest('act', 'a_b')).toEqual({ type: 'act', id: 'a_b' });
+    expect(parseRequest('job', 'abc')).toBeNull();
+    expect(parseRequest('act', undefined)).toBeNull();
+    expect(parseRequest('act', '../etc')).toBeNull();
+    expect(parseRequest('act', 'a'.repeat(65))).toBeNull();
+  });
+});
+
+describe('cards', () => {
+  const person = {
+    name: 'Aarav Kulkarni',
+    headline: 'Session drummer',
+    roles: ['Drummer'],
+    genres: ['Bollywood', 'Indie', 'Rock'],
+    location: 'Mumbai',
+    verified: true,
+    verificationTier: 'verified_pro',
+    sessionRate: 6000,
+    dayRate: 9000,
+    photoUrl: 'https://cdn.example/a.jpg',
+  };
+  it('a professional card: name, role, city, from-rate, tier and at most three chips', () => {
+    const card = professionalCard('p1', person);
+    expect(card).toMatchObject({
+      title: 'Aarav Kulkarni',
+      subtitle: 'Session drummer',
+      kicker: 'Musician · Mumbai',
+      monogram: 'AK',
+    });
+    expect(card.chips).toEqual(['Verified Pro', 'from ₹6,000', 'Bollywood']);
+    expect(card.photoUrl).toBe('https://cdn.example/a.jpg');
+    expect(card.shape).toBe('circle');
+  });
+  it('never uses a photo for a demo account', () => {
+    expect(professionalCard('p1', { ...person, demo: true }).photoUrl).toBeUndefined();
+    expect(
+      actCard('a1', { name: 'Band', demo: true, photo_url: 'https://cdn.example/b.jpg' }).photoUrl,
+    ).toBeUndefined();
+  });
+  it('a professional with no name has no card', () => {
+    expect(professionalCard('p1', {})).toBeNull();
+    expect(opportunityCard('j1', {})).toBeNull();
+    expect(actCard('a1', {})).toBeNull();
+  });
+  it('an opportunity card: kind, company, place and a pay range', () => {
+    const card = opportunityCard('j1', {
+      title: 'Session guitarist',
+      company: 'Blue Frog',
+      type: 'session',
+      location: 'Mumbai',
+      compensation_min: 5000,
+      compensation_max: 8000,
+      employerVerified: true,
+    });
+    expect(card).toMatchObject({
+      kicker: 'Opportunity · session',
+      subtitle: 'Blue Frog',
+      kind: 'session',
+      shape: 'square',
+    });
+    expect(card.chips).toEqual(['Mumbai', '₹5,000–8,000', 'Verified hirer']);
+    expect(opportunityCard('j2', { title: 'T', salary: 'Negotiable' }).chips).toEqual(['Negotiable']);
+    expect(opportunityCard('j3', { title: 'T', compensation_min: 4000 }).chips).toEqual(['from ₹4,000']);
+  });
+  it('an act card: fee, lineup and genres', () => {
+    const card = actCard('a1', {
+      name: 'The Brass Co',
+      tagline: 'Baraat brass',
+      city: 'Pune',
+      min_fee: 45000,
+      lineup_size: 7,
+      genres: ['Folk'],
+      verified: true,
+    });
+    expect(card.kicker).toBe('Live act · Pune');
+    expect(card.chips).toEqual(['Verified', 'from ₹45,000', '7 on stage']);
+  });
+  it('draws the text of the card into the element tree', () => {
+    const tree = cardTree(professionalCard('p1', person));
+    const drawn = text(tree);
+    for (const part of ['Verse', 'Aarav Kulkarni', 'Session drummer', 'from ₹6,000', 'AK'])
+      expect(drawn).toContain(part);
+    expect(tree.props.style).toMatchObject({ width: 1200, height: 630 });
+    expect(text(cardTree(defaultCard()))).toContain('Hire a verified musician');
+  });
+  it('shows a fetched photo instead of the art', () => {
+    const tree = cardTree(professionalCard('p1', person), 'data:image/jpeg;base64,AAAA');
+    expect(JSON.stringify(tree)).toContain('data:image/jpeg;base64,AAAA');
+    expect(text(tree)).not.toContain('|AK');
+  });
+});
+
+describe('respond', () => {
+  const png = new Uint8Array([137, 80, 78, 71]).buffer;
+  const make = (over = {}) => ({
+    apiOrigin: 'https://api.test',
+    fetchJson: vi.fn(async () => ({ professional: { name: 'Meera Iyer', photoUrl: 'https://cdn.example/m.jpg' } })),
+    fetchImage: vi.fn(async () => 'data:image/jpeg;base64,AAAA'),
+    render: vi.fn(async () => png),
+    ...over,
+  });
+  const ask = (deps, type = 'professional', id = 'p1') =>
+    respond(new Request('https://x.test/api/og/professional/p1.png'), type, id, deps);
+  const expectFallback = (res) => {
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/og-default.png');
+  };
+
+  it('returns a cached PNG for a known id, fetching the public JSON', async () => {
+    const deps = make();
+    const res = await ask(deps, 'professional', 'p1.png');
+    expect(deps.fetchJson).toHaveBeenCalledWith('https://api.test/api/public/talent/p1');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('image/png');
+    expect(res.headers.get('cache-control')).toBe(
+      'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
+    );
+    expect(await res.arrayBuffer()).toEqual(png);
+  });
+  it('asks the right endpoint for each type', async () => {
+    const deps = make({ fetchJson: vi.fn(async () => ({ job: { title: 'Gig' }, act: { name: 'Act' } })) });
+    await ask(deps, 'opportunity', 'j1');
+    await ask(deps, 'act', 'a1');
+    expect(deps.fetchJson.mock.calls.map(([url]) => url)).toEqual([
+      'https://api.test/api/jobs/j1',
+      'https://api.test/api/public/acts/a1',
+    ]);
+    await expect(loadCard('act', 'a1', deps)).resolves.toMatchObject({ title: 'Act' });
+  });
+  it('redirects to the default card for a bad type, an unknown id or a failed lookup', async () => {
+    for (const [type, id, deps] of [
+      ['nope', 'p1', make()],
+      ['professional', null, make()],
+      ['professional', 'nope', make({ fetchJson: vi.fn(async () => null) })],
+      ['professional', 'p1', make({ fetchJson: vi.fn(async () => Promise.reject(new Error('down'))) })],
+      ['professional', 'p1', make({ fetchJson: vi.fn(async () => ({ professional: {} })) })],
+    ]) {
+      expectFallback(await ask(deps, type, id));
+      expect(deps.render).not.toHaveBeenCalled();
+    }
+  });
+  it('draws the art when the photo cannot be fetched, or when the renderer cannot decode it', async () => {
+    const noPhoto = make({ fetchImage: vi.fn(async () => Promise.reject(new Error('timeout'))) });
+    await ask(noPhoto);
+    expect(JSON.stringify(noPhoto.render.mock.calls[0][0])).not.toContain('data:image/jpeg');
+
+    const render = vi.fn().mockRejectedValueOnce(new Error('bad image')).mockResolvedValue(png);
+    const res = await ask(make({ render }));
+    expect(res.status).toBe(200);
+    expect(render).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(render.mock.calls[0][0])).toContain('data:image/jpeg');
+    expect(JSON.stringify(render.mock.calls[1][0])).not.toContain('data:image/jpeg');
+  });
+  it('redirects to the default card if even the art fails to draw', async () => {
+    const render = vi.fn().mockRejectedValue(new Error('a'));
+    expectFallback(await ask(make({ render })));
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+});

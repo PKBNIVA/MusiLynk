@@ -29,6 +29,12 @@ class AiSpendGuard
     AiCreditLedger.where(reason: "usage", created_at: from..to).where("metadata->>'tier' = 'free'").sum(:cost_inr)
   end
 
+  # Spend on one task this calendar month, from the same ledger rows.
+  def self.task_spend_inr(task, now: Time.current)
+    from, to = month_bounds(now)
+    AiCreditLedger.where(reason: "usage", task: task.to_s, created_at: from..to).sum(:cost_inr)
+  end
+
   # Launch mode: hard_monthly_budget_inr and free_tier_monthly_budget_inr are set to the same
   # ₹1,500 cap (there is no purchasable paid AI tier to protect separately right now), so both
   # budgets raise the same code and copy — the person never sees a distinction between "free"
@@ -49,5 +55,14 @@ class AiSpendGuard
     return unless total_spend_inr(now:) >= budgets.fetch(:hard_monthly_budget_inr)
 
     raise Paused.new(PAUSE_MESSAGE, code: "AI_FREE_PAUSED")
+  end
+
+  # System-initiated summaries (Verification::Summarizer): the global hard budget applies, and
+  # so does the task's own monthly line. Raises Paused (AI_FREE_PAUSED) like the other guards.
+  def self.check_task!(task, now: Time.current)
+    check!(tier: "paid", admin: false, now:)
+    return unless task_spend_inr(task, now:) >= AiPricing.verification_summary_budget_inr
+
+    raise Paused.new("The monthly budget for this AI task is used up.", code: "AI_FREE_PAUSED")
   end
 end

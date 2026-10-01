@@ -1,7 +1,11 @@
-import { ChevronDown, Inbox, ListOrdered, Mail, MessageCircleQuestion, Plus, Sparkles, ThumbsDown } from 'lucide-react';
-import { EmptyState } from '../components/help/EmptyState';
+import { ChevronDown, ListOrdered, Mail, MessageCircleQuestion, Sparkles, ThumbsDown } from 'lucide-react';
+import { EmptyState } from '../components/kit/EmptyState';
+import { personLines } from '../lib/personLine';
+import { UserAvatar } from '../components/kit/UserAvatar';
+import { FirstSample } from '../components/talent/FirstSample';
 import { useCallback, useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
@@ -15,6 +19,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../lib/authContext';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { errorMessage } from '../lib/errors';
+import { formatWhen, formatInputEcho } from '../lib/format';
+import { shareListing } from '../lib/shareListing';
 import type { ConversationCreated, EmployerApplication, Job } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
 import { isAiPaywallError, suggestAi, useAiTaskEnabled, type AiPaywallError } from '../lib/ai';
@@ -26,6 +32,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
+import { optionLabel } from '../components/ui/option-labels';
+import { jobStatusLabel } from '../components/OpportunityPipeline';
 
 // The application's snapshot of the portfolio/resume chosen at apply time (materialsSnapshot —
 // see backend/docs/api-pages-portfolios-resumes.md §8). Not in apiTypes yet, so kept local here.
@@ -60,6 +68,9 @@ const DRAFT_TITLES: Record<DraftKind, string> = {
   rejection_note: 'Draft kind rejection',
 };
 
+/** The applicant's email is only shown once the hirer has moved them forward. */
+const EMAIL_VISIBLE_STATUSES = ['Shortlisted', 'Interview Scheduled', 'Offer', 'Hired'];
+
 /** Parses candidate_summary's fixed output shape: "- bullet" lines, then a final "Fit: ..." line. */
 function parseCandidateSummary(text: string): CandidateSummary {
   const rows = text
@@ -84,6 +95,33 @@ function screeningPair(value: unknown, index: number) {
   if (at >= 0) return { question: text.slice(0, at), answer: text.slice(at + 4).trim() };
   if (text.endsWith(' ::')) return { question: text.slice(0, -3), answer: '' };
   return { question: `Question ${index + 1}`, answer: text.trim() };
+}
+
+/** "8 yrs" from the free-text experience field, or the text itself when it has no number. */
+function yearsLabel(experience?: string | null) {
+  const text = (experience || '').trim();
+  if (!text) return '';
+  const n = /^\d+$/.test(text) ? Number(text) : NaN;
+  return Number.isFinite(n) ? `${n} yrs` : text;
+}
+
+/** The cover note: italic, two lines, "More" reveals the rest. */
+function CoverNote({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-3 text-sm italic text-slate-300">
+      <p className={`whitespace-pre-line break-words ${open ? '' : 'line-clamp-2'}`}>“{text}”</p>
+      {text.length > 120 && (
+        <button
+          type="button"
+          className="not-italic text-violet-300 hover:text-white"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? 'Less' : 'More'}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function EmployerApplications() {
@@ -155,7 +193,7 @@ export default function EmployerApplications() {
       }
       setSummaries((s) => ({
         ...s,
-        [a.id]: { loading: false, open: true, error: errorMessage(e, 'Could not summarize this candidate.') },
+        [a.id]: { loading: false, open: true, error: errorMessage(e, 'Could not summarize this applicant.') },
       }));
     }
   }
@@ -264,7 +302,7 @@ export default function EmployerApplications() {
   async function message(candidateId: string, jobId: string) {
     try {
       const d = await apiPost<ConversationCreated>('/conversations', { candidateId, jobId });
-      nav(`${base}/messages?conversation=${d.conversation.id}`);
+      nav(`${base}/messages?c=${d.conversation.id}`);
     } catch (e: unknown) {
       toast.error(errorMessage(e));
     }
@@ -313,23 +351,24 @@ export default function EmployerApplications() {
       await update(
         notes.id,
         { recruiterNote: notes.note, recruiterRating: notes.rating ? Number(notes.rating) : null },
-        'Recruiter notes saved',
+        'Notes saved',
       )
     )
       setNotes(null);
   }
   const setJobFilter = (v: string) => setParams(v ? { jobId: v } : {}, { replace: true });
   const filteredJob = jobs.find((j) => j.id === jobId);
+  // One primary button per screen: "Shortlisted" on the first applicant who can be shortlisted.
+  const primaryShortlistId = apps.find((a) => (a.allowedNextStatuses || []).includes('Shortlisted'))?.id;
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <h1 className="text-4xl font-bold">Applications</h1>
-          <AiCreditsBadge />
-        </div>
-        <HelpCallout {...HELP.employerApplications} />
-        <p className="text-slate-400 mt-2 mb-5">Review candidates only for opportunities you posted.</p>
+        <PageHeader
+          title="Applicants"
+          actions={<AiCreditsBadge />}
+          help={<HelpCallout {...HELP.employerApplications} />}
+        />
         {jobs.length > 0 && (
           <div className="mb-6 flex flex-wrap items-end gap-3">
             <div className="max-w-md flex-1 min-w-56">
@@ -344,7 +383,10 @@ export default function EmployerApplications() {
                 className="mt-2"
                 options={[
                   { value: '', label: 'All opportunities' },
-                  ...jobs.map((j) => ({ value: j.id, label: `${j.title} (${j.status})` })),
+                  ...jobs.map((j) => ({
+                    value: j.id,
+                    label: `${j.title} (${jobStatusLabel[j.status] || optionLabel(j.status)})`,
+                  })),
                 ]}
               />
             </div>
@@ -400,30 +442,41 @@ export default function EmployerApplications() {
             </CardContent>
           </Card>
         ) : apps.length === 0 ? (
-          <EmptyState
-            icon={Inbox}
-            title={
-              jobId ? `No applications for ${filteredJob?.title || 'this opportunity'} yet.` : 'No applications yet.'
-            }
-            action={
-              jobId ? (
-                <Button variant="outline" onClick={() => setJobFilter('')}>
-                  Show all opportunities
-                </Button>
-              ) : (
-                <Button asChild>
-                  <Link to={postPath}>
-                    <Plus aria-hidden="true" size={16} className="mr-2" />
-                    Create an opportunity
-                  </Link>
-                </Button>
-              )
-            }
-          >
-            {jobId
-              ? 'New applicants usually arrive within a few days of a listing going live.'
-              : 'Post an opportunity and applicants will appear here with their samples and answers.'}
-          </EmptyState>
+          (() => {
+            // Share what is live: the filtered opportunity, else the newest live one.
+            const live = filteredJob ?? jobs.find((j) => j.status === 'published');
+            if (!jobs.length)
+              return (
+                <EmptyState
+                  scene="applicants"
+                  title="Post an opportunity to receive applicants"
+                  action={{ label: 'Post an opportunity', to: postPath }}
+                />
+              );
+            // Nothing is live yet: say it is in review rather than promise applicants.
+            const inReview =
+              !live && (filteredJob ? filteredJob.status === 'pending' : jobs.every((j) => j.status === 'pending'));
+            return (
+              <EmptyState
+                scene="applicants"
+                title={filteredJob ? `No applicants for ${filteredJob.title} yet` : 'No applicants yet'}
+                hint={
+                  inReview
+                    ? 'Your opportunity is in review. It goes live within 24 hours, and applicants can find it then.'
+                    : 'Most opportunities get their first applicant within 48 hours. Sharing the link speeds that up.'
+                }
+                action={
+                  live && live.status === 'published'
+                    ? { label: 'Share this opportunity', onClick: () => void shareListing(live) }
+                    : inReview
+                      ? { label: 'Back to dashboard', to: base }
+                      : filteredJob
+                        ? { label: 'Show all opportunities', onClick: () => setJobFilter('') }
+                        : { label: 'Post an opportunity', to: postPath }
+                }
+              />
+            );
+          })()
         ) : (
           <div className="space-y-4">
             {(rank.sortActive
@@ -437,162 +490,163 @@ export default function EmployerApplications() {
                 <Card key={a.id} className="bg-white/[.06] border-white/10">
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row gap-5 justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-xl font-semibold">{a.candidateName}</h2>
-                          <Badge>{a.status}</Badge>
-                          {aiRank && (
-                            <Badge
-                              className="bg-violet-500/15 text-violet-200"
-                              title="AI estimate, not a hiring decision"
+                      <div className="flex min-w-0 flex-1 gap-4">
+                        <UserAvatar id={a.candidateId} name={a.candidateName} size="md" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-xl font-semibold">
+                              <Link
+                                to={`/professionals/${encodeURIComponent(a.candidateId)}`}
+                                className="hover:text-violet-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded"
+                              >
+                                {a.candidateName}
+                              </Link>
+                            </h2>
+                            <Badge>{a.status}</Badge>
+                            {aiRank && (
+                              <Badge
+                                className="bg-violet-500/15 text-violet-200"
+                                title="AI estimate, not a hiring decision"
+                              >
+                                AI estimate: {aiRank.score}/100
+                              </Badge>
+                            )}
+                          </div>
+                          {aiRank && <p className="text-xs text-violet-300 mt-1">{aiRank.reason}</p>}
+                          <div className="text-sm text-slate-300 mt-1 break-words">
+                            {(() => {
+                              const line = personLines({
+                                headline: a.headline,
+                                genres: a.genres,
+                                location: a.candidateLocation || 'Location not provided',
+                              });
+                              return [line.primary, ...line.secondary.slice(0, 3), yearsLabel(a.experience)]
+                                .filter(Boolean)
+                                .join(' · ');
+                            })()}
+                          </div>
+                          {EMAIL_VISIBLE_STATUSES.includes(a.status) && a.candidateEmail && (
+                            <div className="text-xs text-slate-400 mt-1 break-all">
+                              <a href={`mailto:${a.candidateEmail}`} className="underline hover:text-white">
+                                Email this applicant
+                              </a>
+                            </div>
+                          )}
+                          <div className="text-slate-400 text-xs mt-1">Applied for {a.jobTitle}</div>
+                          {a.status === 'Interview Scheduled' && a.interviewDate && (
+                            <div className="text-sm text-emerald-300 mt-1">
+                              Interview: {formatWhen(a.interviewDate)}
+                            </div>
+                          )}
+                          <FirstSample id={a.candidateId} className="mt-3" />
+                          {a.screeningAnswers?.length > 0 && (
+                            <details className="mt-3 text-sm">
+                              <summary className="cursor-pointer text-slate-300 hover:text-white">
+                                Screening answers ({a.screeningAnswers.length})
+                              </summary>
+                              <dl className="mt-2 space-y-2">
+                                {a.screeningAnswers.map((x, i: number) => {
+                                  const { question, answer } = screeningPair(x, i);
+                                  return (
+                                    <div key={i} className="p-2 rounded bg-white/5 [overflow-wrap:anywhere]">
+                                      <dt className="text-slate-400 text-xs">{question}</dt>
+                                      <dd
+                                        className={answer ? 'mt-1 whitespace-pre-line' : 'mt-1 italic text-slate-500'}
+                                      >
+                                        {answer || 'No answer'}
+                                      </dd>
+                                    </div>
+                                  );
+                                })}
+                              </dl>
+                            </details>
+                          )}
+                          {a.coverLetter && <CoverNote text={a.coverLetter} />}
+                          {(a.recruiterNote || a.recruiterRating) && (
+                            <div className="text-xs text-amber-200 mt-3">
+                              Internal: {a.recruiterRating ? `${a.recruiterRating}/5 · ` : ''}
+                              {a.recruiterNote}
+                            </div>
+                          )}
+                          {materials && (materials.portfolio || materials.resume) && (
+                            <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
+                              {materials.portfolio && (
+                                <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                                  <div className="text-slate-500 text-xs">Portfolio sent with this application</div>
+                                  <div className="font-medium mt-0.5">{materials.portfolio.title}</div>
+                                  {materials.portfolio.headline && (
+                                    <div className="text-slate-400 text-xs mt-0.5">{materials.portfolio.headline}</div>
+                                  )}
+                                  <div className="text-slate-400 text-xs mt-1">
+                                    {materials.portfolio.itemCount ?? materials.portfolio.items?.length ?? 0} work
+                                    sample
+                                    {(materials.portfolio.itemCount ?? materials.portfolio.items?.length ?? 0) === 1
+                                      ? ''
+                                      : 's'}
+                                  </div>
+                                </div>
+                              )}
+                              {materials.resume && (
+                                <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                                  <div className="text-slate-500 text-xs">Resume sent with this application</div>
+                                  <div className="font-medium mt-0.5">{materials.resume.title}</div>
+                                  {materials.resume.summary && (
+                                    <div className="text-slate-400 text-xs mt-0.5 line-clamp-2">
+                                      {materials.resume.summary}
+                                    </div>
+                                  )}
+                                  <div className="text-slate-400 text-xs mt-1">
+                                    {(materials.resume.sections || []).join(', ') ||
+                                      `${materials.resume.entryCount ?? 0} entries`}
+                                    {materials.resume.pdf && (
+                                      <>
+                                        {' · '}
+                                        <a
+                                          className="underline underline-offset-2"
+                                          href={materials.resume.pdf.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                        >
+                                          {materials.resume.pdf.filename || 'PDF'}
+                                        </a>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {summarizeEnabled && summary?.open && (
+                            <div
+                              className="mt-4 rounded-lg border border-violet-400/20 bg-violet-500/[.06] p-3 text-sm"
+                              aria-live="polite"
                             >
-                              AI estimate: {aiRank.score}/100
-                            </Badge>
+                              {summary.loading ? (
+                                <p role="status" className="text-slate-400">
+                                  Summarizing…
+                                </p>
+                              ) : summary.error ? (
+                                <p role="alert" className="text-rose-300">
+                                  {summary.error}
+                                </p>
+                              ) : summary.data ? (
+                                <>
+                                  <ul className="list-disc pl-4 space-y-1 text-slate-200">
+                                    {summary.data.bullets.map((b, i) => (
+                                      <li key={i}>{b}</li>
+                                    ))}
+                                  </ul>
+                                  {summary.data.fit && <p className="mt-2 text-violet-200">Fit: {summary.data.fit}</p>}
+                                  <p className="mt-2 text-xs text-slate-500">
+                                    AI-written summary — review before relying on it.
+                                  </p>
+                                </>
+                              ) : null}
+                            </div>
                           )}
                         </div>
-                        {aiRank && <p className="text-xs text-violet-300 mt-1">{aiRank.reason}</p>}
-                        <div className="text-violet-300 text-sm mt-1">Applied for {a.jobTitle}</div>
-                        {a.status === 'Interview Scheduled' && a.interviewDate && (
-                          <div className="text-sm text-emerald-300 mt-1">
-                            Interview: {new Date(a.interviewDate).toLocaleString()}
-                          </div>
-                        )}
-                        <div className="text-sm text-slate-400 mt-2 break-words">
-                          {a.candidateEmail} · {a.candidateLocation || 'Location not provided'} ·{' '}
-                          {a.experience || 'Experience not provided'}
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {a.skills?.map((s: string) => (
-                            <Badge variant="secondary" key={s}>
-                              {s}
-                            </Badge>
-                          ))}
-                        </div>
-                        {a.coverLetter && (
-                          <p className="text-sm text-slate-300 mt-4 border-l-2 border-violet-500 pl-3 whitespace-pre-line break-words">
-                            {a.coverLetter}
-                          </p>
-                        )}
-                        {a.screeningAnswers?.length > 0 && (
-                          <div className="mt-4 text-sm space-y-2">
-                            <div className="text-slate-500">Screening responses</div>
-                            <dl className="space-y-2">
-                              {a.screeningAnswers.map((x, i: number) => {
-                                const { question, answer } = screeningPair(x, i);
-                                return (
-                                  <div key={i} className="p-2 rounded bg-white/5 [overflow-wrap:anywhere]">
-                                    <dt className="text-slate-400 text-xs">{question}</dt>
-                                    <dd className={answer ? 'mt-1 whitespace-pre-line' : 'mt-1 italic text-slate-500'}>
-                                      {answer || 'No answer'}
-                                    </dd>
-                                  </div>
-                                );
-                              })}
-                            </dl>
-                          </div>
-                        )}
-                        {(a.recruiterNote || a.recruiterRating) && (
-                          <div className="text-xs text-amber-200 mt-3">
-                            Internal: {a.recruiterRating ? `${a.recruiterRating}/5 · ` : ''}
-                            {a.recruiterNote}
-                          </div>
-                        )}
-                        {materials && (materials.portfolio || materials.resume) && (
-                          <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
-                            {materials.portfolio && (
-                              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                                <div className="text-slate-500 text-xs">Portfolio sent with this application</div>
-                                <div className="font-medium mt-0.5">{materials.portfolio.title}</div>
-                                {materials.portfolio.headline && (
-                                  <div className="text-slate-400 text-xs mt-0.5">{materials.portfolio.headline}</div>
-                                )}
-                                <div className="text-slate-400 text-xs mt-1">
-                                  {materials.portfolio.itemCount ?? materials.portfolio.items?.length ?? 0} work sample
-                                  {(materials.portfolio.itemCount ?? materials.portfolio.items?.length ?? 0) === 1
-                                    ? ''
-                                    : 's'}
-                                </div>
-                              </div>
-                            )}
-                            {materials.resume && (
-                              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                                <div className="text-slate-500 text-xs">Resume sent with this application</div>
-                                <div className="font-medium mt-0.5">{materials.resume.title}</div>
-                                {materials.resume.summary && (
-                                  <div className="text-slate-400 text-xs mt-0.5 line-clamp-2">
-                                    {materials.resume.summary}
-                                  </div>
-                                )}
-                                <div className="text-slate-400 text-xs mt-1">
-                                  {(materials.resume.sections || []).join(', ') ||
-                                    `${materials.resume.entryCount ?? 0} entries`}
-                                  {materials.resume.pdf && (
-                                    <>
-                                      {' · '}
-                                      <a
-                                        className="underline underline-offset-2"
-                                        href={materials.resume.pdf.url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                      >
-                                        {materials.resume.pdf.filename || 'PDF'}
-                                      </a>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {summarizeEnabled && summary?.open && (
-                          <div
-                            className="mt-4 rounded-lg border border-violet-400/20 bg-violet-500/[.06] p-3 text-sm"
-                            aria-live="polite"
-                          >
-                            {summary.loading ? (
-                              <p role="status" className="text-slate-400">
-                                Summarizing…
-                              </p>
-                            ) : summary.error ? (
-                              <p role="alert" className="text-rose-300">
-                                {summary.error}
-                              </p>
-                            ) : summary.data ? (
-                              <>
-                                <ul className="list-disc pl-4 space-y-1 text-slate-200">
-                                  {summary.data.bullets.map((b, i) => (
-                                    <li key={i}>{b}</li>
-                                  ))}
-                                </ul>
-                                {summary.data.fit && <p className="mt-2 text-violet-200">Fit: {summary.data.fit}</p>}
-                                <p className="mt-2 text-xs text-slate-500">
-                                  AI-written summary — review before relying on it.
-                                </p>
-                              </>
-                            ) : null}
-                          </div>
-                        )}
                       </div>
                       <div className="flex flex-wrap lg:flex-col gap-2 lg:w-52">
-                        <Button className="tap-target-44" size="sm" onClick={() => message(a.candidateId, a.jobId)}>
-                          Message
-                        </Button>
-                        <Button
-                          className="tap-target-44"
-                          size="sm"
-                          variant="outline"
-                          disabled={!!updating[a.id]}
-                          onClick={() =>
-                            setNotes({
-                              id: a.id,
-                              name: a.candidateName,
-                              note: a.recruiterNote || '',
-                              rating: a.recruiterRating ? String(a.recruiterRating) : '',
-                            })
-                          }
-                        >
-                          Rate / note
-                        </Button>
                         {(summarizeEnabled || recruiterAiAvailable) && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -630,19 +684,65 @@ export default function EmployerApplications() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
-                        {(a.allowedNextStatuses || []).map((s: string) => (
+                        {a.id === primaryShortlistId && (
                           <Button
-                            key={s}
                             className="tap-target-44"
                             size="sm"
-                            variant={s === 'Rejected' ? 'outline' : 'secondary'}
                             disabled={!!updating[a.id]}
                             aria-busy={!!updating[a.id]}
-                            onClick={() => status(a, s)}
+                            onClick={() => status(a, 'Shortlisted')}
                           >
-                            {s}
+                            Shortlist
                           </Button>
-                        ))}
+                        )}
+                        {(() => {
+                          const moves = (a.allowedNextStatuses || []).filter(
+                            (s: string) => !(a.id === primaryShortlistId && s === 'Shortlisted'),
+                          );
+                          return (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  className="tap-target-44"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!!updating[a.id]}
+                                  aria-busy={!!updating[a.id]}
+                                >
+                                  Move to…
+                                  <ChevronDown aria-hidden="true" size={14} className="ml-1" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {moves.map((s: string) => (
+                                  <DropdownMenuItem key={s} onSelect={() => status(a, s)}>
+                                    {s}
+                                  </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    setNotes({
+                                      id: a.id,
+                                      name: a.candidateName,
+                                      note: a.recruiterNote || '',
+                                      rating: a.recruiterRating ? String(a.recruiterRating) : '',
+                                    })
+                                  }
+                                >
+                                  Rate / note
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          );
+                        })()}
+                        <Button
+                          className="tap-target-44"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => message(a.candidateId, a.jobId)}
+                        >
+                          Message
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -678,6 +778,7 @@ export default function EmployerApplications() {
               onChange={(e) => setInterview((x) => x && { ...x, date: e.target.value })}
               className={fieldClass}
             />
+            {interview?.date && <p className="mt-1 text-xs text-slate-400">{formatInputEcho(interview.date, true)}</p>}
           </div>
         </FormDialog>
         <FormDialog
@@ -692,7 +793,7 @@ export default function EmployerApplications() {
           onSubmit={saveNotes}
         >
           <div>
-            <Label htmlFor="recruiter-note">Recruiter note</Label>
+            <Label htmlFor="recruiter-note">Private note</Label>
             <Textarea
               id="recruiter-note"
               maxLength={2000}

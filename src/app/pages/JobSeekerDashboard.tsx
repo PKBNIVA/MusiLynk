@@ -1,33 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
+import { TourStrip } from '../components/ProductTour';
 import { HelpCallout } from '../components/help/HelpCallout';
 import { WelcomeNextStep } from '../components/landing/WelcomeNextStep';
 import { HELP } from '../components/help/helpContent';
-import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Progress } from '../components/ui/progress';
+import { JobCard } from '../components/JobCard';
+import { EmptyState } from '../components/kit/EmptyState';
+import { StatChips, plural } from '../components/kit/StatChips';
+import { formatWhen } from '../lib/format';
 import { apiGet } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { Link, useLocation } from 'react-router';
-import {
-  Briefcase,
-  Calendar,
-  Search,
-  Bookmark,
-  ArrowRight,
-  ShieldCheck,
-  Bell,
-  Gauge,
-  MapPin,
-  Sparkles,
-  Siren,
-} from 'lucide-react';
-import { EmptyState } from '../components/help/EmptyState';
+import { Search, ArrowRight, Sparkles, Zap, MessageSquare, CalendarCheck } from 'lucide-react';
 import { VouchCard } from '../components/VouchCard';
-import { optionLabel } from '../components/ui/option-labels';
-import type { Job, JobSeekerDashboard } from '../lib/apiTypes';
-import type { LucideIcon } from 'lucide-react';
+import type { Conversation, Job, JobSeekerDashboard } from '../lib/apiTypes';
 export default function JobSeekerDashboard() {
   const { user } = useAuth();
   const welcome = new URLSearchParams(useLocation().search).get('welcome') === '1';
@@ -43,43 +31,89 @@ export default function JobSeekerDashboard() {
       .catch(() => setState('error'));
   };
   useEffect(load, []);
-  const Stat = ({ n, label, icon: I }: { n?: number; label: string; icon: LucideIcon }) => (
-    <Card className="bg-white/[.055] border-white/10">
-      <CardContent className="p-5 flex items-center gap-4">
-        <div className="rounded-xl bg-violet-500/10 p-3">
-          <I className="text-violet-300" />
-        </div>
-        <div>
-          <div className="text-2xl font-bold">{n || 0}</div>
-          <div className="text-sm text-slate-400">{label}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const [convs, setConvs] = useState<Conversation[]>([]);
+  useEffect(() => {
+    // Unread messages are a nicety: a failed fetch simply hides that tile.
+    apiGet<{ conversations?: Conversation[] }>('/conversations')
+      .then((x) => setConvs(x?.conversations || []))
+      .catch(() => undefined);
+  }, []);
+  // The "getting started" strip ticks itself from what the person has actually done.
+  const [hasSample, setHasSample] = useState<boolean>();
+  const [hasAvailability, setHasAvailability] = useState<boolean>();
+  useEffect(() => {
+    apiGet<{ items?: unknown[] }>('/portfolio')
+      .then((x) => setHasSample((x?.items?.length ?? 0) > 0))
+      .catch(() => setHasSample(false));
+    apiGet<{ windows?: unknown[] }>('/availability')
+      .then((x) => setHasAvailability((x?.windows?.length ?? 0) > 0))
+      .catch(() => setHasAvailability(false));
+  }, []);
+  const tourDone =
+    state === 'ready' && hasSample !== undefined && hasAvailability !== undefined
+      ? { sample: hasSample, availability: hasAvailability, applied: (d.applications ?? 0) > 0 }
+      : undefined;
+  const goodFits = d.recommendedJobs.filter((j) => (j.fitScore ?? 0) >= 60).slice(0, 3);
+  const unread = convs.reduce((n, c) => n + (c.unreadCount || 0), 0);
+  const latestUnread = convs
+    .filter((c) => (c.unreadCount || 0) > 0)
+    .sort((a, b) => String(b.lastMessageAt || '').localeCompare(String(a.lastMessageAt || '')))[0];
+  const urgent = d.urgentNearby;
+  const first = urgent?.items?.[0];
+  const tiles = [
+    urgent?.count
+      ? {
+          key: 'urgent',
+          urgent: true,
+          Icon: Zap,
+          title: `${urgent.count} urgent request${urgent.count === 1 ? '' : 's'} near you`,
+          line: first ? [first.roleName, first.city, formatWhen(first.startAt)].filter(Boolean).join(' · ') : '',
+          cta: 'Respond',
+          to: '/jobseeker/urgent',
+        }
+      : null,
+    unread > 0
+      ? {
+          key: 'messages',
+          urgent: false,
+          Icon: MessageSquare,
+          title: `${unread} unread message${unread === 1 ? '' : 's'}`,
+          line: latestUnread?.counterpartName || latestUnread?.employerName || '',
+          cta: 'Read messages',
+          to: '/jobseeker/messages',
+        }
+      : null,
+    d.interviews
+      ? {
+          key: 'interviews',
+          urgent: false,
+          Icon: CalendarCheck,
+          title: `${d.interviews} interview${d.interviews === 1 ? '' : 's'} scheduled`,
+          line: '',
+          cta: 'See applications',
+          to: '/jobseeker/applications',
+        }
+      : null,
+  ].filter((t): t is NonNullable<typeof t> => Boolean(t));
+  const isEmpty = tiles.length === 0 && goodFits.length === 0;
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
-        <div className="flex flex-col md:flex-row justify-between gap-5 mb-7">
-          <div>
-            <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Career workspace</div>
-            <h1 className="text-4xl md:text-5xl font-bold">
-              {/* Right after the two-minute sign-up (?welcome=1) it is a first visit, not a return. */}
-              {welcome ? 'Welcome' : 'Welcome back'}, {user?.name?.split(' ')[0]}
-            </h1>
-            <p className="text-slate-400 mt-2">
-              Focus on credible opportunities and proof of work, not application volume.
-            </p>
-          </div>
-          <Button asChild>
-            <Link to="/jobseeker/jobs">
-              <Search size={16} className="mr-2" />
-              Explore opportunities
-            </Link>
-          </Button>
-        </div>
+        <PageHeader
+          help={<HelpCallout {...HELP.jobseekerDashboard} />}
+          title={`Hi, ${user?.name?.split(' ')[0] || 'there'}`}
+          actions={
+            <Button asChild>
+              <Link to="/jobseeker/jobs">
+                <Search size={16} className="mr-2" />
+                Explore opportunities
+              </Link>
+            </Button>
+          }
+        />
+        {!welcome && tourDone && <TourStrip role="jobseeker" done={tourDone} />}
         <WelcomeNextStep role="jobseeker" />
-        <HelpCallout {...HELP.jobseekerDashboard} />
         {state === 'error' && (
           <div
             role="alert"
@@ -91,126 +125,98 @@ export default function JobSeekerDashboard() {
             </Button>
           </div>
         )}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
-          <Stat n={d.applications} label="Applications" icon={Briefcase} />
-          <Stat n={d.interviews} label="Interviews" icon={Calendar} />
-          <Stat n={d.saved} label="Saved opportunities" icon={Bookmark} />
-        </div>
-        {Boolean(d.urgentNearby?.count) && (
-          <Card className="bg-gradient-to-br from-orange-500/15 to-rose-500/[.06] border-orange-400/20 mb-8">
-            <CardContent className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="rounded-xl bg-orange-500/15 p-2.5 shrink-0">
-                  <Siren aria-hidden="true" size={20} className="text-orange-300" />
+        {tiles.length > 0 && (
+          <section
+            aria-label="Needs you now"
+            className="mb-8 grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3"
+            data-testid="needs-you-now"
+          >
+            {tiles.map((t) => (
+              <div
+                key={t.key}
+                className={`flex min-h-[96px] items-center gap-3 rounded-xl border border-white/10 bg-white/[.055] p-4 ${
+                  t.urgent ? 'border-l-4 border-l-amber-400' : ''
+                }`}
+              >
+                <span
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+                    t.urgent ? 'bg-amber-500/15 text-amber-300' : 'bg-white/10 text-slate-200'
+                  }`}
+                >
+                  <t.Icon aria-hidden="true" size={24} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-semibold">{t.title}</h2>
+                  {t.line && <p className="line-clamp-2 text-sm text-slate-400">{t.line}</p>}
                 </div>
-                <div>
-                  <h2 className="font-semibold flex items-center gap-2">
-                    Urgent near you
-                    <Badge className="bg-orange-500/20 text-orange-200">{d.urgentNearby?.count}</Badge>
-                  </h2>
-                  <p className="text-sm text-slate-400 mt-1">
-                    {d.urgentNearby?.items
-                      .slice(0, 2)
-                      .map((r) => `${r.roleName} in ${r.city}`)
-                      .join(' · ')}
-                    {(d.urgentNearby?.count || 0) > 2 ? ' and more' : ''}
-                  </p>
-                </div>
+                <Button asChild variant="outline" size="sm" className="shrink-0">
+                  <Link to={t.to}>{t.cta}</Link>
+                </Button>
               </div>
-              <Button asChild variant="outline" className="shrink-0">
-                <Link to="/jobseeker/urgent">
-                  Respond now <ArrowRight size={14} className="ml-2" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+            ))}
+          </section>
         )}
-        <Card className="bg-gradient-to-br from-violet-500/10 to-sky-500/[.06] border-white/10 mb-10">
-          <CardContent className="p-5 md:p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="max-w-2xl">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-semibold flex items-center gap-2">
-                    <Gauge aria-hidden="true" size={20} className="text-violet-300" />
-                    Career profile strength
-                  </h2>
-                  {user?.verified && (
-                    <Badge className="bg-emerald-500/15 text-emerald-300">
-                      <ShieldCheck size={13} className="mr-1" />
-                      Verified
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-slate-400 mt-1">
-                  Credits, portfolio proof, skills, genres and availability are stronger hiring signals than a generic
-                  bio.
-                </p>
-              </div>
-              <div className="w-full md:w-64">
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Completeness</span>
-                  <span>{d.profileScore || 0}%</span>
-                </div>
-                <Progress value={d.profileScore || 0} aria-label={`Profile completeness, ${d.profileScore || 0}%`} />
-                <Link to="/jobseeker/profile" className="text-xs text-violet-300 mt-2 inline-flex items-center">
-                  Improve profile <ArrowRight size={12} className="ml-1" />
-                </Link>
-              </div>
+        {goodFits.length > 0 && (
+          <section aria-labelledby="best-fits" className="mb-8">
+            <h2 id="best-fits" className="mb-4 flex items-center gap-2 text-xl font-semibold">
+              <Sparkles aria-hidden="true" size={20} className="text-violet-300" />
+              Good fits
+            </h2>
+            <div className="grid gap-3 md:grid-cols-3">
+              {goodFits.map((j, i) => (
+                <JobCard key={j.id} job={j} index={i} to={`/jobseeker/jobs/${j.id}`} compact />
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          </section>
+        )}
+        {state === 'ready' && (d.profileScore ?? 0) < 80 && (
+          <div
+            data-testid="profile-nudge"
+            className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-sm"
+          >
+            <span>
+              Profile {d.profileScore || 0}% complete{' '}
+              <span className="text-slate-400">· Finish it so hirers can find you</span>
+            </span>
+            <Link to="/jobseeker/profile" className="inline-flex items-center text-violet-300 hover:text-violet-200">
+              Finish profile <ArrowRight aria-hidden="true" size={14} className="ml-1" />
+            </Link>
+          </div>
+        )}
         {user?.verified && (
           <div className="mb-10">
             <VouchCard />
           </div>
         )}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-semibold flex items-center gap-2">
-              <Sparkles aria-hidden="true" size={24} className="text-violet-300" />
-              Best current fits
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Transparent profile-fit score based on skills, genre, location and work mode—not a black-box AI verdict.
-            </p>
-          </div>
-        </div>
-        {state === 'ready' && !d.recommendedJobs?.length && (
+        {state === 'ready' && isEmpty && hasSample !== undefined && (
           <EmptyState
-            icon={Bell}
-            title="No open opportunities to recommend right now."
-            action={
-              <Button asChild variant="outline">
-                <Link to="/jobseeker/alerts">
-                  <Bell aria-hidden="true" size={16} className="mr-2" />
-                  Set up an alert
-                </Link>
-              </Button>
+            scene="stage"
+            title={hasSample ? 'Your work is up. Now get booked' : 'Your first gig starts with your work'}
+            hint={
+              hasSample
+                ? hasAvailability
+                  ? 'Look through open gigs and apply to the ones that fit.'
+                  : 'Tell hirers when you are free so they can book you.'
+                : 'Hirers hear a sample before they message.'
             }
-          >
-            New gigs and sessions arrive every week. An alert tells you as soon as one fits.
-          </EmptyState>
+            action={
+              hasSample
+                ? hasAvailability
+                  ? { label: 'Find work', to: '/jobseeker/jobs', variant: 'outline' }
+                  : { label: 'Set availability', to: '/jobseeker/availability', variant: 'outline' }
+                : { label: 'Add a work sample', to: '/jobseeker/library', variant: 'outline' }
+            }
+          />
         )}
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {d.recommendedJobs?.map((j) => (
-            <Link key={j.id} to={`/jobseeker/jobs/${j.id}`}>
-              <Card className="verse-lift h-full bg-white/[.055] border-white/10 hover:bg-white/[.075]">
-                <CardContent className="p-5">
-                  <div className="flex justify-between gap-3">
-                    <Badge variant="secondary">{optionLabel(j.opportunity_kind || 'job')}</Badge>
-                    <Badge className="bg-sky-500/15 text-sky-200">{j.fitScore}% fit</Badge>
-                  </div>
-                  <h3 className="font-semibold text-lg mt-4">{j.title}</h3>
-                  <p className="text-violet-300 text-sm mt-1">{j.company}</p>
-                  <p className="text-sm text-slate-400 mt-3 flex items-center gap-1.5">
-                    <MapPin aria-hidden="true" size={16} />
-                    {[j.location, j.workplace && optionLabel(j.workplace)].filter(Boolean).join(' · ')}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        {state === 'ready' && (
+          <StatChips
+            items={[
+              { label: plural(d.applications, 'application'), value: d.applications || 0 },
+              { label: plural(d.interviews, 'interview'), value: d.interviews || 0 },
+              { label: 'saved', value: d.saved || 0 },
+            ]}
+          />
+        )}
       </main>
     </div>
   );

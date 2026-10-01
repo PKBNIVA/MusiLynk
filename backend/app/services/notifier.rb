@@ -50,7 +50,7 @@ class Notifier
     # Milestone: this hirer's first application, ever, across any of their listings.
     def milestone_first_application(employer, application)
       return unless employer && Application.joins(:job).where(jobs: { employer_id: employer.id }).count == 1
-      return unless LifecycleEmail.record!(employer, "milestone_hirer_first_application")
+      return unless LifecycleSequences.claim(employer, "milestone_hirer_first_application")
 
       LifecycleEmailDeliveryJob.perform_later(employer.id, "milestone_hirer_first_application",
         candidate: application.candidate.name, job: application.job.title)
@@ -59,7 +59,7 @@ class Notifier
     # Milestone: a musician's first response to an urgent request, ever. `minutes` is how
     # long after the request was posted they responded.
     def milestone_first_urgent_response(user, urgent_request)
-      return unless LifecycleEmail.record!(user, "milestone_musician_first_response")
+      return unless LifecycleSequences.claim(user, "milestone_musician_first_response")
 
       minutes = ((Time.current - urgent_request.created_at) / 60).round
       LifecycleEmailDeliveryJob.perform_later(user.id, "milestone_musician_first_response", minutes:)
@@ -68,7 +68,7 @@ class Notifier
     # Milestone: a hirer's 5th urgent request filled through Verse.
     def milestone_5th_filled_request(requester)
       return unless requester && requester.urgent_requests.where(status: "filled").count == 5
-      return unless LifecycleEmail.record!(requester, "milestone_hirer_5th_filled_request")
+      return unless LifecycleSequences.claim(requester, "milestone_hirer_5th_filled_request")
 
       LifecycleEmailDeliveryJob.perform_later(requester.id, "milestone_hirer_5th_filled_request")
     end
@@ -77,7 +77,7 @@ class Notifier
     # caller). Fires once, exactly at 100, so it never double-sends as views keep climbing.
     def milestone_profile_100_views(user, view_count)
       return unless view_count == 100
-      return unless LifecycleEmail.record!(user, "milestone_profile_100_views")
+      return unless LifecycleSequences.claim(user, "milestone_profile_100_views")
 
       LifecycleEmailDeliveryJob.perform_later(user.id, "milestone_profile_100_views")
     end
@@ -93,7 +93,9 @@ class Notifier
     # refreshed (and moved to the top) as further messages arrive. An email goes out only
     # when a fresh notification is raised and none was raised for this conversation in the
     # last MESSAGE_EMAIL_INTERVAL. Never copies the message body anywhere.
-    def new_message(message)
+    # `in_app: false` sends only the email, for a message that another in-app notice already covers
+    # (the first note of an urgent response, UrgentRequestsController#respond).
+    def new_message(message, in_app: true)
       conversation = message.conversation
       sender = message.sender
       recipient = conversation.candidate_id == sender.id ? conversation.employer : conversation.candidate
@@ -101,6 +103,8 @@ class Notifier
 
       link = message_link(conversation)
       body = conversation.job ? "About #{conversation.job.title}." : "Open the conversation to reply."
+      return email(recipient, "new_message", name: sender.name, job: conversation.job&.title, path: link) unless in_app
+
       Notification.transaction do
         # Serialises concurrent sends in one conversation so only one unread row exists.
         conversation.lock!
@@ -133,6 +137,8 @@ class Notifier
 
     STAGE_APPLAUSE_KIND = "stage_applause".freeze
     STAGE_COMMENT_KIND = "stage_comment".freeze
+    STAGE_RESHARE_KIND = "stage_reshare".freeze
+    STAGE_REPLY_KIND = "stage_reply".freeze
 
     # Someone applauded your post. Coalesced per post the same way new-message notifications
     # are: the recipient keeps at most one unread "applause" notice per post, refreshed as
@@ -154,6 +160,23 @@ class Notifier
         title: "New comment on your post", body: "#{actor.name} commented: #{comment.body.to_s.truncate(140)}")
     end
 
+    # Someone reshared your post; links to the reshare so the original author can see it in context.
+    def stage_reshare(original, reshare, actor)
+      recipient = original.created_by
+      return if recipient.nil? || recipient.id == reshare.created_by_user_id
+      notify(recipient, kind: STAGE_RESHARE_KIND, link: "/stage/posts/#{reshare.id}",
+        title: "Your post was reshared", body: "#{actor.name} reshared your post.")
+    end
+
+    # Someone replied to your comment. Coalesced per post like applause and comments; the post's
+    # owner, who already hears about every comment on it, is not told twice.
+    def stage_reply(post, parent, reply, actor)
+      recipient = parent.created_by
+      return if recipient.nil? || recipient.id == reply.created_by_user_id || recipient.id == post.created_by_user_id
+      coalesce(recipient, kind: STAGE_REPLY_KIND, link: "/stage/posts/#{post.id}",
+        title: "New reply to your comment", body: "#{actor.name} replied: #{reply.body.to_s.truncate(140)}")
+    end
+
     def stage_new_follower(follow, follower)
       return unless follow.followable_type == "user"
       recipient = User.find_by(id: follow.followable_id)
@@ -168,7 +191,7 @@ class Notifier
     def urgent_request_alert(urgent_request, recipient, reasons = [])
       why = reasons.presence && " Why you: #{reasons.join(' · ')}."
       notify(recipient, kind: "urgent_alert", title: "Urgent: #{urgent_request.role_name} needed in #{urgent_request.city}",
-        link: "/jobseeker/urgent", body: "#{urgent_request.title} — #{urgent_request.city}, #{urgent_request.start_at&.strftime('%d %b, %I:%M %p')}.#{why}")
+        link: "/jobseeker/urgent", body: "#{urgent_request.title} — #{urgent_request.city}, #{IndianFormat.date_time(urgent_request.start_at)}.#{why}")
       email(recipient, "urgent_request_alert", title: urgent_request.title, role: urgent_request.role_name, city: urgent_request.city,
         startAt: urgent_request.start_at&.iso8601, reasons: reasons.presence)
     end
@@ -191,8 +214,8 @@ class Notifier
     # A published job automatically closed because its application deadline passed
     # (JobsDeadlineSweepJob).
     def job_deadline_closed(job)
-      notify(job.employer, kind: "job_deadline_closed", title: "Your listing closed at its deadline",
-        link: "/hiring", body: "Your listing for #{job.title} closed at its deadline. Reopen with a new date if you're still hiring.")
+      notify(job.employer, kind: "job_deadline_closed", title: "Your opportunity closed at its deadline",
+        link: "/hiring", body: "#{job.title} closed at its deadline. Reopen it with a new date if you're still hiring.")
       email(job.employer, "job_deadline_closed", title: job.title)
     end
 
@@ -205,17 +228,26 @@ class Notifier
 
     # Admin::UsersController#grant_early_access just switched this employer onto Early Access Pro.
     def early_access_granted(subscription)
-      until_date = subscription.trial_ends_at&.strftime("%d %b %Y")
+      until_date = IndianFormat.date(subscription.trial_ends_at)
       notify(subscription.user, kind: "early_access_granted", title: "Your Early Access Pro is active",
         link: "/employer/billing", body: "No card needed. Pro features are unlocked on Verse until #{until_date}.")
       email(subscription.user, "early_access_granted", until: until_date)
+    end
+
+    # Verification::Evaluate scored a request below the summary threshold: one nudge, listing what
+    # would help (only the components still missing).
+    def verification_needs_more_proof(user, missing)
+      tips = missing.presence || ["add links to your best work"]
+      body = "Add more proof to get verified faster: #{tips.join('; ')}."
+      notify(user, kind: "verification", title: "Add more proof to get verified faster", link: "/profile", body:)
+      email(user, "verification_more_proof", tips: tips.join("; "))
     end
 
     # "How did it go with <name>?" — an urgent request was filled or a booking completed
     # (ReviewPromptSweepJob); reminder: true is the single 3-day nudge if it's still unwritten.
     def review_prompt(prompt, reminder: false)
       title = reminder ? "Still time to review #{prompt.counterpart_name}" : "How did it go with #{prompt.counterpart_name}?"
-      link = "/reviews?employerId=#{prompt.counterpart_user_id}"
+      link = review_prompt_link(prompt)
       notify(prompt.user, kind: "review_prompt", title:, link:,
         body: "Leave a quick review for #{prompt.counterpart_name} — it helps other musicians and hirers on Verse.")
       email(prompt.user, "review_prompt", name: prompt.counterpart_name, path: link, reminder: reminder.to_s)
@@ -230,6 +262,13 @@ class Notifier
     end
 
     private
+
+    # Musicians review hirers on their Reviews page (pre-selecting the hirer); a hirer has no
+    # review form, so theirs goes to their dashboard, where the finished request or booking lives.
+    def review_prompt_link(prompt)
+      return "/jobseeker/reviews?employerId=#{prompt.counterpart_user_id}" if prompt.user&.jobseeker?
+      "/employer"
+    end
 
     def notify(user, **attributes)
       return unless user

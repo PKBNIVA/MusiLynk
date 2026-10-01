@@ -165,7 +165,7 @@ globalThis.fetch = async () =>
 await assert.rejects(apiGet('/me'), (error) => error instanceof ApiError && error.status === 401);
 assert.equal(localStorage.getItem('verse_access_token'), null);
 assert.equal(sessionStorage.getItem('verse_return_to'), '/employer/messages?thread=42');
-assert.deepEqual(redirects, ['/auth/employer']);
+assert.deepEqual(redirects, ['/auth/employer?reason=expired']);
 
 // Caller cancellation remains cancellation and is not retried or mislabeled as a timeout.
 calls = 0;

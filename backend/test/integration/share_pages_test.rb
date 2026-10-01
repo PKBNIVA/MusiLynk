@@ -29,6 +29,22 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     assert_includes response.body, job.title
     assert_includes response.body, "\"@type\":\"JobPosting\""
     assert_includes response.body, "<link rel=\"canonical\""
+    assert_includes response.body, %(<meta property="og:image" content="#{FrontendUrl.base}/api/og/opportunity/#{job.id}.png">)
+    assert_includes response.body, %(<meta name="twitter:image" content="#{FrontendUrl.base}/api/og/opportunity/#{job.id}.png">)
+  end
+
+  test "share pages redirect browsers by meta refresh but not Google's crawlers" do
+    job = create_job("published")
+    get "/share/opportunities/#{job.id}", headers: { "User-Agent" => "WhatsApp/2.23" }
+    assert_includes response.body, %(http-equiv="refresh")
+    assert_equal "User-Agent", response.headers["Vary"]
+    [ "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "Mozilla/5.0 (compatible; Google-InspectionTool/1.0)" ].each do |agent|
+      get "/share/opportunities/#{job.id}", headers: { "User-Agent" => agent }
+      assert_response :success
+      refute_includes response.body, %(http-equiv="refresh")
+      assert_includes response.body, "\"@type\":\"JobPosting\""
+      assert_includes response.body, %(<link rel="canonical" href="#{FrontendUrl.base}/opportunities/#{job.id}">)
+    end
   end
 
   test "draft job share page 404s" do
@@ -58,6 +74,7 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, user.name
     assert_includes response.body, "\"@type\":\"Person\""
+    assert_includes response.body, %(<meta property="og:image" content="#{FrontendUrl.base}/api/og/professional/#{user.id}.png">)
   end
 
   test "act share page renders" do
@@ -66,6 +83,13 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Share Act"
     assert_includes response.body, "\"@type\":\"MusicGroup\""
+    assert_includes response.body, %(<meta property="og:image" content="#{FrontendUrl.base}/api/og/act/#{act.id}.png">)
+  end
+
+  test "an unknown id and the default page keep the static default image" do
+    get "/share/professionals/does-not-exist"
+    assert_response :not_found
+    assert_includes response.body, %(<meta property="og:image" content="#{FrontendUrl.base}/og-default.png">)
   end
 
   test "portfolio share page renders" do
@@ -74,5 +98,47 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Share Portfolio"
     assert_includes response.body, "\"@type\":\"ProfilePage\""
+  end
+
+  test "portfolio share page 404s for a synthetic owner and renders for an organic one" do
+    demo = create_user("Share Portfolio Demo", "jobseeker")
+    demo.update!(synthetic_batch: "demo-20260926-1200")
+    real = create_user("Share Portfolio Real", "jobseeker")
+    attrs = ->(user, title) { { owner_type: "user", owner_id: user.id, title:, slug: "share-#{SecureRandom.hex(6)}", visibility: "public" } }
+    demo_portfolio = Portfolio.create!(**attrs.call(demo, "Demo Portfolio"))
+    real_portfolio = Portfolio.create!(**attrs.call(real, "Real Portfolio"))
+
+    get "/share/p/#{real_portfolio.slug}"
+    assert_response :success
+    get "/share/p/#{demo_portfolio.slug}"
+    assert_response :not_found
+  end
+
+  test "share pages 404 for demo and hidden synthetic accounts and their jobs and acts" do
+    demo = create_user("Share Demo Musician", "jobseeker")
+    demo.update!(synthetic_batch: "demo-20260926-1200")
+    qa = create_user("Share Qa Musician", "jobseeker")
+    qa.update!(synthetic_batch: "local-qa")
+    real = create_user("Share Real Musician", "jobseeker")
+    demo_employer = create_user("Share Demo Employer", "employer")
+    demo_employer.update!(synthetic_batch: "demo-20260926-1200")
+    demo_job = Job.create!(employer: demo_employer, title: "Demo share job", company: "Demo Co", location: "Pune", kind: "Contract", genre: "Rock",
+      description: "A properly documented professional opportunity with clear responsibilities and written terms.", status: "published", published_at: Time.current)
+    act_attrs = { act_type: "band", currency: "INR", fee_basis: "event", status: "active" }
+    demo_act = Act.create!(owner: demo, name: "Demo Share Act", **act_attrs)
+    real_act = Act.create!(owner: real, name: "Real Share Act", **act_attrs)
+
+    get "/share/professionals/#{real.id}"
+    assert_response :success
+    get "/share/acts/#{real_act.id}"
+    assert_response :success
+    get "/share/professionals/#{demo.id}"
+    assert_response :not_found
+    get "/share/professionals/#{qa.id}"
+    assert_response :not_found
+    get "/share/acts/#{demo_act.id}"
+    assert_response :not_found
+    get "/share/opportunities/#{demo_job.id}"
+    assert_response :not_found
   end
 end

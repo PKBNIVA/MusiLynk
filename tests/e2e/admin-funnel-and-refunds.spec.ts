@@ -127,7 +127,7 @@ test('Commerce shows a Refunds to review list and marking one done calls the API
   await page.getByRole('tab', { name: 'Commerce' }).click();
   await expect(page.getByRole('heading', { name: 'Refunds to review', level: 2 })).toBeVisible();
   await expect(page.getByText('The Night Owls')).toBeVisible();
-  await expect(page.getByText('INR 24,720')).toBeVisible();
+  await expect(page.getByText('₹24,720')).toBeVisible();
   await expect(page.getByText('hirer cancel')).toBeVisible();
   await page.getByRole('button', { name: 'Mark done' }).click();
   await expect(page.getByText('No refunds waiting on review.')).toBeVisible();

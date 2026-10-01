@@ -5,6 +5,11 @@
 // PageMeta.tsx) still see the right head for these routes; <div id="root"> is left untouched so
 // the SPA still mounts and takes over normally.
 //
+// It also writes a head for every role x city hire page and every city rates page (the fixed lists in
+// backend/config/seo_pages.yml: 12 roles x 16 cities, 16 cities), worded exactly as HirePage.tsx and
+// RatesPage.tsx word them, so a crawler that never runs the page's JavaScript still sees the right head.
+// Those heads carry no noindex: the page adds it itself once the API says it is too thin to index.
+//
 // Runs at the end of `npm run build` (see package.json) for the public build only — skipped when
 // VITE_APP_TARGET=admin, which never calls this script (build:admin invokes `vite build` directly).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -27,11 +32,55 @@ export const ROUTES = {
   '/guide': ['How to use Verse', 'Step-by-step guides for music professionals, hiring teams, bands and event bookers on Verse.'],
   '/about': ['About Verse', 'Verse connects musicians, bands and hiring teams for gigs, sessions and live bookings across India.'],
   '/safety': ['Trust & Safety', 'How Verse verifies professionals, protects payments and keeps the marketplace safe.'],
+  '/credits': ['Photo credits', 'The photographers and licences behind the pictures on Verse, from Wikimedia Commons under Creative Commons and public-domain terms.'],
   '/contact': ['Contact Verse', 'Get in touch with the Verse team.'],
   '/community-guidelines': ['Community guidelines', 'The standards Verse expects from every musician, band and hiring team on the platform.'],
   '/terms': ['Terms of service', "Verse's terms of service."],
   '/privacy': ['Privacy policy', "Verse's privacy policy."],
 };
+
+/** The `roles:` and `cities:` maps of backend/config/seo_pages.yml (flat `slug: Label` lines). */
+export function readSeoPages(yaml) {
+  const lists = { roles: [], cities: [] };
+  let current = null;
+  for (const line of yaml.split(/\r?\n/)) {
+    if (/^\s*(#|$)/.test(line)) continue;
+    const section = line.match(/^(roles|cities):\s*$/);
+    if (section) {
+      current = section[1];
+      continue;
+    }
+    const entry = line.match(/^\s+([a-z0-9-]+):\s*(.+?)\s*$/);
+    if (entry && current) lists[current].push([entry[1], entry[2]]);
+    else if (/^\S/.test(line)) current = null;
+  }
+  return lists;
+}
+
+const lowerRole = (label) => (label === 'DJ' ? label : label.toLowerCase());
+
+/** path -> [title, description] for the hire and rates pages, as the pages set them client-side. */
+export function seoPageRoutes({ roles, cities }) {
+  const routes = {};
+  for (const [roleSlug, role] of roles) {
+    for (const [citySlug, city] of cities) {
+      routes[`/hire/${roleSlug}/${citySlug}`] = [
+        `Hire a verified ${lowerRole(role)} in ${city} | Verse`,
+        `Browse verified ${lowerRole(role)}s in ${city} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`,
+      ];
+    }
+  }
+  for (const [citySlug, city] of cities) {
+    routes[`/rates/${citySlug}`] = [
+      `What musicians charge in ${city} | Verse`,
+      `Median session, show and day rates reported by verified and unverified professionals on Verse in ${city}. A guide, not a quote.`,
+    ];
+  }
+  return routes;
+}
+
+/** PageMeta.tsx cuts a description at 160 characters; do the same so the head matches the page. */
+const clip = (text) => (text.length > 160 ? `${text.slice(0, 157).trimEnd()}…` : text);
 
 function pageHead({ title, description, canonical, image }) {
   return `    <title>${title}</title>
@@ -58,7 +107,13 @@ export function render(indexHtml, path, [title, description]) {
   const canonical = `${BASE_URL}${path}`;
   const image = `${BASE_URL}/og-default.png`;
   const head = pageHead({ title: escapeHtml(title), description: escapeHtml(description), canonical, image });
-  let html = indexHtml.replace(/<title>[^<]*<\/title>\s*/, '').replace(/<meta name="description"[^>]*>\s*/, '');
+  // index.html carries document-level defaults (title, description, og:*, twitter:*); a page's own
+  // head replaces them rather than repeating them.
+  let html = indexHtml
+    .replace(/<title>[^<]*<\/title>\s*/, '')
+    .replace(/<meta\s+name="description"[^>]*>\s*/, '')
+    .replace(/<meta\s+(?:property="og:|name="twitter:)[^>]*>\s*/g, '')
+    .replace(/<link\s+rel="canonical"[^>]*>\s*/, '');
   html = html.replace('</head>', `${head}`);
   return html;
 }
@@ -77,10 +132,14 @@ function main(distDir = join(root, 'dist')) {
   }
   const indexHtml = readFileSync(indexPath, 'utf8');
 
-  for (const [path, meta] of Object.entries(ROUTES)) {
+  const seoYaml = join(root, 'backend', 'config', 'seo_pages.yml');
+  const seoRoutes = existsSync(seoYaml) ? seoPageRoutes(readSeoPages(readFileSync(seoYaml, 'utf8'))) : {};
+  const routes = { ...ROUTES, ...seoRoutes };
+
+  for (const [path, meta] of Object.entries(routes)) {
     const outDir = path === '/' ? distDir : join(distDir, path);
     mkdirSync(outDir, { recursive: true });
-    writeFileSync(join(outDir, 'index.html'), render(indexHtml, path, meta));
+    writeFileSync(join(outDir, 'index.html'), render(indexHtml, path, [meta[0], clip(meta[1])]));
   }
 
   const robotsPath = join(distDir, 'robots.txt');
@@ -88,7 +147,9 @@ function main(distDir = join(root, 'dist')) {
     writeFileSync(robotsPath, rewriteRobots(readFileSync(robotsPath, 'utf8'), BASE_URL));
   }
 
-  console.log(`prerender-heads: wrote ${Object.keys(ROUTES).length} static route heads to ${distDir}`);
+  console.log(
+    `prerender-heads: wrote ${Object.keys(routes).length} route heads (${Object.keys(seoRoutes).length} hire and rates pages) to ${distDir}`,
+  );
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

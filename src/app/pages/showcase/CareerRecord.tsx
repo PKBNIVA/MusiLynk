@@ -260,7 +260,6 @@ export default function CareerRecord() {
   return (
     <ShowcaseShell
       title="Career record"
-      description="Your experience, credits, education, skills, gear, languages, links and awards. Enter each once; resumes pick from here."
       help={SHOWCASE_HELP.career}
       back={{ to: `${base}/resumes`, label: 'Resumes' }}
       actions={

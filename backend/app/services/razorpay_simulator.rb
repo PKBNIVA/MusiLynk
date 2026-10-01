@@ -23,7 +23,6 @@ class RazorpaySimulator
     end
   end
 
-  MONTH = 30 * 24 * 3600
   TRIAL_AUTH_PAISE = 500
   SUBSCRIPTION_ACTIONS = %w[activate charge pending halt pause resume cancel complete].freeze
 
@@ -93,7 +92,7 @@ class RazorpaySimulator
       next { dismissed: true, events: [] } if outcome.to_s == "dismiss"
 
       trial = sub["start_at"].to_i > now
-      amount = trial ? TRIAL_AUTH_PAISE : plan_amount!(sub["plan_id"])
+      amount = trial ? TRIAL_AUTH_PAISE : payable_amount(sub)
       payment = new_payment(amount:, currency: "INR", order_id: nil, notes: sub["notes"], description: "Subscription #{sub["id"]}", invoice_id: nil)
       payment["subscription_id"] = sub["id"]
       if outcome.to_s == "fail"
@@ -270,7 +269,7 @@ class RazorpaySimulator
           "auth_attempts" => 0, "total_count" => total, "paid_count" => 0, "customer_notify" => body["customer_notify"].to_i == 1,
           "created_at" => now, "expire_by" => nil, "short_url" => "https://rzp.io/i/#{SecureRandom.alphanumeric(8)}",
           "has_scheduled_changes" => false, "change_scheduled_at" => nil, "source" => "api", "payment_method" => nil,
-          "offer_id" => nil, "remaining_count" => total
+          "offer_id" => body["offer_id"].presence, "remaining_count" => total
         }
         deep(@subscriptions[id])
       end
@@ -347,11 +346,28 @@ class RazorpaySimulator
   end
 
   def plan_amount!(plan_id)
-    code = Billing::BillingController::PLANS.keys.find { ENV["RAZORPAY_PLAN_#{_1.upcase}"].presence == plan_id }
-    monthly = code && Billing::BillingController::PLANS.dig(code, :monthly)
-    raise Error.new(400, "The id provided does not exist", field: "plan_id") unless monthly.to_i.positive?
+    code, interval = PlanPricing.plan_for_provider_id(plan_id)
+    rupees = code && PlanPricing.amount(code, interval)
+    raise Error.new(400, "The id provided does not exist", field: "plan_id") unless rupees.to_i.positive?
 
-    monthly * 100
+    rupees * 100
+  end
+
+  # What one charge of `sub` costs in paise: the plan price, less the code's percentage while
+  # its discounted periods last. (Live Razorpay does this through the Offer; the simulator reads
+  # the percentage the checkout put in the subscription notes.)
+  def payable_amount(sub)
+    amount = plan_amount!(sub["plan_id"])
+    percent = sub.dig("notes", "discount_percent").to_i
+    periods = sub.dig("notes", "discount_periods").presence&.to_i
+    return amount unless percent.positive? && (periods.nil? || sub["paid_count"] < periods)
+
+    (amount * (100 - percent) / 100.0).round
+  end
+
+  def period_seconds(sub)
+    _code, interval = PlanPricing.plan_for_provider_id(sub["plan_id"])
+    PlanPricing::PERIOD_SECONDS.fetch(interval || "monthly")
   end
 
   def new_payment(amount:, currency:, order_id:, notes:, description:, invoice_id:)
@@ -382,7 +398,7 @@ class RazorpaySimulator
   end
 
   def charge_payment(sub, fail: false)
-    payment = new_payment(amount: plan_amount!(sub["plan_id"]), currency: "INR", order_id: nil, notes: sub["notes"], description: "Subscription #{sub["id"]}", invoice_id: next_id("inv"))
+    payment = new_payment(amount: payable_amount(sub), currency: "INR", order_id: nil, notes: sub["notes"], description: "Subscription #{sub["id"]}", invoice_id: next_id("inv"))
     payment["subscription_id"] = sub["id"]
     fail ? fail_payment!(payment) : capture_payment!(payment)
     payment
@@ -390,7 +406,7 @@ class RazorpaySimulator
 
   def start_cycle!(sub, _payment)
     start = [sub["current_end"].to_i, now].max
-    sub.merge!("status" => "active", "current_start" => start, "current_end" => start + MONTH, "charge_at" => start + MONTH,
+    sub.merge!("status" => "active", "current_start" => start, "current_end" => start + period_seconds(sub), "charge_at" => start + period_seconds(sub),
                "paid_count" => sub["paid_count"] + 1, "remaining_count" => [sub["total_count"] - sub["paid_count"] - 1, 0].max)
   end
 

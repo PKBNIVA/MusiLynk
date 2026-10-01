@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { apiGet } from '../lib/api';
@@ -22,11 +23,7 @@ export default function CareerResources() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-5xl mx-auto px-6 pt-28 pb-16">
-        <div className="text-xs uppercase tracking-[.22em] text-violet-300 mb-2">Career library</div>
-        <h1 className="text-4xl font-bold">Learn the business behind the music</h1>
-        <p className="text-slate-400 mt-2 mb-7">
-          Practical career education around credits, rights, metadata, portfolios, hiring and professional operations.
-        </p>
+        <PageHeader title="Resources" />
         {state === 'loading' && <p className="text-slate-400">Loading resources…</p>}
         {state === 'error' && (
           <div role="alert" className="rounded-xl border border-rose-400/20 bg-rose-500/10 p-5">

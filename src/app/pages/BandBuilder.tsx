@@ -1,6 +1,7 @@
-import { EmptyState } from '../components/help/EmptyState';
+import { EmptyState } from '../components/kit/EmptyState';
 import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
+import { PageHeader } from '../components/PageHeader';
 import { apiGet, apiPost } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -143,14 +144,7 @@ export default function BandBuilder() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
-        <div className="mb-7">
-          <div className="text-xs uppercase tracking-[.2em] text-violet-300">Roster builder</div>
-          <h1 className="text-3xl sm:text-4xl font-bold mt-2">Build your band or live team</h1>
-          <p className="text-slate-400 mt-2 max-w-3xl">
-            Define the concept first, then the exact seats you need—lead singer, bassist, tabla player, playback
-            engineer, FOH, technical director or any other music/live-production role.
-          </p>
-        </div>
+        <PageHeader title="Band builder" />
         <div className="grid lg:grid-cols-[.85fr_1.15fr] gap-6">
           <Card className="bg-white/[.055] border-white/10">
             <CardContent className="p-6">

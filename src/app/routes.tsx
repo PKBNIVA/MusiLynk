@@ -32,7 +32,6 @@ function publicRoutes(): RouteObject[] {
   const JobDetails = L(() => import('./pages/JobDetails'));
   const ProfileSetup = L(() => import('./pages/ProfileSetup'));
   const CompanyProfile = L(() => import('./pages/CompanyProfile'));
-  const Portfolio = L(() => import('./pages/Portfolio'));
   const ApplicationTracking = L(() => import('./pages/ApplicationTracking'));
   const EmployerApplications = L(() => import('./pages/EmployerApplications'));
   const PostJob = L(() => import('./pages/PostJob'));
@@ -404,12 +403,9 @@ function publicRoutes(): RouteObject[] {
           ),
         },
         {
+          // The old "Work samples" page was folded into My work; keep the address working.
           path: 'portfolio',
-          element: (
-            <P roles={['jobseeker']}>
-              <Portfolio />
-            </P>
-          ),
+          element: <Redirect to="/jobseeker/library" />,
         },
         {
           path: 'applications',

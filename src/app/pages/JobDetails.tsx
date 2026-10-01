@@ -338,7 +338,7 @@ export default function JobDetails() {
                         {job.portfolioRequired && (
                           <p className="text-xs text-amber-200/90 mt-2">
                             This opportunity requires at least one portfolio item.{' '}
-                            <Link to="/jobseeker/portfolio" className="underline">
+                            <Link to="/jobseeker/library" className="underline">
                               Add work samples
                             </Link>
                           </p>

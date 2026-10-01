@@ -528,7 +528,7 @@ export default function EmployerApplications() {
                           {EMAIL_VISIBLE_STATUSES.includes(a.status) && a.candidateEmail && (
                             <div className="text-xs text-slate-400 mt-1 break-all">
                               <a href={`mailto:${a.candidateEmail}`} className="underline hover:text-white">
-                                {a.candidateEmail}
+                                Email this applicant
                               </a>
                             </div>
                           )}

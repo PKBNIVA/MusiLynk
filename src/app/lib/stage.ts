@@ -320,7 +320,7 @@ export function splitHashtags(body: string): TextSegment[] {
 
 export type FeedEntry = { kind: 'post'; post: StagePost } | { kind: 'system'; posts: StagePost[] };
 
-const isSystemPost = (post: StagePost) => post.kind === 'system' || Boolean(post.author.system);
+export const isSystemPost = (post: StagePost) => post.kind === 'system' || Boolean(post.author.system);
 
 /**
  * The feed as render entries: a run of two or more consecutive Verse system posts ("X joined",

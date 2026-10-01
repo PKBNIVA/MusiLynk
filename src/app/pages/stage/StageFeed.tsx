@@ -12,7 +12,7 @@ import { EventStrip } from '../../components/stage/EventStrip';
 import { PostCard } from '../../components/stage/PostCard';
 import { SystemRoundup } from '../../components/stage/SystemRoundup';
 import { useFeedList } from '../../components/stage/useFeedList';
-import { fetchFeed, authorPath, groupFeed } from '../../lib/stage';
+import { fetchFeed, authorPath, groupFeed, isSystemPost } from '../../lib/stage';
 import { usePageMeta } from '../../components/PageMeta';
 
 export default function StageFeed() {
@@ -111,6 +111,12 @@ export default function StageFeed() {
               </li>
             ))}
           </ul>
+        )}
+
+        {!loading && posts.length > 0 && posts.every(isSystemPost) && (
+          <p className="mt-4 text-center text-sm text-slate-400">
+            Nothing from musicians yet. Share an update above to start the conversation.
+          </p>
         )}
 
         <div ref={sentinelRef} />

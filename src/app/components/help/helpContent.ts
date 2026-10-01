@@ -49,7 +49,7 @@ export const HELP: Record<string, { id: string; title: string; steps: HelpStep[]
       {
         icon: PenLine,
         title: 'Post an opportunity',
-        text: 'Four short steps. Clear pay and dates get better applicants.',
+        text: 'Three short steps. Clear pay and dates get better applicants.',
       },
       {
         icon: ClipboardList,

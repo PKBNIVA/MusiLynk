@@ -324,7 +324,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
               )}
             </section>
             <div className="mt-8">
-              {user ? (
+              {own ? null : user ? (
                 <Button variant="ghost" size="sm" onClick={() => setReporting(true)}>
                   <Flag size={15} aria-hidden="true" className="mr-2" />
                   Report profile

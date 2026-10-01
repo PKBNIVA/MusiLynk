@@ -43,6 +43,8 @@ import {
 } from './ui/dropdown-menu';
 import { UserAvatar } from './kit/UserAvatar';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { SIGN_IN_CODE_TOAST } from '../lib/authToasts';
 import { apiGet } from '../lib/api';
 import { UNREAD_CHANGED_EVENT, useVisiblePolling } from '../lib/usePolling';
 import { TourLauncher } from './ProductTour';
@@ -66,6 +68,10 @@ export function Navigation() {
   const isJobSeeker = user?.role === 'jobseeker';
   const baseUrl = isJobSeeker ? '/jobseeker' : '/employer';
   const [unread, setUnread] = useState(0);
+  // The "check your email" toast is stale once the person is in and moving between pages (J-26).
+  useEffect(() => {
+    toast.dismiss(SIGN_IN_CODE_TOAST);
+  }, [location.pathname]);
   const [unreadMessages, setUnreadMessages] = useState(0);
   // Unread badges: fetched on mount and on route change, polled every 10 s while the tab is visible,
   // and refreshed immediately when a page reports that the viewer read something.
@@ -147,17 +153,15 @@ export function Navigation() {
         { path: `${baseUrl}/build-my-crew`, icon: Users, label: 'Build my crew' },
       ],
     },
+    // Hirers book musicians; performing tools (acts, availability) belong to the musician workspace (J-16).
     {
-      label: 'Book & perform',
+      label: 'Book talent',
       icon: Mic2,
       items: [
         { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
         { path: `${baseUrl}/bookings`, icon: CalendarDays, label: 'Bookings' },
-        { path: `${baseUrl}/acts`, icon: Music, label: 'My acts' },
         { path: `${baseUrl}/band-builder`, icon: UserRoundPlus, label: 'Band builder' },
         { path: `${baseUrl}/urgent`, icon: Zap, label: 'Urgent replacement' },
-        { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
-        { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Page portfolios' },
       ],
     },
   ];

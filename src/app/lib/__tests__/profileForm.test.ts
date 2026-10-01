@@ -1,11 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { blockStorage } from './helpers';
-import {
-  forgetPendingVerification,
-  normalizeWebAddress,
-  pendingVerificationSince,
-  rememberPendingVerification,
-} from '../profileForm';
+import { describe, expect, it } from 'vitest';
+import { normalizeWebAddress } from '../profileForm';
 
 describe('normalizeWebAddress', () => {
   it.each([
@@ -30,34 +24,5 @@ describe('normalizeWebAddress', () => {
 
   it('turns blank into blank', () => {
     expect(normalizeWebAddress('   ')).toBe('');
-  });
-});
-
-describe('pending verification', () => {
-  beforeEach(() => localStorage.clear());
-
-  it('remembers a request for 30 days, per person', () => {
-    const sent = new Date('2026-10-01T09:00:00Z');
-    rememberPendingVerification('u1', sent);
-    expect(pendingVerificationSince('u1', sent.getTime() + 86_400_000)).toBe(sent.toISOString());
-    expect(pendingVerificationSince('u2', sent.getTime())).toBeNull();
-    expect(pendingVerificationSince('u1', sent.getTime() + 31 * 86_400_000)).toBeNull();
-  });
-
-  it('forgets on request', () => {
-    rememberPendingVerification('u1');
-    forgetPendingVerification('u1');
-    expect(pendingVerificationSince('u1')).toBeNull();
-  });
-
-  it('never throws when storage is blocked', () => {
-    const restore = blockStorage('localStorage');
-    try {
-      expect(() => rememberPendingVerification('u1')).not.toThrow();
-      expect(pendingVerificationSince('u1')).toBeNull();
-      expect(() => forgetPendingVerification('u1')).not.toThrow();
-    } finally {
-      restore();
-    }
   });
 });

@@ -55,13 +55,15 @@ class TalentController < ApplicationController
     return unless require_scalar_params!(:ids)
     ids = params[:ids].to_s.split(",").map(&:strip).reject(&:blank?).uniq.first(4)
     return render_error("Choose at least two professionals to compare.", :bad_request) if ids.length < 2
+    shortlisted = TalentShortlist.where(employer: current_user, candidate_id: ids).pluck(:candidate_id).to_set
     professionals = listing_scope.where(id: ids).map do |candidate|
       availability = AvailabilityWindow.where(user: candidate, status: "available").where("end_at > ?", Time.current).order(:start_at).limit(5).map do |window|
         { startAt: window.start_at, endAt: window.end_at, status: window.status, city: window.city }
       end
       public_profile(candidate).merge(
         "portfolio" => candidate.portfolio_items.where(visibility: "public").limit(8).map(&:api_json),
-        "availability" => availability
+        "availability" => availability,
+        "shortlisted" => shortlisted.include?(candidate.id)
       )
     end
     render json: { professionals: }

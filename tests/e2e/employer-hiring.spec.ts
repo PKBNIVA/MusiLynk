@@ -122,7 +122,8 @@ test('a saved draft can be reopened from the dashboard, edited and submitted for
   await page.getByLabel(/^Description/).fill(description);
   await page.getByRole('button', { name: 'Submit for review' }).click();
 
-  await expect(page).toHaveURL(/\/employer$/);
+  // The page says what happens next instead of dropping the poster on the dashboard.
+  await expect(page.getByTestId('submitted-card')).toContainText('What happens next');
   // Moving between steps saves the draft along the way; the last save is the submission.
   const patch = calls.filter((c) => c.method === 'PATCH' && c.path === '/employer/jobs/job-draft').at(-1);
   expect(patch?.body).toMatchObject({ status: 'pending', location: 'Mumbai', description, skills: ['Guitar'] });

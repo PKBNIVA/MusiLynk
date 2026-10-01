@@ -347,7 +347,7 @@ class AuthController < ApplicationController
 
   def me
     return unless authenticate!
-    render json: { user: public_user(current_user) }
+    render json: { user: public_user(current_user).merge(verification_state(current_user)) }
   end
 
   def request_verification
@@ -414,6 +414,13 @@ class AuthController < ApplicationController
   end
 
   private
+
+  # Whether a verification request is waiting for review, and since when (the profile page's
+  # "Pending review" state). Unverified accounts only: an approved account has nothing pending.
+  def verification_state(user)
+    pending = user.profile&.verified? ? nil : user.verification_requests.where(status: "pending").order(created_at: :desc).first
+    { "verificationPending" => pending.present?, "verificationRequestedAt" => pending&.created_at }
+  end
 
   def find_usable_reset_token(raw)
     return nil unless raw.is_a?(String) && raw.present?

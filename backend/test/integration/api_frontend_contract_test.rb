@@ -43,7 +43,7 @@ class ApiFrontendContractTest < ActionDispatch::IntegrationTest
     ["Bookings", :js, "/api/bookings/{requested_booking}/payments", %w[payments], { "payments" => %w[id amount currency status kind] }],
     ["Workspace", :js, "/api/organizations", %w[organizations], { "organizations" => %w[id name memberCount memberRole] }],
     ["Workspace", :js, "/api/organizations/{org}/members", %w[members], { "members" => %w[id name email role] }],
-    ["UrgentRequests", :js, "/api/urgent-requests", %w[requests], { "requests" => %w[id title role_name instrument city start_at currency status requester_id requesterVerified myResponse responseCount] }],
+    ["UrgentRequests", :js, "/api/urgent-requests?scope=mine", %w[requests], { "requests" => %w[id title role_name instrument city start_at currency status requester_id requesterVerified myResponse responseCount conversationId] }],
     ["UrgentRequests", :js, "/api/urgent-requests/{urgent}/responses", %w[responses], { "responses" => %w[user_id name headline message rate] }],
     ["BandBuilder", :js, "/api/band-projects", %w[projects], { "projects" => %w[id name city genres roles], "projects.roles" => %w[id role_name instrument count_needed compensation opportunity_id] }],
     ["BuildMyCrew", :js, "/api/crew-plans", %w[plans], { "plans" => %w[id title event_type city audience_size roles], "plans.roles" => %w[category roleName countNeeded priority rationale] }],

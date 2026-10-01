@@ -10,6 +10,7 @@ import { consumeReturnTo, GOOGLE_AUTH_ERROR_MESSAGES, getSignInMethods, requestS
 import { GoogleButton } from '../components/auth/GoogleButton';
 import { submitUrgentDraft } from '../lib/urgentDraft';
 import { toast } from 'sonner';
+import { SIGN_IN_CODE_TOAST } from '../lib/authToasts';
 import { BrandMark } from '../components/BrandMark';
 import { errorCode, errorMessage } from '../lib/errors';
 import { useSubmitOnce } from '../lib/formErrors';
@@ -146,7 +147,7 @@ export default function AuthPage() {
     setError('');
     setCodeStep('code');
     startCooldown();
-    toast.success('Check your email for a 6-digit code');
+    toast.success('Check your email for a 6-digit code', { id: SIGN_IN_CODE_TOAST });
   };
 
   /* Ref-based guard: rapid clicks on Sign in / Create account send one request (FORM-22). */
@@ -205,7 +206,7 @@ export default function AuthPage() {
       setCode('');
       setCodeStep('code');
       startCooldown();
-      toast.success('Check your email for a 6-digit code');
+      toast.success('Check your email for a 6-digit code', { id: SIGN_IN_CODE_TOAST });
     } catch (e: unknown) {
       if (errorCode(e) === 'OTP_UNAVAILABLE') {
         setCodesAvailable(false);

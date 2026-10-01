@@ -23,6 +23,7 @@ import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import type { Portfolio, Resume } from '../lib/showcase';
 import { ShareToStageButton } from '../components/stage/ShareToStageButton';
 import { FEATURE_STAGE } from '../lib/features';
+import { OwnerJobPanel } from '../components/OwnerJobPanel';
 
 const COVER_MAX = 5_000;
 const answerId = (i: number) => `screening-${i}`;
@@ -143,7 +144,10 @@ export default function JobDetails() {
         )}
       </div>
     );
-  const canApply = user?.role === 'jobseeker' && job.status !== 'closed' && !job.applied;
+  // The poster sees their own listing's status and actions, not the apply panel (J-12).
+  const isOwner = Boolean(user && job.employer_id === user.id);
+  const asSeeker = user?.role === 'jobseeker' && !isOwner;
+  const canApply = asSeeker && job.status !== 'closed' && !job.applied;
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -221,12 +225,19 @@ export default function JobDetails() {
                 )}
               </CardContent>
             </Card>
-            {user?.role === 'jobseeker' && <SimilarJobs job={job} basePath="/jobseeker/jobs" />}
+            {asSeeker && <SimilarJobs job={job} basePath="/jobseeker/jobs" />}
           </div>
           <aside className="space-y-4">
             <Card id="apply-panel" className="bg-white/[.06] border-white/10 lg:sticky lg:top-24">
               <CardContent className="p-5">
-                {user?.role === 'jobseeker' && (
+                {isOwner && (
+                  <OwnerJobPanel
+                    job={job}
+                    base={user?.role === 'jobseeker' ? '/jobseeker' : '/employer'}
+                    onChanged={load}
+                  />
+                )}
+                {asSeeker && (
                   <div className="flex gap-2 mb-5">
                     <Button variant="outline" className="flex-1" onClick={save}>
                       {job.saved ? (
@@ -241,12 +252,12 @@ export default function JobDetails() {
                     </Button>
                   </div>
                 )}
-                {job.status === 'closed' && (
+                {job.status === 'closed' && !isOwner && (
                   <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-slate-300">
                     This listing has closed.
                   </div>
                 )}
-                {user?.role === 'jobseeker' && job.status !== 'closed' && (
+                {asSeeker && job.status !== 'closed' && (
                   <>
                     {job.applied ? (
                       <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/20 p-4 text-emerald-200">
@@ -358,7 +369,7 @@ export default function JobDetails() {
                 )}
                 <div className="text-xs text-slate-500 mt-5 pt-4 border-t border-white/10">
                   <b className="text-slate-400">Trust note:</b>{' '}
-                  {user?.role === 'jobseeker'
+                  {asSeeker
                     ? 'Never pay an application/audition fee through private channels. Use Report if listing terms change materially or feel unsafe.'
                     : 'Only publish terms your organization is prepared to honor, and keep applicant communication on Verse.'}
                 </div>

@@ -174,7 +174,7 @@ export function Navigation() {
           items: [
             { path: `${baseUrl}/profile`, icon: User, label: 'Profile & verification' },
             { path: `${baseUrl}/review`, icon: Inbox, label: 'Review changes' },
-            { path: `${baseUrl}/reviews`, icon: Star, label: 'Employer reviews' },
+            { path: `${baseUrl}/reviews`, icon: Star, label: 'Hirer reviews' },
           ],
         },
         {
@@ -461,11 +461,14 @@ export function Navigation() {
                     How to use Verse
                   </Link>
                 </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-rose-500">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
+                {/* Pinned to the bottom of the scrolling menu so Sign out is on screen on a phone. */}
+                <div className="sticky bottom-0 -mx-1 -mb-1 bg-popover px-1 pb-1">
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-rose-500">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>

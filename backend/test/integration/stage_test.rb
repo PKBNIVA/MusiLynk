@@ -392,6 +392,16 @@ class StageTest < ActionDispatch::IntegrationTest
     assert upload.referenced?
   end
 
+  test "media of a deleted stage post no longer counts as referenced" do
+    upload = Upload.create!(user: @alice, storage: "s3", key: "uploads/#{@alice.id}/a/q.jpg", filename: "q.jpg", content_type: "image/jpeg",
+      byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/q.jpg", created_at: 3.days.ago)
+    gone = Post.create!(author_type: "user", author_id: @alice.id, created_by_user_id: @alice.id, body: "Pic", media: [{ uploadId: upload.id, type: "image" }])
+    assert upload.referenced?
+    gone.update!(status: "deleted")
+    assert_not upload.referenced?
+    assert_includes Upload.unreferenced, upload
+  end
+
   test "resharing notifies the original author, but not when resharing your own post" do
     original = Post.create!(author_type: "user", author_id: @alice.id, created_by_user_id: @alice.id, body: "Original", visibility: "public")
     post "/api/stage/posts", params: { body: "Worth a look", resharedPostId: original.id }, headers: auth(@bob), as: :json

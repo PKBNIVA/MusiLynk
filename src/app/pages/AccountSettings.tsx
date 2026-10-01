@@ -443,7 +443,7 @@ function PasswordCard({ user, onSaved }: { user: User; onSaved: (u: User) => voi
       await apiPost('/account/password', firstPassword ? { newPassword } : { currentPassword, newPassword });
       toast.success(
         firstPassword
-          ? 'Password set. You can now sign in with it or with an emailed code.'
+          ? 'Password set. You can now sign in with it as well.'
           : 'Password updated. Other sessions were signed out.',
       );
       if (firstPassword) onSaved({ ...user, passwordSet: true });
@@ -468,7 +468,7 @@ function PasswordCard({ user, onSaved }: { user: User; onSaved: (u: User) => voi
         <form onSubmit={save} className="space-y-3" aria-busy={busy}>
           {firstPassword ? (
             <p className="text-sm text-slate-300">
-              You sign in with an emailed code. Add a password if you would like to sign in with one as well.
+              You have no password yet. Add one if you would like to sign in with a password too.
             </p>
           ) : (
             <div>
@@ -505,10 +505,12 @@ function PasswordCard({ user, onSaved }: { user: User; onSaved: (u: User) => voi
               {error}
             </p>
           )}
-          <div className="flex items-center gap-3">
-            <ShieldCheck size={15} className="text-slate-500 shrink-0" aria-hidden="true" />
-            <p className="text-xs text-slate-400">Changing your password signs out every other device.</p>
-          </div>
+          {!firstPassword && (
+            <div className="flex items-center gap-3">
+              <ShieldCheck size={15} className="text-slate-500 shrink-0" aria-hidden="true" />
+              <p className="text-xs text-slate-400">Changing your password signs out every other device.</p>
+            </div>
+          )}
           <Button type="submit" disabled={busy || (!firstPassword && !currentPassword) || !strong} aria-busy={busy}>
             {busy ? (firstPassword ? 'Saving…' : 'Updating…') : firstPassword ? 'Set password' : 'Update password'}
           </Button>

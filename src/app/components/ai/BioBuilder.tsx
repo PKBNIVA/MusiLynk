@@ -43,7 +43,7 @@ const joinAnd = (values: string[]) =>
   values.length <= 1 ? values[0] || '' : `${values.slice(0, -1).join(', ')} and ${values[values.length - 1]}`;
 
 function roleLine(roles: string[]) {
-  return roles.length ? joinAnd(roles) : 'music professional';
+  return roles.length ? joinAnd(roles) : 'musician';
 }
 
 /** Pure and deterministic: the same input always builds the same three variants. Exported so it
@@ -93,7 +93,7 @@ export function buildBioVariants(input: BioBuilderInput): BioBuilderVariant[] {
   return (['plain', 'warm', 'confident'] as const).map((tone) => ({
     tone,
     label: TONE_LABELS[tone],
-    headline: capitalize(headlines[tone]) || 'Music professional',
+    headline: capitalize(headlines[tone]) || 'Musician',
     bio: bios[tone],
   }));
 }

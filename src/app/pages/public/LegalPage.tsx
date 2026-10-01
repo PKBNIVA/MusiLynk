@@ -50,7 +50,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
     items: [
       [
         'What Verse does',
-        'Verse helps music professionals show proof of work, discover opportunities, build teams, book talent and manage professional relationships without forcing every use case into a generic job board.',
+        'Verse helps musicians show proof of work, discover opportunities, build teams, book talent and manage professional relationships without forcing every use case into a generic job board.',
       ],
       [
         'Who it is for',
@@ -94,7 +94,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
     items: [
       [
         'Data we process',
-        'Account details; professional profile and portfolio data; applications; messages; availability; booking and billing records; verification and safety reports; and device, session and operational logs.',
+        'Account details; musician profile and portfolio data; applications; messages; availability; booking and billing records; verification and safety reports; and device, session and operational logs.',
       ],
       [
         'Why we use it',
@@ -102,7 +102,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Public information',
-        'Fields deliberately published on public profiles, acts and opportunities may be visible to search engines. Private contact details and internal recruiter information are not intended to be public.',
+        'Fields deliberately published on public profiles, acts and opportunities may be visible to search engines. Private contact details and internal hirer notes are not intended to be public.',
       ],
       [
         'Your data and your account',
@@ -269,7 +269,7 @@ function dynamicItems(key: string, policy: LegalPolicy | null): [string, string]
     return [
       [
         'Data Protection (DPDP Act, 2023) — Draft, pending legal review',
-        'What we collect: account and contact details, professional profile and portfolio data, booking and payment records, and device/session logs. Purpose: to provide the service, process bookings and payments, prevent abuse and meet legal obligations. Consent: creating an account and using booking/payment features is your consent to this processing for those purposes; where a feature asks for separate consent (e.g. optional analytics), it is requested there. Withdrawal: you can withdraw consent for optional processing at any time from account settings, and delete your account entirely (see "Your data and your account" above) — Verse then deletes what the law allows it to delete and keeps only what tax and company law requires.',
+        'What we collect: account and contact details, musician profile and portfolio data, booking and payment records, and device/session logs. Purpose: to provide the service, process bookings and payments, prevent abuse and meet legal obligations. Consent: creating an account and using booking/payment features is your consent to this processing for those purposes; where a feature asks for separate consent (e.g. optional analytics), it is requested there. Withdrawal: you can withdraw consent for optional processing at any time from account settings, and delete your account entirely (see "Your data and your account" above) — Verse then deletes what the law allows it to delete and keeps only what tax and company law requires.',
       ],
       grievanceOfficerItem(policy.legal),
     ];

@@ -52,6 +52,7 @@ import {
   whatsappShareUrl,
 } from '../lib/promo';
 import { loadAiUsage, type AiUsage } from '../lib/ai';
+import { formatDate, formatMoney } from '../lib/format';
 
 type Summary = {
   status: 'pending' | 'trialing' | 'active' | 'cancelling' | 'past_due' | 'cancelled' | 'early_access';
@@ -96,10 +97,8 @@ const PAYMENT_MODE_NOTICE: Partial<Record<PaymentMode, [string, string]>> = {
   ],
 };
 
-const day = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-const money = (currency: string, value: number) =>
-  currency === 'INR' ? inr(value) : `${currency} ${Number(value).toLocaleString('en-IN')}`;
+const day = (value?: string | null) => formatDate(value);
+const money = (currency: string, value: number) => formatMoney(value, currency);
 
 const STATUS_LABEL: Record<Summary['status'], string> = {
   pending: 'Setup incomplete',

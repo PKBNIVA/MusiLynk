@@ -124,13 +124,13 @@ export function PublicNav() {
                   <DropdownMenuItem asChild>
                     <Link to="/auth/jobseeker">
                       <LogIn size={16} className="mr-2" />
-                      Sign in as a professional
+                      Sign in as a musician
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/auth/employer">
                       <Briefcase size={16} className="mr-2" />
-                      Sign in as an employer
+                      Sign in as a hirer
                     </Link>
                   </DropdownMenuItem>
                 </div>
@@ -195,13 +195,13 @@ export function PublicNav() {
                   <DropdownMenuItem asChild>
                     <Link to="/auth/jobseeker">
                       <Users size={15} className="mr-2" />
-                      Professional account
+                      Musician account
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/auth/employer">
                       <Briefcase size={15} className="mr-2" />
-                      Employer account
+                      Hirer account
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

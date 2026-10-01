@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { ArrowRight, Zap } from 'lucide-react';
 import { SEO_ROLES } from '../../lib/seoPages';
 import { defaultUrgentStartAt, urgentPath } from '../../lib/landing';
+import { formatInputEcho } from '../../lib/format';
 
 const FIELD =
   'h-11 w-full rounded-xl border border-white/15 bg-slate-900 px-3 text-base text-white placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300';
@@ -63,6 +64,7 @@ export function UrgentBand({ city }: { city: string }) {
               onChange={(e) => setStartAt(e.target.value)}
               className={FIELD}
             />
+            {startAt && <p className="mt-1 text-xs text-slate-400">{formatInputEcho(startAt, true)}</p>}
           </div>
           <button
             type="submit"

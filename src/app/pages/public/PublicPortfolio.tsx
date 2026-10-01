@@ -78,7 +78,7 @@ export default function PublicPortfolio() {
         error={error || (!loading && !p ? { message: 'Not found', status: 404 } : null)}
         noun="portfolio"
         backTo="/music-professionals"
-        backLabel="Browse professionals"
+        backLabel="Browse musicians"
         onRetry={() => void load()}
       />
     );

@@ -4,8 +4,12 @@ import {
   formatDateTime,
   formatDeadline,
   formatFromRate,
+  currencySymbol,
+  formatInputEcho,
   formatMoney,
+  formatNumber,
   formatPay,
+  periodLabel,
   formatReplyTime,
   formatWhen,
   fromRate,
@@ -201,5 +205,47 @@ describe('formatReplyTime', () => {
     expect(formatReplyTime(120)).toBe('Replies in ~2 h');
     expect(formatReplyTime(null)).toBe('');
     expect(formatReplyTime(undefined)).toBe('');
+  });
+});
+
+describe('formatNumber', () => {
+  it('groups digits the Indian way and tolerates empty values', () => {
+    expect(formatNumber(1234567)).toBe('12,34,567');
+    expect(formatNumber('5000')).toBe('5,000');
+    expect(formatNumber(null)).toBe('');
+    expect(formatNumber('abc')).toBe('');
+  });
+});
+
+describe('periodLabel', () => {
+  it('turns stored periods into words, never raw enum strings', () => {
+    expect(periodLabel('per_event')).toBe('event');
+    expect(periodLabel('per_hour')).toBe('hour');
+    expect(periodLabel('Per Day')).toBe('day');
+    expect(periodLabel('month')).toBe('month');
+    expect(periodLabel('half_day')).toBe('half day');
+    expect(periodLabel(null)).toBe('');
+  });
+  it('feeds formatPay', () => {
+    expect(formatPay({ compensation_min: 5000, compensation_period: 'per_event' })).toBe('From ₹5,000 / event');
+  });
+});
+
+describe('currencySymbol', () => {
+  it('returns the symbol, defaulting to the rupee', () => {
+    expect(currencySymbol('INR')).toBe('₹');
+    expect(currencySymbol(undefined)).toBe('₹');
+    expect(currencySymbol('usd')).toBe('$');
+    expect(currencySymbol('NOPE1')).toBe('NOPE1');
+  });
+});
+
+describe('formatInputEcho', () => {
+  it('echoes a native date input value in Indian order', () => {
+    expect(formatInputEcho('2026-11-14')).toBe('14 Nov 2026');
+    expect(formatInputEcho('2026-11-14T18:00', true)).toBe('14 Nov 2026, 6 pm');
+    expect(formatInputEcho('2026-11-14T18:30', true)).toBe('14 Nov 2026, 6:30 pm');
+    expect(formatInputEcho('')).toBe('');
+    expect(formatInputEcho(null)).toBe('');
   });
 });

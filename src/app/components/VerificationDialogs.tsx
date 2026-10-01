@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from './ui/button';
 import { Field, FormDialog, textareaClass } from './booking/BookingDialogs';
 import { errorMessage } from '../lib/errors';
+import { formatNumber } from '../lib/format';
 
 // Accessible replacements for the window.prompt calls on the profile page.
 
@@ -65,7 +66,7 @@ export function VerificationRequestDialog({
       return;
     }
     if (noteTooLong) {
-      setError(`Keep your note under ${VERIFICATION_NOTE_MAX.toLocaleString()} characters.`);
+      setError(`Keep your note under ${formatNumber(VERIFICATION_NOTE_MAX)} characters.`);
       document.getElementById(`${id}-note`)?.focus();
       return;
     }
@@ -85,8 +86,8 @@ export function VerificationRequestDialog({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Request professional verification"
-      description="Share one public link that proves your professional work. Our team reviews it before adding the verified badge."
+      title="Request verification"
+      description="Share one public link that proves your work as a musician. Our team reviews it before adding the verified badge."
       submitLabel="Submit for review"
       busyLabel="Submitting…"
       busy={busy}
@@ -96,7 +97,7 @@ export function VerificationRequestDialog({
       <Field
         label="Proof URL"
         htmlFor={`${id}-url`}
-        hint="An official website, credit page, label or studio page, professional profile or another verifiable source."
+        hint="An official website, credit page, label or studio page or another verifiable source."
       >
         <input
           id={`${id}-url`}
@@ -132,7 +133,7 @@ export function VerificationRequestDialog({
         />
         {note.length > NOTE_COUNTER_THRESHOLD && (
           <p id={`${id}-note-count`} className={noteTooLong ? 'text-sm text-rose-300' : 'text-sm text-slate-400'}>
-            {note.length.toLocaleString()} / {VERIFICATION_NOTE_MAX.toLocaleString()}
+            {formatNumber(note.length)} / {formatNumber(VERIFICATION_NOTE_MAX)}
           </p>
         )}
       </Field>

@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { Bookmark, BookmarkCheck, Flag, MessageSquare, Send, FileText, ListChecks } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, Job } from '../lib/apiTypes';
-import { formatDate } from '../lib/format';
+import { formatDate, formatNumber } from '../lib/format';
 import { MoreDetails } from '../components/help/MoreDetails';
 import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
@@ -80,8 +80,7 @@ export default function JobDetails() {
       questions.forEach((q, i) => {
         if (!answers[i]?.trim()) missing[answerId(i)] = 'Answer this question to apply.';
       });
-      if (cover.length > COVER_MAX)
-        missing.coverLetter = `Keep the note under ${COVER_MAX.toLocaleString()} characters.`;
+      if (cover.length > COVER_MAX) missing.coverLetter = `Keep the note under ${formatNumber(COVER_MAX)} characters.`;
       applyForm.setFormError('');
       if (applyForm.setErrors(missing)) {
         applyForm.focusFirst();
@@ -126,7 +125,7 @@ export default function JobDetails() {
                 : 'This opportunity could not be loaded'}
             </h1>
             <p className="text-slate-400 mt-3">
-              {/not found/i.test(loadError) ? 'It may have been filled, closed or removed by the employer.' : loadError}
+              {/not found/i.test(loadError) ? 'It may have been filled, closed or removed by the hirer.' : loadError}
             </p>
             <div className="flex justify-center gap-2 mt-6">
               {!/not found/i.test(loadError) && (
@@ -276,7 +275,7 @@ export default function JobDetails() {
                           <fieldset className="space-y-3 mb-4">
                             <legend className="text-sm font-medium mb-1">Screening questions</legend>
                             <p className="text-xs text-slate-400">
-                              The employer asks everyone these. Short, honest answers are best.
+                              The hirer asks everyone these. Short, honest answers are best.
                             </p>
                             {job.screeningQuestions.map((q: string, i: number) => (
                               <Field
@@ -301,12 +300,12 @@ export default function JobDetails() {
                           </fieldset>
                         )}
                         <MoreDetails
-                          label="Add a note to the employer (optional)"
+                          label="Add a note to the hirer (optional)"
                           forceOpen={!!applyForm.errors.coverLetter}
                         >
                           <Field
                             id="cover-note"
-                            label="Short note to the employer"
+                            label="Short note to the hirer"
                             optional
                             help="Two or three lines on why you fit, plus the one sample they should hear first. Your profile is sent automatically."
                             error={applyForm.errors.coverLetter}
@@ -363,7 +362,7 @@ export default function JobDetails() {
                       data-testid="message-employer"
                     >
                       <MessageSquare size={16} className="mr-2" />
-                      Message employer
+                      Message hirer
                     </Button>
                   </>
                 )}

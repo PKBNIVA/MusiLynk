@@ -28,6 +28,7 @@ import type {
 } from '../../lib/apiTypes';
 import { Inbox, type LucideIcon } from 'lucide-react';
 import { AdminSelect, InfoTip } from './ui';
+import { formatNumber, formatDate, formatDateTime } from '../../lib/format';
 
 // Shared state, helpers and small dialogs used by every admin tab. Kept in one
 // file (rather than one file per helper) so the tabs stay easy to scan.
@@ -193,8 +194,7 @@ export type AdminActions = {
 
 export const date = (value: string | null | undefined, withTime = false) => {
   if (!value) return '—';
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '—' : withTime ? d.toLocaleString() : d.toLocaleDateString();
+  return withTime ? formatDateTime(value, { fallback: '—' }) : formatDate(value, { fallback: '—' });
 };
 // On the admin build there is no public route to resolve a relative path against — those pages
 // simply don't exist in this bundle — so the link must be absolute to the public site instead.
@@ -254,7 +254,7 @@ export function Pager({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
       <p className="text-sm text-slate-400" aria-live="polite">
-        Showing {from.toLocaleString()}–{to.toLocaleString()} of {meta.total.toLocaleString()}
+        Showing {formatNumber(from)}–{formatNumber(to)} of {formatNumber(meta.total)}
       </p>
       <div className="flex items-center gap-2">
         <Button size="sm" variant="outline" disabled={meta.page <= 1 || loading} onClick={() => onPage(meta.page - 1)}>

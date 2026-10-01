@@ -12,6 +12,7 @@ import { announceUnreadChanged } from '../lib/usePolling';
 import { Switch } from '../components/ui/switch';
 import { errorMessage } from '../lib/errors';
 import type { Notification, NotificationPreferences } from '../lib/apiTypes';
+import { formatWhen } from '../lib/format';
 
 type Role = 'jobseeker' | 'employer';
 type Item = Notification;
@@ -234,7 +235,7 @@ export default function Notifications() {
                           </div>
                           {n.body && <p className="text-sm text-slate-400 mt-1 break-words">{n.body}</p>}
                           <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
-                            <span className="text-xs text-slate-500">{new Date(n.createdAt).toLocaleString()}</span>
+                            <span className="text-xs text-slate-500">{formatWhen(n.createdAt)}</span>
                             <span className="flex gap-3">
                               {!n.readAt && (
                                 <button

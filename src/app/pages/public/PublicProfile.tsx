@@ -85,7 +85,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
         error={error || (!loading && !p ? { message: 'Not found', status: 404 } : null)}
         noun="profile"
         backTo="/music-professionals"
-        backLabel="Browse professionals"
+        backLabel="Browse musicians"
         onRetry={() => void load()}
       />
     );

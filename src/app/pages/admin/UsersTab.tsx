@@ -20,6 +20,7 @@ import { Label } from '../../components/ui/label';
 import type { AdminUser } from '../../lib/apiTypes';
 import { Panel, Empty, date, type AdminActions } from './shared';
 import { AdminSelect, AdminPageHeader, HowToCallout } from './ui';
+import { formatNumber } from '../../lib/format';
 
 const PER_PAGE = 50;
 const ROLES = ['jobseeker', 'employer', 'admin'] as const;
@@ -147,9 +148,7 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
         />
       </div>
       <p className="text-sm text-slate-400 mt-3" aria-live="polite">
-        {total === 0
-          ? '0 users'
-          : `Showing ${from.toLocaleString()}–${to.toLocaleString()} of ${total.toLocaleString()} users`}
+        {total === 0 ? '0 users' : `Showing ${formatNumber(from)}–${formatNumber(to)} of ${formatNumber(total)} users`}
       </p>
       <div className="space-y-3 mt-3">
         {!loading && users.length === 0 && (

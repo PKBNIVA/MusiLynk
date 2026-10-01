@@ -15,9 +15,10 @@ import type {
 import { errorMessage } from '../../lib/errors';
 import { Panel, Pager, Empty, date, RECONCILABLE, type AdminActions, type PageMeta } from './shared';
 import { AdminPageHeader, HowToCallout, InfoTip } from './ui';
+import { formatMoney } from '../../lib/format';
 
 const money = (currency: string | null | undefined, value: unknown) =>
-  `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
+  formatMoney(Number(value || 0), currency || 'INR');
 
 // Self-fetches from GET/PATCH /api/admin/refunds (Admin::RefundsController) — a separate data
 // source from the rest of this tab (which is fed by AdminDashboard), so this list never needs a
@@ -262,9 +263,7 @@ export default function CommerceTab({
                     </div>
                   </div>
                   <div className="text-xs text-slate-400 shrink-0">
-                    {e.amount != null
-                      ? `${(e.currency || 'INR').toUpperCase()} ${(Number(e.amount) / 100).toLocaleString()} · `
-                      : ''}
+                    {e.amount != null ? `${formatMoney(Number(e.amount) / 100, e.currency || 'INR')} · ` : ''}
                     {date(e.processedAt || e.createdAt, true)}
                   </div>
                 </div>
@@ -336,7 +335,7 @@ export default function CommerceTab({
                   <div className="text-xs text-slate-400 mt-2">
                     {[b.event_type, b.event_date, b.city].filter(Boolean).join(' · ')}
                     {Number(b.paidAmount) > 0
-                      ? ` · paid ${b.currency || 'INR'} ${Number(b.paidAmount).toLocaleString()}`
+                      ? ` · paid ${formatMoney(Number(b.paidAmount), b.currency || 'INR')}`
                       : ''}
                   </div>
                 </div>

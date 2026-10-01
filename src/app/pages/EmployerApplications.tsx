@@ -19,7 +19,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../lib/authContext';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { errorMessage } from '../lib/errors';
-import { formatWhen } from '../lib/format';
+import { formatWhen, formatInputEcho } from '../lib/format';
 import { shareListing } from '../lib/shareListing';
 import type { ConversationCreated, EmployerApplication, Job } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
@@ -191,7 +191,7 @@ export default function EmployerApplications() {
       }
       setSummaries((s) => ({
         ...s,
-        [a.id]: { loading: false, open: true, error: errorMessage(e, 'Could not summarize this candidate.') },
+        [a.id]: { loading: false, open: true, error: errorMessage(e, 'Could not summarize this applicant.') },
       }));
     }
   }
@@ -349,7 +349,7 @@ export default function EmployerApplications() {
       await update(
         notes.id,
         { recruiterNote: notes.note, recruiterRating: notes.rating ? Number(notes.rating) : null },
-        'Recruiter notes saved',
+        'Notes saved',
       )
     )
       setNotes(null);
@@ -773,6 +773,7 @@ export default function EmployerApplications() {
               onChange={(e) => setInterview((x) => x && { ...x, date: e.target.value })}
               className={fieldClass}
             />
+            {interview?.date && <p className="mt-1 text-xs text-slate-400">{formatInputEcho(interview.date, true)}</p>}
           </div>
         </FormDialog>
         <FormDialog
@@ -787,7 +788,7 @@ export default function EmployerApplications() {
           onSubmit={saveNotes}
         >
           <div>
-            <Label htmlFor="recruiter-note">Recruiter note</Label>
+            <Label htmlFor="recruiter-note">Private note</Label>
             <Textarea
               id="recruiter-note"
               maxLength={2000}

@@ -190,7 +190,7 @@ export default function JobSearch() {
                     checked={f.verified === 'true'}
                     onCheckedChange={(v) => update({ verified: v ? 'true' : '' })}
                   />
-                  Verified employers only
+                  Verified hirers only
                 </label>
               </div>
             )}

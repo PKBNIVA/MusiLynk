@@ -9,6 +9,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { usePageMeta } from '../components/PageMeta';
 import { errorMessage } from '../lib/errors';
 import type { PlatformCheckReport } from '../lib/apiTypes';
+import { formatDateTime } from '../lib/format';
 
 export default function AdminTester() {
   usePageMeta('Admin · Live Tester', 'Non-destructive runtime checks for the Verse platform.');
@@ -129,7 +130,7 @@ export default function AdminTester() {
                   <div className="text-2xl font-bold">
                     {data.summary.passed}/{data.summary.total} checks passed
                   </div>
-                  <div className="text-sm text-slate-500">Generated {new Date(data.generatedAt).toLocaleString()}</div>
+                  <div className="text-sm text-slate-500">Generated {formatDateTime(data.generatedAt)}</div>
                 </div>
               </CardContent>
             </Card>

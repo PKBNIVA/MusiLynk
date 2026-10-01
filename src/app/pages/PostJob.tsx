@@ -47,7 +47,7 @@ import {
   type JobPostTemplate,
 } from '../components/templates/JobPostTemplates';
 import { trackJobPosted } from '../lib/analytics';
-import { formatDate, formatPay } from '../lib/format';
+import { formatDate, formatPay, formatInputEcho } from '../lib/format';
 import { SubmittedListing } from '../components/SubmittedListing';
 import { PostJobPlanLimitDialog } from '../components/PostJobPlanLimitDialog';
 
@@ -732,8 +732,7 @@ export default function PostJob() {
             <div className="flex items-center gap-1">
               <Label htmlFor="job-function">Function</Label>
               <FieldHelp topic="Function">
-                The area of music work this sits in. Professionals filter search by function, so choose the closest
-                match.
+                The area of music work this sits in. Musicians filter search by function, so choose the closest match.
               </FieldHelp>
             </div>
             <AppSelect
@@ -921,6 +920,7 @@ export default function PostJob() {
           <Field
             id="job-application-deadline"
             label="Application deadline"
+            hint={formatInputEcho(f.applicationDeadline)}
             error={form.errors.applicationDeadline}
             help="The listing closes to new applicants after this day. Leave it blank to keep it open until you close it."
           >
@@ -943,6 +943,7 @@ export default function PostJob() {
                   onChange={(e) => set('startDate', e.target.value)}
                   className={`mt-2 ${input}`}
                 />
+                {f.startDate && <p className="mt-1 text-xs text-slate-400">{formatInputEcho(f.startDate)}</p>}
               </div>
               <div>
                 <Label htmlFor="job-duration">Duration</Label>
@@ -1141,8 +1142,8 @@ export default function PostJob() {
           <div className="rounded-xl border border-emerald-400/15 bg-emerald-500/[.06] p-4 flex gap-3 text-sm text-emerald-100">
             <ShieldCheck aria-hidden="true" className="shrink-0" size={20} />
             <p>
-              Listings are reviewed for clarity, trust and suspicious off-platform fee/contact language. Verified
-              employers receive a trust marker, but verification never replaces candidate due diligence.
+              Listings are reviewed for clarity, trust and suspicious off-platform fee/contact language. Verified hirers
+              receive a trust marker, but verification never replaces your own checks on an applicant.
             </p>
           </div>
         </div>

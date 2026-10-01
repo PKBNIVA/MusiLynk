@@ -731,7 +731,7 @@ export default function ProfileSetup() {
               <div className="grid md:grid-cols-2 gap-5">
                 <Field
                   id={fieldId('headline')}
-                  label="Professional headline"
+                  label="Headline"
                   labelExtra={
                     <>
                       {templateButton('headline')}
@@ -843,7 +843,7 @@ export default function ProfileSetup() {
                   <AutocompleteInput
                     id={fieldId('roles')}
                     field="roles"
-                    label="Professional roles"
+                    label="Roles"
                     values={listOf(f.roles)}
                     onChange={(vs) => set('roles', vs.join(', '))}
                     placeholder="Session Bassist, Musical Director, FOH Engineer"
@@ -1002,7 +1002,7 @@ export default function ProfileSetup() {
                 <FormError message={emailError} />
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-4">
                   <div>
-                    <p className="font-medium">Professional verification</p>
+                    <p className="font-medium">Verification</p>
                     <p className="text-sm text-slate-400">
                       {f.verified
                         ? 'Your work has been checked. The badge shows on your profile and in search.'

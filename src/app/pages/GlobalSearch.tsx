@@ -20,7 +20,7 @@ type ResultType = SearchResult['type'];
 const icons: Record<string, LucideIcon> = { jobs: Briefcase, talent: Users, acts: Music, samples: PlayCircle };
 const TYPE_LABELS: Record<ResultType, [string, string]> = {
   jobs: ['Opportunities', 'opportunities'],
-  talent: ['Professionals', 'professionals'],
+  talent: ['Musicians', 'musicians'],
   acts: ['Acts', 'acts'],
   samples: ['Work samples', 'work samples'],
 };
@@ -36,7 +36,7 @@ export default function GlobalSearch() {
   const selectedType = isType(rawType) ? rawType : 'all';
   usePageMeta(
     query.trim() ? `Search: ${query.trim().slice(0, 60)}` : 'Search Verse',
-    'Search music jobs, professionals, bookable acts and work samples across the Verse network.',
+    'Search opportunities, musicians, bookable acts and work samples across the Verse network.',
     { noindex: true },
   );
   const [q, setQ] = useState(query);
@@ -100,7 +100,7 @@ export default function GlobalSearch() {
             Find the people and work that <span className="verse-gradient-text">move music forward.</span>
           </h1>
           <p className="mt-3 text-lg text-slate-300">
-            Explore opportunities, professionals, bookable acts and real work samples.
+            Explore opportunities, musicians, bookable acts and real work samples.
           </p>
         </div>
         <form

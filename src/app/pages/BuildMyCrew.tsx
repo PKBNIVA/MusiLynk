@@ -16,6 +16,7 @@ import { errorMessage } from '../lib/errors';
 import type { CrewPlan } from '../lib/apiTypes';
 import { FormSection, MoreDetails } from '../components/help/MoreDetails';
 import { AppSelect } from '../components/ui/app-select';
+import { formatInputEcho } from '../lib/format';
 const needOptions = ['music', 'sound', 'lighting', 'video', 'production'];
 export default function BuildMyCrew() {
   const [plans, setPlans] = useState<CrewPlan[]>([]),
@@ -151,7 +152,7 @@ export default function BuildMyCrew() {
                   </Field>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field id="crew-date" label="Event date">
+                  <Field id="crew-date" label="Event date" hint={formatInputEcho(f.eventDate)}>
                     <Input
                       type="date"
                       value={f.eventDate}

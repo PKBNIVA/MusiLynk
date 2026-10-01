@@ -14,6 +14,7 @@ import { useConfirm } from '../components/booking/BookingDialogs';
 import { MapPin, Calendar, BriefcaseBusiness } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { Application } from '../lib/apiTypes';
+import { formatDate, formatDateTime } from '../lib/format';
 const ordered = ['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Offer', 'Hired'];
 export default function ApplicationTracking() {
   const [apps, setApps] = useState<Application[]>([]),
@@ -33,7 +34,7 @@ export default function ApplicationTracking() {
   function withdraw(id: string, title: string) {
     confirm.ask({
       title: `Withdraw your application for “${title}”?`,
-      description: 'The employer will no longer see it.',
+      description: 'The hirer will no longer see it.',
       confirmLabel: 'Withdraw',
       destructive: true,
       action: async () => {
@@ -99,11 +100,11 @@ export default function ApplicationTracking() {
                           <BriefcaseBusiness size={15} className="mr-1" />
                           {a.workplace}
                         </span>
-                        <span>Applied {new Date(a.createdAt).toLocaleDateString()}</span>
+                        <span>Applied {formatDate(a.createdAt)}</span>
                         {a.interviewDate && (
                           <span className="flex text-emerald-300">
                             <Calendar size={15} className="mr-1" />
-                            {new Date(a.interviewDate).toLocaleString()}
+                            {formatDateTime(a.interviewDate)}
                           </span>
                         )}
                       </div>
@@ -116,7 +117,7 @@ export default function ApplicationTracking() {
                   </div>
                   {a.status === 'Offer' && (
                     <p className="mt-4 text-sm text-emerald-200">
-                      You have an offer. Confirm terms with the employer in{' '}
+                      You have an offer. Confirm terms with the hirer in{' '}
                       <Link to="/jobseeker/messages" className="underline">
                         Messages
                       </Link>

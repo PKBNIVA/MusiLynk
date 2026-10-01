@@ -16,7 +16,7 @@ import { BookingDepositPanel } from '../components/BookingDepositPanel';
 import { BookingFeeBreakdown } from '../components/booking/BookingFeeBreakdown';
 import { trackBookingQuoteAccepted, trackBookingQuoteSent } from '../lib/analytics';
 import { errorMessage } from '../lib/errors';
-import { formatDate, formatMoney, formatWhen } from '../lib/format';
+import { formatDate, formatMoney, formatWhen, formatInputEcho } from '../lib/format';
 import type { Booking, BookingPayment, ConversationCreated } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
 
@@ -656,6 +656,7 @@ export default function Bookings() {
                   id={QUOTE_IDS.validUntil}
                   label="Valid until"
                   optional
+                  hint={formatInputEcho(quote.validUntil)}
                   error={quoteErrors.errors.validUntil}
                   help="After this date the client can no longer accept the quote, so your calendar is not held forever."
                 >

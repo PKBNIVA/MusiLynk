@@ -76,7 +76,7 @@ export const HELP: Record<string, { id: string; title: string; steps: HelpStep[]
     id: 'applications',
     title: 'How applications work',
     steps: [
-      { icon: Send, title: 'You apply', text: 'Your answers, profile and samples go to the employer together.' },
+      { icon: Send, title: 'You apply', text: 'Your answers, profile and samples go to the hirer together.' },
       { icon: Eye, title: 'They review', text: 'The status here changes as they shortlist or schedule an interview.' },
       {
         icon: MessageSquare,

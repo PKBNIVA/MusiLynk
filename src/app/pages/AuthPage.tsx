@@ -397,7 +397,7 @@ export default function AuthPage() {
               One login. Your whole <span className="verse-gradient-text">music world.</span>
             </h1>
             <p className="mt-5 max-w-lg text-lg leading-8 text-slate-300">
-              Discover work, prove your craft, build teams and manage every conversation in one professional home.
+              Discover work, prove your craft, build teams and manage every conversation in one place.
             </p>
           </div>
           {/* A CSS fade-in (the global reduced-motion rule shortens it); the motion library cost ~42 kB gzip for this alone. */}
@@ -412,7 +412,7 @@ export default function AuthPage() {
                 </CardTitle>
                 <CardDescription className="text-slate-300">
                   {role === 'employer'
-                    ? 'Hire music talent and manage every candidate'
+                    ? 'Hire music talent and manage every applicant'
                     : 'Find work and build a career people can hear'}
                 </CardDescription>
               </CardHeader>
@@ -424,14 +424,14 @@ export default function AuthPage() {
                       className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role === 'jobseeker' ? 'bg-white/10 text-white' : 'text-slate-400'}`}
                     >
                       <Users size={15} />
-                      Professional
+                      Musician
                     </Link>
                     <Link
                       to="/auth/employer"
                       className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role === 'employer' ? 'bg-white/10 text-white' : 'text-slate-400'}`}
                     >
                       <Briefcase size={15} />
-                      Employer
+                      Hirer
                     </Link>
                   </div>
                 )}

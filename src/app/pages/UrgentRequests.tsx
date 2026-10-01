@@ -17,7 +17,7 @@ import { UrgentRequestFields } from '../components/urgent/UrgentRequestFields';
 import { URGENT_PROMISE, useUrgentForm } from '../lib/urgentForm';
 import { Clock3, Zap, Siren } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
-import { formatMoney, formatPay, formatWhen } from '../lib/format';
+import { formatMoney, formatPay, formatWhen, currencySymbol } from '../lib/format';
 import type { ConversationCreated, UrgentRequest, UrgentRequestResponse } from '../lib/apiTypes';
 import { trackUrgentRequestSubmitted, trackUrgentResponseSubmitted } from '../lib/analytics';
 
@@ -170,7 +170,7 @@ export default function UrgentRequests() {
   const closeRequest = (r: UrgentRequest, status: 'filled' | 'closed', filledByUserId?: string) =>
     ask({
       title: status === 'filled' ? 'Mark this request filled?' : 'Close this request?',
-      description: 'It stops appearing to professionals and cannot be reopened.',
+      description: 'It stops appearing to musicians and cannot be reopened.',
       confirmLabel: status === 'filled' ? 'Mark filled' : 'Close request',
       destructive: status === 'closed',
       action: () => applyStatus(r, status, filledByUserId),
@@ -407,13 +407,13 @@ export default function UrgentRequests() {
                       </Button>
                     ) : (
                       r.status === 'open' && (
-                        <p className="text-xs text-slate-500 sm:max-w-40">Professionals respond to this request.</p>
+                        <p className="text-xs text-slate-500 sm:max-w-40">Musicians respond to this request.</p>
                       )
                     )}
                   </div>
                   {expanded === r.id && (
                     <div className="mt-5 border-t border-white/10 pt-4">
-                      <h3 className="font-semibold">Available professionals</h3>
+                      <h3 className="font-semibold">Available musicians</h3>
                       <div className="mt-3 space-y-2">
                         {(responses[r.id] || []).map((response) => (
                           <div key={response.user_id} className="rounded-xl border border-white/10 bg-black/15 p-3">
@@ -426,9 +426,7 @@ export default function UrgentRequests() {
                               />
                               <div className="min-w-0">
                                 <div className="font-medium">{response.name}</div>
-                                <div className="text-sm text-violet-300">
-                                  {response.headline || 'Music professional'}
-                                </div>
+                                <div className="text-sm text-violet-300">{response.headline || 'Musician'}</div>
                               </div>
                             </div>
                             {response.message && (
@@ -477,7 +475,7 @@ export default function UrgentRequests() {
           open={posting}
           onOpenChange={(open) => !open && setPosting(false)}
           title="Post an urgent need"
-          description="Visible to professionals until you mark it filled or cancel it."
+          description="Visible to musicians until you mark it filled or cancel it."
           submitLabel="Publish request"
           busyLabel="Publishing…"
           busy={pending === 'create'}
@@ -510,7 +508,10 @@ export default function UrgentRequests() {
                   onChange={(e) => setReply({ ...reply, message: e.target.value })}
                 />
               </Field>
-              <Field label={`Your rate in ${reply.request.currency || 'INR'} (optional)`} htmlFor="urgent-reply-rate">
+              <Field
+                label={`Your rate in ${currencySymbol(reply.request.currency)} (optional)`}
+                htmlFor="urgent-reply-rate"
+              >
                 <Input
                   id="urgent-reply-rate"
                   type="number"

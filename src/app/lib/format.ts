@@ -94,13 +94,43 @@ export function formatDeadline(value: DateInput, options: DeadlineOptions = {}):
 
 type Amount = number | string | null | undefined;
 
+/** "1,25,000": a count with Indian digit grouping (never the viewer's browser locale). */
+export function formatNumber(value: Amount): string {
+  const n = toAmount(value);
+  return n === null ? '' : new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 2 }).format(n);
+}
+
+/**
+ * The visible echo of a native date input's value, in Indian order: "14 Nov 2026" for a date
+ * input, "14 Nov 2026, 6 pm" for a datetime-local one. Native inputs show the browser's own order
+ * (often month first), so the field carries this line next to it. Empty → ''.
+ */
+export function formatInputEcho(value: string | null | undefined, withTime = false): string {
+  if (!value) return '';
+  const text = withTime ? formatDateTime(value) : formatDate(value);
+  return text.replace(':00 ', ' ');
+}
+
+/**
+ * A billing period or fee basis as people say it: "per_event" → "event", "per hour" → "hour",
+ * "month" → "month". Unknown values are spaced out, never printed raw.
+ */
+export function periodLabel(value: string | null | undefined): string {
+  if (!value) return '';
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^per[\s_-]+/, '')
+    .replace(/[_-]+/g, ' ');
+}
+
 const toAmount = (value: Amount): number | null => {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 };
 
-/** "₹15,000" (INR) or "$1,500"; an unknown currency code falls back to "XYZ 1,500". */
+/** "₹15,000" (never "INR 15,000") or "$1,500"; an unknown currency code falls back to "XYZ 1,500". */
 export function formatMoney(value: Amount, currency = 'INR'): string {
   const n = toAmount(value);
   if (n === null) return '';
@@ -109,6 +139,17 @@ export function formatMoney(value: Amount, currency = 'INR'): string {
     return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: code, maximumFractionDigits: 0 }).format(n);
   } catch {
     return `${code} ${new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 }).format(n)}`;
+  }
+}
+
+/** "₹" for INR, "$" for USD, the code itself when the currency has no symbol: for field labels. */
+export function currencySymbol(currency: string | null | undefined): string {
+  const code = (currency || 'INR').toUpperCase();
+  try {
+    const part = new Intl.NumberFormat(LOCALE, { style: 'currency', currency: code }).formatToParts(0);
+    return part.find((x) => x.type === 'currency')?.value ?? code;
+  } catch {
+    return code;
   }
 }
 
@@ -140,7 +181,8 @@ export function formatPay(job: PayFields, fallback = 'Not disclosed'): string {
   } else {
     return fallback;
   }
-  return job.compensation_period ? `${range} / ${job.compensation_period.replace(/^per\s+/i, '')}` : range;
+  const period = periodLabel(job.compensation_period);
+  return period ? `${range} / ${period}` : range;
 }
 
 /** "Today 6 pm", "Tomorrow 6:30 pm", otherwise "Sat 14 Nov 6 pm". Empty → `fallback`. */

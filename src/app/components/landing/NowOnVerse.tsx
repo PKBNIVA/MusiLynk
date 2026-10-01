@@ -78,7 +78,7 @@ function PersonCard({ person }: { person: Person }) {
         />
         <span className="min-w-0">
           <span className="block truncate font-bold group-hover:underline">{person.name}</span>
-          <span className="block truncate text-sm text-slate-300">{line.primary || 'Music professional'}</span>
+          <span className="block truncate text-sm text-slate-300">{line.primary || 'Musician'}</span>
         </span>
       </Link>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-300">

@@ -32,7 +32,7 @@ const tours: { [k: string]: TourStep[] } = {
     {
       icon: Search,
       title: 'Search the whole music network',
-      text: 'Search jobs, professionals, acts and work samples from one place—even if you only know a rough term like “sound person” or “Bollywood guitarist”.',
+      text: 'Search opportunities, musicians, acts and work samples from one place—even if you only know a rough term like “sound person” or “Bollywood guitarist”.',
       to: '/search',
       cta: 'Try global search',
     },
@@ -48,7 +48,7 @@ const tours: { [k: string]: TourStep[] } = {
     {
       icon: Music,
       title: 'Build proof before applying',
-      text: 'Add several work samples and tag each by genre, role, instrument and skill. Employers can then find the right proof instead of opening one generic reel.',
+      text: 'Add several work samples and tag each by genre, role, instrument and skill. Hirers can then find the right proof instead of opening one generic reel.',
       to: '/jobseeker/library',
       cta: 'Add your work',
     },
@@ -99,7 +99,7 @@ const tours: { [k: string]: TourStep[] } = {
     {
       icon: Users,
       title: 'Compare and organize talent',
-      text: 'Select 2–4 professionals to compare rates, proof, skills and availability side by side. Save strong people into reusable folders for future projects.',
+      text: 'Select 2–4 musicians to compare rates, proof, skills and availability side by side. Save strong people into reusable folders for future projects.',
       to: '/employer/candidates',
       cta: 'Search & compare',
     },

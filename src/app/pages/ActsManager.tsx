@@ -19,6 +19,7 @@ import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { errorMessage } from '../lib/errors';
 import type { Act, ActMember, Taxonomy } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
+import { formatMoney, periodLabel } from '../lib/format';
 
 const FALLBACK_ACT_TYPES = ['solo', 'duo', 'trio', 'band', 'ensemble', 'dj'];
 // Inputs hand back strings, so the lineup size holds whatever was typed until it is submitted.
@@ -333,8 +334,9 @@ export default function ActsManager() {
                     </div>
                     {Boolean(a.min_fee || a.max_fee) && (
                       <div className="mt-4 text-sm text-emerald-300">
-                        Indicative ₹{Number(a.min_fee || 0).toLocaleString('en-IN')} – ₹
-                        {Number(a.max_fee || a.min_fee || 0).toLocaleString('en-IN')} / {a.fee_basis}
+                        Indicative {formatMoney(a.min_fee || 0, a.currency || undefined)} –{' '}
+                        {formatMoney(a.max_fee || a.min_fee || 0, a.currency || undefined)} /{' '}
+                        {periodLabel(a.fee_basis) || 'event'}
                       </div>
                     )}
                     <div className="mt-5 border-t border-white/10 pt-4">

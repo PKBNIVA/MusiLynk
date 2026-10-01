@@ -36,7 +36,7 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
     stub_google_flow(email: "newmusician@example.com", email_verified: true) do |code, verifier|
       with_env(ENV_KEYS) do
         state = start_state(intent: "signin", role: "jobseeker", consent: true)
-        get "/auth/google/callback?code=#{code}&state=#{state}"
+        get "/auth/google/callback?code=#{code}&state=#{state}", headers: { "Cookie" => oauth_cookie }
       end
     end
     assert_response :redirect
@@ -87,7 +87,7 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
     stub_google_flow(email: "norole@example.com", email_verified: true) do |code, verifier|
       with_env(ENV_KEYS) do
         state = start_state(intent: "signin", role: nil)
-        get "/auth/google/callback?code=#{code}&state=#{state}"
+        get "/auth/google/callback?code=#{code}&state=#{state}", headers: { "Cookie" => oauth_cookie }
       end
     end
     assert_response :redirect
@@ -102,7 +102,7 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
     stub_google_flow(email: "returning@example.com", email_verified: true, sub: "sub-existing") do |code|
       with_env(ENV_KEYS) do
         state = start_state(intent: "signin", role: "jobseeker")
-        get "/auth/google/callback?code=#{code}&state=#{state}"
+        get "/auth/google/callback?code=#{code}&state=#{state}", headers: { "Cookie" => oauth_cookie }
       end
     end
     assert_response :redirect
@@ -113,7 +113,7 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
     stub_google_flow(email: "unverified@example.com", email_verified: false) do |code|
       with_env(ENV_KEYS) do
         state = start_state(intent: "signin", role: "jobseeker")
-        get "/auth/google/callback?code=#{code}&state=#{state}"
+        get "/auth/google/callback?code=#{code}&state=#{state}", headers: { "Cookie" => oauth_cookie }
       end
     end
     assert_response :redirect
@@ -131,7 +131,7 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
   test "callback when Google reports an error redirects with auth_error=provider_error" do
     with_env(ENV_KEYS) do
       state = start_state(intent: "signin", role: "jobseeker")
-      get "/auth/google/callback?error=access_denied&state=#{state}"
+      get "/auth/google/callback?error=access_denied&state=#{state}", headers: { "Cookie" => oauth_cookie }
     end
     assert_response :redirect
     assert_includes response.location, "auth_error=provider_error"
@@ -146,7 +146,7 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
         get "/auth/google/start?intent=connect&ticket=#{ticket}"
         assert_no_match(/token=/, response.location)
         state = URI.decode_www_form(URI.parse(response.location).query).to_h["state"]
-        get "/auth/google/callback?code=#{code}&state=#{state}"
+        get "/auth/google/callback?code=#{code}&state=#{state}", headers: { "Cookie" => response.headers["Set-Cookie"].to_s.split(";").first }
       end
     end
     assert_response :redirect
@@ -161,7 +161,7 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
       with_env(ENV_KEYS) do
         get "/auth/google/start?intent=connect&ticket=#{other_ticket}"
         state = URI.decode_www_form(URI.parse(response.location).query).to_h["state"]
-        get "/auth/google/callback?code=#{code}&state=#{state}"
+        get "/auth/google/callback?code=#{code}&state=#{state}", headers: { "Cookie" => response.headers["Set-Cookie"].to_s.split(";").first }
       end
     end
     assert_includes response.location, "auth_error=connected_elsewhere"
@@ -201,6 +201,11 @@ class GoogleAuthTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def oauth_cookie
+    value = Rails.application.message_verifier("google-oauth-state-cookie").generate("x", purpose: :google_oauth_state_cookie, expires_in: 10.minutes)
+    "#{GoogleAuthController::STATE_COOKIE}=#{CGI.escape(value)}"
+  end
 
   def start_state(intent:, role:, return_to: nil, consent: false, ticket: nil)
     Rails.application.message_verifier("google-oauth-state").generate(

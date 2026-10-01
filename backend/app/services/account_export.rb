@@ -5,6 +5,8 @@
 class AccountExport
   FORMAT_VERSION = 1
   SECRET_COLUMNS = %w[password_digest token_digest code_digest signature razorpay_signature].freeze
+  # Moderators' private notes about a request are not the person's own data.
+  INTERNAL_COLUMNS = %w[founder_notes].freeze
 
   def initialize(user)
     @user = user
@@ -39,6 +41,17 @@ class AccountExport
       organizations: rows(@user.organizations.order(:created_at)),
       subscriptions: rows(@user.subscriptions.order(:created_at)),
       payments: rows(@user.billing_attempts.order(:created_at)),
+      stagePosts: rows(Post.where(created_by_user_id: @user.id).order(:created_at)),
+      stageComments: rows(PostComment.where(created_by_user_id: @user.id).order(:created_at)),
+      stageFollows: rows(Follow.where(follower_user_id: @user.id).order(:created_at)),
+      urgentRequests: @user.urgent_requests.order(:created_at).map { row(_1).except(*INTERNAL_COLUMNS) },
+      urgentResponses: rows(UrgentRequestResponse.where(user_id: @user.id).order(:created_at)),
+      shortlists: rows(TalentShortlist.where(employer_id: @user.id).order(:created_at)),
+      talentFolders: rows(@user.talent_folders.order(:created_at)),
+      vouches: @user.vouches.order(:created_at).map { row(_1).except("token") },
+      bandProjects: rows(@user.band_projects.order(:created_at)),
+      crewPlans: rows(@user.crew_plans.order(:created_at)),
+      connectedAccounts: @user.auth_connections.order(:created_at).map { _1.slice(:provider, :email, :display_name, :created_at) },
       blockedUsers: @user.user_blocks.includes(:blocked).map { { "userId" => _1.blocked_id, "name" => _1.blocked.name, "since" => _1.created_at } }
     }
   end

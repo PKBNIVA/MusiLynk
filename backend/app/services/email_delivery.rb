@@ -73,12 +73,25 @@ class EmailDelivery
       notice: true,
       footer: "If you made this change, nothing else is needed. If you did not, sign in right away with an emailed code and change your password, or contact support."
     },
+    # data: { detail: the account email }. Sent when the password set before the address was confirmed
+    # is removed (User#reclaim_unverified_credentials!).
+    "account_password_removed" => {
+      subject: "We removed a password from your Verse account",
+      heading: "Password removed",
+      copy: "For your security we removed the password that was set before you confirmed this address. You can set a new one any time from Settings, or sign in with an emailed code. The account is:",
+      action: nil,
+      notice: true,
+      footer: "If you did not just sign in to Verse, contact support."
+    },
     # data: { link:, name: }. Sent to the invitee's address; they may not have a Verse account yet.
     "vouch_invite" => {
       subject: "You were vouched for on Verse",
       heading: ->(d) { "#{d[:name]} vouched for you on Verse" },
       copy: ->(d) { "#{d[:name]} vouched for you on Verse. A vouch helps hirers trust your profile. Use the button below to join." },
-      action: "Join Verse"
+      action: "Join Verse",
+      # The invitee may have no account, so "your Verse account" and "cannot be turned off" do not apply.
+      footer: "You are getting this one email because someone you know named you on Verse. If you do not know them, you can safely ignore it: nothing happens unless you join.",
+      service_note: false
     }
   }.freeze
   DEFAULT_FOOTER = "If you did not request this, you can safely ignore this email.".freeze
@@ -91,6 +104,13 @@ class EmailDelivery
   # mail clients ignore style sheets.
   def self.brand_header_html
     %(<div style="font-size:0;line-height:0"><span style="display:inline-block;width:32px;height:32px;line-height:32px;border-radius:10px;background:#7c3aed;color:#ffffff;text-align:center;font-size:18px;font-weight:800;vertical-align:middle">V</span><span style="display:inline-block;margin-left:10px;font-size:22px;line-height:32px;font-weight:800;color:#a78bfa;vertical-align:middle">Verse</span></div>)
+  end
+
+  # The opening of <head> every email shares: charset and a mobile viewport, so 375px phones
+  # do not scale a 560px layout down. `preheader` is the hidden line inbox lists show after the subject.
+  def self.head_html(preheader)
+    hidden = %(<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">#{ERB::Util.html_escape(preheader.to_s.squish.truncate(110))}</div>)
+    %(<!doctype html><html lang="en-IN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif">#{hidden})
   end
 
   # The one primary button of an email (a link, styled as a button).
@@ -222,7 +242,7 @@ class EmailDelivery
   def self.email_text(content:, data:)
     value = email_body_value(content:, data:)
     value = "#{content[:action]}: #{value}" if content[:action]
-    "Verse\n\n#{render_value(content[:heading], data)}\n\n#{render_value(content[:copy], data)}\n\n#{value}\n\n#{content[:footer] || DEFAULT_FOOTER}\n#{SERVICE_NOTE}"
+    ["Verse", render_value(content[:heading], data), render_value(content[:copy], data), value, [content[:footer] || DEFAULT_FOOTER, (SERVICE_NOTE unless content[:service_note] == false)].compact.join("\n")].join("\n\n")
   end
 
   def self.email_html(content:, data:)
@@ -237,8 +257,9 @@ class EmailDelivery
     footer = ERB::Util.html_escape(content[:footer] || DEFAULT_FOOTER)
     heading = ERB::Util.html_escape(render_value(content[:heading], data))
     copy = ERB::Util.html_escape(render_value(content[:copy], data))
+    service_note = content[:service_note] == false ? "" : %(<p style="margin-top:8px;color:#94a3b8;font-size:13px">#{SERVICE_NOTE}</p>)
     <<~HTML.squish
-      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px">#{brand_header_html}<h1 style="font-size:28px;margin:28px 0 12px">#{heading}</h1><p style="color:#cbd5e1;line-height:1.6">#{copy}</p>#{body}<p style="margin-top:28px;color:#94a3b8;font-size:13px">#{footer}</p><p style="margin-top:8px;color:#94a3b8;font-size:13px">#{SERVICE_NOTE}</p></div></body></html>
+      #{head_html(render_value(content[:copy], data))}<div style="max-width:560px;margin:0 auto;padding:40px 24px">#{brand_header_html}<h1 style="font-size:28px;margin:28px 0 12px">#{heading}</h1><p style="color:#cbd5e1;line-height:1.6">#{copy}</p>#{body}<p style="margin-top:28px;color:#94a3b8;font-size:13px">#{footer}</p>#{service_note}</div></body></html>
     HTML
   end
 

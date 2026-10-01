@@ -10,7 +10,7 @@ module Employer
       scope = scope.where(job_id: params[:jobId]) if params[:jobId].present?
       rows = scope.order(updated_at: :desc).limit(LIST_LIMIT).map do |application|
         application.api_json.merge(jobTitle: application.job.title, candidateId: application.candidate_id,
-          candidateName: application.candidate.name, candidateEmail: application.candidate.email,
+          candidateName: application.candidate.name,
           headline: application.candidate.profile&.headline, candidateLocation: application.candidate.profile&.location,
           experience: application.candidate.profile&.experience,
           skills: application.candidate.profile&.skills || [], genres: application.candidate.profile&.genres || [],

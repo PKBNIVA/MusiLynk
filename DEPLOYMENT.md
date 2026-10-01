@@ -234,6 +234,17 @@ receives the code, then set `ADMIN_SECOND_FACTOR=required` so a later email outa
 closed instead of silently skipping the step. Use `off` only in an emergency and remove it
 afterwards.
 
+### Weekly founder report and `FOUNDER_REPORT_TO`
+
+Every Monday 09:00 IST (03:30 UTC, GoodJob cron `founder_report`) `FounderReportJob` emails last
+Monday-to-Sunday (IST) in numbers, organic accounts only, with a "Needs you" list that links to
+the admin console (`ADMIN_ORIGIN`, else `FRONTEND_URL`, plus `/admin?tab=queue|verification|reports|urgent`).
+
+- Recipients: `FOUNDER_REPORT_TO` (optional; comma-separated addresses). Unset, it goes to every
+  active admin account (the `ADMIN_EMAIL` user). Needs working email delivery (Brevo or Resend).
+- Needs the worker running with cron on (`GOOD_JOB_ENABLE_CRON`, default on in production).
+- Preview without sending: `bin/rails "reports:founder[preview]"`; send now: `bin/rails reports:founder`.
+
 ### Admin site and `ADMIN_ORIGIN`
 
 The admin panel is meant to run as its own Vercel project (a second build of this repo with

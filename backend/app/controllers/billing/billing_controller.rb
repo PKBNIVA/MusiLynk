@@ -170,7 +170,18 @@ module Billing
       return render_error("Billing webhook is not configured", :service_unavailable) unless secret
       expected = OpenSSL::HMAC.hexdigest("SHA256", secret, raw)
       return render_error("Invalid webhook signature", :unauthorized) unless ActiveSupport::SecurityUtils.secure_compare(expected, request.headers["X-Razorpay-Signature"].to_s)
-      payload = JSON.parse(raw); event_id = request.headers["X-Razorpay-Event-Id"].presence || Digest::SHA256.hexdigest(raw)
+      payload = JSON.parse(raw); header_id = request.headers["X-Razorpay-Event-Id"].presence
+      # The header is not covered by the signature: it names the event, but a replayed header must not
+      # make a different signed body look like a duplicate. Same id and same body is a retry; the same
+      # id with another body is a new event, keyed on a digest of the signed body instead.
+      body_id = Digest::SHA256.hexdigest(raw)
+      return render json: { ok: true, duplicate: true } if BillingEvent.exists?(provider: "razorpay", provider_event_id: body_id)
+
+      event_id = header_id || body_id
+      if (known = BillingEvent.find_by(provider: "razorpay", provider_event_id: event_id))
+        return render json: { ok: true, duplicate: true } if known.payload == payload
+        event_id = body_id
+      end
       return render json: { ok: true, duplicate: true } if BillingEvent.exists?(provider: "razorpay", provider_event_id: event_id)
       event_at = provider_event_time(payload)
       provider_id = payload.dig("payload", "subscription", "entity", "id")

@@ -19,7 +19,7 @@ class WeeklyDigestTest < ActiveSupport::TestCase
 
     sections = WeeklyDigest.build(musician, since: @since, until_time: Time.current)
     requests_section = sections.find { _1[:heading] == "Urgent requests near you" }
-    jobs_section = sections.find { _1[:heading] == "New jobs matching your roles" }
+    jobs_section = sections.find { _1[:heading] == "New opportunities matching your roles" }
 
     assert_equal 1, requests_section[:items].size
     assert_includes requests_section[:items].first[:text], matching_request.role_name
@@ -37,7 +37,7 @@ class WeeklyDigestTest < ActiveSupport::TestCase
       currency: "INR", status: "filled", start_at: 1.day.from_now).update_column(:updated_at, 30.days.ago)
 
     sections = WeeklyDigest.build(musician, since: @since, until_time: Time.current)
-    community = sections.find { _1[:heading] == "This week on Verse" }
+    community = sections.find { _1[:heading] == "Across Verse" }
     assert_equal "1 request was filled through Verse this week.", community[:footnote]
   end
 
@@ -52,8 +52,7 @@ class WeeklyDigestTest < ActiveSupport::TestCase
 
     sections = WeeklyDigest.build(musician, since: @since, until_time: Time.current)
     assert_empty sections.find { _1[:heading] == "Urgent requests near you" }[:items]
-    assert_equal "0 requests were filled through Verse this week.",
-      sections.find { _1[:heading] == "This week on Verse" }[:footnote]
+    assert_nil sections.find { _1[:heading] == "Across Verse" }[:footnote], "a zero is left out, not printed"
   end
 
   test "hirer digest includes newly verified musicians matching posted roles and city" do

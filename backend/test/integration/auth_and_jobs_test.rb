@@ -537,6 +537,8 @@ class AuthAndJobsTest < ActionDispatch::IntegrationTest
   end
 
   def login(email)
+    # Password sign-in needs a confirmed address (security audit DEC-4a); registration alone does not confirm it.
+    User.find_by(email:)&.update_columns(email_verified: true)
     post "/api/auth/login", params: { email:, password: "StrongPass123!" }, as: :json
     assert_response :success
     response.parsed_body.fetch("accessToken")

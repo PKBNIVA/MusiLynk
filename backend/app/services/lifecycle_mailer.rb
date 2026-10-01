@@ -62,7 +62,7 @@ class LifecycleMailer
     },
     "hirer_day14_inactive_response_time" => {
       category: "lifecycle", subject: ->(p) { "Musicians in #{p['city']} are answering fast" },
-      heading: ->(p) { "Musicians in #{p['city']} are answering within #{p['hours']} hours" },
+      heading: ->(p) { "Musicians in #{p['city']} are answering within #{duration_words(p['hours'].to_f * 60)}" },
       copy: ->(_) { "If you have a gig to fill, an urgent request usually gets a reply quickly." },
       action: "Send an urgent request", path: "/employer/urgent"
     },
@@ -74,8 +74,8 @@ class LifecycleMailer
       action: "Review applicants", path: "/employer/applications"
     },
     "milestone_musician_first_response" => {
-      category: "product", subject: ->(p) { "You responded in #{p['minutes']} minutes" },
-      heading: ->(p) { "You responded in #{p['minutes']} minutes" },
+      category: "product", subject: ->(p) { "You responded in #{duration_words(p['minutes'])}" },
+      heading: ->(p) { "You responded in #{duration_words(p['minutes'])}" },
       copy: ->(_) { "Fast responders get chosen more. Keep an eye on urgent requests near you." },
       action: "See urgent requests", path: "/jobseeker/urgent"
     },
@@ -96,6 +96,15 @@ class LifecycleMailer
   def self.step_category(key) = STEPS.fetch(key)[:category]
 
   # "1 applicant", "3 applicants": the count in a step's params with its noun in the right number.
+  # "12 minutes", "1 minute"; long waits read as hours ("2 hours"). Whole numbers only.
+  def self.duration_words(minutes)
+    minutes = minutes.to_f.round
+    return "#{minutes} #{'minute'.pluralize(minutes)}" if minutes < 90
+
+    hours = (minutes / 60.0).round
+    "#{hours} #{'hour'.pluralize(hours)}"
+  end
+
   def self.count_of(params, noun)
     count = params["count"].to_i
     "#{count} #{noun.pluralize(count)}"
@@ -147,13 +156,15 @@ class LifecycleMailer
   def self.html(heading:, copy:, action:, link:, user:)
     h = ERB::Util.method(:html_escape)
     <<~HTML.squish
-      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:26px;margin:28px 0 12px">#{h.call(heading)}</h1><p style="color:#cbd5e1;line-height:1.6">#{h.call(copy)}</p>#{EmailDelivery.button_html(action, link)}#{footer_html(user)}</div></body></html>
+      #{EmailDelivery.head_html(copy)}<div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:26px;margin:28px 0 12px">#{h.call(heading)}</h1><p style="color:#cbd5e1;line-height:1.6">#{h.call(copy)}</p>#{EmailDelivery.button_html(action, link)}#{footer_html(user)}</div></body></html>
     HTML
   end
 
   def self.text(heading:, copy:, action:, link:, user:)
     "Verse\n\n#{heading}\n\n#{copy}\n\n#{action}: #{link}\n\n#{footer_text(user)}"
   end
+
+  def self.digest_link(user) = "#{NotificationEmail.frontend_url}#{NotificationEmail.workspace(user)}"
 
   def self.digest_html(sections, user)
     h = ERB::Util.method(:html_escape)
@@ -164,7 +175,7 @@ class LifecycleMailer
       %(<h2 style="font-size:17px;margin:22px 0 6px;color:#f8fafc">#{h.call(section[:heading])}</h2>#{note}#{list})
     end.join
     <<~HTML.squish
-      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:24px;margin:28px 0 4px">This week on Verse</h1>#{body}#{footer_html(user)}</div></body></html>
+      #{EmailDelivery.head_html('Open requests, new opportunities and what happened this week.')}<div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:24px;margin:28px 0 4px">This week on Verse</h1>#{body}#{EmailDelivery.button_html('Open Verse', digest_link(user))}#{footer_html(user)}</div></body></html>
     HTML
   end
 
@@ -173,7 +184,7 @@ class LifecycleMailer
       lines = Array(section[:items]).map { |i| "- #{i[:text]}: #{i[:link]}" }
       [section[:heading], section[:footnote], *lines].compact.join("\n")
     end.join("\n\n")
-    "Verse\n\nThis week on Verse\n\n#{body}\n\n#{footer_text(user)}"
+    "Verse\n\nThis week on Verse\n\n#{body}\n\nOpen Verse: #{digest_link(user)}\n\n#{footer_text(user)}"
   end
   private_class_method :html, :digest_html, :digest_text, :footer_html
 end

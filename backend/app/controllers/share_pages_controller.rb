@@ -31,7 +31,7 @@ class SharePagesController < ActionController::API
     bio = plain_text(profile&.bio)
     render_html(
       title: "#{user.name} | Verse",
-      description: truncate(bio.presence || profile&.headline.to_s),
+      description: truncate(bio.presence || profile&.headline.presence || "#{user.name} on Verse: see their work, rates and availability, then book or message them."),
       canonical_path: "/professionals/#{user.id}",
       og_type: "profile",
       image: og_image("professional", user.id),
@@ -46,7 +46,7 @@ class SharePagesController < ActionController::API
     bio = plain_text(act.bio)
     render_html(
       title: "#{act.name} | Verse",
-      description: truncate(bio),
+      description: truncate(bio.presence || act.tagline.presence || "#{act.name} on Verse: see the lineup, sample fees and availability, then request a quote."),
       canonical_path: "/acts/#{act.id}",
       og_type: "website",
       image: og_image("act", act.id),
@@ -62,7 +62,7 @@ class SharePagesController < ActionController::API
     image = portfolio.members.first&.first&.thumbnail_url.presence
     render_html(
       title: "#{portfolio.title} | Verse",
-      description: truncate(bio.presence || portfolio.headline.to_s),
+      description: truncate(bio.presence || portfolio.headline.presence || "#{portfolio.title} on Verse: a musician portfolio with work samples and links."),
       canonical_path: "/p/#{portfolio.slug}",
       og_type: "website",
       image:,
@@ -92,6 +92,20 @@ class SharePagesController < ActionController::API
     "#{text[0, length]}..."
   end
 
+  # schema.org baseSalary.value.unitText only takes HOUR, DAY, WEEK, MONTH or YEAR; Verse's per-session,
+  # per-show and per-project periods have no equivalent, so those jobs publish no baseSalary at all
+  # (an invalid unitText makes Google drop the whole posting from rich results).
+  SALARY_UNITS = { "hour" => "HOUR", "day" => "DAY", "week" => "WEEK", "month" => "MONTH", "year" => "YEAR" }.freeze
+
+  def base_salary(job)
+    return unless job.compensation_min.present? || job.compensation_max.present?
+    period = job.compensation_period.to_s.strip.downcase.presence || "month"
+    unit = SALARY_UNITS[period]
+    return unless unit
+    value = { "@type" => "QuantitativeValue", "minValue" => job.compensation_min, "maxValue" => job.compensation_max, "unitText" => unit }.compact
+    { "@type" => "MonetaryAmount", "currency" => job.currency.presence || "INR", "value" => value }
+  end
+
   def job_json_ld(job, description)
     employment_type = EMPLOYMENT_TYPES[job.kind.to_s.strip.downcase] || "OTHER"
     ld = {
@@ -107,16 +121,14 @@ class SharePagesController < ActionController::API
     }
     ld["validThrough"] = job.application_deadline.iso8601 if job.application_deadline.present?
     if job.workplace == "remote"
+      # Google requires applicantLocationRequirements alongside TELECOMMUTE.
       ld["jobLocationType"] = "TELECOMMUTE"
+      ld["applicantLocationRequirements"] = { "@type" => "Country", "name" => "IN" }
     else
-      ld["jobLocation"] = { "@type" => "Place", "address" => { "@type" => "PostalAddress", "addressLocality" => job.location, "addressCountry" => "IN" } }
+      ld["jobLocation"] = { "@type" => "Place", "address" => { "@type" => "PostalAddress", "addressLocality" => job.location, "addressCountry" => "IN" }.compact }
     end
-    if job.compensation_min.present? || job.compensation_max.present?
-      ld["baseSalary"] = {
-        "@type" => "MonetaryAmount", "currency" => job.currency.presence || "INR",
-        "value" => { "@type" => "QuantitativeValue", "minValue" => job.compensation_min, "maxValue" => job.compensation_max, "unitText" => (job.compensation_period.presence || "MONTH").to_s.upcase }
-      }
-    end
+    salary = base_salary(job)
+    ld["baseSalary"] = salary if salary
     ld
   end
 
@@ -148,7 +160,8 @@ class SharePagesController < ActionController::API
       canonical: base,
       og_type: "website",
       image: "#{base}/og-default.png",
-      json_ld: nil
+      json_ld: nil,
+      robots: "noindex"
     ).html_safe, status:, content_type: "text/html"
   end
 
@@ -168,9 +181,13 @@ class SharePagesController < ActionController::API
       content_type: "text/html"
   end
 
-  def page_html(title:, description:, canonical:, og_type:, image:, json_ld:, refresh: true)
+  def page_html(title:, description:, canonical:, og_type:, image:, json_ld:, refresh: true, robots: nil)
     esc = CGI.method(:escapeHTML)
     refresh_tag = refresh ? %(<meta http-equiv="refresh" content="0; url=#{esc.call(canonical)}">) : ""
+    # Google reads this page as the document (vercel.json sends it here), so the description is body text too,
+    # not only a meta tag.
+    description_html = description.present? ? %(<p>#{esc.call(description)}</p>) : ""
+    robots_tag = robots ? %(<meta name="robots" content="#{esc.call(robots)}">) : ""
     ld_script = json_ld ? %(<script type="application/ld+json">#{json_ld.to_json.gsub('</', '<\/')}</script>) : ""
     <<~HTML
       <!doctype html>
@@ -180,6 +197,7 @@ class SharePagesController < ActionController::API
         <title>#{esc.call(title)}</title>
         <meta name="description" content="#{esc.call(description)}">
         <link rel="canonical" href="#{esc.call(canonical)}">
+        #{robots_tag}
         <meta property="og:type" content="#{esc.call(og_type)}">
         <meta property="og:site_name" content="Verse">
         <meta property="og:title" content="#{esc.call(title)}">
@@ -193,13 +211,14 @@ class SharePagesController < ActionController::API
         #{refresh_tag}
         #{ld_script}
         <style>body{background:#0b0b12;color:#f4f4f6;font-family:system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px}
-        a{color:#8b8bff;font-size:1.1rem}</style>
+        a{color:#8b8bff;font-size:1.1rem}h1{font-size:1.5rem}</style>
       </head>
       <body>
-        <div>
-          <p>#{esc.call(title)}</p>
+        <main>
+          <h1>#{esc.call(title)}</h1>
+          #{description_html}
           <a href="#{esc.call(canonical)}">Open on Verse</a>
-        </div>
+        </main>
       </body>
       </html>
     HTML

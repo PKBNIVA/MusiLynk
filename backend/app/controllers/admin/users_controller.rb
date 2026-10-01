@@ -78,6 +78,19 @@ module Admin
       render json: { ok: true, revoked: count }
     end
 
+    # Support rescue for an unverified account whose address cannot receive mail (bounce, typo):
+    # password sign-in is refused until the email is confirmed, so an admin can confirm it here.
+    def confirm_email
+      user = User.find(params[:id])
+      return render_error("This account was deleted by its owner.", :conflict, "ACCOUNT_DELETED") if user.deleted?
+      return render_error("Admin accounts do not need email confirmation.", :unprocessable_content) if user.admin?
+
+      was_verified = user.email_verified?
+      user.update!(email_verified: true)
+      audit!("admin.user.confirm_email", user, alreadyVerified: was_verified)
+      render json: { ok: true, alreadyVerified: was_verified }
+    end
+
     def grant_plan
       return render_error("Invalid plan.", :bad_request) unless %w[pro studio enterprise].include?(params[:planCode])
       days = params.fetch(:days, 30)

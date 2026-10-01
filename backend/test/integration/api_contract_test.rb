@@ -110,7 +110,7 @@ class ApiContractTest < ActionDispatch::IntegrationTest
     get "/api/employer/applications", headers: auth(employer_token)
     assert_response :success
     applicant = response.parsed_body.fetch("applications").find { _1["id"] == application.id }
-    assert_contract applicant, %w[id jobId jobTitle candidateId candidateName candidateEmail candidateLocation skills verified status]
+    assert_contract applicant, %w[id jobId jobTitle candidateId candidateName candidateLocation skills verified status]
 
     get "/api/candidates", headers: auth(employer_token)
     assert_response :success

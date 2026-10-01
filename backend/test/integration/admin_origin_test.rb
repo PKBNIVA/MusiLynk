@@ -17,7 +17,7 @@ class AdminOriginTest < ActionDispatch::IntegrationTest
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
     @admin = User.create!(name: "Site Admin", email: "site-admin@example.com", password: PASSWORD, role: "admin", status: "active")
-    @member = User.create!(name: "Plain Member", email: "member@example.com", password: PASSWORD, role: "jobseeker", status: "active")
+    @member = User.create!(name: "Plain Member", email: "member@example.com", password: PASSWORD, role: "jobseeker", status: "active", email_verified: true)
     @member.create_profile!
     @token = session_for(@admin)
   end

@@ -1,5 +1,7 @@
 class BookingsController < ApplicationController
   PAYMENTS_LIMIT = 100
+  # What the deposit panel and receipts need; provider order/payment ids and the payer stay server-side.
+  PAYMENT_FIELDS = %w[id booking_request_id kind currency status amount created_at updated_at fee_amount gst_amount fee_percent policy_version].freeze
   before_action -> { authenticate!("jobseeker", "employer") }
 
   def index
@@ -194,7 +196,7 @@ class BookingsController < ApplicationController
   def payments
     booking = BookingRequest.includes(:act).find(params[:id]); return render_error("Booking not found", :not_found) unless [booking.requester_id, booking.act.owner_id].include?(current_user.id)
     payments = booking.booking_payments.includes(:invoice).order(created_at: :desc).limit(PAYMENTS_LIMIT)
-    render json: { payments: payments.map { _1.attributes.merge(invoiceId: _1.invoice&.id) } }
+    render json: { payments: payments.map { _1.attributes.slice(*PAYMENT_FIELDS).merge(invoiceId: _1.invoice&.id) } }
   end
 
   private

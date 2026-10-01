@@ -18,6 +18,10 @@
 class GoogleAuthController < ApplicationController
   STATE_PURPOSE = :google_oauth_state
   STATE_TTL = 10.minutes
+  # Binds the OAuth state to the browser that started the flow (login CSRF): /start sets this
+  # signed cookie holding the state's nonce, /callback only accepts a state whose nonce it carries.
+  STATE_COOKIE = "verse_oauth_state".freeze
+  STATE_COOKIE_PURPOSE = :google_oauth_state_cookie
   DEFAULT_RETURN_TO = { "jobseeker" => "/jobseeker", "employer" => "/employer" }.freeze
   JOIN_PATH = { "jobseeker" => "/join/musician", "employer" => "/join/hiring" }.freeze
 
@@ -31,21 +35,24 @@ class GoogleAuthController < ApplicationController
 
     verifier = SecureRandom.urlsafe_base64(32)
     challenge = Digest::SHA256.base64digest(verifier).tr("+/", "-_").delete("=")
+    nonce = SecureRandom.hex(16)
     state = state_verifier.generate({
-      "csrf" => SecureRandom.hex(16), "verifier" => verifier, "intent" => intent,
+      "csrf" => nonce, "verifier" => verifier, "intent" => intent,
       "role" => %w[jobseeker employer].include?(params[:role]) ? params[:role] : nil,
       "return_to" => safe_return_to(params[:return_to]),
       "consent" => ActiveModel::Type::Boolean.new.cast(params[:consent]) == true,
       "ticket" => intent == "connect" ? params[:ticket] : nil
     }, purpose: STATE_PURPOSE, expires_in: STATE_TTL)
 
+    set_state_cookie(nonce)
     redirect_to GoogleOauth.authorize_url(state:, code_challenge: challenge), allow_other_host: true
   end
 
   # GET /auth/google/callback?code=&state=  (or ?error=... when the person cancels)
   def callback
     payload = read_state(params[:state])
-    return redirect_with_error("state_mismatch") unless payload
+    return redirect_with_error("state_mismatch") unless payload && state_cookie_matches?(payload)
+    clear_state_cookie
     return redirect_with_error("provider_error", payload) if params[:error].present?
 
     begin
@@ -74,6 +81,24 @@ class GoogleAuthController < ApplicationController
   private
 
   def state_verifier = Rails.application.message_verifier("google-oauth-state")
+  def cookie_verifier = Rails.application.message_verifier("google-oauth-state-cookie")
+
+  def set_state_cookie(nonce)
+    value = cookie_verifier.generate(nonce, purpose: STATE_COOKIE_PURPOSE, expires_in: STATE_TTL)
+    response.headers["Set-Cookie"] = "#{STATE_COOKIE}=#{CGI.escape(value)}; Path=/auth/google; Max-Age=#{STATE_TTL.to_i}; HttpOnly; Secure; SameSite=Lax"
+  end
+
+  def clear_state_cookie
+    response.headers["Set-Cookie"] = "#{STATE_COOKIE}=; Path=/auth/google; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+  end
+
+  def state_cookie_matches?(payload)
+    raw = request.cookies[STATE_COOKIE]
+    nonce = raw.is_a?(String) && raw.length <= 1024 ? cookie_verifier.verified(raw, purpose: STATE_COOKIE_PURPOSE) : nil
+    nonce.is_a?(String) && payload["csrf"].is_a?(String) && ActiveSupport::SecurityUtils.secure_compare(nonce, payload["csrf"])
+  rescue StandardError
+    false
+  end
 
   def read_state(raw)
     return nil unless raw.is_a?(String) && raw.length <= 4096
@@ -89,7 +114,7 @@ class GoogleAuthController < ApplicationController
 
   def notify_linked(user)
     return unless EmailDelivery.configured?
-    EmailDeliveryJob.enqueue(user:, template: "google_connected", link: "#{frontend_url}/account")
+    EmailDeliveryJob.enqueue(user:, template: "google_connected", link: NotificationEmail.settings_link(user))
   rescue StandardError => e
     Rails.logger.error({ event: "email_enqueue_failed", template: "google_connected", error: e.class.name }.to_json)
     ErrorReporter.capture(e, tags: { source: "email_enqueue_failed", template: "google_connected" })

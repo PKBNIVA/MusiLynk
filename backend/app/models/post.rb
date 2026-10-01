@@ -61,7 +61,7 @@ class Post < ApplicationRecord
   # the ordering the Stage feed and StageSystemPostsJob rely on to show the weekly pinned post on top.
   scope :pinned_first, -> { order(Arel.sql("(pinned_until IS NOT NULL AND pinned_until > NOW()) DESC"), created_at: :desc, id: :desc) }
   scope :upcoming_events, ->(city: nil) {
-    scope = where(kind: "event").where("event_starts_at >= ?", Time.current).visible
+    scope = where(kind: "event", visibility: "public").where("event_starts_at >= ?", Time.current).visible
     scope = scope.where(city: city) if city.present?
     scope.order(featured: :desc, event_starts_at: :asc)
   }
@@ -192,15 +192,30 @@ class Post < ApplicationRecord
     return reshared_post_preview if reshared_post_id.present?
 
     case kind
-    when "portfolio_share" then shared_portfolio_item ? { type: "portfolio_item", item: shared_portfolio_item.api_json } : unavailable("portfolio_item")
-    when "job_share" then shared_job ? { type: "job", job: shared_job.api_json, applyOpen: shared_job.listed? } : unavailable("job")
+    when "portfolio_share" then shared_item_public? ? { type: "portfolio_item", item: public_item_json(shared_portfolio_item) } : unavailable("portfolio_item")
+    when "job_share" then shared_job&.published? && !shared_job.employer.deleted? ? { type: "job", job: shared_job.api_json, applyOpen: true } : unavailable("job")
     end
   end
 
   private
 
+  # Only a work sample that is public right now, by an account that is still active.
+  def shared_item_public?
+    item = shared_portfolio_item
+    item.present? && item.visibility == "public" && item.user.active?
+  end
+
+  # The public view of a work sample: what its own profile page shows, not internal columns.
+  PUBLIC_ITEM_FIELDS = %w[id user_id kind title url credited_as thumbnail_url waveform_url description tags genres roles instruments year featured].freeze
+
+  def public_item_json(item)
+    item.attributes.slice(*PUBLIC_ITEM_FIELDS).transform_keys { _1.camelize(:lower) }.merge("type" => item.kind)
+  end
+
   def reshared_post_preview
-    reshared_post ? { type: "post", post: reshared_post.api_json } : unavailable("post")
+    # Only a public, live original is embedded: a reshare is itself public, so a followers-only,
+    # hidden (moderated) or deleted original must not be readable through it.
+    reshared_post&.then { _1.active? && _1.visibility == "public" } ? { type: "post", post: reshared_post.api_json } : unavailable("post")
   end
 
   def unavailable(type) = { type:, unavailable: true }
@@ -247,12 +262,12 @@ class Post < ApplicationRecord
     errors.add(:shared_job_id, "is required") and return if shared_job_id.blank?
     job = shared_job
     return errors.add(:shared_job_id, "was not found") unless job
-    errors.add(:shared_job_id, "is not open") unless job.listed?
+    errors.add(:shared_job_id, "must be one of your own published opportunities") unless job.published? && job.employer_id == created_by_user_id
   end
 
   def reshared_post_is_visible
     original = reshared_post
     return errors.add(:reshared_post_id, "was not found") unless original
-    errors.add(:reshared_post_id, "is not available") unless original.active?
+    errors.add(:reshared_post_id, "is not available") unless original.active? && original.visibility == "public"
   end
 end

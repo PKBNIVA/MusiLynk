@@ -85,7 +85,7 @@ class Notifier
     def application_status(application)
       job = application.job
       notify(application.candidate, kind: "application_status", title: "Application update", link: "/jobseeker/applications",
-        body: "#{job.title}: #{application.status}")
+        body: "Your application for #{job.title} is now marked as #{application.status}.")
       email(application.candidate, "application_status", job: job.title, status: application.status)
     end
 
@@ -215,8 +215,19 @@ class Notifier
     # (JobsDeadlineSweepJob).
     def job_deadline_closed(job)
       notify(job.employer, kind: "job_deadline_closed", title: "Your opportunity closed at its deadline",
-        link: "/hiring", body: "#{job.title} closed at its deadline. Reopen it with a new date if you're still hiring.")
+        link: "/employer", body: "#{job.title} closed at its deadline. Reopen it with a new date if you're still hiring.")
       email(job.employer, "job_deadline_closed", title: job.title)
+    end
+
+    JOB_REVIEW_WORDS = {
+      "published" => "is now live on Verse.", "rejected" => "was not approved. Open it, make the changes and submit it again.",
+      "closed" => "was closed.", "pending" => "is waiting for review. We will update you within 24 hours."
+    }.freeze
+
+    # An admin moved an opportunity to a new status (Admin::JobsController#update).
+    def job_review_update(job)
+      notify(job.employer, kind: "moderation", title: "Opportunity review update", link: "/employer",
+        body: "#{job.title} #{JOB_REVIEW_WORDS.fetch(job.status, "was updated.")}")
     end
 
     # "<Name> vouched for you on Verse": sent to the invitee's email, whether or not they have

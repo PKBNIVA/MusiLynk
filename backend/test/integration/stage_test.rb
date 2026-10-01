@@ -67,14 +67,20 @@ class StageTest < ActionDispatch::IntegrationTest
   end
 
   test "shares an open job" do
-    job = create_job(@org_owner, "published")
+    job = create_job(@alice, "published")
     post "/api/stage/posts", params: { kind: "job_share", sharedJobId: job.id }, headers: auth(@alice), as: :json
     assert_response :created
     assert response.parsed_body["post"]["sharedEntity"]["applyOpen"]
   end
 
+  test "refuses to share someone else's published job" do
+    job = create_job(@org_owner, "published")
+    post "/api/stage/posts", params: { kind: "job_share", sharedJobId: job.id }, headers: auth(@alice), as: :json
+    assert_response :unprocessable_content
+  end
+
   test "refuses to share a closed job" do
-    job = create_job(@org_owner, "closed")
+    job = create_job(@alice, "closed")
     post "/api/stage/posts", params: { kind: "job_share", sharedJobId: job.id }, headers: auth(@alice), as: :json
     assert_response :unprocessable_content
   end
@@ -99,8 +105,8 @@ class StageTest < ActionDispatch::IntegrationTest
     assert_equal({ "type" => "portfolio_item", "unavailable" => true }, response.parsed_body["post"]["sharedEntity"])
   end
 
-  test "closing a job that was shared still renders it, with applyOpen false" do
-    job = create_job(@org_owner, "published")
+  test "closing a job that was shared still renders it as unavailable" do
+    job = create_job(@alice, "published")
     post "/api/stage/posts", params: { kind: "job_share", sharedJobId: job.id }, headers: auth(@alice), as: :json
     id = response.parsed_body["id"]
 
@@ -110,7 +116,7 @@ class StageTest < ActionDispatch::IntegrationTest
     assert_response :success
     shared = response.parsed_body["post"]["sharedEntity"]
     assert_equal "job", shared["type"]
-    refute shared["applyOpen"]
+    assert shared["unavailable"], "a closed listing is no longer embedded in the share"
   end
 
   test "deleting the original post of a reshare still renders the reshare, without a shared preview" do

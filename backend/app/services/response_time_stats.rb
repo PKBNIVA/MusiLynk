@@ -10,8 +10,9 @@ class ResponseTimeStats
   # Median minutes between an urgent request's creation and its first response, over
   # requests (optionally in `city`, optionally created in `since..`) that have a response.
   # Returns nil when there's no data — callers use that to skip rather than show a made-up number.
-  def self.median_minutes(city: nil, since: nil)
-    deltas(city:, since:).then { |d| median(d) }
+  # `before` (optional, exclusive) closes the window, for a single past week.
+  def self.median_minutes(city: nil, since: nil, before: nil)
+    deltas(city:, since:, before:).then { |d| median(d) }
   end
 
   def self.median_hours(city: nil, since: nil)
@@ -38,10 +39,11 @@ class ResponseTimeStats
     end.sort_by { |_, m| m }.first(limit)
   end
 
-  def self.deltas(city:, since:)
+  def self.deltas(city:, since:, before: nil)
     requests = organic_requests
     requests = requests.where("city ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(city)}%") if city.present?
-    requests = requests.where(created_at: since..) if since
+    requests = requests.where(created_at: since...before) if since
+    requests = requests.where(created_at: ...before) if before && !since
 
     first_response_at = UrgentRequestResponse.joins(:urgent_request).merge(requests)
       .group(:urgent_request_id).minimum(:created_at)

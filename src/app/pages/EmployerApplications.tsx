@@ -448,17 +448,26 @@ export default function EmployerApplications() {
                   action={{ label: 'Post an opportunity', to: postPath }}
                 />
               );
+            // Nothing is live yet: say it is in review rather than promise applicants.
+            const inReview =
+              !live && (filteredJob ? filteredJob.status === 'pending' : jobs.every((j) => j.status === 'pending'));
             return (
               <EmptyState
                 scene="applicants"
                 title={filteredJob ? `No applicants for ${filteredJob.title} yet` : 'No applicants yet'}
-                hint="Most listings get their first applicant within 48 hours. Sharing the link speeds that up."
+                hint={
+                  inReview
+                    ? 'Your listing is in review. It goes live within 24 hours, and applicants can find it then.'
+                    : 'Most listings get their first applicant within 48 hours. Sharing the link speeds that up.'
+                }
                 action={
                   live && live.status === 'published'
                     ? { label: 'Share this opportunity', onClick: () => void shareListing(live) }
-                    : filteredJob
-                      ? { label: 'Show all opportunities', onClick: () => setJobFilter('') }
-                      : { label: 'Post an opportunity', to: postPath }
+                    : inReview
+                      ? { label: 'Back to dashboard', to: base }
+                      : filteredJob
+                        ? { label: 'Show all opportunities', onClick: () => setJobFilter('') }
+                        : { label: 'Post an opportunity', to: postPath }
                 }
               />
             );

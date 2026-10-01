@@ -8,8 +8,6 @@ import { HELP } from '../components/help/helpContent';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { apiGet } from '../lib/api';
-import { toast } from 'sonner';
-import { SIGN_IN_CODE_TOAST } from '../lib/authToasts';
 import { Link, useLocation } from 'react-router';
 import { Plus, ShieldCheck, Zap } from 'lucide-react';
 import { UserAvatar } from '../components/kit/UserAvatar';
@@ -34,8 +32,6 @@ export default function EmployerDashboard() {
       .catch(() => {});
   useEffect(() => {
     load();
-    // Signing in with an emailed code leaves its "check your email" toast up; the person is in now.
-    toast.dismiss(SIGN_IN_CODE_TOAST);
   }, []);
   // Nothing posted yet: the two choice cards are the one way in, so no other button or strip repeats them.
   const welcome = new URLSearchParams(location.search).has('welcome');

@@ -90,7 +90,7 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 | POST | `/auth/verify-email` | public | `token` | `{ok}`; 400 `TOKEN_INVALID` |
 | POST | `/auth/forgot-password` | public | `email` | `{ok}` (always) |
 | POST | `/auth/reset-password` | public | `token, password` | `{ok}`; 400 |
-| GET | `/me` | any | — | `{user}`: user columns + camelCase profile fields, `profileComplete`, `emailVerified` |
+| GET | `/me` | any | — | `{user}`: user columns + camelCase profile fields, `profileComplete`, `emailVerified`, `verificationPending` (an open verification request awaits review) |
 | PUT | `/profile` | talent | whitelisted profile fields (`headline, bio, skills[] …, companyName …, hourlyRate …`) | `{user}`; 422 unsafe URL. `verified`, `role`, `status` are ignored |
 
 ### Opportunities and applications
@@ -189,9 +189,10 @@ Every `q` (global search, jobs, talent, candidates, acts) goes through `Search::
 | POST | `/acts/:id/members` | talent (owner) | `displayName, roleName, instrument, userId (active jobseeker)` | 201 `{id}`; 400 status; 404 user; 409 duplicate |
 | DELETE | `/acts/:id/members/:memberId` | talent (owner) | — | `{ok}`; 409 leader |
 | GET | `/bookings` | talent | — | `{bookings: [… actName, requesterName, isOwner, isRequester, latestQuote, paidAmount, paymentCount]}` **unbounded** |
-| POST | `/bookings` | talent | `actId, eventType, eventDate, city, budgetMin/Max, …` | 201 `{id}`; 409 own act; 402 plan |
+| GET | `/bookings/limits` | talent | — | `{activeAllowed, activeUsed, plan, planName}` (enquiry limit, shown before the form) |
+| POST | `/bookings` | talent | `actId` or `musicianId` (a musician who fronts no act gets a direct-enquiry solo act), `eventType, eventDate, city, budgetMin/Max, …` | 201 `{id}`; 409 own act; 402 plan |
 | POST | `/bookings/:id/quote` | talent (act owner) | `performanceFee, travelFee, productionFee, otherFee, depositPercent, validUntil, …` | 201 `{id, total}`; 409 state |
-| POST | `/bookings/:id/status` | party | `status` per owner/requester transition table | `{ok}`; 409 |
+| POST | `/bookings/:id/status` | party | `status` per owner/requester transition table; optional `message` (posted into the pair's thread, used by Ask for changes) | `{ok}`; 409 |
 | POST | `/bookings/:id/payment-order` | requester | `Idempotency-Key` header | `{payment, checkout: {mode: mock\|razorpay, …}}`; 409/502/503 |
 | GET | `/bookings/:id/payments` | party | — | `{payments}` |
 | POST | `/booking-payments/:id/confirm` | payer | `orderId, paymentId, signature` (Razorpay) | `{ok}`; 409/422/502 |
@@ -205,11 +206,12 @@ Every `q` (global search, jobs, talent, candidates, acts) goes through `Search::
 | GET | `/organizations/:id/members` | member | — | `{members: [{id, name, email, role}]}`; non-member 404 |
 | POST | `/organizations/:id/members` | owner/admin member | `email, role: admin\|recruiter\|booker\|finance\|member` | 201; 400 `INVALID_ROLE`; 402 seats; 403 |
 | DELETE | `/organizations/:id/members/:userId` | owner/admin member | — | `{ok}`; 409 owner |
-| GET | `/urgent-requests` | talent | `city, role` | `{requests: [… requesterName, requesterVerified, myResponse, responseCount]}` **unbounded, N+1** |
+| GET | `/urgent-requests` | talent | `city, role, scope: mine\|matches\|browse` (default `matches` for musicians, `mine` for hirers), `page` (20 per page) | `{requests: [… requesterName, requesterVerified, myResponse, responseCount, conversationId, myMatchReasons], scope, page, perPage, total, hasMore}` |
 | POST | `/urgent-requests` | talent | `title, roleName, city, startAt, endAt, budgetMin/Max, …` | 201 `{id}` |
 | PATCH/PUT | `/urgent-requests/:id` | requester | `status: filled\|cancelled` | `{ok}`; 400 |
-| POST | `/urgent-requests/:id/respond` | talent (not requester) | `message, rate` | 201 `{ok}` (upsert) |
-| GET | `/urgent-requests/:id/responses` | requester | — | `{responses: [{user_id, name, headline, message, rate, …}]}` |
+| POST | `/urgent-requests/:id/respond` | talent (not requester) | `message, rate` | 201 `{ok, conversationId}` (upsert; opens the thread with the note as first message) |
+| POST | `/urgent-requests/:id/accept` | requester | `userId` (a responder) | `{ok, request, conversationId}`; marks the request filled, notifies both, posts nothing public; 422 not a responder / already filled |
+| GET | `/urgent-requests/:id/responses` | requester | — | `{responses: [{user_id, name, headline, photoUrl, message, rate, …}]}` |
 | GET / POST | `/band-projects` | talent | `name, concept, city, genres[], commitmentType, …` | `{projects: [… roles]}` / 201 `{id}` |
 | POST | `/band-projects/:id/roles` | talent (owner) | `roleName, instrument, countNeeded, skillLevel, requirements, compensation` | 201 `{id}` |
 | POST | `/band-projects/:id/roles/:roleId/publish` | talent (owner) | — | 201 `{jobId, status}`; 402; 409 already published |

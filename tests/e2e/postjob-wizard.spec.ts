@@ -126,7 +126,8 @@ test('every step change saves a draft, and an earlier draft is offered on reopen
   await expect(page.getByText('Draft saved')).toBeVisible();
   await page.getByRole('button', { name: 'Next: Screen & review' }).click();
   // "Start a new one" saves into the old draft's slot: one draft at a time, none added beside it.
-  await expect.poll(() => calls.filter((c) => c.method === 'PATCH').length).toBeGreaterThanOrEqual(1);
+  // One save per step change (Pay & dates, Screen & review), both into that slot.
+  await expect.poll(() => calls.filter((c) => c.method === 'PATCH').length).toBe(2);
   expect(calls.filter((c) => c.method === 'POST' && c.path === '/jobs')).toHaveLength(0);
   const saved = calls.filter((c) => c.method === 'PATCH');
   expect(saved.every((c) => c.path === '/employer/jobs/job-draft')).toBe(true);

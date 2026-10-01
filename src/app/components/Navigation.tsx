@@ -43,6 +43,8 @@ import {
 } from './ui/dropdown-menu';
 import { UserAvatar } from './kit/UserAvatar';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { SIGN_IN_CODE_TOAST } from '../lib/authToasts';
 import { apiGet } from '../lib/api';
 import { UNREAD_CHANGED_EVENT, useVisiblePolling } from '../lib/usePolling';
 import { TourLauncher } from './ProductTour';
@@ -66,6 +68,10 @@ export function Navigation() {
   const isJobSeeker = user?.role === 'jobseeker';
   const baseUrl = isJobSeeker ? '/jobseeker' : '/employer';
   const [unread, setUnread] = useState(0);
+  // The "check your email" toast is stale once the person is in and moving between pages (J-26).
+  useEffect(() => {
+    toast.dismiss(SIGN_IN_CODE_TOAST);
+  }, [location.pathname]);
   const [unreadMessages, setUnreadMessages] = useState(0);
   // Unread badges: fetched on mount and on route change, polled every 10 s while the tab is visible,
   // and refreshed immediately when a page reports that the viewer read something.

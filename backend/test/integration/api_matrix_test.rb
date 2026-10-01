@@ -277,7 +277,13 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/urgent-requests/{urgent}", :talent, { params: { status: "filled" }, idor: true, missing: :urgent, bad: { status: "open" }, bad_status: [400] }],
     [:put, "/api/urgent-requests/{urgent}", :talent, { params: { status: "cancelled" }, idor: true }],
     [:post, "/api/urgent-requests/{others_urgent}/respond", :talent, { ok: [201], params: { message: "Available" }, missing: :others_urgent }],
-    [:post, "/api/urgent-requests/{urgent}/accept", :talent, { ok: [422], params: { userId: "nobody" }, idor: true, missing: :urgent, note: "choosing a responder is covered in HirerFlowsTest" }],
+    [:post, "/api/urgent-requests/{urgent}/accept", :talent, { ok: [200], params: ->(w, a) {
+      next({}) unless w.refs[a][:urgent]
+
+      responder = w.user(a == :js ? :emp2 : :js2)
+      UrgentRequestResponse.find_or_create_by!(urgent_request_id: w.refs[a][:urgent], user_id: responder.id) { _1.message = "Available" }
+      { userId: responder.id }
+    }, idor: true, missing: :urgent, bad: { userId: "nobody" }, bad_status: [422] }],
     [:get, "/api/urgent-requests/{urgent}/responses", :talent, { keys: %w[responses], idor: true, missing: :urgent }],
     [:get, "/api/urgent-requests/{urgent}/token-action", :public, {
       params: ->(w, actor) { { t: UrgentActionToken.generate(UrgentRequest.find(w.refs[actor][:urgent] || w.refs[:shared][:urgent]), "close") } },

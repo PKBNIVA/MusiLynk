@@ -74,6 +74,7 @@ function publicRoutes(): RouteObject[] {
   const InvoicePrint = L(() => import('./pages/InvoicePrint'));
   const BandBuilder = L(() => import('./pages/BandBuilder'));
   const Billing = L(() => import('./pages/Billing'));
+  const MusicianBilling = L(() => import('./pages/MusicianBilling'));
   const AccountData = L(() => import('./pages/AccountData'));
   const AccountSettings = L(() => import('./pages/AccountSettings'));
   // ---- Showcase (one library, many views; one account, many hats) — begin ----
@@ -579,7 +580,7 @@ function publicRoutes(): RouteObject[] {
           path: 'billing',
           element: (
             <P roles={['jobseeker']}>
-              <Billing />
+              <MusicianBilling />
             </P>
           ),
         },

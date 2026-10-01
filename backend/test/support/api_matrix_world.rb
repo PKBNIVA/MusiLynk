@@ -43,7 +43,7 @@ module ApiMatrixWorld
     make_user = lambda do |actor, name, role, profile: {}, complete: true|
       seq += 1
       user = User.create!(name:, email: "matrix-#{actor}-#{seq}-#{SecureRandom.hex(3)}@example.com", password: PASSWORD,
-        role:, status: "active", profile_complete: complete, email_verified: true)
+        role:, status: "active", profile_complete: complete, email_verified: true, password_set_at: Time.current)
       user.create_profile!({ headline: "#{name} headline", location: "Mumbai", skills: ["Mixing"], roles: ["Engineer"] }.merge(profile)) unless role == "admin"
       raw = SecureRandom.urlsafe_base64(48)
       user.sessions.create!(token_digest: Digest::SHA256.hexdigest(raw), expires_at: 30.days.from_now)

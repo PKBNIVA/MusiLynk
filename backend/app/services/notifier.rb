@@ -133,6 +133,8 @@ class Notifier
 
     STAGE_APPLAUSE_KIND = "stage_applause".freeze
     STAGE_COMMENT_KIND = "stage_comment".freeze
+    STAGE_RESHARE_KIND = "stage_reshare".freeze
+    STAGE_REPLY_KIND = "stage_reply".freeze
 
     # Someone applauded your post. Coalesced per post the same way new-message notifications
     # are: the recipient keeps at most one unread "applause" notice per post, refreshed as
@@ -152,6 +154,23 @@ class Notifier
       link = "/stage/posts/#{post.id}"
       coalesce(recipient, kind: STAGE_COMMENT_KIND, link:,
         title: "New comment on your post", body: "#{actor.name} commented: #{comment.body.to_s.truncate(140)}")
+    end
+
+    # Someone reshared your post; links to the reshare so the original author can see it in context.
+    def stage_reshare(original, reshare, actor)
+      recipient = original.created_by
+      return if recipient.nil? || recipient.id == reshare.created_by_user_id
+      notify(recipient, kind: STAGE_RESHARE_KIND, link: "/stage/posts/#{reshare.id}",
+        title: "Your post was reshared", body: "#{actor.name} reshared your post.")
+    end
+
+    # Someone replied to your comment. Coalesced per post like applause and comments; the post's
+    # owner, who already hears about every comment on it, is not told twice.
+    def stage_reply(post, parent, reply, actor)
+      recipient = parent.created_by
+      return if recipient.nil? || recipient.id == reply.created_by_user_id || recipient.id == post.created_by_user_id
+      coalesce(recipient, kind: STAGE_REPLY_KIND, link: "/stage/posts/#{post.id}",
+        title: "New reply to your comment", body: "#{actor.name} replied: #{reply.body.to_s.truncate(140)}")
     end
 
     def stage_new_follower(follow, follower)

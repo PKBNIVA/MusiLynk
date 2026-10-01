@@ -37,6 +37,7 @@ module Stage
       post.status = "active"
       post.save!
       bump_reshare_count(post)
+      Notifier.stage_reshare(post.reshared_post, post, actor) if post.reshared_post
       flags = ScamSignals.detect(post.body, from_hiring_side: true, early: true)
       audit!("stage.post.create", post, flags.present? ? { safetyFlags: flags } : {})
       render json: { id: post.id, post: post.api_json }, status: :created

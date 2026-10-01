@@ -243,7 +243,7 @@ class Notifier
     # (ReviewPromptSweepJob); reminder: true is the single 3-day nudge if it's still unwritten.
     def review_prompt(prompt, reminder: false)
       title = reminder ? "Still time to review #{prompt.counterpart_name}" : "How did it go with #{prompt.counterpart_name}?"
-      link = "/reviews?employerId=#{prompt.counterpart_user_id}"
+      link = review_prompt_link(prompt)
       notify(prompt.user, kind: "review_prompt", title:, link:,
         body: "Leave a quick review for #{prompt.counterpart_name} — it helps other musicians and hirers on Verse.")
       email(prompt.user, "review_prompt", name: prompt.counterpart_name, path: link, reminder: reminder.to_s)
@@ -258,6 +258,13 @@ class Notifier
     end
 
     private
+
+    # Musicians review hirers on their Reviews page (pre-selecting the hirer); a hirer has no
+    # review form, so theirs goes to their dashboard, where the finished request or booking lives.
+    def review_prompt_link(prompt)
+      return "/jobseeker/reviews?employerId=#{prompt.counterpart_user_id}" if prompt.user&.jobseeker?
+      "/employer"
+    end
 
     def notify(user, **attributes)
       return unless user

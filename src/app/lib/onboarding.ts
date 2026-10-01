@@ -99,9 +99,19 @@ export function localPreview(url: string): LinkPreview {
 export const fetchLinkPreview = (url: string) =>
   apiPost<LinkPreview>('/link-previews', { url }, { skipAuthRedirect: true, timeoutMs: 8_000 });
 
+/** "artist", "album", "track"… from a Spotify URL path; "link" when it is none of those. */
+function spotifyNoun(url: string): string {
+  try {
+    return new URL(url).pathname.match(/\/(artist|track|album|playlist|show|episode)\//)?.[1] ?? 'link';
+  } catch {
+    return 'link';
+  }
+}
+
 /** What a link card shows as its title. */
 export function previewTitle(preview: LinkPreview) {
   if (preview.title) return preview.title;
+  if (preview.provider === 'spotify') return `${preview.label} ${spotifyNoun(preview.url)}`;
   if (preview.provider !== 'link') return `${preview.label} ${preview.kind === 'audio' ? 'track' : 'post'}`;
   try {
     return new URL(preview.url).hostname.replace(/^www\./, '');

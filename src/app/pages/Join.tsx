@@ -233,7 +233,12 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
   const runDraft = async () => {
     setDrafting(true);
     try {
-      setDraftResult(await draftFromLinks(links.map((link) => link.url)));
+      setDraftResult(
+        await draftFromLinks(
+          links.map((link) => link.url),
+          { roles: allRoles, city: city[0] },
+        ),
+      );
     } catch (caught) {
       toast.error(errorMessage(caught, 'Couldn’t draft a profile from those links. Try again.'));
     } finally {

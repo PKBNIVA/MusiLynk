@@ -34,15 +34,40 @@ export interface ProfileDraft {
 // scraped page) — plus optionally its own expanded links, one level, for a link-in-bio source.
 export type DraftSource = Omit<LinkPreview, 'kind'> & { kind: string; links?: DraftSource[] };
 
+/** A pasted link the server could not read, with the reason to show next to it. */
+export interface DraftFailure {
+  url: string;
+  message: string;
+}
+
 export interface DraftResult {
   sources: DraftSource[];
   draft: ProfileDraft;
   aiUsed: boolean;
   provenance: Record<string, string>;
+  failures?: DraftFailure[];
 }
 
-export const draftFromLinks = (links: string[]) =>
-  apiPost<DraftResult>('/link-import/draft', { links }, { skipAuthRedirect: true, timeoutMs: 20_000 });
+/** What the person already told us; the draft starts from it when the links add nothing. */
+export interface KnownProfile {
+  roles?: string[];
+  city?: string;
+}
+
+export const draftFromLinks = (links: string[], known: KnownProfile = {}) =>
+  apiPost<DraftResult>(
+    '/link-import/draft',
+    { links, roles: known.roles?.length ? known.roles : undefined, city: known.city?.trim() || undefined },
+    { skipAuthRedirect: true, timeoutMs: 20_000 },
+  );
+
+/** What was found in one link, read off the provenance map ("roles.Drummer" -> that link's url). */
+export function foundInLink(url: string, provenance: Record<string, string>): string[] {
+  return Object.entries(provenance)
+    .filter(([, source]) => source === url)
+    .map(([key]) => key.replace(/^(roles|instruments|genres|credits)\./, '').replace(/^city$/, 'City'))
+    .filter(Boolean);
+}
 
 export interface LibraryImportResult {
   portfolioItems: PortfolioItem[];

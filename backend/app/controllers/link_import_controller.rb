@@ -1,4 +1,5 @@
-# POST /api/link-import/draft { links: [url, …] up to 8 } -> { sources, draft, aiUsed, provenance }
+# POST /api/link-import/draft { links: [url, …] up to 8, roles?: [...], city? } ->
+#   { sources, draft, aiUsed, provenance, failures: [{url, message}] }
 #
 # Public — the sign-up flow calls it before an account exists — and rate-limited per IP like
 # link previews; a signed-in caller is additionally counted against LinkImport::Budget's
@@ -18,7 +19,8 @@ class LinkImportController < ApplicationController
     own_hosts = [current_user&.profile&.website, current_user&.profile&.portfolio_url].filter_map { |value| URI.parse(value.to_s).host }
     identity = current_user ? { user: current_user } : { anonymous_ip: request.remote_ip }
 
-    result = LinkImport::ProfileDraft.build(links, own_hosts:, identity:)
+    known = { roles: Array(params[:roles]).select { _1.is_a?(String) }, city: params[:city].is_a?(String) ? params[:city] : nil }
+    result = LinkImport::ProfileDraft.build(links, own_hosts:, identity:, known:)
     render json: result.as_json
   rescue URI::InvalidURIError
     render_error("That doesn't look like a web link.", :unprocessable_content, "INVALID_URL")

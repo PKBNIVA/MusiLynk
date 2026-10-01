@@ -33,6 +33,19 @@ class LinkImport::ProfileDraftTest < ActiveSupport::TestCase
     assert_not result.ai_used
   end
 
+  test "what the person already entered fills the draft, and a link that cannot be read is reported" do
+    stub_resolver("https://example.com/a" => { provider: "link", kind: "page", url: "https://example.com/a", title: nil, author: nil, description: nil, thumbnail: nil },
+      "https://example.com/gone" => LinkPreview::InvalidUrl.new("That doesn't look like a web link."))
+
+    result = build(["https://example.com/a", "https://example.com/gone"], known: { roles: ["Tabla player"], city: "Mumbai" })
+
+    assert_equal ["Tabla player"], result.draft[:roles]
+    assert_equal "Mumbai", result.draft[:city]
+    assert_equal 1, result.failures.length
+    assert_equal "https://example.com/gone", result.failures.first[:url]
+    assert_equal result.failures, result.as_json[:failures]
+  end
+
   test "\"xx years\" phrasing is also recognised" do
     stub_resolver("https://example.com/b" => { provider: "link", kind: "page", url: "https://example.com/b", title: "Drummer", author: nil,
                                                  description: "10 years of touring experience.", thumbnail: nil })
@@ -113,7 +126,11 @@ class LinkImport::ProfileDraftTest < ActiveSupport::TestCase
   private
 
   FakeResolver = Struct.new(:map) do
-    def call(url, own_hosts: []) = map.fetch(url)
+    def call(url, own_hosts: [])
+      value = map.fetch(url)
+      raise value if value.is_a?(Exception)
+      value
+    end
   end
 
   FakeAi = Struct.new(:json) do

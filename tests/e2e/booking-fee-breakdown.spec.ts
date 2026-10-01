@@ -95,10 +95,10 @@ test('checkout breakdown shows only the deposit when the platform fee is off', a
   await openBookings(page, false);
   const card = page.getByTestId('booking-card').filter({ hasText: 'The Night Owls' });
   const breakdown = card.getByTestId('booking-fee-breakdown').first();
-  await expect(breakdown.getByTestId('breakdown-deposit')).toContainText('INR 20,000');
+  await expect(breakdown.getByTestId('breakdown-deposit')).toContainText('₹20,000');
   await expect(breakdown.getByTestId('breakdown-fee')).toHaveCount(0);
   await expect(breakdown.getByTestId('breakdown-gst')).toHaveCount(0);
-  await expect(breakdown.getByTestId('breakdown-total')).toContainText('INR 20,000');
+  await expect(breakdown.getByTestId('breakdown-total')).toContainText('₹20,000');
   await expect(page.getByText('Verse does not currently charge a platform fee on bookings.').first()).toBeVisible();
 });
 
@@ -106,10 +106,10 @@ test('checkout breakdown shows the fee and GST on top of the deposit when the pl
   await openBookings(page, true);
   const card = page.getByTestId('booking-card').filter({ hasText: 'The Night Owls' });
   const breakdown = card.getByTestId('booking-fee-breakdown').first();
-  await expect(breakdown.getByTestId('breakdown-deposit')).toContainText('INR 20,000');
-  await expect(breakdown.getByTestId('breakdown-fee')).toContainText('INR 4,000');
-  await expect(breakdown.getByTestId('breakdown-gst')).toContainText('INR 720');
-  await expect(breakdown.getByTestId('breakdown-total')).toContainText('INR 24,720');
+  await expect(breakdown.getByTestId('breakdown-deposit')).toContainText('₹20,000');
+  await expect(breakdown.getByTestId('breakdown-fee')).toContainText('₹4,000');
+  await expect(breakdown.getByTestId('breakdown-gst')).toContainText('₹720');
+  await expect(breakdown.getByTestId('breakdown-total')).toContainText('₹24,720');
   await expect(page.getByRole('button', { name: /Pay deposit · ₹24,720/ })).toBeVisible();
 });
 

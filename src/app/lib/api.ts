@@ -1,6 +1,5 @@
 import { reportApiFailure } from './monitoring';
 import { PROTECTED_AREA, signInPath } from './appTarget';
-import { saveUnsentDrafts } from './unsentDraft';
 
 // `?.`: the Node smoke tests import this module without Vite, where import.meta.env is undefined.
 export const API_BASE = import.meta.env?.VITE_API_URL || '/api';
@@ -152,6 +151,14 @@ function requestIdFor(response: Response, data?: ApiErrorBody) {
   return response.headers.get('x-request-id') || data?.requestId || data?.request_id;
 }
 
+// Work to do just before an expired session sends the visitor to sign in, such as keeping text they
+// had typed (see unsentDraft.ts). Registered from outside so this module stays free of page concerns.
+const beforeSignInRedirect = new Set<() => void>();
+export function onBeforeSignInRedirect(listener: () => void) {
+  beforeSignInRedirect.add(listener);
+  return () => void beforeSignInRedirect.delete(listener);
+}
+
 // The role of the signed-in person, for pages whose path carries no role (/stage): an expired
 // session there signs in again as the same kind of account. Set by AuthProvider.
 let sessionRoleHint: string | null = null;
@@ -183,7 +190,7 @@ function redirectAfterUnauthorized(path: string, rejectedToken: string | null, s
   if (!PROTECTED_AREA.test(window.location.pathname)) return;
 
   authRedirectStarted = true;
-  saveUnsentDrafts();
+  beforeSignInRedirect.forEach((listener) => listener());
   writeStored('session', RETURN_TO_KEY, currentPath);
   window.location.replace(signInPath(signInRole(window.location.pathname)));
 }

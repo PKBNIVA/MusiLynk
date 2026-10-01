@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { onBeforeSignInRedirect } from './api';
 
 // Keeps text a person has typed but not sent across an expired-session redirect (api.ts signs
 // them out and sends them to sign-in, then back to the page). A form registers a snapshot
@@ -40,6 +41,10 @@ export function saveUnsentDrafts() {
     /* worst case the person retypes it */
   }
 }
+
+// Importing this module is what arms the hook: the expiry handler in api.ts keeps the drafts of every form
+// that registered, just before it leaves the page.
+onBeforeSignInRedirect(saveUnsentDrafts);
 
 /** Returns and clears the saved draft for `key`, or null when there is none. */
 export function takeUnsentDraft(key: string): string | null {

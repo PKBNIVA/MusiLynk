@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
+import { useSearchParams } from 'react-router';
 import { Card, CardContent } from '../components/ui/card';
+import { EmptyState } from '../components/kit/EmptyState';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -13,6 +15,8 @@ import { errorMessage } from '../lib/errors';
 import type { PublicEmployer, Review } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
 export default function Reviews() {
+  const [searchParams] = useSearchParams();
+  const wantedEmployerId = useRef(searchParams.get('employerId') || '');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [employers, setEmployers] = useState<PublicEmployer[]>([]);
   const [employerId, setEmployerId] = useState('');
@@ -33,7 +37,9 @@ export default function Reviews() {
         setReviews(d.reviews || []);
         setEmployers(eligible);
         setEmployerId((current) =>
-          eligible.some((employer) => employer.id === current) ? current : eligible[0]?.id || '',
+          eligible.some((employer) => employer.id === current)
+            ? current
+            : eligible.find((employer) => employer.id === wantedEmployerId.current)?.id || eligible[0]?.id || '',
         );
       })
       .catch((e: unknown) => setLoadError(errorMessage(e, 'Reviews could not be loaded.')));
@@ -113,7 +119,7 @@ export default function Reviews() {
               </form>
             </CardContent>
           </Card>
-          <div className="space-y-4">
+          <div className={`space-y-4 ${loaded && employers.length === 0 ? 'order-first lg:order-none' : ''}`}>
             {loadError && (
               <Card className="bg-rose-500/10 border-rose-400/20" role="alert">
                 <CardContent className="p-5">
@@ -125,9 +131,12 @@ export default function Reviews() {
               </Card>
             )}
             {loadError ? null : reviews.length === 0 ? (
-              <Card className="bg-white/5 border-white/10">
-                <CardContent className="p-8 text-slate-400">No published reviews yet.</CardContent>
-              </Card>
+              <EmptyState
+                scene="stage"
+                title="No published reviews yet."
+                hint="Reviews of hirers show up here once musicians have worked with them."
+                action={{ label: 'Find work', to: '/jobseeker/jobs', variant: 'outline' }}
+              />
             ) : (
               reviews.map((r) => (
                 <Card key={r.id} className="bg-white/[.06] border-white/10">

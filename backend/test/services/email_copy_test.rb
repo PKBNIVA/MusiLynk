@@ -76,7 +76,7 @@ class EmailCopyTest < ActiveSupport::TestCase
       { "title" => "Wedding set", "role" => "Drummer", "city" => "Pune", "startAt" => "2026-10-05T13:00:00Z" }, @musician)
     assert_includes alert[:html], "Wedding set in Pune, 5 Oct, 6:30 pm."
     status = NotificationEmail.render("application_status", { "job" => "Wedding set", "status" => "Interview Scheduled" }, @musician)
-    assert_includes status[:html], "is now interview scheduled."
+    assert_includes status[:html], "is now marked as Interview Scheduled."
   end
 
   test "sequence emails use their own subject, singular and plural counts, and say opportunity" do
@@ -104,7 +104,11 @@ class EmailCopyTest < ActiveSupport::TestCase
       assert_includes html, ">V</span>", name
       assert_operator html.scan(BUTTON).size, :<=, 1, name
       assert_equal content[:action] ? 1 : 0, html.scan(BUTTON).size, name
-      assert_includes html, EmailDelivery::SERVICE_NOTE, name
+      if content[:service_note] == false
+        assert_not_includes html, EmailDelivery::SERVICE_NOTE, "#{name}: an invitee has no account to describe"
+      else
+        assert_includes html, EmailDelivery::SERVICE_NOTE, name
+      end
       assert_no_match(/VERSE/, html, name)
       text = EmailDelivery.send(:email_text, content:, data:)
       assert_match(/^Verse\n\n/, text)

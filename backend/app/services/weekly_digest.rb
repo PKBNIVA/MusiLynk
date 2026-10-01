@@ -11,6 +11,17 @@ class WeeklyDigest
     new(user, since:, until_time:).build
   end
 
+  # The email's subject: the count and name of the thing the fullest list holds ("3 urgent
+  # requests near you this week"), or the plain title when no list has anything in it. Each
+  # list names itself with `noun` (singular) and `where` (what follows the count).
+  def self.subject_for(sections)
+    largest = sections.select { _1[:noun].present? }.max_by { Array(_1[:items]).size }
+    count = Array(largest&.dig(:items)).size
+    return "This week on Verse" unless count.positive?
+
+    "#{count} #{largest[:noun].pluralize(count)} #{largest[:where]} this week"
+  end
+
   def initialize(user, since:, until_time:)
     @user = user
     @since = since
@@ -31,11 +42,11 @@ class WeeklyDigest
   def musician_sections
     profile = user.profile
     [
-      section("Urgent requests near you", matching_open_requests(profile), footnote: nil),
-      section("New jobs matching your roles", matching_jobs(profile), footnote: nil),
+      section("Urgent requests near you", matching_open_requests(profile), noun: "urgent request", where: "near you"),
+      section("New opportunities matching your roles", matching_jobs(profile), noun: "new opportunity", where: "matching your roles"),
       { heading: "Your profile", items: [], footnote: profile_views_footnote },
       { heading: "New in your city", items: [], footnote: newly_verified_footnote(profile) },
-      { heading: "This week on Verse", items: [], footnote: community_footnote }
+      { heading: "Across Verse", items: [], footnote: community_footnote }
     ]
   end
 
@@ -45,7 +56,7 @@ class WeeklyDigest
     scope = scope.where("city ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(city)}%") if city.present?
     roles = Array(profile&.roles)
     scope = scope.where("role_name IN (?) OR instrument IN (?)", roles, roles) if roles.any?
-    scope.map { |r| { text: "#{r.role_name} needed in #{r.city}", link: "#{app_url}/urgent" } }
+    scope.map { |r| { text: "#{r.title}: #{r.role_name} needed in #{r.city}, #{IndianFormat.date_time(r.start_at)}", link: "#{app_url}/urgent" } }
   end
 
   def matching_jobs(profile)
@@ -58,7 +69,9 @@ class WeeklyDigest
   def profile_views_footnote
     count = ProductEvent.named("profile_view").where(created_at: since..until_time)
       .where("props->>'profileId' = ?", user.id).count
-    "Your profile: #{count} #{'view'.pluralize(count)} this week."
+    return nil if count.zero?
+
+    "Your profile had #{count} #{'view'.pluralize(count)} this week."
   end
 
   def newly_verified_footnote(profile)
@@ -66,19 +79,23 @@ class WeeklyDigest
     scope = VerificationRequest.where(status: "approved", reviewed_at: since..until_time)
     scope = scope.joins(user: :profile).where(profiles: { location: city }) if city.present?
     count = scope.count
+    return nil if count.zero?
+
     "New in #{city.presence || 'your area'}: #{count} newly verified #{'musician'.pluralize(count)}."
   end
 
   def community_footnote
     count = ResponseTimeStats.organic_requests.where(status: "filled", updated_at: since..until_time).count
+    return nil if count.zero?
+
     "#{count} #{'request'.pluralize(count)} #{count == 1 ? 'was' : 'were'} filled through Verse this week."
   end
 
   # --- Hirer digest ----------------------------------------------------------------
   def hirer_sections
     [
-      section("Newly verified musicians in #{user.profile&.location.presence || 'your city'}", newly_verified_musicians, footnote: nil),
-      section("Your open opportunities and requests", open_listings_status, footnote: nil),
+      section("Newly verified musicians in #{city_name}", newly_verified_musicians, noun: "newly verified musician", where: "in #{city_name}"),
+      section("Your open opportunities and requests", open_listings_status, noun: "update", where: "on your opportunities and requests"),
       { heading: "Response time this week", items: [], footnote: response_time_footnote },
       { heading: "Fastest responders this week", items: fastest_responders, footnote: nil }
     ]
@@ -110,7 +127,7 @@ class WeeklyDigest
     jobs = user.jobs.where(status: "published").left_joins(:applications).group(:id)
       .select("jobs.*, COUNT(applications.id) AS applicant_count").limit(MAX_ITEMS)
     requests = user.urgent_requests.where(status: "open").limit(MAX_ITEMS)
-    job_items = jobs.map { |j| { text: "#{j.title}: #{j.applicant_count} applicant#{'s' unless j.applicant_count == 1}", link: "#{app_url}/applications" } }
+    job_items = jobs.map { |j| { text: "#{j.title}: #{j.applicant_count} #{'applicant'.pluralize(j.applicant_count)}", link: "#{app_url}/applications" } }
     request_items = requests.map { |r| { text: "#{r.title}: #{r.urgent_request_responses.count} response#{'s' unless r.urgent_request_responses.count == 1}", link: "#{app_url}/urgent" } }
     (job_items + request_items).first(MAX_ITEMS)
   end
@@ -127,11 +144,13 @@ class WeeklyDigest
       responder = User.find_by(id: user_id)
       next unless responder
 
-      { text: "#{responder.name.split.first} (#{responder.profile&.roles&.first || 'musician'}) — median #{minutes.round} min", link: "#{NotificationEmail.frontend_url}/talent/#{user_id}" }
+      { text: "#{responder.name.split.first} (#{responder.profile&.roles&.first || 'musician'}) — median #{minutes.round} min", link: "#{NotificationEmail.frontend_url}/professionals/#{user_id}" }
     end
   end
 
-  def section(heading, items, footnote:)
-    { heading:, items:, footnote: }
+  def city_name = user.profile&.location.presence || "your city"
+
+  def section(heading, items, noun: nil, where: nil)
+    { heading:, items:, footnote: nil, noun:, where: }
   end
 end

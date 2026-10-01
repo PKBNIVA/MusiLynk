@@ -85,6 +85,7 @@ Rails.application.routes.draw do
         member do
           post :grant_plan, path: "grant-plan"
           post :revoke_sessions, path: "revoke-sessions"
+          post :confirm_email, path: "confirm-email"
           post :grant_early_access, path: "early-access"
           delete :revoke_early_access, path: "early-access"
         end

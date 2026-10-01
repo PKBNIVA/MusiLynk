@@ -16,11 +16,11 @@ class AuthController < ApplicationController
   # Per-code attempts are capped by SignInCode::MAX_ATTEMPTS; this IP budget stops
   # one client spraying guesses across many addresses' codes.
   OTP_VERIFY_FAILURES_PER_IP = 25
-  OTP_UNAVAILABLE_MESSAGE = "Email sign-in codes are temporarily unavailable. Use your password instead.".freeze
+  OTP_UNAVAILABLE_MESSAGE = "Email sign-in codes are temporarily unavailable. Try again in a few minutes. If you have a confirmed account with a password you can use that, otherwise contact Verse support.".freeze
   OTP_REQUEST_MESSAGE = "If this email can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.".freeze
   EMAIL_VERIFICATION_REQUIRED_MESSAGE = "Confirm your email address before signing in with a password. We can send the link again, or you can sign in with an emailed code.".freeze
   OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
-  EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so Verse can no longer send to it. Use a different email address, or sign in with your password.".freeze
+  EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so Verse can no longer send to it. Use a different email address. If this is your address and you cannot sign in, contact Verse support.".freeze
   CODE_ONLY_LOGIN_MESSAGE = "This account uses email codes — send me a code.".freeze
   PASSWORDLESS_LOGIN_MESSAGE = "Use Google to sign in, or set a password from your email.".freeze
   PHONE_OTP_UNAVAILABLE_MESSAGE = "WhatsApp sign-in codes are temporarily unavailable.".freeze
@@ -375,12 +375,12 @@ class AuthController < ApplicationController
     email = normalized_email
     user = User.find_by(email:)
     if user && !user.email_verified? && user.active? && !user.admin?
-      scopes = { email: [email, 3] }
-      unless failure_budget_exhausted?("resend-verification", scopes, period: 1.hour)
-        record_failure!("resend-verification", scopes, period: 1.hour)
+      # Over the per-address budget nothing is sent but the answer is identical (no oracle).
+      key_period = 1.hour
+      count_key = failure_key("resend-verification", :email, email, key_period)
+      if (Rails.cache.increment(count_key, 1, expires_in: key_period) || 1) <= 3
         deliver_token(issue_token("verify_email", 24.hours, user), "/verify-email", user)
       end
-      return if performed?
     end
     render json: { ok: true, message: "If that address has an unconfirmed account, a new link is on its way." }
   end
@@ -435,7 +435,8 @@ class AuthController < ApplicationController
 
     token.with_lock do
       return render_error(RESET_TOKEN_INVALID_MESSAGE, :bad_request, "TOKEN_INVALID") if token.used_at? || token.expires_at <= Time.current
-      user.update!(password: params[:password], password_set_at: Time.current)
+      # Reaching the reset link proves the mailbox, so the address counts as confirmed from here on.
+      user.update!(password: params[:password], password_set_at: Time.current, email_verified: true)
       token.update!(used_at: Time.current)
       user.sessions.delete_all
       user.email_tokens.usable("reset_password").update_all(used_at: Time.current)

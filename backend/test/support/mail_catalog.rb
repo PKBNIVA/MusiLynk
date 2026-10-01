@@ -60,6 +60,7 @@ module MailCatalog
       "account_email_change" => { code: "205871" },
       "account_email_changed" => { detail: "asha.new@example.com" },
       "account_password_set" => { detail: "asha.catalog@example.com" },
+      "account_password_removed" => { detail: "asha.catalog@example.com" },
       "google_connected" => { link: NotificationEmail.settings_link(@musician) },
       "vouch_invite" => { link: "#{FRONT}/join/musician?vouch=vch_Zm9vYmFy", name: "Asha Rao" }
     }

@@ -426,7 +426,7 @@ export default function UrgentRequests() {
                                 Message
                               </Button>
                               {r.status === 'open' && (
-                                <Button size="sm" onClick={() => acceptResponder(r, response)}>
+                                <Button size="sm" variant="outline" onClick={() => acceptResponder(r, response)}>
                                   Accept
                                 </Button>
                               )}

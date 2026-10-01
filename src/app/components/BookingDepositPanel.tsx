@@ -114,8 +114,8 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; 
       >
         <p className="font-medium">Deposit payment is not open yet</p>
         <p className="mt-1 text-amber-100/80">
-          Your booking is accepted and {booking.actName} has been told. We will email you the moment you can pay
-          {expected ? ` the ${money(quote?.currency, expected)} deposit` : ' the deposit'}. Until then, message{' '}
+          Your booking is accepted and {booking.actName} has been told. Paying the
+          {expected ? ` ${money(quote?.currency, expected)} deposit` : ' deposit'} is not open yet. Until then, message{' '}
           {booking.actName} to agree the next step.
         </p>
         {refused && (

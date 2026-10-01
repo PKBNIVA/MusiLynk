@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 
 const STEPS = [
   'We review it within 24 hours.',
-  'Once approved it goes live and musicians can apply. We email you when that happens.',
+  'Once approved it goes live and musicians can apply. You will see its status on Your opportunities.',
   'You can edit it any time from Your opportunities.',
 ];
 

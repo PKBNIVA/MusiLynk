@@ -255,11 +255,13 @@ class HirerFlowsTest < ActionDispatch::IntegrationTest
     post "/api/jobs", params: body, headers: auth(@hirer), as: :json
     assert_response :created
     first_id = response.parsed_body.fetch("id")
+    first_flags = response.parsed_body.fetch("moderationFlags")
     assert_no_difference "Job.count" do
       post "/api/jobs", params: body, headers: auth(@hirer), as: :json
     end
     assert_response :created
     assert_equal first_id, response.parsed_body.fetch("id")
+    assert_equal first_flags, response.parsed_body.fetch("moderationFlags")
 
     # A different listing, or a draft, is not a repeat.
     assert_difference "Job.count", 1 do

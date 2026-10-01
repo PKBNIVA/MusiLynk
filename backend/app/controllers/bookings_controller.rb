@@ -1,5 +1,6 @@
 class BookingsController < ApplicationController
   PAYMENTS_LIMIT = 100
+  DIRECT_ENQUIRY_TAGLINE = "Direct enquiries"
   before_action -> { authenticate!("jobseeker", "employer") }
 
   def index
@@ -202,10 +203,10 @@ class BookingsController < ApplicationController
   # The musician's own act for enquiries addressed to them rather than to a lineup. Created on the
   # first enquiry, never listed publicly (inactive), and reused for every later one.
   def solo_act_for(musician)
-    musician.owned_acts.find_by(act_type: "solo", status: "inactive") || begin
+    musician.owned_acts.find_by(act_type: "solo", status: "inactive", tagline: DIRECT_ENQUIRY_TAGLINE) || begin
       profile = musician.profile
       act = musician.owned_acts.create!(name: musician.name, act_type: "solo", currency: "INR", fee_basis: "event", status: "inactive",
-        tagline: "Direct enquiries", city: profile&.location, genres: Array(profile&.genres), lineup_size: 1)
+        tagline: DIRECT_ENQUIRY_TAGLINE, city: profile&.location, genres: Array(profile&.genres), lineup_size: 1)
       act.act_members.create!(display_name: musician.name, role_name: "Leader", is_leader: true, member_status: "confirmed", user: musician)
       act
     end

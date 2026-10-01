@@ -129,7 +129,7 @@ class JobsController < ApplicationController
       job.save!
     end
     return if performed?
-    return render json: { id: repeat.id, status: repeat.status, moderationFlags: [], postedAs: repeat.posted_as_json(current_user) }, status: :created if repeat
+    return render json: { id: repeat.id, status: repeat.status, moderationFlags: repeat.moderation_note.to_s.split("; "), postedAs: repeat.posted_as_json(current_user) }, status: :created if repeat
 
     audit!("job.create", job, { postedAs: (job.posted_as_page && actor.key) }.compact)
     render json: { id: job.id, status: job.status, moderationFlags: flags, postedAs: job.posted_as_json(current_user) }, status: :created

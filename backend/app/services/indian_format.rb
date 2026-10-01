@@ -4,6 +4,14 @@
 module IndianFormat
   ZONE = "Asia/Kolkata".freeze
 
+  # A whole number in lakh grouping: 1234 -> "1,234", 1234567 -> "12,34,567".
+  def self.number(value)
+    digits = value.to_i.abs.to_s
+    head, tail = digits.length > 3 ? [digits[0...-3], digits[-3..]] : ["", digits]
+    head = head.reverse.scan(/\d{1,2}/).join(",").reverse
+    "#{'-' if value.to_i.negative?}#{[head, tail].reject(&:empty?).join(',')}"
+  end
+
   # "5 Oct 2026"; nil for nil.
   def self.date(time)
     time&.in_time_zone(ZONE)&.strftime("%-d %b %Y")

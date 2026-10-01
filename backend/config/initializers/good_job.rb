@@ -71,6 +71,12 @@ Rails.application.configure do
       class: "ReviewPromptSweepJob",
       description: "Prompt both parties to review each other after an urgent fill or booking completion, and send the one 3-day reminder"
     },
+    founder_report: {
+      # Monday 09:00 IST = 03:30 UTC, after the Sunday-night week has closed in IST.
+      cron: "30 3 * * 1",
+      class: "FounderReportJob",
+      description: "Email the founders last week's numbers (organic accounts only) and what needs them"
+    },
     fast_responder_week: {
       # Monday 00:20 IST — after the week just ended, before that day's own urgent traffic.
       cron: "50 18 * * 0",

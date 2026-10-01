@@ -147,17 +147,15 @@ export function Navigation() {
         { path: `${baseUrl}/build-my-crew`, icon: Users, label: 'Build my crew' },
       ],
     },
+    // Hirers book musicians; performing tools (acts, availability) belong to the musician workspace (J-16).
     {
-      label: 'Book & perform',
+      label: 'Book talent',
       icon: Mic2,
       items: [
         { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
         { path: `${baseUrl}/bookings`, icon: CalendarDays, label: 'Bookings' },
-        { path: `${baseUrl}/acts`, icon: Music, label: 'My acts' },
         { path: `${baseUrl}/band-builder`, icon: UserRoundPlus, label: 'Band builder' },
         { path: `${baseUrl}/urgent`, icon: Zap, label: 'Urgent replacement' },
-        { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
-        { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Page portfolios' },
       ],
     },
   ];

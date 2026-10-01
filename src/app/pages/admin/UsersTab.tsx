@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Users as UsersIcon,
   Sparkles,
+  MailCheck,
 } from 'lucide-react';
 import { apiGet, apiPatch, apiPost, apiDelete } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
@@ -39,12 +40,55 @@ const STATUS_BADGE: Record<string, string> = {
   deleted: 'bg-white/10 text-slate-300',
 };
 
-type UsersResponse = { users: AdminUser[]; page: number; perPage: number; total: number };
+// The users API may also describe how the account signs in (Google connections, phone). Optional so
+// the dialog degrades gracefully when the backend does not send them yet.
+type ConnectionInfo = { provider?: string; email?: string | null; label?: string | null };
+type SupportUser = AdminUser & {
+  connections?: ConnectionInfo[] | null;
+  phone?: string | null;
+  phoneVerified?: boolean | null;
+  deleted?: boolean;
+};
+type UsersResponse = { users: SupportUser[]; page: number; perPage: number; total: number };
 
 // Users is the one admin list with real server-side search: it fetches its own
 // page from `GET /admin/users?q=&role=&status=&page=&perPage=` instead of
 // filtering whatever the console's initial load happened to bring back, so an
 // account outside the newest page is still reachable (FORM-01).
+function SignInMethods({ user }: { user: SupportUser }) {
+  const connections = user.connections ?? [];
+  const known = user.connections !== undefined || user.phone !== undefined;
+  return (
+    <div className="rounded-md border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-100 grid gap-2">
+      <p>
+        <b>Check before confirming.</b> Someone else may have registered this address first. Look at the sign-in methods
+        linked to this account (Google connections, phone) and make sure they belong to the person asking.
+      </p>
+      {known ? (
+        <ul className="list-disc pl-5 text-slate-200" aria-label="Linked sign-in methods">
+          {connections.map((c, i) => (
+            <li key={`${c.provider ?? 'conn'}-${i}`}>
+              {c.provider ? c.provider.charAt(0).toUpperCase() + c.provider.slice(1) : 'Connection'}
+              {c.email || c.label ? `: ${c.email ?? c.label}` : ''}
+            </li>
+          ))}
+          {user.phone && (
+            <li>
+              Phone: {user.phone}
+              {user.phoneVerified ? ' (verified)' : ' (not verified)'}
+            </li>
+          )}
+          {connections.length === 0 && !user.phone && <li>No Google connection or phone linked. Password only.</li>}
+        </ul>
+      ) : (
+        <p className="text-slate-300">
+          This list does not show linked sign-in methods. Look the account up in the Sign-in doctor tab first.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function UsersTab({ actions }: { actions: AdminActions }) {
   const { busy, patch, act, setGrant, setConfirm } = actions;
   const [query, setQuery] = useState('');
@@ -172,6 +216,9 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
                 <Badge className={`mt-2 ${STATUS_BADGE[u.status] ?? 'bg-white/10 text-slate-300'}`}>
                   {STATUS_LABEL[u.status] ?? u.status}
                 </Badge>
+                {u.emailVerified === false && u.role !== 'admin' && (
+                  <Badge className="mt-2 ml-2 bg-amber-500/15 text-amber-200">Email not verified</Badge>
+                )}
                 {u.earlyAccessUntil && (
                   <Badge className="mt-2 ml-2 bg-violet-500/15 text-violet-200">
                     Early Access until {date(u.earlyAccessUntil)}
@@ -238,6 +285,31 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
                         Grant Early Access Pro
                       </Button>
                     ))}
+                  {u.emailVerified === false && u.status !== 'deleted' && !u.deleted && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={!!busy}
+                      title="Mark this account's email address as verified"
+                      onClick={() =>
+                        setConfirm({
+                          title: `Confirm email for ${u.name}?`,
+                          description: `${u.email} will be marked as verified without the owner clicking the email link.`,
+                          details: <SignInMethods user={u} />,
+                          confirmLabel: 'Confirm email',
+                          run: () =>
+                            act(
+                              `confirm-email:${u.id}`,
+                              () => apiPost(`/admin/users/${u.id}/confirm-email`),
+                              'Email confirmed',
+                            ).then(() => load(page)),
+                        })
+                      }
+                    >
+                      <MailCheck aria-hidden="true" size={15} className="mr-1" />
+                      Confirm email
+                    </Button>
+                  )}
                   {u.status === 'active' ? (
                     <Button
                       size="sm"

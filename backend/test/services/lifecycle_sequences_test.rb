@@ -162,6 +162,21 @@ class LifecycleSequencesTest < ActiveSupport::TestCase
     ENV.delete("SINCE")
   end
 
+  test "lifecycle:release_undelivered keeps rows that record a delivery" do
+    Rails.application.load_tasks unless Rake::Task.task_defined?("lifecycle:release_undelivered")
+    musician = create_musician(created_at: 30.days.ago)
+    burned = LifecycleEmail.create!(user: musician, key: "musician_day1_first_link", sent_at: 1.day.ago)
+    delivered = LifecycleEmail.create!(user: musician, key: "musician_day3_verified_badge", sent_at: 1.day.ago, delivered_at: 1.day.ago)
+
+    ENV["SINCE"] = 3.days.ago.iso8601
+    out, = capture_io { Rake::Task["lifecycle:release_undelivered"].execute }
+    assert_match(/Released 1 /, out)
+    assert_not LifecycleEmail.exists?(burned.id)
+    assert LifecycleEmail.exists?(delivered.id)
+  ensure
+    ENV.delete("SINCE")
+  end
+
   test "lifecycle:release_undelivered with PAIRS releases only the named user and key" do
     Rails.application.load_tasks unless Rake::Task.task_defined?("lifecycle:release_undelivered")
     first = create_musician(created_at: 30.days.ago)

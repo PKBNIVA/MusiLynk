@@ -20,5 +20,11 @@ class LifecycleEmail < ApplicationRecord
     false
   end
 
+  # Stamps delivered_at once the provider accepted the message (LifecycleEmailDeliveryJob).
+  # A no-op when no row was claimed for the pair, and idempotent on a retry.
+  def self.mark_delivered!(user_id, key)
+    where(user_id:, key:, delivered_at: nil).update_all(delivered_at: Time.current)
+  end
+
   def self.sent?(user, key) = exists?(user_id: user.id, key:)
 end

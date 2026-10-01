@@ -15,13 +15,13 @@ class LifecycleMailer
       category: "lifecycle", subject: "Add your first work link",
       heading: "Show people what you sound like",
       copy: ->(_) { "A profile with one work sample gets far more replies than an empty one. Add a track, a video, or a link to a set." },
-      action: "Add a work link", path: "/jobseeker/portfolio"
+      action: "Add a work link", path: "/jobseeker/library"
     },
     "musician_day3_verified_badge" => {
       category: "lifecycle", subject: "Get your Verified badge",
       heading: "Stand out with a Verified badge",
       copy: ->(_) { "Verified profiles are trusted faster by hirers. It takes a couple of minutes to request." },
-      action: "Get verified", path: "/jobseeker/verification"
+      action: "Get verified", path: "/jobseeker/profile?verify=1"
     },
     "musician_day5_set_availability" => {
       category: "lifecycle", subject: "Set your availability so hirers can find you",
@@ -46,32 +46,32 @@ class LifecycleMailer
       category: "lifecycle", subject: "Post what you need",
       heading: "Post what you need — or send an urgent request",
       copy: ->(_) { "Tell musicians what you're looking for, or send an urgent request if you need someone fast." },
-      action: "Post a listing", path: "/employer/jobs/new"
+      action: "Post a listing", path: "/employer/post-job"
     },
     "hirer_day3_meet_verified" => {
       category: "lifecycle", subject: ->(p) { "Meet verified #{p['role']} players in #{p['city']}" },
       heading: ->(p) { "Meet verified #{p['role']} players in #{p['city']}" },
       copy: ->(_) { "Here are a few verified musicians who might be a fit." },
-      action: "Browse musicians", path: "/employer/discover"
+      action: "Browse musicians", path: "/employer/candidates"
     },
     "hirer_day7_listing_applicants" => {
       category: "lifecycle", subject: ->(p) { "Your listing has #{p['count']} applicants" },
       heading: ->(p) { "Your listing has #{p['count']} applicants" },
       copy: ->(p) { "#{p['title']} has new applicants waiting for a look." },
-      action: "Review applicants", path: "/employer/applicants"
+      action: "Review applicants", path: "/employer/applications"
     },
     "hirer_day14_inactive_response_time" => {
       category: "lifecycle", subject: ->(p) { "Musicians in #{p['city']} are answering fast" },
       heading: ->(p) { "Musicians in #{p['city']} are answering within #{p['hours']} hours" },
       copy: ->(_) { "If you have a gig to fill, an urgent request usually gets a reply quickly." },
-      action: "Send an urgent request", path: "/employer/urgent/new"
+      action: "Send an urgent request", path: "/employer/urgent"
     },
     # Milestones (instant, via Notifier).
     "milestone_hirer_first_application" => {
       category: "product", subject: "You received your first application",
       heading: "Your first application is in",
       copy: ->(p) { "#{p['candidate']} applied to #{p['job']}. Take a look." },
-      action: "Review applicants", path: "/employer/applicants"
+      action: "Review applicants", path: "/employer/applications"
     },
     "milestone_musician_first_response" => {
       category: "product", subject: "You responded in %{minutes} minutes",
@@ -89,11 +89,17 @@ class LifecycleMailer
       category: "product", subject: "You've filled 5 urgent requests on Verse",
       heading: "5 requests filled through Verse",
       copy: ->(_) { "You've filled 5 urgent requests through Verse. Thanks for using it to find people fast." },
-      action: "Post another request", path: "/employer/urgent/new"
+      action: "Post another request", path: "/employer/urgent"
     }
   }.freeze
 
   def self.step_category(key) = STEPS.fetch(key)[:category]
+
+  # The CTA link for a step. Each STEPS path is already the full in-app path (it carries its
+  # own /jobseeker or /employer workspace prefix), so the link is the frontend origin plus that
+  # path, built exactly once. Never add NotificationEmail.workspace here: that doubled the
+  # prefix (/jobseeker/jobseeker/...) and landed on the 404 page.
+  def self.step_link(key) = "#{NotificationEmail.frontend_url}#{STEPS.fetch(key)[:path]}"
 
   # Returns { subject:, html:, text: } for a sequence step or milestone. Raises KeyError
   # for an unknown key.
@@ -103,7 +109,7 @@ class LifecycleMailer
     subject = call_or_value(spec[:subject], params).to_s.squish.first(150)
     heading = call_or_value(spec[:heading], params)
     copy = call_or_value(spec[:copy], params)
-    link = "#{NotificationEmail.frontend_url}#{NotificationEmail.workspace(user)}#{spec[:path]}"
+    link = step_link(key)
     render_content(heading:, copy:, action: spec[:action], link:, user:)
   end
 

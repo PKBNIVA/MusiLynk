@@ -41,6 +41,21 @@ class WeeklyDigestTest < ActiveSupport::TestCase
     assert_equal "1 request were filled through Verse this week.", community[:footnote]
   end
 
+  test "musician digest ignores demo urgent requests, in the list and in the filled count" do
+    musician = create_musician(city: "Mumbai", roles: ["Drummer"])
+    demo_hirer = create_hirer
+    demo_hirer.update_column(:synthetic_batch, "demo-showcase")
+    UrgentRequest.create!(requester: demo_hirer, title: "Demo drummer", role_name: "Drummer", city: "Mumbai",
+      currency: "INR", status: "open", start_at: 1.day.from_now)
+    UrgentRequest.create!(requester: demo_hirer, title: "Demo filled", role_name: "Bass", city: "Pune",
+      currency: "INR", status: "filled", start_at: 1.day.from_now)
+
+    sections = WeeklyDigest.build(musician, since: @since, until_time: Time.current)
+    assert_empty sections.find { _1[:heading] == "Urgent requests near you" }[:items]
+    assert_equal "0 requests were filled through Verse this week.",
+      sections.find { _1[:heading] == "This week on Verse" }[:footnote]
+  end
+
   test "hirer digest includes newly verified musicians matching posted roles and city" do
     hirer = create_hirer(city: "Chennai")
     Job.create!(employer: hirer, title: "Need a vocalist", company: hirer.name, location: "Chennai", kind: "Contract",

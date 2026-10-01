@@ -560,6 +560,57 @@ describe('401 handling', () => {
     }
   });
 
+  it('treats an expired session on the Stage like any protected page: keeps the unsent text, then signs in as the same role', async () => {
+    const { location, restore } = fakeLocation('/stage');
+    try {
+      const { apiPost, setAccessToken, hasAccessToken, consumeReturnTo, rememberSessionRole } = await loadApi();
+      const { registerUnsentDraft, takeUnsentDraft } = await import('../unsentDraft');
+      registerUnsentDraft('stage-composer', () => 'Playing Blue Frog on Friday');
+      rememberSessionRole('employer');
+      setAccessToken('expired');
+      fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
+
+      await expect(apiPost('/stage/posts', { body: 'x' })).rejects.toMatchObject({ status: 401 });
+      expect(hasAccessToken()).toBe(false);
+      expect(location.replace).toHaveBeenCalledWith('/auth/employer');
+      expect(consumeReturnTo()).toBe('/stage');
+      expect(takeUnsentDraft('stage-composer')).toBe('Playing Blue Frog on Friday');
+    } finally {
+      restore();
+    }
+  });
+
+  it('falls back to the musician sign-in when the Stage session had no known role, and forgets a cleared hint', async () => {
+    const { location, restore } = fakeLocation('/stage/posts/p1');
+    try {
+      const { apiGet, setAccessToken, rememberSessionRole } = await loadApi();
+      rememberSessionRole('employer');
+      rememberSessionRole(null);
+      setAccessToken('expired');
+      fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
+      await expect(apiGet('/stage/posts/p1')).rejects.toMatchObject({ status: 401 });
+      expect(location.replace).toHaveBeenCalledWith('/auth/jobseeker');
+    } finally {
+      restore();
+    }
+  });
+
+  it('remembers the role across a cold load whose token expired before /me resolved', async () => {
+    const { location, restore } = fakeLocation('/stage');
+    try {
+      const first = await loadApi();
+      first.rememberSessionRole('employer');
+      vi.resetModules();
+      const { apiGet, setAccessToken } = await loadApi();
+      setAccessToken('expired');
+      fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
+      await expect(apiGet('/stage/feed')).rejects.toMatchObject({ status: 401 });
+      expect(location.replace).toHaveBeenCalledWith('/auth/employer');
+    } finally {
+      restore();
+    }
+  });
+
   it('sends an expired admin-site session back to the admin sign-in page', async () => {
     vi.stubEnv('VITE_APP_TARGET', 'admin');
     const { location, restore } = fakeLocation('/account');

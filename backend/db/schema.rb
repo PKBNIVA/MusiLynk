@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_090100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -729,6 +729,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_090100) do
     t.string "key", null: false
     t.datetime "sent_at", null: false
     t.datetime "created_at", null: false
+    t.datetime "delivered_at"
     t.index ["user_id", "key"], name: "index_lifecycle_emails_on_user_id_and_key", unique: true
   end
 

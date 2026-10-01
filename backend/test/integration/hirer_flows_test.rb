@@ -111,6 +111,16 @@ class HirerFlowsTest < ActionDispatch::IntegrationTest
     assert_equal [5, false], [body["requests"].size, body["hasMore"]]
   end
 
+  test "an absurd page number answers with an empty page, never an error" do
+    urgent_request
+    [0, -4, 10**30, "abc"].each do |page|
+      get "/api/urgent-requests", params: { scope: "browse", page: }, headers: auth(@drummer)
+      assert_response :success, "page=#{page}"
+    end
+    get "/api/urgent-requests", params: { scope: "browse", page: 10**30 }, headers: auth(@drummer)
+    assert_equal [], response.parsed_body["requests"]
+  end
+
   test "a hirer's default list is their own requests in any status" do
     mine = urgent_request
     filled = urgent_request(role: "Singer")

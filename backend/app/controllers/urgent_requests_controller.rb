@@ -5,6 +5,7 @@ class UrgentRequestsController < ApplicationController
   LIST_LIMIT = 200
 
   PAGE_SIZE = 20
+  MAX_PAGE = 1_000
   SCOPES = %w[mine matches browse].freeze
   # Words that say nothing about which instrument or job someone does.
   ROLE_FILLER = %w[player artist artiste musician and the of].freeze
@@ -19,7 +20,7 @@ class UrgentRequestsController < ApplicationController
     scope_name = params[:scope].presence || (current_user.jobseeker? ? "matches" : "mine")
     return render_error("Unknown view.", :bad_request, "INVALID_PARAMETER") unless SCOPES.include?(scope_name)
 
-    page = [params[:page].to_i, 1].max
+    page = params[:page].to_i.clamp(1, MAX_PAGE)
     base = UrgentRequest.includes(:urgent_request_responses, :filled_by, requester: :profile)
     base = scope_name == "mine" ? base.where(requester: current_user).order(created_at: :desc) : base.open_and_recent.where.not(requester_id: current_user.id).order(start_at: :asc)
     base = base.where("city ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:city])}%") if params[:city].present?

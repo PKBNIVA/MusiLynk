@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ShieldCheck,
   Users,
@@ -20,7 +20,7 @@ import {
   TrendingUp,
   Ticket,
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
@@ -38,10 +38,15 @@ import {
   type Grant,
   type AdminActions,
   type ReportFilters,
+  type JobStatusFilter,
   SOURCES,
   readSource,
   readMeta,
   reportsQuery,
+  jobsQuery,
+  readAdminTab,
+  DEFAULT_ADMIN_TAB,
+  DEFAULT_JOB_STATUS,
   EMPTY,
   DEFAULT_REPORT_FILTERS,
   Stat,
@@ -71,6 +76,19 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth(),
     nav = useNavigate();
   usePageMeta('Admin · Trust & Operations', 'Verse moderation, verification, marketplace health and audit.');
+  // The active tab lives in the URL (?tab=) so reload, shared links and Back keep it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = readAdminTab(searchParams.get('tab'));
+  const selectTab = (value: string) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === DEFAULT_ADMIN_TAB) next.delete('tab');
+        else next.set('tab', value);
+        return next;
+      },
+      { replace: true },
+    );
   const [data, setData] = useState<Data>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<Source, string>>>({});
   const [meta, setMeta] = useState<Partial<Record<Source, PageMeta>>>({});
@@ -83,12 +101,25 @@ export default function AdminDashboard() {
   // paging (E2/#76). Reports otherwise flow through the same `data`/`meta` buckets as every
   // other tab; only the query string sent for that one source differs.
   const [reportFilters, setReportFilters] = useState<ReportFilters>(DEFAULT_REPORT_FILTERS);
+  // The Opportunity queue's status filter; like the report filters it is sent to the server, so the
+  // pager total always matches the rows listed.
+  const [jobStatus, setJobStatus] = useState<JobStatusFilter>(DEFAULT_JOB_STATUS);
+  // The bulk reload (`load`) runs from stable callbacks, so it reads the live filters through a ref.
+  const filtersRef = useRef({ reportFilters, jobStatus });
+  filtersRef.current = { reportFilters, jobStatus };
+
+  const sourcePath = (source: Source, page: number, perPage: number) =>
+    source === 'reports'
+      ? reportsQuery(filtersRef.current.reportFilters, page, perPage)
+      : source === 'jobs'
+        ? jobsQuery(filtersRef.current.jobStatus, page, perPage)
+        : `${SOURCES[source][0]}?page=${page}&perPage=${perPage}`;
 
   const load = useCallback(async () => {
     setLoading(true);
     const keys = Object.keys(SOURCES) as Source[];
     const settled = await Promise.allSettled(
-      keys.map((k) => apiGet<Payload | null>(k === 'reports' ? reportsQuery(reportFilters, 1) : SOURCES[k][0])),
+      keys.map((k) => apiGet<Payload | null>(k === 'reports' || k === 'jobs' ? sourcePath(k, 1, 100) : SOURCES[k][0])),
     );
     const next: Partial<Data> = {},
       nextErrors: Partial<Record<Source, string>> = {},
@@ -105,7 +136,6 @@ export default function AdminDashboard() {
     setErrors(nextErrors);
     setMeta((prev) => ({ ...prev, ...nextMeta }));
     setLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reportFilters changes are handled by loadReports below
   }, []);
   useEffect(() => {
     void load();
@@ -115,11 +145,7 @@ export default function AdminDashboard() {
   // console (E2): each paged tab calls this instead of the bulk `load()`.
   const loadPage = useCallback(
     (source: Source, page: number) => {
-      const perPage = meta[source]?.perPage ?? 100;
-      const path =
-        source === 'reports'
-          ? reportsQuery(reportFilters, page, perPage)
-          : `${SOURCES[source][0]}?page=${page}&perPage=${perPage}`;
+      const path = sourcePath(source, page, meta[source]?.perPage ?? 100);
       apiGet<Payload | null>(path)
         .then((res) => {
           setData((prev) => ({ ...prev, [source]: SOURCES[source][1](res) }));
@@ -134,7 +160,7 @@ export default function AdminDashboard() {
         })
         .catch((e: unknown) => setErrors((prev) => ({ ...prev, [source]: errorMessage(e, 'Unable to load.') })));
     },
-    [meta, reportFilters],
+    [meta],
   );
 
   // Applying a filter always restarts the reports tab at page 1.
@@ -145,6 +171,17 @@ export default function AdminDashboard() {
     loadPage('reports', 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when the filters themselves change
   }, [reportFilters]);
+  // Changing the queue's status filter restarts it at page 1 (skipping the first render, which
+  // the bulk load already covers).
+  const jobStatusMounted = useRef(false);
+  useEffect(() => {
+    if (!jobStatusMounted.current) {
+      jobStatusMounted.current = true;
+      return;
+    }
+    loadPage('jobs', 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when the filter itself changes
+  }, [jobStatus]);
 
   // Every moderation action goes through here: one in flight at a time, toast on result, then refresh.
   const act = async (key: string, request: () => Promise<unknown>, message: string) => {
@@ -166,8 +203,6 @@ export default function AdminDashboard() {
   const actions: AdminActions = { busy, act, patch, setConfirm, setGrant };
 
   const { stats, jobs, reviews, verifications, reports, logs, subscriptions, bookings, attempts, billingEvents } = data;
-  const pendingJobs = useMemo(() => jobs.filter((j) => j.status === 'pending'), [jobs]);
-  const pendingVerifications = useMemo(() => verifications.filter((v) => v.status === 'pending'), [verifications]);
   const failedCount = Object.keys(errors).length;
   const retry = () => {
     void load();
@@ -263,15 +298,15 @@ export default function AdminDashboard() {
           <Stat label="Bookings" value={stats.bookings} icon={Activity} hasError={!!errors.stats} />
           <Stat label="Paid plans" value={stats.activeSubscriptions} icon={ShieldCheck} hasError={!!errors.stats} />
         </div>
-        <Tabs defaultValue="queue">
+        <Tabs value={tab} onValueChange={selectTab}>
           <TabsList className="bg-white/5 border border-white/10 flex flex-wrap justify-start h-auto w-full md:w-auto gap-1 p-1">
             <TabsTrigger value="queue" className="flex-none gap-1.5">
               <Briefcase aria-hidden="true" size={14} />
-              Opportunity queue ({errors.jobs ? '!' : pendingJobs.length})
+              Opportunity queue ({errors.stats ? '!' : (stats.pendingJobs ?? 0)})
             </TabsTrigger>
             <TabsTrigger value="verification" className="flex-none gap-1.5">
               <UserCheck aria-hidden="true" size={14} />
-              Verification ({errors.verifications ? '!' : pendingVerifications.length})
+              Verification ({errors.stats ? '!' : (stats.verificationQueue ?? 0)})
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex-none gap-1.5">
               <Flag aria-hidden="true" size={14} />
@@ -283,7 +318,7 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="reviews" className="flex-none gap-1.5">
               <Star aria-hidden="true" size={14} />
-              Reviews ({errors.reviews ? '!' : reviews.filter((r) => r.status === 'pending').length})
+              Reviews ({errors.stats ? '!' : (stats.pendingReviews ?? 0)})
             </TabsTrigger>
             <TabsTrigger value="signin" className="flex-none gap-1.5">
               <Stethoscope aria-hidden="true" size={14} />
@@ -326,7 +361,9 @@ export default function AdminDashboard() {
           <TabsContent value="queue" className="space-y-3 mt-5">
             <Suspense fallback={null}>
               <QueueTab
-                jobs={pendingJobs}
+                jobs={jobs}
+                status={jobStatus}
+                onStatus={setJobStatus}
                 error={errors.jobs}
                 loading={loading}
                 retry={retry}

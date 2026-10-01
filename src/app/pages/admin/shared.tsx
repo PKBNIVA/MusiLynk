@@ -117,6 +117,45 @@ export const reportsQuery = (filters: ReportFilters, page: number, perPage = 100
   return `${SOURCES.reports[0]}?${qs.toString()}`;
 };
 
+// The Opportunity queue's status filter. Applied server-side (Admin::JobsController#index) before
+// paging, so the pager's total counts exactly the rows being paged. "pending" is the working queue.
+export const JOB_STATUS_OPTIONS = [
+  { value: 'pending', label: 'Waiting for review' },
+  { value: 'published', label: 'Published' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'closed', label: 'Closed' },
+  { value: 'all', label: 'All statuses' },
+] as const;
+export type JobStatusFilter = (typeof JOB_STATUS_OPTIONS)[number]['value'];
+export const DEFAULT_JOB_STATUS: JobStatusFilter = 'pending';
+export const jobsQuery = (status: JobStatusFilter, page: number, perPage = 100) => {
+  const qs = new URLSearchParams({ page: String(page), perPage: String(perPage), status });
+  return `${SOURCES.jobs[0]}?${qs.toString()}`;
+};
+
+// The console's tabs, in display order. The active one lives in the URL (?tab=) so a reload,
+// a shared link and the back button all keep it. Unknown values fall back to the queue.
+export const ADMIN_TABS = [
+  'queue',
+  'verification',
+  'reports',
+  'users',
+  'reviews',
+  'signin',
+  'commerce',
+  'codes',
+  'operations',
+  'audit',
+  'demo',
+  'ai',
+  'urgent',
+  'funnel',
+] as const;
+export type AdminTab = (typeof ADMIN_TABS)[number];
+export const DEFAULT_ADMIN_TAB: AdminTab = 'queue';
+export const readAdminTab = (value: string | null): AdminTab =>
+  (ADMIN_TABS as readonly string[]).includes(value ?? '') ? (value as AdminTab) : DEFAULT_ADMIN_TAB;
+
 // Pagination envelope every paged admin list answers with (page/perPage/total).
 export type PageMeta = { page: number; perPage: number; total: number };
 export const readMeta = (d: Payload | null): PageMeta | null =>

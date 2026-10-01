@@ -18,7 +18,10 @@ const RULES = [
 
 async function violations(page: Page) {
   const result = await new AxeBuilder({ page }).withRules(RULES).analyze();
-  return result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ") + " :: " + (n.any[0]?.message ?? "") + " :: " + n.html.slice(0, 160)).join(" | ")}`);
+  return result.violations.map(
+    (v) =>
+      `${v.id}: ${v.nodes.map((n) => n.target.join(' ') + ' :: ' + (n.any[0]?.message ?? '') + ' :: ' + n.html.slice(0, 160)).join(' | ')}`,
+  );
 }
 
 for (const role of ['jobseeker', 'employer'] as const) {
@@ -48,3 +51,26 @@ test('an open select list is scrollable by keyboard and hides nothing focusable'
   await expect(page.getByRole('listbox')).toBeVisible();
   expect(await violations(page)).toEqual([]);
 });
+
+for (const role of ['jobseeker', 'employer'] as const) {
+  for (const width of [360, 390]) {
+    test(`${role}: signed-in top bar fits ${width}px with a long name`, async ({ page }) => {
+      await signInWithDialogFixtures(page, role);
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(`/${role}`);
+      const nav = page.getByRole('navigation', { name: 'Workspace navigation' });
+      await expect(nav).toBeVisible();
+      const m = await page.evaluate(() => {
+        const row = document.querySelector('nav[aria-label="Workspace navigation"] > div') as HTMLElement;
+        return {
+          row: row.scrollWidth,
+          row_client: row.clientWidth,
+          doc: document.documentElement.scrollWidth,
+          view: window.innerWidth,
+        };
+      });
+      expect(m.row).toBeLessThanOrEqual(m.row_client);
+      expect(m.doc).toBeLessThanOrEqual(m.view);
+    });
+  }
+}

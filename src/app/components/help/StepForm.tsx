@@ -49,7 +49,13 @@ export function StepForm({
             style={{ width: `${pct}%` }}
           />
         </div>
-        <ol className={cn('mt-4 grid grid-cols-2 gap-2', COLUMNS[steps.length] ?? 'sm:grid-cols-4')}>
+        <ol
+          className={cn(
+            'mt-4 grid gap-2',
+            steps.length === 3 ? 'grid-cols-3' : 'grid-cols-2',
+            COLUMNS[steps.length] ?? 'sm:grid-cols-4',
+          )}
+        >
           {steps.map((s, i) => {
             const done = i < current;
             const active = i === current;
@@ -64,6 +70,9 @@ export function StepForm({
                   aria-current={active ? 'step' : undefined}
                   className={cn(
                     'flex w-full min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors',
+                    // three steps share one row on a phone: icon above a short centred label
+                    steps.length === 3 &&
+                      'max-sm:h-full max-sm:flex-col max-sm:justify-start max-sm:gap-1 max-sm:px-1.5 max-sm:text-center max-sm:text-xs',
                     active && 'border-violet-400/50 bg-violet-500/15 text-white',
                     open && 'border-white/10 bg-white/[.03] text-slate-200 hover:border-violet-400/40',
                     !active && !open && 'border-white/10 text-slate-400 disabled:cursor-default',

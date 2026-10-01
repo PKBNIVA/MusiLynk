@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const toastFn = vi.hoisted(() => Object.assign(vi.fn(() => 'id'), { error: vi.fn() }));
+const toastFn = vi.hoisted(() =>
+  Object.assign(
+    vi.fn(() => 'id'),
+    { error: vi.fn() },
+  ),
+);
 vi.mock('sonner', () => ({ toast: toastFn }));
 
 import { undoToast } from '../undoToast';

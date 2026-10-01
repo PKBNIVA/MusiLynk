@@ -15,7 +15,13 @@ describe('ConfirmDialog', () => {
     const root = createRoot(host);
     await act(async () =>
       root.render(
-        <ConfirmDialog open onOpenChange={onOpenChange} title="Remove it?" confirmLabel="Remove" onConfirm={onConfirm} />,
+        <ConfirmDialog
+          open
+          onOpenChange={onOpenChange}
+          title="Remove it?"
+          confirmLabel="Remove"
+          onConfirm={onConfirm}
+        />,
       ),
     );
     const buttons = Array.from(document.body.querySelectorAll('button'));

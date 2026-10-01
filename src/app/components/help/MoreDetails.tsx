@@ -54,11 +54,11 @@ export function FormSection({
 }) {
   return (
     <fieldset className={cn('space-y-4', className)}>
-      <legend className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-violet-200">
+      <legend className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-violet-200">
         {Icon && <Icon aria-hidden="true" size={16} className="text-violet-300" />}
         {title}
       </legend>
-      {description && <p className="-mt-2 text-xs text-slate-400">{description}</p>}
+      {description && <p className="-mt-1 text-sm text-slate-400">{description}</p>}
       {children}
     </fieldset>
   );

@@ -25,7 +25,12 @@ type UndoToastOptions = {
  * use ConfirmDialog for anything involving money or other people.
  */
 export function undoToast(message: string, options: UndoToastOptions) {
-  const { onUndo, onCommit, duration = 6000, commitErrorMessage = 'Could not finish that. Please try again.' } = options;
+  const {
+    onUndo,
+    onCommit,
+    duration = 6000,
+    commitErrorMessage = 'Could not finish that. Please try again.',
+  } = options;
   let undone = false;
   let settled = false;
   const commit = async () => {

@@ -62,7 +62,7 @@ export function ConfirmDialog({
   };
   return (
     <AlertDialog open={open} onOpenChange={(next) => (pending ? undefined : onOpenChange(next))}>
-      <AlertDialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription asChild={typeof description !== 'string'}>
@@ -91,16 +91,16 @@ export function ConfirmDialog({
 /**
  * Promise-style helper so a click handler can simply `await`.
  *
- *   const { confirm, confirmDialog } = useConfirm();
+ *   const { ask, confirmDialog } = useConfirm();
  *   const onRemove = async () => {
- *     if (!(await confirm({ title: 'Remove this slot?', confirmLabel: 'Remove' }))) return;
+ *     if (!(await ask({ title: 'Remove this slot?', confirmLabel: 'Remove' }))) return;
  *     await api.delete(...);
  *   };
  *   return <>... {confirmDialog}</>;
  */
 export function useConfirm() {
   const [state, setState] = React.useState<(ConfirmOptions & { resolve: (ok: boolean) => void }) | null>(null);
-  const confirm = React.useCallback(
+  const ask = React.useCallback(
     (options: ConfirmOptions) =>
       new Promise<boolean>((resolve) => {
         setState({ ...options, resolve });
@@ -127,5 +127,5 @@ export function useConfirm() {
       onConfirm={() => settle(true)}
     />
   );
-  return { confirm, confirmDialog };
+  return { ask, confirmDialog };
 }

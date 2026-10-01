@@ -210,9 +210,13 @@ export function ReportReview({
         {context && (
           <div className="grid gap-5">
             <section aria-label="Report">
-              <div className="text-rose-300 font-medium">{context.report.reason}</div>
+              <div className="text-rose-300 font-medium break-words [overflow-wrap:anywhere]">
+                {context.report.reason}
+              </div>
               {context.report.details && (
-                <p className="text-sm text-slate-300 mt-1 whitespace-pre-wrap break-words">{context.report.details}</p>
+                <p className="text-sm text-slate-300 mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                  {context.report.details}
+                </p>
               )}
               <p className="text-xs text-slate-400 mt-1">
                 Reported by {context.report.reporterName || 'Unknown'} · {when(context.report.createdAt)}

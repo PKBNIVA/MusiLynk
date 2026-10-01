@@ -596,7 +596,7 @@ export default function PostJob() {
     return (
       <div className="min-h-screen bg-slate-950 text-white">
         <Navigation />
-        <main className="max-w-3xl mx-auto px-5 md:px-6 pt-28 pb-16">
+        <main className="max-w-3xl mx-auto px-4 sm:px-5 md:px-6 pt-28 pb-16">
           <SubmittedListing
             title={submitted.title}
             viewPath={`${seeker ? '/jobseeker' : '/employer'}/jobs/${encodeURIComponent(submitted.id)}`}
@@ -610,7 +610,7 @@ export default function PostJob() {
     return (
       <div className="min-h-screen bg-slate-950 text-white">
         <Navigation />
-        <main className="max-w-5xl mx-auto px-5 md:px-6 pt-28 pb-16">
+        <main className="max-w-5xl mx-auto px-4 sm:px-5 md:px-6 pt-28 pb-16">
           {loadError ? (
             <Card className="bg-white/[.055] border-white/10">
               <CardContent className="p-8 text-center" role="alert">
@@ -1154,7 +1154,7 @@ export default function PostJob() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
-      <main className="max-w-5xl mx-auto px-5 md:px-6 pt-28 pb-16">
+      <main className="max-w-5xl mx-auto px-4 sm:px-5 md:px-6 pt-28 pb-16">
         <PageHeader
           help={
             job ? undefined : (

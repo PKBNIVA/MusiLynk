@@ -66,3 +66,31 @@ test("the landing page's popular searches open a hire page, whose urgent CTA pre
   await expect(page.getByRole('combobox', { name: 'Role needed' })).toHaveValue('Drummer');
   await expect(page.getByRole('combobox', { name: 'City' })).toHaveValue('Mumbai');
 });
+
+// The page must never scroll sideways on a phone, even when a card carries long, unbroken content
+// (grid items without a zero minimum width used to stretch the whole page to ~400px).
+test('a hire page with long profile content does not scroll sideways on a 360px phone', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await mockSignupApi(page);
+  const long = 'Hindustani-Carnatic-Fusion-Percussion-Specialist-for-Destination-Weddings';
+  await page.route('**/api/public/hire-pages/drummer/mumbai', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...HIRE_PAGE_RESPONSE,
+        featured: [
+          { ...HIRE_PAGE_RESPONSE.featured[0], name: `Asha ${long}`, headline: long, genres: [long], reviewsCount: 3 },
+          ...HIRE_PAGE_RESPONSE.featured,
+        ],
+      }),
+    }),
+  );
+  await page.goto('/hire/drummer/mumbai');
+  await expect(page.getByTestId('featured-grid')).toBeVisible();
+  const { scroll, client } = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth,
+  }));
+  expect(scroll).toBeLessThanOrEqual(client);
+});

@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../lib/authContext';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
+import { useConfirm } from '../components/booking/BookingDialogs';
 import { errorMessage } from '../lib/errors';
 import { formatWhen, formatInputEcho } from '../lib/format';
 import { shareListing } from '../lib/shareListing';
@@ -67,9 +68,6 @@ const DRAFT_TITLES: Record<DraftKind, string> = {
   interview_questions: 'Interview questions',
   rejection_note: 'Draft kind rejection',
 };
-
-/** The applicant's email is only shown once the hirer has moved them forward. */
-const EMAIL_VISIBLE_STATUSES = ['Shortlisted', 'Interview Scheduled', 'Offer', 'Hired'];
 
 /** Parses candidate_summary's fixed output shape: "- bullet" lines, then a final "Fit: ..." line. */
 function parseCandidateSummary(text: string): CandidateSummary {
@@ -322,9 +320,23 @@ export default function EmployerApplications() {
       markUpdating(id, false);
     }
   }
+  const { ask, element: confirmDialog } = useConfirm();
   function status(a: EmployerApplication, s: string) {
     if (s === 'Interview Scheduled') {
       setInterview({ id: a.id, name: a.candidateName, date: '' });
+      return;
+    }
+    if (s === 'Rejected') {
+      // Rejecting tells the applicant and cannot be taken back from this screen, so ask first.
+      ask({
+        title: `Reject ${a.candidateName}?`,
+        description: `${a.candidateName} will be told their application for ${a.jobTitle} was not taken forward. You can't undo this.`,
+        confirmLabel: 'Reject applicant',
+        destructive: true,
+        action: async () => {
+          await update(a.id, { status: s }, `Marked ${s}`);
+        },
+      });
       return;
     }
     void update(a.id, { status: s }, `Marked ${s}`);
@@ -525,13 +537,6 @@ export default function EmployerApplications() {
                                 .join(' · ');
                             })()}
                           </div>
-                          {EMAIL_VISIBLE_STATUSES.includes(a.status) && a.candidateEmail && (
-                            <div className="text-xs text-slate-400 mt-1 break-all">
-                              <a href={`mailto:${a.candidateEmail}`} className="underline hover:text-white">
-                                Email this applicant
-                              </a>
-                            </div>
-                          )}
                           <div className="text-slate-400 text-xs mt-1">Applied for {a.jobTitle}</div>
                           {a.status === 'Interview Scheduled' && a.interviewDate && (
                             <div className="text-sm text-emerald-300 mt-1">
@@ -751,6 +756,7 @@ export default function EmployerApplications() {
             })}
           </div>
         )}
+        {confirmDialog}
         <FormDialog
           open={!!interview}
           onOpenChange={(o) => {

@@ -110,7 +110,12 @@ export default function AdminAiTab() {
                   <h2>By task</h2>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 max-h-80 overflow-auto">
+              <CardContent
+                className="space-y-2 max-h-80 overflow-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
+                tabIndex={0}
+                role="region"
+                aria-label="By task"
+              >
                 {Object.entries(costs.byTask).length === 0 && <Empty text="No AI usage recorded this month." />}
                 {Object.entries(costs.byTask)
                   .sort((a, b) => b[1] - a[1])
@@ -128,7 +133,12 @@ export default function AdminAiTab() {
                   <h2>By plan tier</h2>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 max-h-80 overflow-auto">
+              <CardContent
+                className="space-y-2 max-h-80 overflow-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
+                tabIndex={0}
+                role="region"
+                aria-label="By plan tier"
+              >
                 {Object.entries(costs.byTier).length === 0 && <Empty text="No AI usage recorded this month." />}
                 {Object.entries(costs.byTier)
                   .sort((a, b) => b[1] - a[1])
@@ -146,7 +156,12 @@ export default function AdminAiTab() {
                   <h2>Top accounts by spend</h2>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 max-h-96 overflow-auto">
+              <CardContent
+                className="space-y-2 max-h-96 overflow-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
+                tabIndex={0}
+                role="region"
+                aria-label="Top accounts by spend"
+              >
                 {costs.topAccounts.length === 0 && <Empty text="No AI usage recorded this month." />}
                 {costs.topAccounts.map((a) => (
                   <div

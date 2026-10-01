@@ -17,6 +17,7 @@ const admin = {
   profileComplete: true,
 };
 const adminFixtures = () => ({
+  'POST /api/admin/users/u-1/confirm-email': { body: { ok: true, alreadyVerified: false } },
   '/api/admin/stats': { body: { stats: { users: 2, liveJobs: 1, pendingJobs: 1, openReports: 1 } } },
   '/api/admin/users': {
     body: {
@@ -490,6 +491,70 @@ test.describe('admin console', () => {
     });
     // Admin rows never offer plan or status changes.
     await expect(page.getByRole('button', { name: 'Grant plan' })).toHaveCount(1);
+  });
+
+  test('confirm email is offered only for unverified, non-admin, non-deleted users and warns about sign-in methods', async ({
+    page,
+  }) => {
+    const base = (id: string, over: Record<string, unknown>) => ({
+      id,
+      name: `User ${id}`,
+      email: `${id}@example.invalid`,
+      role: 'jobseeker',
+      status: 'active',
+      emailVerified: false,
+      createdAt: '2026-09-01T00:00:00Z',
+      ...over,
+    });
+    let confirmed = false;
+    const fixtures = adminFixtures();
+    const calls = await mockApi(
+      page,
+      {
+        ...fixtures,
+        '/api/admin/users': () => ({
+          body: {
+            users: [
+              base('unverified', {
+                name: 'Unverified Una',
+                emailVerified: confirmed,
+                connections: [{ provider: 'google', email: 'una.g@example.invalid' }],
+                phone: '+91 98xxxxxx10',
+                phoneVerified: true,
+              }),
+              base('verified', { name: 'Verified Vik', emailVerified: true }),
+              base('deleted', { name: 'Deleted Dev', status: 'deleted' }),
+              base('adm', { name: 'Admin Ann', role: 'admin' }),
+            ],
+            page: 1,
+            perPage: 50,
+            total: 4,
+          },
+        }),
+        'POST /api/admin/users/unverified/confirm-email': () => {
+          confirmed = true;
+          return { body: { ok: true, alreadyVerified: false } };
+        },
+      },
+      admin,
+    );
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: 'Users' }).click();
+    await expect(page.getByRole('button', { name: 'Confirm email' })).toHaveCount(1);
+    await page.getByRole('button', { name: 'Confirm email' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Someone else may have registered this address first');
+    await expect(dialog).toContainText('una.g@example.invalid');
+    await expect(dialog).toContainText('+91 98xxxxxx10');
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    expect(calls.some((c) => c.path.endsWith('/confirm-email'))).toBe(false);
+
+    await page.getByRole('button', { name: 'Confirm email' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Confirm email' }).click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+    expect(calls.some((c) => c.method === 'POST' && c.path === '/api/admin/users/unverified/confirm-email')).toBe(true);
+    // The row refreshed: the account is verified now, so the action is gone.
+    await expect(page.getByRole('button', { name: 'Confirm email' })).toHaveCount(0);
   });
 
   test('billing attempts can be reconciled from the commerce tab', async ({ page }) => {

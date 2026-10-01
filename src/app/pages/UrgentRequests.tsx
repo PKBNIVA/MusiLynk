@@ -227,6 +227,7 @@ export default function UrgentRequests() {
       <main className="max-w-6xl mx-auto px-4 sm:px-5 pt-28 pb-16">
         <PageHeader
           title="Need someone by tomorrow"
+          hint="Post a short-notice request and musicians who are free can respond."
           actions={
             <Button
               onClick={() => {

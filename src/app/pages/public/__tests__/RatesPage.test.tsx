@@ -20,6 +20,12 @@ function meta(attr: 'name' | 'property', key: string) {
   return document.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
 }
 
+function breadcrumbItems() {
+  const raw = document.querySelector('script[type="application/ld+json"][data-page-meta]')?.textContent ?? '[]';
+  const graph = JSON.parse(raw) as Array<{ '@type': string; itemListElement?: { item: string }[] }>;
+  return graph.find((entry) => entry['@type'] === 'BreadcrumbList')?.itemListElement?.map((entry) => entry.item);
+}
+
 async function mount(url: string) {
   const router = createMemoryRouter([{ path: '/rates/:city', element: <RatesPage /> }], { initialEntries: [url] });
   await act(async () =>
@@ -84,11 +90,22 @@ describe('RatesPage', () => {
     expect(meta('name', 'robots')?.content).toBe('noindex, nofollow');
   });
 
-  it('is not noindex before the API answers', async () => {
+  it('is noindex from the first render, until the API says there is enough data', async () => {
     vi.mocked(apiGet).mockReturnValue(new Promise(() => {}));
     await mount('/rates/mumbai');
     expect(container.textContent).toContain('Loading');
-    expect(meta('name', 'robots')?.content ?? '').not.toContain('noindex');
+    expect(meta('name', 'robots')?.content).toBe('noindex, nofollow');
+  });
+
+  it('emits a BreadcrumbList with absolute URLs', async () => {
+    vi.mocked(apiGet).mockResolvedValue(RATES_DATA);
+    await mount('/rates/mumbai');
+    await act(async () => {});
+    expect(breadcrumbItems()).toEqual([
+      `${window.location.origin}/`,
+      `${window.location.origin}/music-professionals`,
+      `${window.location.origin}/rates/mumbai`,
+    ]);
   });
 
   it('is not noindex when there is enough data, and has a photo header', async () => {

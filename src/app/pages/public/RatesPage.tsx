@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
 import { PhotoHeader } from '../../components/landing/PhotoHeader';
-import { usePageMeta } from '../../components/PageMeta';
+import { absoluteUrl, usePageMeta } from '../../components/PageMeta';
 import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
@@ -68,20 +68,36 @@ export default function RatesPage() {
     ? `Median session, show and day rates reported by verified and unverified musicians on Verse in ${data.city.name}. A guide, not a quote.`
     : undefined;
   const jsonLd = data
-    ? {
-        '@context': 'https://schema.org',
-        '@type': 'Dataset',
-        name: `Musician and crew rates in ${data.city.name}`,
-        description: `Session, show and day rates reported by musicians on Verse in ${data.city.name}.`,
-        spatialCoverage: { '@type': 'Place', name: data.city.name },
-      }
+    ? [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Dataset',
+          name: `Musician and crew rates in ${data.city.name}`,
+          description: `Session, show and day rates reported by musicians on Verse in ${data.city.name}.`,
+          spatialCoverage: { '@type': 'Place', name: data.city.name },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Verse', item: absoluteUrl('/') },
+            { '@type': 'ListItem', position: 2, name: 'Musicians', item: absoluteUrl('/music-professionals') },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: `Rates in ${data.city.name}`,
+              item: absoluteUrl(ratesPagePath(data.city.slug)),
+            },
+          ],
+        },
+      ]
     : undefined;
 
   usePageMeta(title, description, {
     canonicalPath: ratesPagePath(city),
     type: 'website',
-    // Indexable until the API has answered and says otherwise (too little data); a failed lookup is not a page.
-    noindex: data ? !data.indexable : Boolean(error),
+    // Decided from the first render: noindex until the API confirms there is enough data to index.
+    noindex: data ? !data.indexable : true,
     jsonLd,
   });
 
@@ -115,7 +131,12 @@ export default function RatesPage() {
               <p className="mt-3 text-xs text-slate-300">Last updated {formatDate(data.updatedAt)}</p>
             </PhotoHeader>
 
-            <div className="overflow-x-auto mt-8">
+            <div
+              className="overflow-x-auto mt-8 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
+              role="region"
+              aria-label="Rates by role"
+              tabIndex={0}
+            >
               <table className="w-full text-left text-sm" data-testid="rates-table">
                 <thead>
                   <tr className="text-slate-400 border-b border-white/10">

@@ -163,7 +163,18 @@ export default function ActsManager() {
         await load();
       },
     });
-  async function changeStatus(act: Act) {
+  const requestStatusChange = (act: Act) => {
+    if (act.status !== 'active') return void changeStatus(act);
+    ask({
+      title: `Hide ${act.name} from booking?`,
+      description:
+        'Hirers will no longer find this act in search or be able to book it. Existing bookings stay as they are. You can publish it again any time.',
+      confirmLabel: 'Hide from booking',
+      destructive: true,
+      action: () => changeStatus(act, true),
+    });
+  };
+  async function changeStatus(act: Act, throwOnError = false) {
     if (togglingId) return;
     setStatusError('');
     setTogglingId(act.id);
@@ -173,6 +184,7 @@ export default function ActsManager() {
       toast.success(act.status === 'active' ? 'Act hidden from booking' : 'Act published for booking');
       await load();
     } catch (e: unknown) {
+      if (throwOnError) throw e;
       setStatusError(errorMessage(e, 'The act could not be updated. Try again.'));
     } finally {
       setTogglingId(null);
@@ -389,7 +401,7 @@ export default function ActsManager() {
                           variant="ghost"
                           disabled={togglingId === a.id}
                           aria-busy={togglingId === a.id}
-                          onClick={() => void changeStatus(a)}
+                          onClick={() => requestStatusChange(a)}
                         >
                           {togglingId === a.id
                             ? 'Saving…'

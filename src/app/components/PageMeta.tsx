@@ -19,6 +19,11 @@ function publicUrl() {
   return typeof window !== 'undefined' ? window.location.origin.replace(/\/+$/, '') : '';
 }
 
+/** An absolute URL on this site for a path ("/hire/dj/mumbai"); structured data needs full URLs. */
+export function absoluteUrl(path: string) {
+  return /^https?:\/\//i.test(path) ? path : `${publicUrl()}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 function ensureMeta(attr: 'name' | 'property', key: string) {
   let tag = document.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
   if (!tag) {

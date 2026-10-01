@@ -100,17 +100,17 @@ export default function StageFeed() {
         )}
 
         {!loading && posts.length > 0 && (
-          <ul role="feed" aria-busy={loadingMore} aria-label="The Stage feed" className="space-y-4">
+          <div role="feed" aria-busy={loadingMore} aria-label="The Stage feed" className="space-y-4">
             {groupFeed(posts).map((entry) => (
-              <li key={entry.kind === 'post' ? entry.post.id : `roundup-${entry.posts[0].id}`}>
+              <div key={entry.kind === 'post' ? entry.post.id : `roundup-${entry.posts[0].id}`}>
                 {entry.kind === 'post' ? (
                   <PostCard post={entry.post} onChanged={update} onDeleted={remove} />
                 ) : (
                   <SystemRoundup posts={entry.posts} />
                 )}
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
 
         {!loading && posts.length > 0 && posts.every(isSystemPost) && (

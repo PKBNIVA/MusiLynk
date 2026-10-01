@@ -64,7 +64,18 @@ export default function CandidateCompare() {
       if (p.shortlisted) await apiDelete(`/shortlists/${p.id}`);
       else await apiPost(`/shortlists/${p.id}`, {});
       setPeople((xs) => xs.map((x) => (x.id === p.id ? { ...x, shortlisted: !p.shortlisted } : x)));
-      toast.success(p.shortlisted ? 'Removed from shortlist' : 'Added to talent shortlist');
+      if (p.shortlisted) {
+        toast.success('Removed from shortlist', {
+          action: {
+            label: 'Undo',
+            onClick: () => {
+              apiPost(`/shortlists/${p.id}`, {})
+                .then(() => setPeople((xs) => xs.map((x) => (x.id === p.id ? { ...x, shortlisted: true } : x))))
+                .catch((e: unknown) => toast.error(errorMessage(e, 'Could not restore the shortlist entry.')));
+            },
+          },
+        });
+      } else toast.success('Added to talent shortlist');
     } catch (e: unknown) {
       toast.error(errorMessage(e, 'Unable to update your shortlist.'));
     }

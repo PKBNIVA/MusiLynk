@@ -8,7 +8,7 @@
 // It also writes a head for every role x city hire page and every city rates page (the fixed lists in
 // backend/config/seo_pages.yml: 12 roles x 16 cities, 16 cities), worded exactly as HirePage.tsx and
 // RatesPage.tsx word them, so a crawler that never runs the page's JavaScript still sees the right head.
-// Those heads carry no noindex: the page adds it itself once the API says it is too thin to index.
+// Those heads carry no noindex: the page sets noindex itself from its first render and drops it once the API confirms it is indexable.
 //
 // Runs at the end of `npm run build` (see package.json) for the public build only — skipped when
 // VITE_APP_TARGET=admin, which never calls this script (build:admin invokes `vite build` directly).

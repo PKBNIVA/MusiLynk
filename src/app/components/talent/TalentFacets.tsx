@@ -106,9 +106,9 @@ export function TalentFacets({ values, update }: Props) {
         More filters{active > 0 ? ` (${active})` : ''}
       </button>
       {(open || active > 0) && (
-        <div id="talent-facets" className="mt-3 grid gap-3">
+        <div id="talent-facets" className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3">
           {GROUPS.map((group) => (
-            <div key={group.key} role="group" aria-label={group.label} className="flex items-center gap-3">
+            <div key={group.key} role="group" aria-label={group.label} className="flex min-w-0 items-center gap-3">
               <span className="w-16 shrink-0 text-xs uppercase tracking-wide text-slate-500">{group.label}</span>
               <div className="-mr-5 flex min-w-0 snap-x flex-nowrap gap-2 overflow-x-auto pr-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mr-0 md:flex-wrap md:overflow-visible md:pr-0">
                 {group.options.map((option) => (

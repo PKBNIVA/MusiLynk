@@ -9,7 +9,7 @@ export function SystemRoundup({ posts }: { posts: StagePost[] }) {
   const shown = posts.slice(0, SHOWN);
   const more = posts.length - shown.length;
   return (
-    <section
+    <article
       aria-labelledby="stage-roundup"
       data-testid="system-roundup"
       className="verse-surface rounded-2xl border border-white/10 bg-white/[.03] p-4"
@@ -28,6 +28,6 @@ export function SystemRoundup({ posts }: { posts: StagePost[] }) {
         ))}
       </ul>
       {more > 0 && <p className="mt-2 text-xs text-slate-500">and {more} more</p>}
-    </section>
+    </article>
   );
 }

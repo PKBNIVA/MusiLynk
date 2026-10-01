@@ -55,13 +55,13 @@ export default function StageTag() {
           </EmptyState>
         )}
         {!loading && posts.length > 0 && (
-          <ul role="feed" aria-busy={loadingMore} aria-label={`Posts tagged ${tag}`} className="mt-5 space-y-4">
+          <div role="feed" aria-busy={loadingMore} aria-label={`Posts tagged ${tag}`} className="mt-5 space-y-4">
             {posts.map((post) => (
-              <li key={post.id}>
+              <div key={post.id}>
                 <PostCard post={post} onChanged={update} onDeleted={remove} />
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
         <div ref={sentinelRef} />
         {loadingMore && <p className="py-4 text-center text-sm text-slate-500">Loading more…</p>}

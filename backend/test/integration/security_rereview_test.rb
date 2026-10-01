@@ -123,6 +123,26 @@ class SecurityReReviewTest < ActionDispatch::IntegrationTest
     assert_operator EmailToken.where(user:, purpose: "verify_email").count - before, :<=, 3
   end
 
+  test "RR-8 victim resetting the password of an attacker-registered account also ends the attacker's linked Google identity" do
+    email = "pre-hijack-reset@example.com"
+    user = register_unverified(email)
+    AuthConnection.create!(owner: user, provider: "google", provider_uid: "sub-attacker-own-google@example.com", email: "attacker-own-google@example.com")
+    raw = SecureRandom.urlsafe_base64(32)
+    EmailToken.create!(user:, purpose: "reset_password", token_digest: Digest::SHA256.hexdigest(raw), expires_at: 2.hours.from_now)
+    post "/api/auth/reset-password", params: { token: raw, password: "VictimNewPass456!" }, as: :json
+    assert_response :success
+    assert_empty user.reload.auth_connections, "the pre-linked Google identity survived the reset"
+    assert user.email_verified?
+    post "/api/auth/login", params: { email:, password: "VictimNewPass456!" }, as: :json
+    assert_response :success
+    google_callback(email: "attacker-own-google@example.com") do
+      if response.location.include?("code=")
+        post "/api/auth/exchange", params: { code: Rack::Utils.parse_query(URI.parse(response.location).query)["code"] }, as: :json
+        assert_not_equal user.id, response.parsed_body.dig("user", "id"), "attacker's pre-linked Google identity still signs in to the victim's account"
+      end
+    end
+  end
+
   private
 
   def create_job(owner, status)

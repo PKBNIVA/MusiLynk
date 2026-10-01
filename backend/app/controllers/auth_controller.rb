@@ -436,6 +436,9 @@ class AuthController < ApplicationController
     token.with_lock do
       return render_error(RESET_TOKEN_INVALID_MESSAGE, :bad_request, "TOKEN_INVALID") if token.used_at? || token.expires_at <= Time.current
       # Reaching the reset link proves the mailbox, so the address counts as confirmed from here on.
+      # Anything attached before that proof (a linked Google identity, a phone) may be a stranger's
+      # pre-hijack, so it is dropped first, exactly as a first proven sign-in would.
+      user.reclaim_unverified_credentials!
       user.update!(password: params[:password], password_set_at: Time.current, email_verified: true)
       token.update!(used_at: Time.current)
       user.sessions.delete_all

@@ -76,7 +76,7 @@ class ShowcaseRules
     merged = (own.keys | extra.keys).index_with { (own.fetch(_1, []) | extra.fetch(_1, [])) }
     if match?(merged, year)
       found = hits(condition("any").merge(condition("all")) { |_dim, a, b| a | b }, extra)
-      return "Its title or description mentions #{found.first(3).join(', ')}" if found.any?
+      return "Its text mentions #{found.first(3).join(', ')}" if found.any?
     end
     all = condition("all")
     have = all.flat_map { |dim, values| values & own.fetch(dim, []) }

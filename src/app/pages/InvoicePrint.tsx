@@ -142,7 +142,7 @@ export default function InvoicePrint() {
                 </tr>
               </tbody>
             </table>
-            <p className="mt-6 text-xs text-slate-500">Booking fee policy version {invoice.policyVersion}.</p>
+            <p className="mt-6 text-xs text-slate-600">Booking fee policy version {invoice.policyVersion}.</p>
           </article>
         )}
       </main>

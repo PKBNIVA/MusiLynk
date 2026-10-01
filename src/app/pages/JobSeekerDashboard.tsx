@@ -38,6 +38,21 @@ export default function JobSeekerDashboard() {
       .then((x) => setConvs(x?.conversations || []))
       .catch(() => undefined);
   }, []);
+  // The "getting started" strip ticks itself from what the person has actually done.
+  const [hasSample, setHasSample] = useState<boolean>();
+  const [hasAvailability, setHasAvailability] = useState<boolean>();
+  useEffect(() => {
+    apiGet<{ items?: unknown[] }>('/portfolio')
+      .then((x) => setHasSample((x?.items?.length ?? 0) > 0))
+      .catch(() => setHasSample(false));
+    apiGet<{ windows?: unknown[] }>('/availability')
+      .then((x) => setHasAvailability((x?.windows?.length ?? 0) > 0))
+      .catch(() => setHasAvailability(false));
+  }, []);
+  const tourDone =
+    state === 'ready' && hasSample !== undefined && hasAvailability !== undefined
+      ? { sample: hasSample, availability: hasAvailability, applied: (d.applications ?? 0) > 0 }
+      : undefined;
   const goodFits = d.recommendedJobs.filter((j) => (j.fitScore ?? 0) >= 60).slice(0, 3);
   const unread = convs.reduce((n, c) => n + (c.unreadCount || 0), 0);
   const latestUnread = convs
@@ -97,7 +112,7 @@ export default function JobSeekerDashboard() {
             </Button>
           }
         />
-        {!welcome && <TourStrip role="jobseeker" />}
+        {!welcome && tourDone && <TourStrip role="jobseeker" done={tourDone} />}
         <WelcomeNextStep role="jobseeker" />
         {state === 'error' && (
           <div

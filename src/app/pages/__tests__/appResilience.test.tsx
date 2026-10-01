@@ -111,7 +111,7 @@ describe('Notifications', () => {
 
     await act(async () => fail(new Error('')));
     expect(card().getAttribute('data-read')).toBe('false');
-    expect(toast.error).toHaveBeenCalledWith('Unable to mark notification as read');
+    expect(toast.error).toHaveBeenCalledWith('Unable to mark notification as read. Try again.');
   });
 });
 
@@ -149,7 +149,7 @@ describe('Job details', () => {
       await settle();
       expect(container.textContent).toContain('Session guitarist');
       expect(Boolean(byText('button', 'Save'))).toBe(expected);
-      expect(Boolean(container.querySelector('[aria-label="Report listing"]'))).toBe(expected);
+      expect(Boolean(container.querySelector('[aria-label="Report opportunity"]'))).toBe(expected);
       act(() => root.render(null));
     }
   });

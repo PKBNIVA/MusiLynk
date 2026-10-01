@@ -133,7 +133,7 @@ function billingReturnPath(plan: string, interval: BillingInterval, code: string
 export default function Pricing() {
   usePageMeta(
     'Pricing',
-    'Verse plans for music hiring and booking teams. Professionals build profiles and apply free; paid plans add capacity, seats and trials.',
+    'Verse plans for music hiring and booking teams. Musicians build profiles and apply free; paid plans add capacity, seats and trials.',
     { canonicalPath: '/pricing' },
   );
   const [plans, setPlans] = useState<ApiPlan[]>(FALLBACK_PLANS);
@@ -173,8 +173,8 @@ export default function Pricing() {
       <main className="max-w-7xl mx-auto px-5 md:px-6 py-16">
         <PhotoHeader photo="college-fest" title="Pay for operating capacity, not the right to apply">
           <p className="text-lg">
-            Music professionals can build a profile and apply without a subscription. Paid plans are for teams using
-            Verse to recruit, source, book and manage talent at higher volume.
+            Musicians can build a profile and apply without a subscription. Paid plans are for teams using Verse to
+            recruit, source, book and manage talent at higher volume.
           </p>
         </PhotoHeader>
         {live === false && (
@@ -275,9 +275,9 @@ export default function Pricing() {
         </div>
         <Card className="mt-8 bg-amber-500/[.05] border-amber-400/15">
           <CardContent className="p-6 text-sm text-slate-300">
-            <b>How billing works:</b> recurring plans are billed through Razorpay Subscriptions with server-side
-            credentials and signed webhooks. Trials are enforced by the server. Booking deposits for live acts are a
-            separate payment flow with their own quote, cancellation and refund rules—see{' '}
+            <b>How billing works:</b> paid plans are billed through Razorpay, renew on the date shown on your Billing
+            page, and can be cancelled at any time. A free trial charges nothing until it ends. Booking deposits for
+            live acts are a separate payment flow with their own quote, cancellation and refund rules—see{' '}
             <Link className="text-violet-300 underline underline-offset-4" to="/refund-policy">
               payments &amp; refunds
             </Link>

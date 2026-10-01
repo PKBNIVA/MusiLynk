@@ -7,8 +7,9 @@ export const IS_ADMIN_SITE = import.meta.env?.VITE_APP_TARGET === 'admin';
 /** Where a signed-out visitor to a protected page signs in: the admin site signs in at its root. */
 export const signInPath = (role: string) => (IS_ADMIN_SITE ? '/' : `/auth/${role}`);
 
-/** Pages that need a session, so an expired one sends the visitor back to sign in. */
-export const PROTECTED_AREA = IS_ADMIN_SITE ? /^\/(admin|account)(\/|$)/ : /^\/(jobseeker|employer)(\/|$)/;
+/** Pages that need a session, so an expired one sends the visitor back to sign in (the Stage is
+ * signed-in only and has no role in its path, so sign-in uses the last role the session had). */
+export const PROTECTED_AREA = IS_ADMIN_SITE ? /^\/(admin|account)(\/|$)/ : /^\/(jobseeker|employer|stage)(\/|$)/;
 
 /**
  * The public marketplace's own origin (VITE_PUBLIC_URL, e.g. https://verse.example.app), with any

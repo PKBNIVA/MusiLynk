@@ -24,6 +24,7 @@ import {
   DEFAULT_CITY,
   HIRER_KINDS,
   MUSICIAN_ROLES,
+  ROLE_MAX_LENGTH,
   starterLinks,
   type HirerKind,
   type StarterPayload,
@@ -233,7 +234,12 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
   const runDraft = async () => {
     setDrafting(true);
     try {
-      setDraftResult(await draftFromLinks(links.map((link) => link.url)));
+      setDraftResult(
+        await draftFromLinks(
+          links.map((link) => link.url),
+          { roles: allRoles, city: city[0] },
+        ),
+      );
     } catch (caught) {
       toast.error(errorMessage(caught, 'Couldn’t draft a profile from those links. Try again.'));
     } finally {
@@ -318,6 +324,7 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
             id="join-other-role"
             field="roles"
             label="Something else? Add it here"
+            maxLength={ROLE_MAX_LENGTH}
             values={otherRoles}
             onChange={(next) => {
               setOtherRoles(next);

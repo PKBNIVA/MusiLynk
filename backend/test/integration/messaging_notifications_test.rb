@@ -436,7 +436,7 @@ class MessagingNotificationsTest < ActionDispatch::IntegrationTest
     requester = create_user("Optout Requester", "employer", verified_email: true)
 
     get "/api/notifications/preferences", headers: auth(owner)
-    assert_equal({ "emailNotifications" => true }, response.parsed_body)
+    assert_equal({ "emailNotifications" => true, "paymentsNotify" => false }, response.parsed_body)
     [nil, "false", 0, "no"].each do |value|
       patch "/api/notifications/preferences", params: { emailNotifications: value }, headers: auth(owner), as: :json
       assert_response :bad_request

@@ -224,6 +224,7 @@ Rails.application.routes.draw do
         delete "members/:member_id", to: "acts#remove_member"
       end
     end
+    get "bookings/limits", to: "bookings#limits"
     resources :bookings, only: %i[index create] do
       member do
         post :quote
@@ -243,6 +244,7 @@ Rails.application.routes.draw do
     resources :urgent_requests, path: "urgent-requests", only: %i[index show create update] do
       member do
         post :respond
+        post :accept
         get :responses
         get "token-action", to: "urgent_requests#action_from_token"
       end
@@ -264,6 +266,7 @@ Rails.application.routes.draw do
       get "feed", to: "feed#index"
       get "events", to: "events#index"
       get "authors/:type/:authorId/posts", to: "posts#by_author"
+      get "authors/:type/:id", to: "authors#show"
       get "authors/:type/:id/followers", to: "follows#followers"
       get "authors/:type/:id/following", to: "follows#following"
       get "tags/:tag", to: "tags#show"

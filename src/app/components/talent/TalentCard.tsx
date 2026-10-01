@@ -90,7 +90,7 @@ export function TalentCard({ person: c, index, to, aside, footer }: Props) {
                 <Zap size={16} className="shrink-0 text-amber-300" aria-label="Fast responder this week" />
               )}
             </div>
-            <p className="mt-0.5 truncate text-sm text-slate-300">{line.primary || 'Music professional'}</p>
+            <p className="mt-0.5 truncate text-sm text-slate-300">{line.primary || 'Musician'}</p>
             {line.secondary.length > 0 && (
               <p className="mt-0.5 truncate text-sm text-slate-400">{line.secondary.slice(0, 3).join(' · ')}</p>
             )}

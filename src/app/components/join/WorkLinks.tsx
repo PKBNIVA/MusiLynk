@@ -116,7 +116,7 @@ export function WorkLinks({ links, onChange }: { links: WorkLink[]; onChange: (n
         />
         <Button type="button" variant="outline" onClick={() => add(draft)} disabled={full || !draft.trim()}>
           <Plus aria-hidden="true" size={16} />
-          Add
+          Add link
         </Button>
       </div>
       {error && (

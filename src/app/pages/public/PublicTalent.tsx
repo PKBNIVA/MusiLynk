@@ -19,7 +19,7 @@ import type { Professional } from '../../lib/apiTypes';
 type TalentPage = PageMeta & { talent?: Professional[]; role?: { key: string; label: string } };
 const pickTalent = (page: TalentPage) => page.talent;
 const FILTERS = ['q', 'location', 'role', 'verified', ...FACET_KEYS] as const;
-const NOUN = ['professional', 'professionals'] as const;
+const NOUN = ['musician', 'musicians'] as const;
 
 function Chip({ pressed, onClick, children }: { pressed: boolean; onClick: () => void; children: string }) {
   return (
@@ -40,7 +40,7 @@ function Chip({ pressed, onClick, children }: { pressed: boolean; onClick: () =>
 
 export default function PublicTalent() {
   usePageMeta(
-    'Find musicians & music professionals',
+    'Find musicians',
     'Search singers, instrumentalists, composers, engineers, technical directors, tour crew and managers on Verse.',
     { canonicalPath: '/music-professionals', type: 'website' },
   );
@@ -50,7 +50,7 @@ export default function PublicTalent() {
   const list = usePagedList<Professional, TalentPage>({
     path: '/public/talent',
     pick: pickTalent,
-    noun: 'professionals',
+    noun: 'musicians',
   });
   const { items, loading, error, meta } = list;
   const [q, setQ] = useState(values.q),
@@ -79,7 +79,7 @@ export default function PublicTalent() {
           {!loading && !error && items.length > 0 && (
             <>
               <span data-testid="result-count">
-                {list.total} {list.total === 1 ? 'professional' : 'professionals'}
+                {list.total} {list.total === 1 ? 'musician' : 'musicians'}
               </span>
               {' · '}
             </>
@@ -101,7 +101,7 @@ export default function PublicTalent() {
         )}
         <form onSubmit={submit} className="grid md:grid-cols-[1.3fr_1fr_auto] gap-3 mt-8" role="search">
           <label htmlFor="public-talent-query" className="sr-only">
-            Search professionals
+            Search musicians
           </label>
           <Input
             id="public-talent-query"
@@ -111,7 +111,7 @@ export default function PublicTalent() {
             className="bg-white/5 border-white/15"
           />
           <label htmlFor="public-talent-location" className="sr-only">
-            Professional location
+            Musician location
           </label>
           <Input
             id="public-talent-location"
@@ -156,7 +156,7 @@ export default function PublicTalent() {
         {!loading && <SearchNotice meta={meta} query={values.q} />}
         {loading ? (
           <p className="text-slate-400 text-center py-16" role="status">
-            Loading professionals…
+            Loading musicians…
           </p>
         ) : error ? (
           <div className="text-center py-16" role="alert">
@@ -184,7 +184,7 @@ export default function PublicTalent() {
           </>
         ) : (
           <NoResults
-            noun="professionals"
+            noun="musicians"
             query={values.q}
             meta={meta}
             onSearch={(term) => update({ q: term })}

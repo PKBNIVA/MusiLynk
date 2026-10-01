@@ -1,5 +1,6 @@
 class BookingsController < ApplicationController
   PAYMENTS_LIMIT = 100
+  DIRECT_ENQUIRY_TAGLINE = "Direct enquiries"
   before_action -> { authenticate!("jobseeker", "employer") }
 
   def index
@@ -8,10 +9,31 @@ class BookingsController < ApplicationController
     render json: { bookings: scope.map { booking_json(_1) } }
   end
 
+  # The hirer's plan capacity for booking enquiries, read by the enquiry form so the limit is known
+  # before the first field is filled (J-25), like jobs/limits is for opportunities.
+  def limits
+    entitlements = Entitlements.for(current_user)
+    render json: {
+      activeAllowed: entitlements.limit(:bookings),
+      activeUsed: BookingRequest.where(requester: current_user, status: Entitlements::ACTIVE_BOOKING_STATUSES).count,
+      plan: entitlements.plan_code,
+      planName: entitlements.plan.fetch(:name)
+    }
+  end
+
   def create
-    scalar_keys = %i[actId eventType eventName eventDate startTime durationMinutes venueName venueAddress city audienceSize indoorOutdoor budgetMin budgetMax currency requirements]
+    scalar_keys = %i[actId musicianId eventType eventName eventDate startTime durationMinutes venueName venueAddress city audienceSize indoorOutdoor budgetMin budgetMax currency requirements]
     return render_error("Booking fields must be plain values.", :bad_request, "INVALID_PARAMETER") if scalar_keys.any? { params[_1].is_a?(Array) || params[_1].is_a?(ActionController::Parameters) }
-    act = Act.where(status: "active").find_by(id: params[:actId].to_s)
+    # A quote asked of a musician (not an act) goes to the musician's own bookings through their solo act.
+    act = if params[:musicianId].present?
+      musician = SyntheticQa::Demo.publicly_listed(User.discoverable_talent).find_by(id: params[:musicianId].to_s)
+      return render_error("This musician is not available for enquiries.", :not_found) unless musician
+      return render_error("You cannot book yourself.", :conflict) if musician.id == current_user.id
+
+      solo_act_for(musician)
+    else
+      Act.where(status: "active").find_by(id: params[:actId].to_s)
+    end
     return render_error("This act is no longer available for booking.", :not_found) unless act
     return render_error("You cannot book your own act.", :conflict) if act.owner_id == current_user.id
     event_date = parse_event_date(params[:eventDate])
@@ -54,13 +76,19 @@ class BookingsController < ApplicationController
     render_error("This booking can no longer be quoted.", :conflict)
   end
 
+  CHANGE_MESSAGE_LIMIT = 1_000
+
   def change_status
     booking = party_booking
     previous_status = booking.status
+    note = params[:message].is_a?(String) ? params[:message].strip.presence : nil
+    return render_error("Keep your message under #{CHANGE_MESSAGE_LIMIT} characters.", :unprocessable_content, "MESSAGE_TOO_LONG") if note && note.length > CHANGE_MESSAGE_LIMIT
     booking.transition_to!(params[:status].to_s, actor: current_user)
     Notifier.booking_status(booking, actor: current_user)
+    # "Ask for changes" can say what to change; the words go to the other side in the pair's thread.
+    conversation = post_change_request(booking, note) if note && booking.status == "negotiating"
     refund = maybe_record_refund!(booking, previous_status:, actor: current_user, no_show: params[:noShow])
-    render json: { ok: true, status: booking.status, refund: refund && refund_json(refund) }
+    render json: { ok: true, status: booking.status, refund: refund && refund_json(refund), conversationId: conversation&.id }
   rescue BookingRequest::InvalidTransition => error
     render_error(error.message, error.http_status)
   end
@@ -69,7 +97,7 @@ class BookingsController < ApplicationController
     booking = BookingRequest.includes(:booking_quotes).find(params[:id])
     return render_error("Booking not found", :not_found) unless booking.requester_id == current_user.id
     # Fail closed in production without usable keys, and anywhere a key is present but refused for this environment.
-    return render_error("Live payments are not configured.", :service_unavailable) if (Rails.env.production? || RazorpayConfig.key_present?) && !RazorpayConfig.usable?
+    return render_error("Online payment is not switched on yet.", :service_unavailable, "PAYMENTS_UNAVAILABLE") if (Rails.env.production? || RazorpayConfig.key_present?) && !RazorpayConfig.usable?
     payment = existing = quote = attempt = nil
     payment_error = nil
     booking.with_lock do
@@ -126,7 +154,7 @@ class BookingsController < ApplicationController
     return render_error("Payment is already confirmed.", :conflict) if payment.status == "paid" && payment.provider != "razorpay"
     return render_error("Mock payments are disabled in production.", :forbidden) if Rails.env.production? && payment.provider != "razorpay"
     if payment.provider == "razorpay"
-      return render_error("Live payments are not configured.", :service_unavailable) unless RazorpayConfig.usable?
+      return render_error("Online payment is not switched on yet.", :service_unavailable, "PAYMENTS_UNAVAILABLE") unless RazorpayConfig.usable?
       return render_error("Payment order mismatch", :unprocessable_content) unless payment.provider_order_id.present? && ActiveSupport::SecurityUtils.secure_compare(payment.provider_order_id, params[:orderId].to_s)
       expected = OpenSSL::HMAC.hexdigest("SHA256", ENV.fetch("RAZORPAY_KEY_SECRET"), "#{payment.provider_order_id}|#{params[:paymentId]}")
       return render_error("Invalid payment signature", :unprocessable_content) unless ActiveSupport::SecurityUtils.secure_compare(expected, params[:signature].to_s)
@@ -171,6 +199,34 @@ class BookingsController < ApplicationController
   end
 
   private
+
+  # The musician's own act for enquiries addressed to them rather than to a lineup. Created on the
+  # first enquiry, never listed publicly (inactive), and reused for every later one.
+  def solo_act_for(musician)
+    musician.owned_acts.find_by(act_type: "solo", status: "inactive", tagline: DIRECT_ENQUIRY_TAGLINE) || begin
+      profile = musician.profile
+      act = musician.owned_acts.create!(name: musician.name, act_type: "solo", currency: "INR", fee_basis: "event", status: "inactive",
+        tagline: DIRECT_ENQUIRY_TAGLINE, city: profile&.location, genres: Array(profile&.genres), lineup_size: 1)
+      act.act_members.create!(display_name: musician.name, role_name: "Leader", is_leader: true, member_status: "confirmed", user: musician)
+      act
+    end
+  end
+
+  # Puts the change request into the conversation between the two parties (opened if need be).
+  def post_change_request(booking, note)
+    owner = booking.act.owner
+    requester = booking.requester
+    return nil if UserBlock.between?(owner, requester) || !owner.active? || !requester.active?
+
+    conversation = Conversation.open_between!(candidate: owner, employer: requester)
+    sender = current_user
+    message = conversation.messages.new(sender:, body: "Changes requested for #{booking.event_name.presence || booking.act.name}: #{note}".first(MessagesController::MAX_LENGTH))
+    message.flag_scam_signals
+    message.save!
+    Notifier.new_message(message)
+    conversation
+  end
+
   def razorpay_order_checkout(order_id, amount_paise, currency)
     { mode: "razorpay", keyId: RazorpayConfig.key_id, amount: amount_paise, currency:, orderId: order_id }.merge(RazorpayConfig.simulator? ? { simulator: true } : {})
   end

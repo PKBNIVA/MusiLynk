@@ -46,6 +46,22 @@ class ResponseTimeStatsTest < ActiveSupport::TestCase
     assert_equal [fast_responder.id, slow_responder.id], ranked.map(&:first)
   end
 
+  test "demo requests never count toward the median or the fastest-responder ranking" do
+    demo_hirer = create_user("employer")
+    demo_hirer.update_column(:synthetic_batch, "demo-showcase")
+    demo_request = UrgentRequest.create!(requester: demo_hirer, title: "Demo bassist", role_name: "Bassist", city: "Goa",
+      currency: "INR", status: "open", start_at: 1.day.from_now).tap { _1.update_column(:created_at, 1.hour.ago) }
+    responder = create_user("jobseeker")
+    respond(demo_request, minutes_after: 1, user: responder)
+
+    assert_nil ResponseTimeStats.median_minutes(city: "Goa")
+    assert_empty ResponseTimeStats.fastest_responders(city: "Goa")
+
+    real = create_request(city: "Goa", created_at: 1.hour.ago)
+    respond(real, minutes_after: 40)
+    assert_equal 40.0, ResponseTimeStats.median_minutes(city: "Goa")
+  end
+
   private
 
   def create_user(role)

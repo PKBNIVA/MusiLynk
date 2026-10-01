@@ -47,7 +47,8 @@ import {
   type JobPostTemplate,
 } from '../components/templates/JobPostTemplates';
 import { trackJobPosted } from '../lib/analytics';
-import { formatDate, formatPay } from '../lib/format';
+import { formatDate, formatPay, formatInputEcho } from '../lib/format';
+import { SubmittedListing } from '../components/SubmittedListing';
 import { PostJobPlanLimitDialog } from '../components/PostJobPlanLimitDialog';
 
 /** ActorResolver::Actor#as_json — the identities a person can post an opportunity as. */
@@ -253,6 +254,8 @@ export default function PostJob() {
   // is what the save logic reads, since a save can finish between two renders.
   const [draftId, setDraftId] = useState('');
   const draftRef = useRef('');
+  // Set once an opportunity has been submitted for review: the page shows what happens next (J-12).
+  const [submitted, setSubmitted] = useState<{ id: string; title: string } | null>(null);
   const [autosave, setAutosave] = useState<'' | 'saved' | 'failed'>('');
   const autosaveQueue = useRef<Promise<unknown>>(Promise.resolve());
   // The 402 plan-limit dialog (V-14): non-null holds the server's verbatim message and keeps
@@ -477,19 +480,28 @@ export default function PostJob() {
     }
     goTo(Math.min(step + 1, last));
   }
+  // Back to an empty first step (and a fresh draft slot).
+  function resetForm() {
+    setStep(0);
+    setReached(0);
+    setF(blank);
+    setJob(null);
+    draftRef.current = '';
+    setDraftId('');
+    setAutosave('');
+    setSubmitted(null);
+    setPipelineKey((k) => k + 1);
+    if (editId) setSp({}, { replace: true });
+    window.scrollTo({ top: 0 });
+  }
   function done() {
-    if (seeker) {
-      setStep(0);
-      setReached(0);
-      setF(blank);
-      setJob(null);
-      draftRef.current = '';
-      setDraftId('');
-      setAutosave('');
-      setPipelineKey((k) => k + 1);
-      if (editId) setSp({}, { replace: true });
-      window.scrollTo({ top: 0 });
-    } else nav('/employer');
+    if (seeker) resetForm();
+    else nav('/employer');
+  }
+  // After a submission for review: show the "what happens next" card rather than leaving the page.
+  function submittedForReview(id: string) {
+    setSubmitted({ id, title: f.title.trim() });
+    window.scrollTo({ top: 0 });
   }
   function submit(e: React.FormEvent | React.MouseEvent, mode: 'primary' | 'draft' = 'primary') {
     e.preventDefault();
@@ -531,7 +543,8 @@ export default function PostJob() {
         toast.success(
           next === 'draft' ? 'Draft saved' : next === 'pending' ? 'Saved and submitted for review' : 'Changes saved',
         );
-        done();
+        if (next === 'pending' && currentStatus !== 'pending') submittedForReview(existing);
+        else done();
       } else {
         const d = await apiPost<CreatedJob>(
           '/jobs',
@@ -544,7 +557,8 @@ export default function PostJob() {
             `Submitted with ${d.moderationFlags.length} moderation note${d.moderationFlags.length === 1 ? '' : 's'}`,
           );
         else toast.success(draft ? 'Draft saved. Finish it any time from your opportunities.' : 'Submitted for review');
-        done();
+        if (!draft && d.id) submittedForReview(d.id);
+        else done();
       }
     } catch (e: unknown) {
       if (errorStatus(e) === 402 && !draft) {
@@ -578,6 +592,20 @@ export default function PostJob() {
   }
   const backTo = seeker ? '/jobseeker/hiring/post' : '/employer';
   const continueDraft = useCallback((id: string) => setSp({ edit: id }), [setSp]);
+  if (submitted)
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Navigation />
+        <main className="max-w-3xl mx-auto px-5 md:px-6 pt-28 pb-16">
+          <SubmittedListing
+            title={submitted.title}
+            viewPath={`${seeker ? '/jobseeker' : '/employer'}/jobs/${encodeURIComponent(submitted.id)}`}
+            dashboardPath={seeker ? '/jobseeker/hiring/post' : '/employer'}
+            onAnother={resetForm}
+          />
+        </main>
+      </div>
+    );
   if (editId && (loadingJob || loadError || job?.id !== editId))
     return (
       <div className="min-h-screen bg-slate-950 text-white">
@@ -704,8 +732,7 @@ export default function PostJob() {
             <div className="flex items-center gap-1">
               <Label htmlFor="job-function">Function</Label>
               <FieldHelp topic="Function">
-                The area of music work this sits in. Professionals filter search by function, so choose the closest
-                match.
+                The area of music work this sits in. Musicians filter search by function, so choose the closest match.
               </FieldHelp>
             </div>
             <AppSelect
@@ -739,7 +766,7 @@ export default function PostJob() {
                 <Label htmlFor="job-posted-as">Posting as</Label>
                 <FieldHelp topic="Posting as">
                   Post this opportunity as yourself, or as a studio, label or act you run. It shows the Page's name
-                  instead of yours and appears on that Page's public listings.
+                  instead of yours and appears on that Page's public opportunities.
                 </FieldHelp>
               </div>
               <AppSelect
@@ -837,7 +864,8 @@ export default function PostJob() {
                 role="note"
                 className="mt-3 rounded-lg border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
               >
-                Listings that don’t show the pay get fewer applicants. Add a range if you can; you can change it later.
+                Opportunities that don’t show the pay get fewer applicants. Add a range if you can; you can change it
+                later.
               </p>
             )}
           </fieldset>
@@ -893,8 +921,9 @@ export default function PostJob() {
           <Field
             id="job-application-deadline"
             label="Application deadline"
+            hint={formatInputEcho(f.applicationDeadline)}
             error={form.errors.applicationDeadline}
-            help="The listing closes to new applicants after this day. Leave it blank to keep it open until you close it."
+            help="The opportunity closes to new applicants after this day. Leave it blank to keep it open until you close it."
           >
             <Input
               type="date"
@@ -915,6 +944,7 @@ export default function PostJob() {
                   onChange={(e) => set('startDate', e.target.value)}
                   className={`mt-2 ${input}`}
                 />
+                {f.startDate && <p className="mt-1 text-xs text-slate-400">{formatInputEcho(f.startDate)}</p>}
               </div>
               <div>
                 <Label htmlFor="job-duration">Duration</Label>
@@ -991,7 +1021,7 @@ export default function PostJob() {
             }
             required
             hint="At least 60 characters."
-            help="Cover the scope, the dates or schedule, who they will work with and what a great result looks like. Specific listings get better applicants."
+            help="Cover the scope, the dates or schedule, who they will work with and what a great result looks like. Specific opportunities get better applicants."
             error={form.errors.description}
           >
             <Textarea
@@ -1071,7 +1101,7 @@ export default function PostJob() {
           <div className="rounded-2xl border border-white/10 bg-white/[.03] p-5">
             <h3 className="mb-2 flex items-center gap-2 font-semibold">
               <ListChecks aria-hidden="true" size={20} className="text-violet-300" />
-              Review your listing
+              Review your opportunity
             </h3>
             <dl>
               <ReviewRow label="Title" value={f.title} onEdit={() => goTo(0)} />
@@ -1113,8 +1143,8 @@ export default function PostJob() {
           <div className="rounded-xl border border-emerald-400/15 bg-emerald-500/[.06] p-4 flex gap-3 text-sm text-emerald-100">
             <ShieldCheck aria-hidden="true" className="shrink-0" size={20} />
             <p>
-              Listings are reviewed for clarity, trust and suspicious off-platform fee/contact language. Verified
-              employers receive a trust marker, but verification never replaces candidate due diligence.
+              Opportunities are reviewed for clarity, trust and suspicious off-platform fee/contact language. Verified
+              hirers receive a trust marker, but verification never replaces your own checks on an applicant.
             </p>
           </div>
         </div>
@@ -1136,7 +1166,7 @@ export default function PostJob() {
                   {
                     icon: BadgeCheck,
                     title: 'We review it',
-                    text: 'Our team checks every listing for clarity and safety before it goes live.',
+                    text: 'Our team checks every opportunity for clarity and safety before it goes live.',
                   },
                   {
                     icon: Inbox,
@@ -1177,11 +1207,21 @@ export default function PostJob() {
           >
             <span className="min-w-0 flex-1">
               You have an unfinished draft: <strong className="break-words">{offeredDraft.title || 'Untitled'}</strong>
+              <span className="block text-violet-200/80">Starting a new one replaces it, so drafts never pile up.</span>
             </span>
             <Button size="sm" onClick={() => continueDraft(offeredDraft.id)}>
               Continue draft
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setOfferedDraft(null)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                // One draft at a time: the new listing is saved into the old draft's slot, not beside it.
+                draftRef.current = offeredDraft.id;
+                setDraftId(offeredDraft.id);
+                setOfferedDraft(null);
+              }}
+            >
               Start a new one
             </Button>
           </div>
@@ -1223,8 +1263,8 @@ export default function PostJob() {
               role="note"
               className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
             >
-              Changes to the title, description or requirements send the listing back to review. It stays hidden from
-              search until it is approved.
+              Changes to the title, description or requirements send the opportunity back to review. It stays hidden
+              from search until it is approved.
             </p>
           )}
           {submitBlocked && step === last && (

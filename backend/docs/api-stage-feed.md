@@ -33,7 +33,7 @@ Query params: `cursor` (optional, opaque string from a previous response).
       "author": { "type": "user", "id": "user_1", "name": "Jane Doe", "avatar": null, "verified": true },
       "kind": "update",
       "body": "Wrapped a great session today! #jazz #mumbai",
-      "media": [{ "uploadId": "upld_1", "type": "audio", "caption": "Final mix" }],
+      "media": [{ "uploadId": "upld_1", "type": "audio", "caption": "Final mix", "url": "https://cdn.example.com/uploads/…/mix.mp3" }],
       "linkUrl": null,
       "city": "Mumbai",
       "genres": ["Jazz"],
@@ -49,9 +49,13 @@ Query params: `cursor` (optional, opaque string from a previous response).
       "updatedAt": "2026-09-28T10:00:00Z"
     }
   ],
-  "nextCursor": "eyJzIjoxMDAwMDAwLjAsInQiOjE3ODczOTg0MDAuMCwiaSI6InBvc3RfYWJjMTIzIn0="
+  "nextCursor": "eyJpIjoicG9zdF9hYmMxMjMiLCJvIjoyMH0="
 }
 ```
+
+`nextCursor` is opaque (the last post served and its position); the ranking is time-decayed, so a
+post can reappear on a later page. Clients show each post once. Each `media` item carries the
+public `url` of the author's finished upload (omitted when it cannot be resolved).
 
 ## POST /api/stage/posts
 
@@ -100,6 +104,12 @@ Updates your own post's `body`, `linkUrl`, `city`, `genres` or `visibility`. 403
 
 Soft-deletes your own post (`status` becomes `deleted`; it stops appearing anywhere).
 `{ "ok": true }`.
+
+## GET /api/stage/authors/:type/:id — Public
+
+Who an author page is about, whether or not they have posted: `{ "author": { type, id, name,
+avatar, verified, system, demo? } }`. `type` is `user`, `organization`, `act` or `system` (id
+`verse`). An unknown, removed or hidden identity is `404 NOT_FOUND`.
 
 ## GET /api/stage/authors/:type/:authorId/posts — Public
 

@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { Link } from 'react-router';
 import { Field, FormDialog, textareaClass } from './booking/BookingDialogs';
 import { errorMessage } from '../lib/errors';
+import { formatNumber } from '../lib/format';
 
 // Accessible replacement for the window.prompt report flows (a conversation partner, a job
 // listing). The reason is picked from a fixed list so moderators get consistent categories;
@@ -16,6 +17,9 @@ export const REPORT_REASONS = [
   'Misleading listing',
   'Other',
 ] as const;
+
+/** The wire value stays the one the server validates (and old reports hold); only the label differs. */
+const REASON_LABEL: Record<string, string> = { 'Misleading listing': 'Misleading opportunity' };
 
 export const REPORT_DETAILS_MAX = 4000;
 
@@ -102,7 +106,7 @@ export function ReportDialog({
               }}
               className="accent-violet-500"
             />
-            {option}
+            {REASON_LABEL[option] ?? option}
           </label>
         ))}
         <p id={`${id}-hint`} className="text-xs text-slate-400">
@@ -116,7 +120,7 @@ export function ReportDialog({
       <Field
         label="Details (optional)"
         htmlFor={`${id}-details`}
-        hint={`What happened? Up to ${REPORT_DETAILS_MAX.toLocaleString()} characters.`}
+        hint={`What happened? Up to ${formatNumber(REPORT_DETAILS_MAX)} characters.`}
       >
         <textarea
           id={`${id}-details`}

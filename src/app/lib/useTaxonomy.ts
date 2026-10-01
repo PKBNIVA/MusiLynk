@@ -30,7 +30,7 @@ export const TALENT_ROLES = [
   { key: 'A&R', label: 'A&R & label teams' },
   { key: 'manager', label: 'Managers & artist services' },
   { key: 'live', label: 'Live & touring crews' },
-  { key: 'music-tech', label: 'Music-tech professionals' },
+  { key: 'music-tech', label: 'Music-tech' },
 ];
 
 let cached: Promise<Taxonomy> | null = null;

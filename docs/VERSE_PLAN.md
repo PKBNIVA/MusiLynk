@@ -59,7 +59,14 @@ Resolved contradictions from the old plans (the code is the truth):
 | #135 | Claude Code permission rules for `scripts/ops` (into `production`) | 2026-09-30 |
 | #136 | B2 cards, profile, ranking and filters (into `claude/launch-2`) | 2026-09-30 |
 | #137 | B3 landing, public pages and OG images (into `claude/launch-2`) | 2026-09-30 |
-| _(this PR)_ | Launch-2 → `production`: foundations, media kit, forms, showcase data, cards and public pages | on merge |
+| #138 | Launch-2 → `production`: foundations, media kit, forms, showcase data, cards and public pages | 2026-09-30 |
+| #139 | Hotfix: stop deploying the OG edge function that failed Vercel's deploy validation (`edge/og.ts`; `/api/og/*` rewrites to `og-default.png`) | 2026-09-30 |
+| #141 | B7 hirer flows (into `claude/launch-3`) | 2026-10-01 |
+| #140 | B8 musician flows (into `claude/launch-3`) | 2026-10-01 |
+| #143 | B10 admin console and integration one-liners (into `claude/launch-3`) | 2026-10-01 |
+| #145 | B6 copy and formatting sweep (into `claude/launch-3`) | 2026-10-01 |
+| #142 | A-16 server-side duplicate-submit guard on `POST /api/jobs` (B4's file): **open, not merged**; the client guard shipped in #141 | open |
+| _(this PR)_ | Launch-3 → `production`: hirer and musician flows, admin fixes, copy sweep | on merge |
 
 ---
 
@@ -175,51 +182,51 @@ From the ten-lens crawl of a production-mode copy (311 unique findings; 41 P0–
 | ID | Sev | Screen/route | Defect | Owner |
 |---|---|---|---|---|
 | A-18 | P0 (v: P1) | /jobseeker/urgent and /employer/urgent | One long unbroken string in an urgent request stretches layout to 1560px and hides the respond dialog. | B2 |
-| A-31 | P0 (v: P1) | /stage | Stage home feed cursor never advances; infinite scroll repeats the same 20 posts, 'all caught up' never appears. | B8 |
-| A-32 | P0 | /stage | Photos attached to Stage posts render as grey boxes for everyone but the uploader's session. | B8 |
-| A-01 | P1 | /jobseeker/library | Add-from-link dialog says 'Added' but Close or Escape discards the link; it saves only via Draft then 'Add to my work'. | B8 |
+| A-31 | P0 (v: P1) | /stage | Stage home feed cursor never advances; infinite scroll repeats the same 20 posts, 'all caught up' never appears. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-32 | P0 | /stage | Photos attached to Stage posts render as grey boxes for everyone but the uploader's session. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-01 | P1 | /jobseeker/library | Add-from-link dialog says 'Added' but Close or Escape discards the link; it saves only via Draft then 'Add to my work'. | **fixed in launch-3, verify at acceptance** (B8) |
 | A-02 | P1 | /professionals/:id | Public profile never shows the day rate that the profile form says will be public. | B2 |
 | A-03 | P1 | /join (via /signup) | /signup redirects to /join, which has no route and renders a 404. | **fixed in launch-2, verify at acceptance** (B0) |
 | A-08 | P1 | /employer/post-job -> /opportunities/:id | Wedding template placeholders like [date] can be submitted, approved and published unchanged. | **fixed in launch-2, verify at acceptance** (B4) |
-| A-09 | P1 | /professionals/:id | 'Request a quote' on a musician profile opens the unfiltered book-talent list and drops the musician. | B7 |
-| A-10 | P1 (v: P2) | /employer/bookings | 'Resume deposit payment' dead-ends with raw 'Live payments are not configured.' toast. | B7 |
+| A-09 | P1 | /professionals/:id | 'Request a quote' on a musician profile opens the unfiltered book-talent list and drops the musician. | **fixed in launch-3, verify at acceptance** (B7) |
+| A-10 | P1 (v: P2) | /employer/bookings | 'Resume deposit payment' dead-ends with raw 'Live payments are not configured.' toast. | **fixed in launch-3, verify at acceptance** (B7) |
 | A-12 | P1 (v: P2) | /jobseeker/profile, /employer/profile | No field or flow to upload a profile photo or company logo; every user is an initials circle. | **fixed in launch-2, verify at acceptance** (B1) |
-| A-14 | P1 | email: musician_day1_first_link, day3, day5, day10, day21; hirer_day1, day3, day7, day14; milestone_* (LifecycleMailer) | Lifecycle email buttons double the workspace prefix (/jobseeker/jobseeker/...) and land on 404. | B10 |
+| A-14 | P1 | email: musician_day1_first_link, day3, day5, day10, day21; hirer_day1, day3, day7, day14; milestone_* (LifecycleMailer) | Lifecycle email buttons double the workspace prefix (/jobseeker/jobseeker/...) and land on 404. | **fixed in launch-3, verify at acceptance** (B10) |
 | A-15 | P1 | /employer/post-job (Start from a template) → admin Opportunity queue | Duplicate of A-08: template brackets published verbatim; a live listing in the admin queue already has them. | **fixed in launch-2, verify at acceptance** (B4) |
 | A-19 | P1 | /music-jobs | Job cards force 603px width on phones; 'Sign in to apply' is off-screen. | **fixed in launch-2, verify at acceptance** (B9) |
-| A-20 | P1 | /jobseeker (all signed-in routes header) | At 360px the workspace hamburger sits fully off-screen; header needs 395px. | B10 |
+| A-20 | P1 | /jobseeker (all signed-in routes header) | At 360px the workspace hamburger sits fully off-screen; header needs 395px. | **fixed in launch-3, verify at acceptance** (B10) |
 | A-21 | P1 | /urgent | Anonymous /urgent shows the signed-in header, bell, avatar and bottom tabs; tabs bounce to login. | B3 |
-| A-22 | P1 | /admin (tab strip + Opportunity queue / Verification / Reviews) | Admin tab badges count the current page only: Verification shows 100 versus 303 real. | B10 |
-| A-23 | P1 | /admin Opportunity queue (page 2+) | Admin queue pager counts all 621 jobs but shows only pending; page 2 is empty; status filter is ignored. | B10 |
-| A-24 | P1 (v: P2) | /admin Reports | One long report text makes the admin console 40,000px wide; Review button is off-screen. | B10 |
+| A-22 | P1 | /admin (tab strip + Opportunity queue / Verification / Reviews) | Admin tab badges count the current page only: Verification shows 100 versus 303 real. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-23 | P1 | /admin Opportunity queue (page 2+) | Admin queue pager counts all 621 jobs but shows only pending; page 2 is empty; status filter is ignored. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-24 | P1 (v: P2) | /admin Reports | One long report text makes the admin console 40,000px wide; Review button is off-screen. | **fixed in launch-3, verify at acceptance** (B10) |
 | A-25 | P1 (v: P2) | /admin Demo data | Admin cannot create demo data (cap 300, 1000 exist, no smaller size) or delete a single batch. | **fixed in launch-2, verify at acceptance** (B5) |
-| A-28 | P1 | /stage | Expired session on /stage: token wiped, no redirect to sign-in, composer stays usable. | B10 |
-| A-33 | P1 (v: P2) | /stage | Resharing your post creates no notification and no email for the original author. | B8 |
-| A-34 | P1 | /stage/posts/:id | Replying to a comment never notifies the commenter; only the post owner is notified. | B8 |
-| A-35 | P1 | /stage/authors/user/:id | Author page for a member with no posts shows 'Loading...' and a '?' avatar; identity comes from posts[0]. | B8 |
-| A-36 | P1 | /jobseeker/reviews | Review-prompt notification links to /reviews, which maps nowhere; 'Open' lands on the bare dashboard. | B8 |
-| A-37 | P1 | /stage/posts/:id | Signed-out deep link to a Stage post is lost: login redirect has no return path. | B8 |
-| A-04 | P2 | /join/musician | 'Draft my profile from these links' returns a fully blank draft despite roles, city and links already entered. | B8 |
-| A-05 | P2 | /join/musician | Spotify artist URLs are labelled 'Spotify track' and later saved as 'Spotify work sample'. | B8 |
+| A-28 | P1 | /stage | Expired session on /stage: token wiped, no redirect to sign-in, composer stays usable. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-33 | P1 (v: P2) | /stage | Resharing your post creates no notification and no email for the original author. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-34 | P1 | /stage/posts/:id | Replying to a comment never notifies the commenter; only the post owner is notified. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-35 | P1 | /stage/authors/user/:id | Author page for a member with no posts shows 'Loading...' and a '?' avatar; identity comes from posts[0]. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-36 | P1 | /jobseeker/reviews | Review-prompt notification links to /reviews, which maps nowhere; 'Open' lands on the bare dashboard. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-37 | P1 | /stage/posts/:id | Signed-out deep link to a Stage post is lost: login redirect has no return path. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-04 | P2 | /join/musician | 'Draft my profile from these links' returns a fully blank draft despite roles, city and links already entered. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-05 | P2 | /join/musician | Spotify artist URLs are labelled 'Spotify track' and later saved as 'Spotify work sample'. | **fixed in launch-3, verify at acceptance** (B8) |
 | A-06 | P2 | /jobseeker/urgent | Urgent matcher uses substring match, so a Dholak player is shown 'Plays Dhol'. | B2 |
-| A-07 | P2 | /jobseeker/review | Review suggestions cite 'title mentions Tabla' when title and description contain no such text. | B8 |
-| A-11 | P2 | /employer/billing | 'Start free trial' stays enabled under a 'Payments unavailable' banner and fails with raw 503 toast. | B7 |
+| A-07 | P2 | /jobseeker/review | Review suggestions cite 'title mentions Tabla' when title and description contain no such text. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-11 | P2 | /employer/billing | 'Start free trial' stays enabled under a 'Payments unavailable' banner and fails with raw 503 toast. | **fixed in launch-3, verify at acceptance** (B7) |
 | A-13 | P2 | /signup | Duplicate of A-03: /signup redirects to nonexistent /join and shows 404. | **fixed in launch-2, verify at acceptance** (B0) |
 | A-16 | P2 | /employer/post-job | Rapid double-click on Submit for review posts twice and creates two listings. | **fixed in launch-2, verify at acceptance** (B4 (queued draft save; re-check)) |
 | A-17 | P2 | /employer/post-job | Absurd pay and slot values pass client checks; server 422 surfaces only as raw model-text toasts. | **fixed in launch-2, verify at acceptance** (B4 (partial; re-check absurd pay)) |
-| A-26 | P2 | /admin Urgent matching → Candidates → Founder notes | Saved founder note disappears when the candidate row is collapsed and reopened until reload. | B10 |
-| A-27 | P2 | /admin (active tab) | Active admin tab is not in the URL; reload always returns to the queue. | B10 |
-| A-30 | P2 | /stage/authors/user/:id | Nonexistent Stage author page shows 'Loading...' forever with a live Follow button. | B8 |
-| A-38 | P2 | /stage/authors/user/:id | Follower count stays '0 followers' after clicking Follow until reload. | B10 |
-| A-39 | P2 | /stage/tags/:tag | Hindi hashtags are not linked, and single-letter tags link to empty pages; frontend and backend patterns differ. | B8 |
+| A-26 | P2 | /admin Urgent matching → Candidates → Founder notes | Saved founder note disappears when the candidate row is collapsed and reopened until reload. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-27 | P2 | /admin (active tab) | Active admin tab is not in the URL; reload always returns to the queue. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-30 | P2 | /stage/authors/user/:id | Nonexistent Stage author page shows 'Loading...' forever with a live Follow button. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-38 | P2 | /stage/authors/user/:id | Follower count stays '0 followers' after clicking Follow until reload. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-39 | P2 | /stage/tags/:tag | Hindi hashtags are not linked, and single-letter tags link to empty pages; frontend and backend patterns differ. | **fixed in launch-3, verify at acceptance** (B8) |
 
 Duplicates, fix once: A-03 = A-13 (`/signup`); A-08 = A-15 (template placeholders); A-30 and A-35 (Stage author identity comes from `posts[0]`; one API change). A-31 (cursor) and A-32 (photo URL) are independent.
 
-**Disputed.** A-29 (signed-in UI persists after the token is gone): one verifier reproduced it only by deleting the token from localStorage, the other found no real path; both rate it P3. Residual gap, expired-token drafts are not preserved → B10 with A-28.
+**Disputed.** A-29 (signed-in UI persists after the token is gone; the expired-session handling in B10 closes the residual, fixed in launch-3): one verifier reproduced it only by deleting the token from localStorage, the other found no real path; both rate it P3. Residual gap, expired-token drafts are not preserved → B10 with A-28.
 
-**Unverified** (all four verifier runs failed): #15 is the same defect as A-21 (`UrgentHire` mounted the signed-in `Navigation`; B3); #16 "Other role" accepts 3,000 characters and sends them to `/auth/register` (B8).
+**Unverified** (all four verifier runs failed): #15 is the same defect as A-21 (`UrgentHire` mounted the signed-in `Navigation`; B3); #16 "Other role" accepts 3,000 characters and sends them to `/auth/register` (B8; the server already capped roles at 60, the client now does too, fixed in launch-3).
 
-**Not bugs but notable** (P3, unverified; B6 or owner): two urgent forms ([51]); Apply now has no confirmation ([145]); five identical system posts on an empty Stage ([127]); every support path points to one personal-looking address ([123]); the legal policy API returns a placeholder entity name and GSTIN ([228]); a user can report their own account ([230]); applicant raw email on the hirer list ([91]); US dates with seconds ([49]); expired session gives no explanation ([241]); empty hirer dashboard repeats its CTAs ([50]). A further 137 P2 and 37 P1 unverified items (mostly copy, visual and UX) sit in the crawl output; B6 takes the US dates, "INR" versus ₹ and raw enum strings first.
+**Not bugs but notable** (P3, unverified; B6 or owner; the US dates, INR, raw enums, applicant email, system-post run, hirer CTAs, self-report and expired-session items are fixed in launch-3 by B6; the two urgent forms, Apply-now confirmation, single support address and legal placeholders remain): two urgent forms ([51]); Apply now has no confirmation ([145]); five identical system posts on an empty Stage ([127]); every support path points to one personal-looking address ([123]); the legal policy API returns a placeholder entity name and GSTIN ([228]); a user can report their own account ([230]); applicant raw email on the hirer list ([91]); US dates with seconds ([49]); expired session gives no explanation ([241]); empty hirer dashboard repeats its CTAs ([50]). A further 137 P2 and 37 P1 unverified items (mostly copy, visual and UX) sit in the crawl output; B6 takes the US dates, "INR" versus ₹ and raw enum strings first.
 
 ---
 
@@ -364,6 +371,8 @@ Duplicates, fix once: A-03 = A-13 (`/signup`); A-08 = A-15 (template placeholder
 
 *Owns:* every user-facing string in `src/app/**` not owned by an in-flight brief at the time it runs, `src/app/lib/format.ts` `formatWhen`/`formatMoney`, email templates in `backend/app/services/email_delivery.rb`, `notification_email.rb`, `lifecycle_sequences.rb` bodies, `backend/config/copy/**` if introduced.
 
+*Owns amendments (granted during launch-3):* backend one-line copy or guard changes in `reports_controller.rb` (self-report 422), `reviews_controller.rb`, `acts_controller.rb`, `talent_controller.rb`, `auth_controller.rb`, `jobs_controller.rb`, `hire_pages_controller.rb`, `billing_reminders_job.rb`, `notifier.rb`, `urgent_matcher.rb`, `whatsapp_alerts.rb`, `weekly_digest.rb`; new `services/indian_format.rb`; `AuthPage.tsx`/`AdminSignIn` (expired-session notice). The wire value of the report reason "Misleading listing" stays; only its label changed.
+
 1. Apply §5.1.6: nouns, dates (`formatWhen` everywhere a `Date` prints; no `toLocaleString()` defaults), rupees, engineering words removed (T-06), vague buttons renamed, every empty state and error states the next step, "a instrument" class grammar fixed, US timestamps gone (J-19).
 2. Payment-unavailable states (J-06): "Payments open soon — we'll email you" with a notify-me toggle instead of raw errors; Billing hides "Start free trial" when `paymentsAvailable` is false and explains Early Access Pro instead.
 3. Email templates: brand header (mark + name), one primary button, Indian dates, unsubscribe footer; lifecycle bodies proofread.
@@ -373,6 +382,8 @@ Duplicates, fix once: A-03 = A-13 (`/signup`); A-08 = A-15 (template placeholder
 ### 7.8 B7 — Hirer flows (after B2)
 
 *Owns:* `EmployerDashboard.tsx`, `OpportunityPipeline.tsx`, `EmployerApplications.tsx`, `CandidateCompare.tsx`, `Bookings.tsx` (hirer branch), `BookingDepositPanel.tsx`, `Billing.tsx` (availability messaging shared with B6 — B7 owns the page structure), `JobDetails.tsx` owner view, `Messages.tsx` (thread grouping), backend `urgent_request_responses` accept endpoint, `conversations_controller.rb` (find-or-create per pair), `booking_requests_controller.rb` (change-request message).
+
+*Owns amendments (granted during launch-3):* `UrgentRequests.tsx` (the musician response flow, list scopes and paging, because the brief's items 1 and 2 assign them; B8 item 8 was done here), `Navigation.tsx`, `Billing.tsx` (hirer plan cards only), `ProfileSetup.tsx`, `PostJob.tsx` (J-12 card, draft slot), `BookTalent.tsx` (A-09, J-25), `auth_controller.rb`, `apiTypes.ts`, `authContext.tsx`, `profileForm.ts` (`verificationPending`), `models/conversation.rb` (`open_between!`), `routes.rb`, `talent_controller.rb` (`shortlisted`), `urgent_requests_controller.rb`, `booking_requests_controller.rb`, `BookingDialogs.tsx`, `BookingFeeBreakdown.tsx`, `AccountStep.tsx`, `AuthPage.tsx`, `lib/authToasts.ts`, `OwnerJobPanel.tsx`, `SubmittedListing.tsx`, `lib/shareListing.ts`, `lib/paymentMode.ts`, `docs/API.md`. The A-16 server-side duplicate guard (`jobs_controller.rb`, B4's file) was split out into PR #142 and is not merged; only the client guard (`useSubmitOnce`) shipped.
 
 1. J-03: each urgent response gets "Message" (opens/creates the conversation) and "Accept" (marks the request filled by that musician, notifies both, posts nothing public); the musician who responds sees the conversation immediately.
 2. J-11: urgent lists show only relevant items — hirers see their own requests plus a "Browse open requests" tab; musicians see matches for their roles/city first, paged 20 at a time.
@@ -386,6 +397,8 @@ Duplicates, fix once: A-03 = A-13 (`/signup`); A-08 = A-15 (template placeholder
 ### 7.9 B8 — Musician flows (after B2)
 
 *Owns:* `JobSeekerDashboard.tsx`, `ProductTour.tsx` (`TourStrip` state), `JobSearch.tsx` (defaults), `showcase/Library.tsx`, `components/join/WorkLinks.tsx`/`ProfileDraftReview.tsx` (import UX), `Portfolio.tsx` (delete) + its inbound links, `Navigation.tsx` (musician account menu grouping), `Billing.tsx` musician branch, `AccountSettings.tsx` (password section), `Reviews.tsx`, `StageFeed.tsx` (system-post density), `UrgentRequests.tsx` musician branch, backend `link_import` labelling, `urgent_matcher` role matching, `password` set endpoint.
+
+*Owns amendments (granted during launch-3):* `StageAuthor.tsx` (A-30/A-35 and the avatar; B10 keeps A-38), `AuthPage.tsx` (role-neutral `/stage` return path), `Join.tsx`, `routes.tsx` (portfolio redirect, `MusicianBilling`), new `MusicianBilling.tsx` (instead of a branch in `Billing.tsx`), `Notifications.tsx`, `Bookings.tsx`, `JobDetails.tsx`, `WelcomeNextStep.tsx`, `stage/*` (feed, tags, authors and posts controllers, `SystemRoundup.tsx`), `post.rb`, `upload.rb`, `notifier.rb`, `showcase_sync.rb`, `showcase_rules.rb`, `link_preview.rb`, `library_imports_controller.rb`, `onboarding/starter.rb`, `application_controller.rb` (`passwordSet`), `google_sign_in.rb`, `account_controller.rb`, `search/synonyms.rb`, `useUrlFilters.ts`, `authContext.tsx`, `AutocompleteInput.tsx`, `EmailDelivery` templates (`account_password_set`), `portfolio-uploads.spec.ts` (ported to My work). J-20 wording: the first profile role is the query, the others are one tap away; instrument synonyms come from `config/search_synonyms.yml`. A-33/A-34 are in-app notifications only.
 
 1. J-09: `TourStrip` steps are ticked from real state (has sample, has availability, has applied) and the strip disappears when all are done.
 2. J-07: "Add from a link" keeps the pasted link on Close (drafted item) and confirms on Add; profile-draft-from-links shows what was found per link and errors per link; Spotify artist/album/track labelled correctly.
@@ -410,7 +423,9 @@ Duplicates, fix once: A-03 = A-13 (`/signup`); A-08 = A-15 (template placeholder
 
 ### 7.10a B10 — Admin console and integration one-liners (after B2 and B3; Sonnet; small)
 
-*Owns:* the admin console components under `src/app/components/admin/**` and `pages/Admin*.tsx`, `lifecycle_sequences.rb` (link paths only), `src/app/pages/stage/StageAuthor*`, `WeeklyDigest` and `ResponseTimeStats` scopes, `tests/e2e/zz-landing-shots.spec.ts`, and a migration for `lifecycle_emails.delivered_at`.
+*Owns:* the admin console components under `src/app/components/admin/**` and `pages/Admin*.tsx`, `lifecycle_mailer.rb` (link paths only; the paths live there, not in `lifecycle_sequences.rb`), `src/app/pages/stage/StageAuthor*`, `WeeklyDigest` and `ResponseTimeStats` scopes, `tests/e2e/zz-landing-shots.spec.ts`, and a migration for `lifecycle_emails.delivered_at`.
+
+*Owns amendments (granted during launch-3):* `Navigation.tsx` (A-20, shared with B1 avatar and B8 menu), `backend/app/services/lifecycle_mailer.rb` and the `/applications` digest link in `weekly_digest.rb` (A-14), `src/app/lib/{api,appTarget,authContext,unsentDraft}` and `components/stage/Composer.tsx` (A-28/A-29), `backend/app/controllers/admin/jobs_controller.rb` (A-23 status filter), `lifecycle_email_delivery_job.rb`, `models/lifecycle_email.rb`, `lib/tasks/lifecycle.rake` (`delivered_at`). The per-share OG function is **not** in B10 (it belongs to B3 and was dropped in review): per-share `og:image` stays the default card until it is rebuilt (§9).
 
 1. A-14: lifecycle email buttons double the workspace prefix (`/jobseeker/jobseeker/…`); build the link once.
 2. A-20: the signed-in header needs 395 px at a 360 px viewport; the hamburger must be on screen.
@@ -453,6 +468,7 @@ B0, B1, B4, B5, B9 start together (disjoint files). B2 and B3 start when B1 merg
 | 11 | Admin → Demo data | when the showcase should go: click Delete on `demo-showcase` | removal |
 | 12 | Railway (both) | `SENTRY_DSN` points at the wrong or a stale project: Sentry rejects the events with `ProjectId` (403). Copy the DSN from the right project | error reports are being dropped |
 | 13 | `backend/config/legal.yml` | fill the legal entity fields; until then the invoice print page has an empty heading | B0 guards hide the unfilled fields, but invoices need them |
+| 14 | Owner, when payments go live | Email the members who ticked "Email me when payments open" (stored as `paymentsNotify` in `profiles.email_preferences`: `Profile.where("email_preferences ->> 'paymentsNotify' = 'true'")`); nothing sends it automatically | B6 promises this on Billing and the deposit panel |
 
 ---
 
@@ -461,6 +477,7 @@ B0, B1, B4, B5, B9 start together (disjoint files). B2 and B3 start when B1 merg
 - **Day-30 rule:** ≥ 20 urgent fills and ≥ 5 deposits paid ⇒ open Delhi and Bengaluru; otherwise stay in Mumbai, fix the funnel, add no features.
 - **Monetisation gates:** ₹499 single post at day 30 if Pro conversion < 5 %; musician Pro (₹149–299) only at ≥ 70 % fill rate; booking fee 5–10 % only on completed live bookings > ₹50k; never sell musician visibility before delivering gigs.
 - **Weekly loop (owner + admin):** Monday pinned Stage thread, Tuesday digest, Friday fastest-responders post, a meetup a fortnight, badge-share nudge on every verification, review ask on every fill. Scorecard: sign-ups by source, % publishing within 24 h, verified count and median time, urgent fills within 24 h (target ≥ 70 %), median first response, digest open rate, active commenters, badge shares, reviews per fill.
+- **Parked from launch-3:** per-share OG image function (a Node serverless function `api/og/[type]/[id].ts` with a statically imported `@vercel/og`; 0.11.1 ran under Node, 1.0.x did not; keep the `/api/og/*` default-card rewrite until it passes deploy validation); PR #142 (A-16 server guard; needs a routing decision on B4's file); musician-level quote; `docs/API.md` for B2's filter params; personal first-fold imagery on Find work.
 - **Deferred, in order:** light mode; Instagram embeds (CSP + Meta review); YouTube channel and Spotify imports; WhatsApp OTP; admin merge tool; resumes/career record; Enterprise plan; native apps (not planned).
 - **Scale triggers:** search index audit at 20,000 members; second verification reviewer past ~150/week; two Puma processes + 2 GB at ~5 lakh members.
 - **Ambition check (kept from the 10-lakh assessment):** 10 lakh *users* in six months is not realistic for a professional marketplace; 25–50k professionals + 3–5k hirers with 10 lakh reach is the honest target, and the loops above are how it is earned.

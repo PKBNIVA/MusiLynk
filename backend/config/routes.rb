@@ -264,6 +264,7 @@ Rails.application.routes.draw do
       get "feed", to: "feed#index"
       get "events", to: "events#index"
       get "authors/:type/:authorId/posts", to: "posts#by_author"
+      get "authors/:type/:id", to: "authors#show"
       get "authors/:type/:id/followers", to: "follows#followers"
       get "authors/:type/:id/following", to: "follows#following"
       get "tags/:tag", to: "tags#show"

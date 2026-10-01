@@ -264,7 +264,7 @@ function EmailCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }
         setChallenge(null);
         return;
       }
-      setError(errorMessage(err, 'Invalid or expired code.'));
+      setError(errorMessage(err, 'That code is wrong or has expired. Request a new one.'));
       setCode('');
     } finally {
       setBusy(false);
@@ -327,7 +327,7 @@ function EmailCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }
             </div>
             {challenge?.debugCode && (
               <p className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
-                Local testing: your code is{' '}
+                Email is switched off here, so your code is{' '}
                 <span className="font-mono font-bold" data-testid="debug-code">
                   {challenge.debugCode}
                 </span>

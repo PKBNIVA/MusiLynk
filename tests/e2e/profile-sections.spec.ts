@@ -74,10 +74,10 @@ async function mock(page: Page, options: { putDelayMs?: number } = {}) {
 test('a section saves itself after a pause, on its own, and says so', async ({ page }) => {
   const { puts } = await mock(page);
   await page.goto('/jobseeker/profile');
-  await expect(page.getByLabel('Professional headline')).toHaveValue('Session guitarist');
+  await expect(page.getByLabel('Headline')).toHaveValue('Session guitarist');
   await expect(page.getByTestId('section-status-about')).toHaveText('');
 
-  await page.getByLabel('Professional headline').fill('Session guitarist, Hindi and English rock');
+  await page.getByLabel('Headline').fill('Session guitarist, Hindi and English rock');
   await expect(page.getByTestId('section-status-about')).toHaveText('Unsaved changes');
   await expect(page.getByTestId('section-status-about')).toHaveText('Saved', { timeout: 5_000 });
   expect(puts).toHaveLength(1);
@@ -144,7 +144,7 @@ test('leaving with unsaved changes asks first', async ({ page }) => {
 test('leaving while a save is on its way waits for it instead of asking', async ({ page }) => {
   await mock(page, { putDelayMs: 1_500 });
   await page.goto('/jobseeker/profile');
-  await page.getByLabel('Professional headline').fill('Session guitarist and arranger');
+  await page.getByLabel('Headline').fill('Session guitarist and arranger');
   await page.getByLabel('Website').focus(); // leaving About starts its (slow) save
   await page.getByRole('link', { name: 'Verse dashboard' }).click();
   await expect(page.getByTestId('unsaved-dialog')).toHaveCount(0);
@@ -155,7 +155,7 @@ test('asking for verification leaves a Pending review state, also after a reload
   const { posts } = await mock(page);
   await page.goto('/jobseeker/profile');
   await page.getByRole('button', { name: 'Request verification' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Request professional verification' });
+  const dialog = page.getByRole('dialog', { name: 'Request verification' });
   await dialog.getByLabel('Proof URL').fill('https://label.example/credits/asha');
   await dialog.getByRole('button', { name: 'Submit for review' }).click();
   await expect(page.getByTestId('verification-pending')).toHaveText(/Pending review/);

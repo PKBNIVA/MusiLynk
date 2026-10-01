@@ -16,6 +16,7 @@ import { useAuth } from '../../lib/authContext';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import { formatMoney, formatPay } from '../../lib/format';
 import type { Act } from '../../lib/apiTypes';
+import { optionLabel } from '../../components/ui/option-labels';
 
 /** MusicGroup structured data for a public act. */
 function musicGroupJsonLd(a: Act, id?: string) {
@@ -92,7 +93,7 @@ export default function PublicAct({ shell }: { shell?: 'public' | 'workspace' } 
           <ActCover act={a} height={220} />
           <CardContent className="p-6 md:p-8">
             <div className="flex gap-2 items-center">
-              <Badge>{a.act_type}</Badge>
+              <Badge>{optionLabel(a.act_type)}</Badge>
               <DemoBadge show={a.demo} />
               {a.verified && <ShieldCheck className="text-emerald-300" size={18} aria-label="Verified act" />}
             </div>

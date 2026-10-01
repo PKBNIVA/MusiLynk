@@ -78,7 +78,7 @@ export default function PublicPortfolio() {
         error={error || (!loading && !p ? { message: 'Not found', status: 404 } : null)}
         noun="portfolio"
         backTo="/music-professionals"
-        backLabel="Browse professionals"
+        backLabel="Browse musicians"
         onRetry={() => void load()}
       />
     );
@@ -138,7 +138,9 @@ export default function PublicPortfolio() {
             Work
           </h2>
           {items.length === 0 ? (
-            <EmptyState icon={FileAudio} title="No public work here yet" className="mt-4" />
+            <EmptyState icon={FileAudio} title="No public work here yet" className="mt-4">
+              Check back soon, or browse other musicians.
+            </EmptyState>
           ) : (
             <ul className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {items.map(({ item }) => (

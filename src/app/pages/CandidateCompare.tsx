@@ -14,6 +14,7 @@ import { errorMessage } from '../lib/errors';
 import { formatDate, formatMoney } from '../lib/format';
 import { useAuth } from '../lib/authContext';
 import type { ComparedProfessional } from '../lib/apiTypes';
+import { optionLabel } from '../components/ui/option-labels';
 export default function CandidateCompare() {
   const [sp, setSp] = useSearchParams(),
     nav = useNavigate(),
@@ -76,14 +77,14 @@ export default function CandidateCompare() {
           <ArrowLeft size={14} className="inline mr-1" />
           Back to talent
         </Link>
-        <PageHeader title="Compare professionals" className="mt-4" />
+        <PageHeader title="Compare musicians" className="mt-4" />
         {ids.length < 2 && (
           <Card className="mt-7 bg-white/5 border-white/10">
             <CardContent className="p-8 text-center text-slate-400">
-              Select two to four professionals from talent search to compare them here.
+              Select two to four musicians from talent search to compare them here.
               <div>
                 <Button asChild className="mt-4">
-                  <Link to={backTo}>Choose professionals</Link>
+                  <Link to={backTo}>Choose musicians</Link>
                 </Button>
               </div>
             </CardContent>
@@ -98,7 +99,7 @@ export default function CandidateCompare() {
           <p className="mt-7 text-slate-400">
             These profiles are no longer available to compare.{' '}
             <Link to={backTo} className="text-violet-300">
-              Choose other professionals
+              Choose other musicians
             </Link>
           </p>
         )}
@@ -121,7 +122,7 @@ export default function CandidateCompare() {
                       <h2 className="text-xl font-semibold">{p.name}</h2>
                       {p.verified && <ShieldCheck size={16} className="text-emerald-300" />}
                     </div>
-                    <div className="text-violet-300 text-sm mt-1">{p.headline || 'Music professional'}</div>
+                    <div className="text-violet-300 text-sm mt-1">{p.headline || 'Musician'}</div>
                   </div>
                 </div>
                 {p.location && (
@@ -157,7 +158,7 @@ export default function CandidateCompare() {
                   {p.availability?.length ? (
                     p.availability.slice(0, 3).map((a) => (
                       <div key={a.startAt} className="text-xs text-slate-300 py-1">
-                        {formatDate(a.startAt)} · {a.status}
+                        {formatDate(a.startAt)} · {optionLabel(a.status)}
                         {a.city ? ` · ${a.city}` : ''}
                       </div>
                     ))

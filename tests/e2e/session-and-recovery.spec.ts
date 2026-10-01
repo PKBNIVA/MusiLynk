@@ -208,7 +208,7 @@ test('legacy job-alert links open the job inside the signed-in workspace', async
   );
 
   await page.goto('/jobseeker/notifications');
-  await expect(page.getByRole('link', { name: 'Open' })).toHaveAttribute('href', '/jobseeker/jobs/job-1');
+  await expect(page.getByRole('link', { name: 'See details' })).toHaveAttribute('href', '/jobseeker/jobs/job-1');
 });
 
 test('signing in from a public opportunity returns to that job', async ({ page }) => {

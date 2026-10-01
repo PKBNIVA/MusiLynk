@@ -25,8 +25,8 @@ class ReviewsController < ApplicationController
         Review.create!(author: current_user, employer:, rating: params[:rating], title: params[:title], body: params[:body], status: "pending")
       end
     end
-    return render_error("You have already reviewed this employer.", :conflict, "REVIEW_EXISTS") if outcome == :duplicate
-    return render_error("You can review an employer only after a completed hire.", :forbidden, "REVIEW_NOT_ELIGIBLE") if outcome == :ineligible
+    return render_error("You have already reviewed this hirer.", :conflict, "REVIEW_EXISTS") if outcome == :duplicate
+    return render_error("You can review a hirer only after a completed hire.", :forbidden, "REVIEW_NOT_ELIGIBLE") if outcome == :ineligible
     render json: { id: outcome.id }, status: :created
   end
 

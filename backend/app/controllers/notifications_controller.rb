@@ -27,7 +27,7 @@ class NotificationsController < ApplicationController
   end
 
   def preferences
-    render json: { emailNotifications: NotificationEmail.opted_in?(current_user) }
+    render json: { emailNotifications: NotificationEmail.opted_in?(current_user), paymentsNotify: current_user.profile&.payments_notify? == true }
   end
 
   def update_preferences
@@ -46,13 +46,13 @@ class NotificationsController < ApplicationController
     return render_error("emailPreferences must be an object.", :bad_request, "INVALID_PREFERENCE") unless updates.respond_to?(:to_unsafe_h) || updates.is_a?(Hash)
 
     updates = updates.to_unsafe_h if updates.respond_to?(:to_unsafe_h)
-    invalid = updates.keys.map(&:to_s) - Profile::EMAIL_PREFERENCE_CATEGORIES
+    invalid = updates.keys.map(&:to_s) - Profile::EMAIL_PREFERENCE_CATEGORIES - [Profile::PAYMENTS_NOTIFY_KEY]
     return render_error("Unknown preference: #{invalid.join(', ')}", :bad_request, "INVALID_PREFERENCE") if invalid.any?
     return render_error("Each preference must be true or false.", :bad_request, "INVALID_PREFERENCE") unless updates.values.all? { [true, false].include?(_1) }
 
     profile = current_user.profile || current_user.create_profile!
     profile.update!(email_preferences: profile.email_preferences.to_h.merge(updates.stringify_keys))
-    render json: { emailPreferences: profile.email_preferences }
+    render json: { emailPreferences: profile.email_preferences, paymentsNotify: profile.payments_notify? }
   end
 
   # One-click unsubscribe from a notification email: no sign-in, the signed token names the

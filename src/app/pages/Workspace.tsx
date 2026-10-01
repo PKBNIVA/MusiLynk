@@ -13,6 +13,7 @@ import { useConfirm } from '../components/booking/BookingDialogs';
 import { errorMessage } from '../lib/errors';
 import type { Organization, OrganizationMember } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
+import { optionLabel } from '../components/ui/option-labels';
 
 export default function Workspace() {
   const { user } = useAuth();
@@ -228,7 +229,7 @@ export default function Workspace() {
                               <div className="text-xs text-slate-500">{member.email}</div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge variant="secondary">{member.role}</Badge>
+                              <Badge variant="secondary">{optionLabel(member.role)}</Badge>
                               {member.role !== 'owner' &&
                                 (selected.memberRole === 'owner' ||
                                   (selected.memberRole === 'admin' &&

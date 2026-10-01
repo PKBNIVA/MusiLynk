@@ -204,14 +204,16 @@ test.describe('payments are off', () => {
     await page.goto('/employer/bookings');
     await page.getByRole('button', { name: /Resume deposit payment/ }).click();
     const note = page.getByTestId('deposit-unavailable');
-    await expect(note).toContainText('Deposit payment is not open yet');
+    await expect(note).toContainText('Payments open soon');
     await expect(note).toContainText('message The Night Owls');
     await expect(page.getByText('Live payments are not configured')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Resume deposit payment/ })).toHaveCount(0);
     await expect(note.getByRole('button', { name: 'Check again' })).toBeVisible();
   });
 
-  test('paid plans are disabled with an explanation under the payments-unavailable banner', async ({ page }) => {
+  test('paid plans hide their start button and explain Early Access Pro under the payments-open-soon banner', async ({
+    page,
+  }) => {
     await mock(page, (path, _method, _body, route) => {
       if (path === '/billing/plans')
         return (
@@ -254,12 +256,22 @@ test.describe('payments are off', () => {
           }),
           true
         );
+      if (path === '/notifications/preferences')
+        return (json(route, { emailNotifications: true, paymentsNotify: false }), true);
+      if (path === '/me/email-preferences') return (json(route, { emailPreferences: {}, paymentsNotify: true }), true);
       return false;
     });
     await page.goto('/employer/billing');
-    await expect(page.getByText('Payments unavailable.')).toBeVisible();
-    await expect(page.getByTestId('plan-pro').getByRole('button', { name: 'Start free trial' })).toBeDisabled();
-    await expect(page.getByTestId('plan-pro-unavailable')).toContainText('Paid plans open once billing is set up');
+    await expect(page.getByText('Payments open soon.')).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Early Access Pro' })).toBeVisible();
+    await expect(page.getByTestId('plan-pro').getByRole('button', { name: 'Start free trial' })).toHaveCount(0);
+    await expect(page.getByTestId('plan-pro-unavailable')).toContainText('Available when payments open');
+    const notify = page.getByLabel('Email me when payments open');
+    await expect(notify).not.toBeChecked();
+    const saved = page.waitForRequest((r) => r.url().includes('/me/email-preferences') && r.method() === 'PUT');
+    await notify.check();
+    expect((await saved).postDataJSON()).toEqual({ emailPreferences: { paymentsNotify: true } });
+    await expect(notify).toBeChecked();
   });
 });
 
@@ -486,7 +498,7 @@ test.describe('posting and viewing an opportunity', () => {
     await page.goto('/employer/jobs/job1');
     const panel = page.getByTestId('owner-panel');
     await expect(panel.getByTestId('owner-status')).toHaveText('In review');
-    await expect(panel).toContainText('We review every listing within 24 hours');
+    await expect(panel).toContainText('We review every opportunity within 24 hours');
     await expect(panel.getByRole('link', { name: '3 applicants' })).toHaveAttribute(
       'href',
       /\/employer\/applications\?jobId=job1/,
@@ -509,7 +521,7 @@ test.describe('applicants and comparing', () => {
     });
     await page.goto('/employer/applications');
     await expect(page.getByRole('heading', { name: 'No applicants yet' })).toBeVisible();
-    await expect(page.getByText('Most listings get their first applicant within 48 hours')).toBeVisible();
+    await expect(page.getByText('Most opportunities get their first applicant within 48 hours')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Share this opportunity' })).toBeVisible();
   });
 
@@ -521,7 +533,7 @@ test.describe('applicants and comparing', () => {
       return false;
     });
     await page.goto('/employer/applications');
-    await expect(page.getByText('Your listing is in review')).toBeVisible();
+    await expect(page.getByText('Your opportunity is in review')).toBeVisible();
     await expect(page.getByText('within 48 hours')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Back to dashboard' })).toBeVisible();
   });

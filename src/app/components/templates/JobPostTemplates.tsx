@@ -40,7 +40,7 @@ export const JOB_POST_TEMPLATES: JobPostTemplate[] = [
     opportunityKind: 'gig',
     title: 'Performer for a wedding / private event',
     description:
-      'Looking for {{solo artist/band/DJ}} for a {{wedding/private event}} on {{date}} at {{venue, city}}. ' +
+      'Looking for {{solo artist/band/DJ}} for {{a wedding/a private event}} on {{date}} at {{venue, city}}. ' +
       'Set runs {{start time}} to {{end time}}, covering {{genre/style}} the crowd will enjoy. ' +
       'PA and basic stage setup {{will/will not}} be provided — please confirm what you bring.',
     screeningQuestions: [
@@ -55,7 +55,7 @@ export const JOB_POST_TEMPLATES: JobPostTemplate[] = [
     opportunityKind: 'tour',
     title: 'Touring musician for an upcoming run of shows',
     description:
-      '{{Artist/band name}} is touring {{region/cities}} from {{start date}} to {{end date}} and needs a {{instrument/role}} for the run. ' +
+      '{{Artist/band name}} is touring {{region/cities}} from {{start date}} to {{end date}} and needs someone on {{instrument/role}} for the run. ' +
       'Expect {{number}} shows, travel by {{mode of travel}}, with rehearsals starting {{rehearsal date}}. ' +
       'Per diem and travel {{are/are not}} covered — details on request.',
     screeningQuestions: [
@@ -70,7 +70,7 @@ export const JOB_POST_TEMPLATES: JobPostTemplate[] = [
     opportunityKind: 'job',
     title: 'Composer/performer for a jingle or ad spot',
     description:
-      '{{Brand/agency name}} needs a {{composer/vocalist/musician}} for a {{length}}-second jingle or ad spot for {{product/campaign}}. ' +
+      '{{Brand/agency name}} needs {{a composer/a vocalist/a musician}} for a jingle or ad spot of {{length}} seconds for {{product/campaign}}. ' +
       'Brief and reference tracks will be shared on shortlisting; turnaround is {{number}} day(s) from brief to first draft. ' +
       'Usage is {{region/media}} for {{duration}} — full rights details shared before you accept.',
     screeningQuestions: [
@@ -85,8 +85,8 @@ export const JOB_POST_TEMPLATES: JobPostTemplate[] = [
     opportunityKind: 'job',
     title: 'Composer/musician for an OTT or film score',
     description:
-      '{{Production house/director name}} is scoring {{film/series title}}, a {{genre}} {{film/series}} releasing on {{platform/date}}. ' +
-      'Looking for a {{composer/orchestrator/session player}} to work on {{number}} cue(s) / the {{portion}} of the score. ' +
+      '{{Production house/director name}} is scoring {{film/series title}} ({{genre}} {{film/series}}), releasing on {{platform/date}}. ' +
+      'Looking for {{a composer/an orchestrator/a session player}} to work on {{number}} cue(s) / the {{portion}} of the score. ' +
       'Reference tone: {{mood/reference tracks}}. Delivery format and deadline shared after shortlisting.',
     screeningQuestions: [
       'Can you share past score work or a reel relevant to this genre/mood?',
@@ -100,7 +100,7 @@ export const JOB_POST_TEMPLATES: JobPostTemplate[] = [
     opportunityKind: 'job',
     title: 'Music teacher / instructor',
     description:
-      '{{School/studio name}} in {{city}} is looking for a {{instrument/subject}} teacher for {{beginner/intermediate/advanced}} students. ' +
+      '{{School/studio name}} in {{city}} is looking for a teacher of {{instrument/subject}} for {{beginner/intermediate/advanced}} students. ' +
       'Classes run {{days/times}}, {{number}} student(s) per batch, {{online/in-person}} at {{location}}. ' +
       'Curriculum and lesson materials {{are/are not}} provided.',
     screeningQuestions: [

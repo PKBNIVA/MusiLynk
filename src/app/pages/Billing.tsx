@@ -52,6 +52,9 @@ import {
   whatsappShareUrl,
 } from '../lib/promo';
 import { loadAiUsage, type AiUsage } from '../lib/ai';
+import { formatDate, formatMoney } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
+import { PaymentsNotify } from '../components/PaymentsNotify';
 
 type Summary = {
   status: 'pending' | 'trialing' | 'active' | 'cancelling' | 'past_due' | 'cancelled' | 'early_access';
@@ -82,24 +85,16 @@ type PaymentMode = 'live' | 'test' | 'mock' | 'disabled';
 
 // Banner copy per payment mode; live payments need no banner.
 const PAYMENT_MODE_NOTICE: Partial<Record<PaymentMode, [string, string]>> = {
-  test: [
-    'Test mode.',
-    'Payments on this environment use Razorpay test mode. No real money moves and no real cards are charged.',
-  ],
-  mock: [
-    'Demo billing.',
-    'Razorpay is not configured on this environment, so upgrades start without any payment step.',
-  ],
+  test: ['Test mode.', 'Payments here use test cards. No real money moves and no real cards are charged.'],
+  mock: ['Trial only.', 'Paid plans start without a payment step for now, so nothing is charged.'],
   disabled: [
-    'Payments unavailable.',
-    'Paid upgrades are paused while billing is being set up. Your current plan is not affected.',
+    'Payments open soon.',
+    'Turn on the email option below and we’ll tell you when they do. Your current plan is not affected. Early Access Pro, which needs no card, is going to our first hirers.',
   ],
 };
 
-const day = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-const money = (currency: string, value: number) =>
-  currency === 'INR' ? inr(value) : `${currency} ${Number(value).toLocaleString('en-IN')}`;
+const day = (value?: string | null) => formatDate(value);
+const money = (currency: string, value: number) => formatMoney(value, currency);
 
 const STATUS_LABEL: Record<Summary['status'], string> = {
   pending: 'Setup incomplete',
@@ -310,7 +305,7 @@ export default function Billing() {
         return;
       }
       if (d.checkout?.mode === 'mock') {
-        toast.success('Trial activated in development mode. Configure Razorpay environment keys for live billing.');
+        toast.success('Trial started. Nothing was charged.');
         await load();
         return;
       }
@@ -328,7 +323,7 @@ export default function Billing() {
           const activated = await waitForActivation();
           if (!activated)
             toast.info(
-              'Razorpay is still confirming your mandate. This page updates once the confirmation arrives; refresh in a minute.',
+              'Your bank is still confirming the payment setup. This page updates once it arrives; refresh in a minute.',
             );
         } else if (result.lastError) {
           toast.error(`Payment not completed: ${result.lastError}`);
@@ -344,7 +339,7 @@ export default function Billing() {
       // A 503 is billing being switched off, not something to retry: say so in plain words.
       toast.error(
         status === 503
-          ? 'Paid plans are not open yet. Your current plan is not affected; try again later.'
+          ? 'Payments open soon. Your current plan is not affected; turn on the email option on this page to hear when they do.'
           : errorMessage(e),
       );
     } finally {
@@ -406,6 +401,7 @@ export default function Billing() {
             <FlaskConical className="shrink-0 text-amber-300" size={18} />
             <span>
               <b>{notice[0]}</b> {notice[1]}
+              {paymentsOff && <PaymentsNotify />}
             </span>
           </div>
         )}
@@ -530,16 +526,11 @@ export default function Billing() {
                     </div>
                   ))}
                 </div>
-                {p.code !== 'free' && (
+                {p.code !== 'free' && !(paymentsOff && p.code !== 'enterprise' && currentCode !== p.code) && (
                   <Button
                     className="w-full mt-6"
                     variant={currentCode === p.code ? 'secondary' : 'default'}
-                    disabled={
-                      pendingPlan !== null ||
-                      (currentCode === p.code && summary?.status !== 'pending') ||
-                      (paymentsOff && p.code !== 'enterprise')
-                    }
-                    aria-describedby={paymentsOff && p.code !== 'enterprise' ? 'payments-notice' : undefined}
+                    disabled={pendingPlan !== null || (currentCode === p.code && summary?.status !== 'pending')}
                     aria-busy={pendingPlan === p.code}
                     onClick={() => choose(p.code)}
                   >
@@ -558,7 +549,7 @@ export default function Billing() {
                 )}
                 {paymentsOff && p.code !== 'free' && p.code !== 'enterprise' && currentCode !== p.code && (
                   <p className="mt-2 text-xs text-slate-400" data-testid={`plan-${p.code}-unavailable`}>
-                    Paid plans open once billing is set up. Your current plan is not affected.
+                    Available when payments open.
                   </p>
                 )}
               </CardContent>
@@ -595,9 +586,7 @@ export default function Billing() {
                       <tr key={h.paymentId} className="border-t border-white/10">
                         <td className="py-2 pr-4">{day(h.at)}</td>
                         <td className="py-2 pr-4">{money(h.currency, h.amount)}</td>
-                        <td className="py-2 pr-4">
-                          {h.status === 'captured' ? 'Paid' : h.status === 'failed' ? 'Failed' : h.status}
-                        </td>
+                        <td className="py-2 pr-4">{h.status === 'captured' ? 'Paid' : optionLabel(h.status)}</td>
                         <td className="py-2 font-mono text-xs text-slate-400">{h.invoiceId || h.paymentId}</td>
                       </tr>
                     ))}
@@ -609,8 +598,8 @@ export default function Billing() {
         )}
 
         <div className="mt-8 text-xs text-slate-500 max-w-4xl">
-          Plan changes: cancel your current plan first; you can subscribe to another plan once it has ended. Payment
-          state is confirmed by signed Razorpay webhooks; closing or refreshing checkout never charges you twice.
+          To change plans, cancel your current plan first, then subscribe to another once it has ended. Closing or
+          refreshing checkout never charges you twice.
         </div>
       </main>
 

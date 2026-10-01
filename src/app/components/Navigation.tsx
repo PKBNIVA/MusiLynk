@@ -125,7 +125,7 @@ export function Navigation() {
     label: 'Hire someone',
     icon: UserSearch,
     items: [
-      { path: `${baseUrl}/hiring/post`, icon: Briefcase, label: 'Post opportunity' },
+      { path: `${baseUrl}/hiring/post`, icon: Briefcase, label: 'Post an opportunity' },
       { path: `${baseUrl}/hiring/talent`, icon: Users, label: 'Find talent' },
       { path: `${baseUrl}/hiring/applicants`, icon: FileText, label: 'Applicants' },
       { path: `${baseUrl}/build-my-crew`, icon: Users, label: 'Build my crew' },
@@ -147,7 +147,7 @@ export function Navigation() {
       label: 'Post & hire',
       icon: BriefcaseBusiness,
       items: [
-        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Create opportunity' },
+        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Post an opportunity' },
         { path: `${baseUrl}/candidates`, icon: Users, label: 'Find talent' },
         { path: `${baseUrl}/applications`, icon: FileText, label: 'Applicants' },
         { path: `${baseUrl}/build-my-crew`, icon: Users, label: 'Build my crew' },
@@ -223,7 +223,7 @@ export function Navigation() {
       ]
     : [
         { path: baseUrl, icon: Home, label: 'Home' },
-        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Create' },
+        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Post' },
         { path: `${baseUrl}/candidates`, icon: Users, label: 'Talent' },
         { path: `${baseUrl}/messages`, icon: MessageSquare, label: 'Inbox' },
       ];

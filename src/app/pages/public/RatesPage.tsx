@@ -8,6 +8,7 @@ import { apiGet } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { useAuth } from '../../lib/authContext';
 import { ratesPagePath } from '../../lib/seoPages';
+import { formatDate, formatMoney } from '../../lib/format';
 
 interface RateRange {
   median: number;
@@ -34,9 +35,7 @@ interface RatesPageData {
 }
 
 const formatRange = (range: RateRange | null) =>
-  range
-    ? `₹${Math.round(range.p25).toLocaleString('en-IN')}–₹${Math.round(range.p75).toLocaleString('en-IN')}`
-    : 'Not enough data yet';
+  range ? `${formatMoney(range.p25)}–${formatMoney(range.p75)}` : 'Not enough data yet';
 
 export default function RatesPage() {
   const { city = '' } = useParams<{ city: string }>();
@@ -54,7 +53,7 @@ export default function RatesPage() {
         if (alive) setData(body);
       })
       .catch((err) => {
-        if (alive) setError(errorMessage(err, 'This page could not be found.'));
+        if (alive) setError(errorMessage(err, 'This page could not be found. Check the link or pick another city.'));
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -66,14 +65,14 @@ export default function RatesPage() {
 
   const title = data ? `What musicians charge in ${data.city.name} | Verse` : 'Musician rates';
   const description = data
-    ? `Median session, show and day rates reported by verified and unverified professionals on Verse in ${data.city.name}. A guide, not a quote.`
+    ? `Median session, show and day rates reported by verified and unverified musicians on Verse in ${data.city.name}. A guide, not a quote.`
     : undefined;
   const jsonLd = data
     ? {
         '@context': 'https://schema.org',
         '@type': 'Dataset',
         name: `Musician and crew rates in ${data.city.name}`,
-        description: `Session, show and day rates reported by professionals on Verse in ${data.city.name}.`,
+        description: `Session, show and day rates reported by musicians on Verse in ${data.city.name}.`,
         spatialCoverage: { '@type': 'Place', name: data.city.name },
       }
     : undefined;
@@ -96,9 +95,11 @@ export default function RatesPage() {
           </p>
         ) : error || !data ? (
           <div className="text-center py-16" role="alert">
-            <p className="text-rose-300">{error || 'This page could not be found.'}</p>
+            <p className="text-rose-300">
+              {error || 'This page could not be found. Check the link or pick another city.'}
+            </p>
             <Button variant="outline" className="mt-4" asChild>
-              <Link to="/music-professionals">Browse all professionals</Link>
+              <Link to="/music-professionals">Browse all musicians</Link>
             </Button>
           </div>
         ) : (
@@ -109,16 +110,9 @@ export default function RatesPage() {
               title={`What musicians charge in ${data.city.name}`}
             >
               <p className="max-w-2xl">
-                Ranges reported by verified and unverified professionals on Verse; they are a guide, not a quote.
+                Ranges reported by verified and unverified musicians on Verse; they are a guide, not a quote.
               </p>
-              <p className="mt-3 text-xs text-slate-300">
-                Last updated{' '}
-                {new Date(data.updatedAt).toLocaleDateString('en-IN', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </p>
+              <p className="mt-3 text-xs text-slate-300">Last updated {formatDate(data.updatedAt)}</p>
             </PhotoHeader>
 
             <div className="overflow-x-auto mt-8">

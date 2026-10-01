@@ -6,6 +6,7 @@ import { Textarea } from '../ui/textarea';
 import { Field } from '../form/Field';
 import { MoreDetails } from '../help/MoreDetails';
 import { BUDGET_BANDS, URGENT_IDS, type UrgentField, type UrgentFormValues } from '../../lib/urgentForm';
+import { formatInputEcho } from '../../lib/format';
 
 /**
  * The urgent request's fields: five required answers, then "More details". The public /urgent
@@ -45,7 +46,13 @@ export function UrgentRequestFields({
         {shown(errors.role)}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id={URGENT_IDS.startAt} label="Date & time" required error={errors.startAt}>
+        <Field
+          id={URGENT_IDS.startAt}
+          label="Date & time"
+          required
+          error={errors.startAt}
+          hint={formatInputEcho(values.startAt, true)}
+        >
           <Input type="datetime-local" value={values.startAt} onChange={(e) => onChange('startAt', e.target.value)} />
         </Field>
         <div>
@@ -101,7 +108,13 @@ export function UrgentRequestFields({
               placeholder="e.g. Blue Frog, Lower Parel"
             />
           </Field>
-          <Field id={URGENT_IDS.endAt} label="Ends" optional error={errors.endAt}>
+          <Field
+            id={URGENT_IDS.endAt}
+            label="Ends"
+            optional
+            error={errors.endAt}
+            hint={formatInputEcho(values.endAt, true)}
+          >
             <Input
               type="datetime-local"
               min={values.startAt}

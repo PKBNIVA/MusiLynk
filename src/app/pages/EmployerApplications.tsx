@@ -19,7 +19,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../lib/authContext';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { errorMessage } from '../lib/errors';
-import { formatWhen } from '../lib/format';
+import { formatWhen, formatInputEcho } from '../lib/format';
 import { shareListing } from '../lib/shareListing';
 import type { ConversationCreated, EmployerApplication, Job } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
@@ -32,6 +32,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
+import { optionLabel } from '../components/ui/option-labels';
+import { jobStatusLabel } from '../components/OpportunityPipeline';
 
 // The application's snapshot of the portfolio/resume chosen at apply time (materialsSnapshot —
 // see backend/docs/api-pages-portfolios-resumes.md §8). Not in apiTypes yet, so kept local here.
@@ -191,7 +193,7 @@ export default function EmployerApplications() {
       }
       setSummaries((s) => ({
         ...s,
-        [a.id]: { loading: false, open: true, error: errorMessage(e, 'Could not summarize this candidate.') },
+        [a.id]: { loading: false, open: true, error: errorMessage(e, 'Could not summarize this applicant.') },
       }));
     }
   }
@@ -349,7 +351,7 @@ export default function EmployerApplications() {
       await update(
         notes.id,
         { recruiterNote: notes.note, recruiterRating: notes.rating ? Number(notes.rating) : null },
-        'Recruiter notes saved',
+        'Notes saved',
       )
     )
       setNotes(null);
@@ -381,7 +383,10 @@ export default function EmployerApplications() {
                 className="mt-2"
                 options={[
                   { value: '', label: 'All opportunities' },
-                  ...jobs.map((j) => ({ value: j.id, label: `${j.title} (${j.status})` })),
+                  ...jobs.map((j) => ({
+                    value: j.id,
+                    label: `${j.title} (${jobStatusLabel[j.status] || optionLabel(j.status)})`,
+                  })),
                 ]}
               />
             </div>
@@ -457,8 +462,8 @@ export default function EmployerApplications() {
                 title={filteredJob ? `No applicants for ${filteredJob.title} yet` : 'No applicants yet'}
                 hint={
                   inReview
-                    ? 'Your listing is in review. It goes live within 24 hours, and applicants can find it then.'
-                    : 'Most listings get their first applicant within 48 hours. Sharing the link speeds that up.'
+                    ? 'Your opportunity is in review. It goes live within 24 hours, and applicants can find it then.'
+                    : 'Most opportunities get their first applicant within 48 hours. Sharing the link speeds that up.'
                 }
                 action={
                   live && live.status === 'published'
@@ -523,7 +528,7 @@ export default function EmployerApplications() {
                           {EMAIL_VISIBLE_STATUSES.includes(a.status) && a.candidateEmail && (
                             <div className="text-xs text-slate-400 mt-1 break-all">
                               <a href={`mailto:${a.candidateEmail}`} className="underline hover:text-white">
-                                {a.candidateEmail}
+                                Email this applicant
                               </a>
                             </div>
                           )}
@@ -773,6 +778,7 @@ export default function EmployerApplications() {
               onChange={(e) => setInterview((x) => x && { ...x, date: e.target.value })}
               className={fieldClass}
             />
+            {interview?.date && <p className="mt-1 text-xs text-slate-400">{formatInputEcho(interview.date, true)}</p>}
           </div>
         </FormDialog>
         <FormDialog
@@ -787,7 +793,7 @@ export default function EmployerApplications() {
           onSubmit={saveNotes}
         >
           <div>
-            <Label htmlFor="recruiter-note">Recruiter note</Label>
+            <Label htmlFor="recruiter-note">Private note</Label>
             <Textarea
               id="recruiter-note"
               maxLength={2000}

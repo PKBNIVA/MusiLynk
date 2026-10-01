@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPost } from '../lib/api';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { Button } from './ui/button';
+import { PaymentsNotify } from './PaymentsNotify';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
 import { errorCode, errorMessage, errorStatus } from '../lib/errors';
@@ -112,12 +113,13 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; 
         data-testid="deposit-unavailable"
         className="w-full max-w-sm rounded-xl border border-amber-400/25 bg-amber-500/[.07] p-3 text-sm text-amber-100"
       >
-        <p className="font-medium">Deposit payment is not open yet</p>
+        <p className="font-medium">Payments open soon</p>
         <p className="mt-1 text-amber-100/80">
-          Your booking is accepted and {booking.actName} has been told. Paying the
-          {expected ? ` ${money(quote?.currency, expected)} deposit` : ' deposit'} is not open yet. Until then, message{' '}
+          Your booking is accepted and {booking.actName} has been told. Until the
+          {expected ? ` ${money(quote?.currency, expected)} deposit` : ' deposit'} can be paid here, message{' '}
           {booking.actName} to agree the next step.
         </p>
+        <PaymentsNotify />
         {refused && (
           <Button size="sm" variant="outline" className="mt-3" onClick={() => setRefused(false)}>
             Check again

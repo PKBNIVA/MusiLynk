@@ -8,6 +8,7 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { errorMessage } from '../../lib/errors';
+import { formatDateTime } from '../../lib/format';
 
 export type Decision = 'warn' | 'suspend' | 'dismiss' | 'unpublish_job' | 'hide_review' | 'hide_act';
 
@@ -67,8 +68,7 @@ export const SIGNAL_LABELS: Record<string, string> = {
 const NOTE_LIMIT = 1000;
 const when = (value?: string | null) => {
   if (!value) return '—';
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+  return formatDateTime(value, { fallback: '—' });
 };
 
 const DECISIONS: Record<Decision, { label: string; busy: string; done: string; hint: string }> = {

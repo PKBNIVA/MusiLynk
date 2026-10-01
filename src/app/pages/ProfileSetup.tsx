@@ -31,7 +31,7 @@ import { MoreDetails } from '../components/help/MoreDetails';
 import { Checkbox } from '../components/ui/checkbox';
 import { DebugLinkDialog, VerificationRequestDialog } from '../components/VerificationDialogs';
 import { errorMessage } from '../lib/errors';
-import { formatWhen } from '../lib/format';
+import { formatWhen, formatNumber } from '../lib/format';
 import type { AccountUser } from '../lib/apiTypes';
 import { Field, FormError } from '../components/form/Field';
 import {
@@ -190,7 +190,7 @@ function validateProfile(f: ProfileForm) {
   const errors: Partial<Record<ProfileField, string>> = {};
   const text = (k: TextField) => String(f[k] ?? '').trim();
   (Object.keys(LIMITS) as TextField[]).forEach((k) => {
-    if (text(k).length > LIMITS[k]) errors[k] = `Keep this under ${LIMITS[k].toLocaleString()} characters.`;
+    if (text(k).length > LIMITS[k]) errors[k] = `Keep this under ${formatNumber(LIMITS[k])} characters.`;
   });
   (['website', 'portfolioUrl'] as const).forEach((k) => {
     if (!errors[k] && text(k) && !isHttpUrl(text(k))) errors[k] = URL_MESSAGE;
@@ -731,7 +731,7 @@ export default function ProfileSetup() {
               <div className="grid md:grid-cols-2 gap-5">
                 <Field
                   id={fieldId('headline')}
-                  label="Professional headline"
+                  label="Headline"
                   labelExtra={
                     <>
                       {templateButton('headline')}
@@ -843,7 +843,7 @@ export default function ProfileSetup() {
                   <AutocompleteInput
                     id={fieldId('roles')}
                     field="roles"
-                    label="Professional roles"
+                    label="Roles"
                     values={listOf(f.roles)}
                     onChange={(vs) => set('roles', vs.join(', '))}
                     placeholder="Session Bassist, Musical Director, FOH Engineer"
@@ -1002,7 +1002,7 @@ export default function ProfileSetup() {
                 <FormError message={emailError} />
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-4">
                   <div>
-                    <p className="font-medium">Professional verification</p>
+                    <p className="font-medium">Verification</p>
                     <p className="text-sm text-slate-400">
                       {f.verified
                         ? 'Your work has been checked. The badge shows on your profile and in search.'

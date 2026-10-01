@@ -92,28 +92,28 @@ test.describe('in-app dialogs', () => {
   test('reporting a job listing sends the reason and details to moderation', async ({ page }) => {
     const state = await signInWithDialogFixtures(page);
     await page.goto(`/jobseeker/jobs/${REPORT_JOB_ID}`);
-    await page.getByRole('button', { name: 'Report listing' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Report this listing' });
+    await page.getByRole('button', { name: 'Report opportunity' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Report this opportunity' });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('radio')).toHaveCount(6);
     // "Other" needs a sentence of explanation.
     await dialog.getByRole('radio', { name: 'Other' }).check();
     await dialog.getByRole('button', { name: 'Send report' }).click();
     await expect(dialog.getByRole('alert')).toContainText('Tell us briefly what is wrong');
-    await dialog.getByRole('radio', { name: 'Misleading listing' }).check();
+    await dialog.getByRole('radio', { name: 'Misleading opportunity' }).check();
     await dialog.getByRole('button', { name: 'Send report' }).click();
     await expect(dialog).toBeHidden();
-    await page.getByRole('button', { name: 'Report listing' }).click();
+    await page.getByRole('button', { name: 'Report opportunity' }).click();
     await page
-      .getByRole('dialog', { name: 'Report this listing' })
+      .getByRole('dialog', { name: 'Report this opportunity' })
       .getByRole('radio', { name: 'Spam or scam' })
       .check();
     await page
-      .getByRole('dialog', { name: 'Report this listing' })
+      .getByRole('dialog', { name: 'Report this opportunity' })
       .getByLabel('Details (optional)')
       .fill('Same post under five names.');
     await page
-      .getByRole('dialog', { name: 'Report this listing' })
+      .getByRole('dialog', { name: 'Report this opportunity' })
       .getByRole('button', { name: 'Send report' })
       .click();
     await expect(page.getByRole('dialog')).toBeHidden();
@@ -134,8 +134,8 @@ test.describe('in-app dialogs', () => {
       }),
     );
     await page.goto(`/jobseeker/jobs/${REPORT_JOB_ID}`);
-    await page.getByRole('button', { name: 'Report listing' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Report this listing' });
+    await page.getByRole('button', { name: 'Report opportunity' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Report this opportunity' });
     await dialog.getByRole('radio', { name: 'Spam or scam' }).check();
     await dialog.getByRole('button', { name: 'Send report' }).click();
     await expect(dialog.getByRole('alert')).toContainText('Too many reports');
@@ -155,8 +155,8 @@ test.describe('in-app dialogs', () => {
       }),
     );
     await page.goto(`/jobseeker/jobs/${REPORT_JOB_ID}`);
-    await page.getByRole('button', { name: 'Report listing' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Report this listing' });
+    await page.getByRole('button', { name: 'Report opportunity' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Report this opportunity' });
     await dialog.getByRole('radio', { name: 'Spam or scam' }).check();
     await dialog.getByRole('button', { name: 'Send report' }).click();
     await expect(dialog.getByRole('alert')).toHaveText(
@@ -172,7 +172,7 @@ test.describe('in-app dialogs', () => {
     await expect(trigger).toBeVisible();
     await trigger.focus();
     await page.keyboard.press('Enter');
-    const dialog = page.getByRole('dialog', { name: 'Request professional verification' });
+    const dialog = page.getByRole('dialog', { name: 'Request verification' });
     const url = dialog.getByRole('textbox', { name: 'Proof URL' });
     await expect(url).toBeFocused();
 
@@ -216,7 +216,7 @@ test.describe('in-app dialogs', () => {
     const state = await signInWithDialogFixtures(page);
     await page.goto('/jobseeker/profile');
     await page.getByRole('button', { name: 'Request verification' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Request professional verification' });
+    const dialog = page.getByRole('dialog', { name: 'Request verification' });
     await dialog.getByRole('textbox', { name: 'Proof URL' }).fill('https://label.example/credits/asha');
     await dialog
       .getByRole('textbox', { name: 'Anything the reviewer should know (optional)' })
@@ -236,9 +236,9 @@ test.describe('in-app dialogs', () => {
     await signInWithDialogFixtures(page);
     await page.goto('/jobseeker/profile');
     // The profile is one page of sections; every section's fields are labelled.
-    for (const name of ['Professional headline', 'Base location', 'Bio', 'Skills', 'Website', 'Phone'])
+    for (const name of ['Headline', 'Base location', 'Bio', 'Skills', 'Website', 'Phone'])
       await expect(page.getByLabel(name, { exact: true })).toBeVisible();
     await expect(page.getByLabel('Currency')).toHaveAttribute('role', 'combobox');
-    await expect(page.getByLabel('Professional headline', { exact: true })).toHaveValue('Session guitarist');
+    await expect(page.getByLabel('Headline', { exact: true })).toHaveValue('Session guitarist');
   });
 });

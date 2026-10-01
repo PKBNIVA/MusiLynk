@@ -146,7 +146,7 @@ test.describe('forms using the shared pattern', () => {
   test('career profile: typed inputs, all errors at once, first invalid focused, long bio wraps', async ({ page }) => {
     const { calls } = await signIn(page, 'jobseeker', undefined, { headline: 'Session bassist' });
     await page.goto('/jobseeker/profile');
-    await expect(page.getByLabel('Professional headline')).toHaveValue('Session bassist');
+    await expect(page.getByLabel('Headline')).toHaveValue('Session bassist');
     await expect(page.getByLabel('Website')).toHaveAttribute('type', 'url');
     await expect(page.getByLabel('Phone')).toHaveAttribute('type', 'tel');
     await expect(page.getByLabel('Phone')).toHaveAttribute('autocomplete', 'tel');

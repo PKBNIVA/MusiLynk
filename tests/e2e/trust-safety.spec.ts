@@ -108,7 +108,7 @@ test('a moderation warning notification opens the community guidelines, which co
     return json(route, { ok: true });
   });
   await page.goto('/employer/notifications');
-  const open = page.getByTestId('notification').getByRole('link', { name: 'Open' });
+  const open = page.getByTestId('notification').getByRole('link', { name: 'See details' });
   await expect(open).toHaveAttribute('href', '/community-guidelines');
 
   await page.goto('/community-guidelines');

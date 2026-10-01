@@ -82,7 +82,7 @@ test.describe('public funnel', () => {
 
   for (const [path, endpoint, back] of [
     ['/acts/missing', '/api/public/acts/missing', 'Browse bookable acts'],
-    ['/professionals/missing', '/api/public/talent/missing', 'Browse professionals'],
+    ['/professionals/missing', '/api/public/talent/missing', 'Browse musicians'],
     ['/opportunities/missing', '/api/jobs/missing', 'Browse music jobs'],
   ] as const) {
     test(`${path} explains a missing record instead of offering a useless retry`, async ({ page }) => {

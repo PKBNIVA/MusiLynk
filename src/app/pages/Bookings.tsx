@@ -16,9 +16,10 @@ import { BookingDepositPanel } from '../components/BookingDepositPanel';
 import { BookingFeeBreakdown } from '../components/booking/BookingFeeBreakdown';
 import { trackBookingQuoteAccepted, trackBookingQuoteSent } from '../lib/analytics';
 import { errorMessage } from '../lib/errors';
-import { formatDate, formatMoney, formatWhen } from '../lib/format';
+import { formatDate, formatMoney, formatWhen, formatInputEcho } from '../lib/format';
 import type { Booking, BookingPayment, ConversationCreated } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
+import { optionLabel } from '../components/ui/option-labels';
 
 const money = (currency: string | null | undefined, value: unknown) =>
   formatMoney(Number(value || 0), currency || 'INR');
@@ -532,10 +533,10 @@ export default function Bookings() {
                                 className="flex flex-wrap justify-between gap-2 text-sm rounded-lg bg-white/[.04] p-3"
                               >
                                 <span>
-                                  {p.kind} · {money(p.currency, p.amount)}
+                                  {optionLabel(p.kind)} · {money(p.currency, p.amount)}
                                 </span>
                                 <span className="flex items-center gap-3">
-                                  {p.status} · {formatWhen(p.created_at)}
+                                  {optionLabel(p.status)} · {formatWhen(p.created_at)}
                                   {p.invoiceId && (
                                     <Link
                                       to={`${base}/invoices/${p.invoiceId}/print`}
@@ -656,6 +657,7 @@ export default function Bookings() {
                   id={QUOTE_IDS.validUntil}
                   label="Valid until"
                   optional
+                  hint={formatInputEcho(quote.validUntil)}
                   error={quoteErrors.errors.validUntil}
                   help="After this date the client can no longer accept the quote, so your calendar is not held forever."
                 >

@@ -161,12 +161,10 @@ export function ApplyMaterials({
       {(detail || resume) && (
         <div
           className="rounded-xl border border-white/10 bg-black/25 p-3"
-          aria-label="What the employer will see"
+          aria-label="What the hirer will see"
           role="group"
         >
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            What the employer will see
-          </p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">What the hirer will see</p>
           {detail && <PortfolioPreview portfolio={detail} members={detail.items || []} />}
           {resume && (
             <p
@@ -188,7 +186,7 @@ export function ApplyMaterials({
       )}
       <p className="flex items-start gap-2 text-xs text-slate-400" data-testid="frozen-note">
         <Lock size={14} aria-hidden="true" className="mt-0.5 shrink-0 text-teal-300" />
-        The employer gets a frozen copy, taken when you apply. Editing your portfolio or resume later won’t change what
+        The hirer gets a frozen copy, taken when you apply. Editing your portfolio or resume later won’t change what
         they see.
       </p>
     </fieldset>

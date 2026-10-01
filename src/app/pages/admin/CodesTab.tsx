@@ -24,6 +24,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Empty, Pager, Panel, date, type AdminActions, type PageMeta } from './shared';
 import { AdminPageHeader, AdminSelect, HowToCallout } from './ui';
+import { formatInputEcho } from '../../lib/format';
 
 const PER_PAGE = 25;
 const KIND_LABEL: Record<PromoKind, string> = {
@@ -622,6 +623,7 @@ function CreateCodeDialog({
                 className="bg-white/5 border-white/15"
                 onChange={(e) => set('expiresAt', e.target.value)}
               />
+              {form.expiresAt && <p className="text-xs text-slate-400">{formatInputEcho(form.expiresAt)}</p>}
             </div>
           </div>
           <div className="grid gap-1.5">

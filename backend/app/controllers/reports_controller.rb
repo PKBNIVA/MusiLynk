@@ -20,6 +20,9 @@ class ReportsController < ApplicationController
     return render_error("This kind of item cannot be reported.", :unprocessable_content, "INVALID_ENTITY_TYPE") unless ENTITY_TYPES.include?(entity_type)
     return render_error("Choose a reason from the list.", :unprocessable_content, "INVALID_REASON") unless REASONS.include?(params[:reason])
     return render_error("This item could not be found.", :not_found, "ENTITY_NOT_FOUND") unless entity_exists?(entity_type, params[:entityId])
+    if entity_type == "user" && params[:entityId].to_s == current_user.id.to_s
+      return render_error("You can't report your own account.", :unprocessable_content, "CANNOT_REPORT_SELF")
+    end
     return unless within_user_rate_limit?("report", limit: CREATE_LIMIT_PER_HOUR, period: 1.hour)
 
     if Report.where(reporter_id: current_user.id, entity_type: entity_type, entity_id: params[:entityId], status: "open").exists?

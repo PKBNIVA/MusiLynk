@@ -68,6 +68,7 @@ test('an expired session on the Stage signs out, redirects to sign-in and keeps 
   await page.getByRole('button', { name: 'Post', exact: true }).click();
 
   await expect(page).toHaveURL(/\/auth\/jobseeker/);
+  await expect(page.getByTestId('session-expired')).toHaveText('Your session expired. Sign in to continue.');
   expect(await page.evaluate(() => localStorage.getItem('verse_access_token'))).toBeNull();
   expect(await page.evaluate(() => sessionStorage.getItem('verse_return_to'))).toBe('/stage');
 
@@ -86,4 +87,29 @@ test('the follower count on an author page moves when you follow and unfollow', 
   await expect(page.getByText('13 followers')).toBeVisible();
   await page.getByRole('button', { name: 'Following' }).click();
   await expect(page.getByText('12 followers')).toBeVisible();
+});
+
+test('a Stage with only system posts shows one roundup card and says what to do next', async ({ page }) => {
+  const state: State = { signedIn: true, followers: 0, following: false };
+  await mockStage(page, state);
+  const post = (n: number) => ({
+    id: `sys_${n}`,
+    kind: 'system',
+    body: `Verse update number ${n}`,
+    author: { type: 'system', id: 'verse', name: 'Verse', system: true },
+    createdAt: '2026-09-30T10:00:00Z',
+  });
+  await page.route('**/api/stage/feed**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ posts: [1, 2, 3, 4, 5].map(post), nextCursor: null }),
+    }),
+  );
+  await page.goto('/stage');
+  await expect(page.getByTestId('system-roundup')).toHaveCount(1);
+  await expect(page.getByTestId('system-roundup')).toContainText('and 1 more');
+  await expect(
+    page.getByText('Nothing from musicians yet. Share an update above to start the conversation.'),
+  ).toBeVisible();
 });

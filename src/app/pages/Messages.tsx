@@ -18,7 +18,7 @@ import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { errorCode, errorMessage as messageOf, errorStatus } from '../lib/errors';
 import { announceUnreadChanged, useVisiblePolling } from '../lib/usePolling';
 import { linkify } from '../lib/linkify';
-import { formatWhen } from '../lib/format';
+import { formatWhen, formatNumber } from '../lib/format';
 import type { Conversation, Message, MessagePage } from '../lib/apiTypes';
 
 const MESSAGE_MAX_LENGTH = 5000;
@@ -330,7 +330,7 @@ export default function Messages() {
     const body = text.trim();
     if (!id || !body || sending) return;
     if (body.length > MESSAGE_MAX_LENGTH) {
-      setSendError(`Messages can be at most ${MESSAGE_MAX_LENGTH.toLocaleString()} characters.`);
+      setSendError(`Messages can be at most ${formatNumber(MESSAGE_MAX_LENGTH)} characters.`);
       return;
     }
     setSending(true);
@@ -763,7 +763,7 @@ export default function Messages() {
                         className={trimmedLength > MESSAGE_MAX_LENGTH ? 'text-rose-300' : ''}
                         data-testid="message-counter"
                       >
-                        {trimmedLength.toLocaleString()} / {MESSAGE_MAX_LENGTH.toLocaleString()}
+                        {formatNumber(trimmedLength)} / {formatNumber(MESSAGE_MAX_LENGTH)}
                       </span>
                     )}
                   </div>

@@ -1,4 +1,5 @@
 import type { PortfolioItem } from './apiTypes';
+import { currencySymbol, formatNumber, periodLabel } from './format';
 
 /**
  * "One library, many views": types for portfolios, resumes, the career record and the review
@@ -290,7 +291,7 @@ export interface PortfolioDraft {
 export const VISIBILITY_OPTIONS = [
   { value: 'public', label: 'Public', description: 'Anyone can find and open it' },
   { value: 'link', label: 'Anyone with the link', description: 'Not listed; share the link yourself' },
-  { value: 'private', label: 'Private', description: 'Only you, and employers you apply to' },
+  { value: 'private', label: 'Private', description: 'Only you, and hirers you apply to' },
 ];
 
 /** The public (EPK) address of a portfolio. */
@@ -313,9 +314,10 @@ export const RATE_BASES = Object.keys(RATE_BASIS);
 /** "₹5,000–8,000 per session", "From ₹5,000 per show", or "" when no amount is set. */
 export function formatRates(rates: Rates | null | undefined) {
   if (!rates || (rates.min == null && rates.max == null)) return '';
-  const symbol = !rates.currency || rates.currency === 'INR' ? '₹' : `${rates.currency} `;
-  const n = (v: number) => v.toLocaleString('en-IN');
-  const per = rates.basis ? ` per ${RATE_BASIS[rates.basis] || rates.basis}` : '';
+  const code = currencySymbol(rates.currency);
+  const symbol = /^[A-Za-z]/.test(code) ? `${code} ` : code;
+  const n = (v: number) => formatNumber(v);
+  const per = rates.basis ? ` per ${RATE_BASIS[rates.basis] || periodLabel(rates.basis)}` : '';
   if (rates.min != null && rates.max != null && rates.max !== rates.min)
     return `${symbol}${n(rates.min)}–${n(rates.max)}${per}`;
   if (rates.min != null) return `${rates.max == null ? 'From ' : ''}${symbol}${n(rates.min)}${per}`;

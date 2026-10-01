@@ -187,7 +187,7 @@ class Notifier
     def urgent_request_alert(urgent_request, recipient, reasons = [])
       why = reasons.presence && " Why you: #{reasons.join(' · ')}."
       notify(recipient, kind: "urgent_alert", title: "Urgent: #{urgent_request.role_name} needed in #{urgent_request.city}",
-        link: "/jobseeker/urgent", body: "#{urgent_request.title} — #{urgent_request.city}, #{urgent_request.start_at&.strftime('%d %b, %I:%M %p')}.#{why}")
+        link: "/jobseeker/urgent", body: "#{urgent_request.title} — #{urgent_request.city}, #{IndianFormat.date_time(urgent_request.start_at)}.#{why}")
       email(recipient, "urgent_request_alert", title: urgent_request.title, role: urgent_request.role_name, city: urgent_request.city,
         startAt: urgent_request.start_at&.iso8601, reasons: reasons.presence)
     end
@@ -210,8 +210,8 @@ class Notifier
     # A published job automatically closed because its application deadline passed
     # (JobsDeadlineSweepJob).
     def job_deadline_closed(job)
-      notify(job.employer, kind: "job_deadline_closed", title: "Your listing closed at its deadline",
-        link: "/hiring", body: "Your listing for #{job.title} closed at its deadline. Reopen with a new date if you're still hiring.")
+      notify(job.employer, kind: "job_deadline_closed", title: "Your opportunity closed at its deadline",
+        link: "/hiring", body: "#{job.title} closed at its deadline. Reopen it with a new date if you're still hiring.")
       email(job.employer, "job_deadline_closed", title: job.title)
     end
 
@@ -224,7 +224,7 @@ class Notifier
 
     # Admin::UsersController#grant_early_access just switched this employer onto Early Access Pro.
     def early_access_granted(subscription)
-      until_date = subscription.trial_ends_at&.strftime("%d %b %Y")
+      until_date = IndianFormat.date(subscription.trial_ends_at)
       notify(subscription.user, kind: "early_access_granted", title: "Your Early Access Pro is active",
         link: "/employer/billing", body: "No card needed. Pro features are unlocked on Verse until #{until_date}.")
       email(subscription.user, "early_access_granted", until: until_date)

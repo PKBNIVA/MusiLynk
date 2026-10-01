@@ -78,7 +78,7 @@ export function Composer({ onPosted, prefill, reshareOf, compact }: ComposerProp
       try {
         validateUploadFile(file);
       } catch (e: unknown) {
-        toast.error(errorMessage(e, 'That file cannot be uploaded.'));
+        toast.error(errorMessage(e, 'That file cannot be uploaded. Choose a different file.'));
         continue;
       }
       const contentType = uploadContentType(file) || '';

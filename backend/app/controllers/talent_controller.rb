@@ -54,7 +54,7 @@ class TalentController < ApplicationController
     return unless authenticate!("jobseeker", "employer")
     return unless require_scalar_params!(:ids)
     ids = params[:ids].to_s.split(",").map(&:strip).reject(&:blank?).uniq.first(4)
-    return render_error("Choose at least two professionals to compare.", :bad_request) if ids.length < 2
+    return render_error("Choose at least two musicians to compare.", :bad_request) if ids.length < 2
     shortlisted = TalentShortlist.where(employer: current_user, candidate_id: ids).pluck(:candidate_id).to_set
     professionals = listing_scope.where(id: ids).map do |candidate|
       availability = AvailabilityWindow.where(user: candidate, status: "available").where("end_at > ?", Time.current).order(:start_at).limit(5).map do |window|

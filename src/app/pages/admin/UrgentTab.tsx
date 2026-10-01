@@ -9,6 +9,7 @@ import { errorMessage } from '../../lib/errors';
 import { Panel, Empty } from './shared';
 import { AdminPageHeader, AdminSelect, HowToCallout } from './ui';
 import type { AdminUrgentRequest, UrgentCandidate, UrgentFunnel } from '../../lib/apiTypes';
+import { formatDate } from '../../lib/format';
 
 // GET /api/admin/urgent-requests (Admin::UrgentRequestsController) — the founder's hand-matching
 // screen for "need someone by tomorrow" (Mumbai first). Self-contained: it loads its own data
@@ -261,7 +262,7 @@ export default function UrgentTab() {
                                   )}
                                   <div className="text-xs text-slate-500">
                                     {c.city || 'No city'} · score {c.score} · {c.reasons.join(', ') || 'no signal'}
-                                    {c.lastActiveAt ? ` · active ${new Date(c.lastActiveAt).toLocaleDateString()}` : ''}
+                                    {c.lastActiveAt ? ` · active ${formatDate(c.lastActiveAt)}` : ''}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">

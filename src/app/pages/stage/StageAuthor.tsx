@@ -149,7 +149,7 @@ export default function StageAuthor() {
         )}
         {!loading && !error && posts.length === 0 && (
           <EmptyState icon={Music4} title="No posts yet" className="mt-6">
-            Nothing shared to the Stage yet.
+            Nothing shared to the Stage yet.{author ? ' Follow them to see their next post.' : ''}
           </EmptyState>
         )}
         {!loading && posts.length > 0 && (

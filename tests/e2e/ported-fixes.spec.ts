@@ -23,14 +23,11 @@ test.describe('phone public navigation', () => {
     await mockApi(page);
     await page.goto('/music-jobs');
     await page.getByRole('button', { name: 'Open navigation' }).click();
-    await expect(page.getByRole('menuitem', { name: 'Sign in as a professional' })).toHaveAttribute(
+    await expect(page.getByRole('menuitem', { name: 'Sign in as a musician' })).toHaveAttribute(
       'href',
       '/auth/jobseeker',
     );
-    await expect(page.getByRole('menuitem', { name: 'Sign in as an employer' })).toHaveAttribute(
-      'href',
-      '/auth/employer',
-    );
+    await expect(page.getByRole('menuitem', { name: 'Sign in as a hirer' })).toHaveAttribute('href', '/auth/employer');
   });
 });
 

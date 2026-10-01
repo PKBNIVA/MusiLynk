@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { errorMessage, errorStatus } from '../lib/errors';
 import type { Act } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
+import { formatInputEcho } from '../lib/format';
 
 type ActPage = PageMeta & { acts?: Act[] };
 type BookingLimits = { activeAllowed: number; activeUsed: number; planName?: string };
@@ -458,7 +459,7 @@ export default function BookTalent() {
                 />
               </Field>
               <div className="grid sm:grid-cols-2 gap-3">
-                <Field label="Event date" htmlFor="enquiry-date">
+                <Field label="Event date" htmlFor="enquiry-date" hint={formatInputEcho(booking.eventDate)}>
                   <Input
                     id="enquiry-date"
                     type="date"

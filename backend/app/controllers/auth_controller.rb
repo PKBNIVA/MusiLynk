@@ -76,7 +76,7 @@ class AuthController < ApplicationController
     # Shared campus, office and mobile-carrier IPs sign up many real users; keep bulk abuse bounded.
     return unless throttle!("register", limit: 60, period: 1.hour)
     role = params[:role].to_s
-    return render_error("Choose either a jobseeker or employer account.", :unprocessable_content, "INVALID_ROLE") unless %w[jobseeker employer].include?(role)
+    return render_error("Choose either a musician or hirer account.", :unprocessable_content, "INVALID_ROLE") unless %w[jobseeker employer].include?(role)
 
     return unless consent_acceptable?
     # The two-minute sign-up sends its answers with the account; the old payload has none.
@@ -475,7 +475,7 @@ class AuthController < ApplicationController
     name = params[:name].to_s.strip
     return nil if role.blank? && name.blank?
     unless SignInCode::SIGN_UP_ROLES.include?(role)
-      render_error("Choose either a jobseeker or employer account.", :unprocessable_content, "INVALID_ROLE")
+      render_error("Choose either a musician or hirer account.", :unprocessable_content, "INVALID_ROLE")
       return nil
     end
     unless name.length.between?(2, 120)

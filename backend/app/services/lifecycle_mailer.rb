@@ -36,9 +36,9 @@ class LifecycleMailer
       action: "Add your rates", path: "/jobseeker/profile"
     },
     "musician_day21_inactive_requests" => {
-      category: "lifecycle", subject: ->(p) { "#{p['count']} new requests near you this week" },
-      heading: ->(p) { "#{p['count']} new requests near you this week" },
-      copy: ->(p) { "Hirers in #{p['city']} posted #{p['count']} urgent requests this week. Take a look before someone else responds." },
+      category: "lifecycle", subject: ->(p) { "#{count_of(p, 'new request')} near you this week" },
+      heading: ->(p) { "#{count_of(p, 'new request')} near you this week" },
+      copy: ->(p) { "Hirers in #{p['city']} posted #{count_of(p, 'urgent request')} this week. Take a look before someone else responds." },
       action: "See urgent requests", path: "/jobseeker/urgent"
     },
     # Hirer (employer) onboarding sequence.
@@ -46,17 +46,17 @@ class LifecycleMailer
       category: "lifecycle", subject: "Post what you need",
       heading: "Post what you need — or send an urgent request",
       copy: ->(_) { "Tell musicians what you're looking for, or send an urgent request if you need someone fast." },
-      action: "Post a listing", path: "/employer/post-job"
+      action: "Post an opportunity", path: "/employer/post-job"
     },
     "hirer_day3_meet_verified" => {
-      category: "lifecycle", subject: ->(p) { "Meet verified #{p['role']} players in #{p['city']}" },
-      heading: ->(p) { "Meet verified #{p['role']} players in #{p['city']}" },
-      copy: ->(_) { "Here are a few verified musicians who might be a fit." },
+      category: "lifecycle", subject: ->(p) { "Meet verified musicians in #{p['city']}" },
+      heading: ->(p) { "Meet verified musicians in #{p['city']}" },
+      copy: ->(p) { "Here are a few verified musicians who might suit your #{p['role']} opportunity." },
       action: "Browse musicians", path: "/employer/candidates"
     },
     "hirer_day7_listing_applicants" => {
-      category: "lifecycle", subject: ->(p) { "Your listing has #{p['count']} applicants" },
-      heading: ->(p) { "Your listing has #{p['count']} applicants" },
+      category: "lifecycle", subject: ->(p) { "Your opportunity has #{count_of(p, 'applicant')}" },
+      heading: ->(p) { "Your opportunity has #{count_of(p, 'applicant')}" },
       copy: ->(p) { "#{p['title']} has new applicants waiting for a look." },
       action: "Review applicants", path: "/employer/applications"
     },
@@ -74,7 +74,7 @@ class LifecycleMailer
       action: "Review applicants", path: "/employer/applications"
     },
     "milestone_musician_first_response" => {
-      category: "product", subject: "You responded in %{minutes} minutes",
+      category: "product", subject: ->(p) { "You responded in #{p['minutes']} minutes" },
       heading: ->(p) { "You responded in #{p['minutes']} minutes" },
       copy: ->(_) { "Fast responders get chosen more. Keep an eye on urgent requests near you." },
       action: "See urgent requests", path: "/jobseeker/urgent"
@@ -95,6 +95,12 @@ class LifecycleMailer
 
   def self.step_category(key) = STEPS.fetch(key)[:category]
 
+  # "1 applicant", "3 applicants": the count in a step's params with its noun in the right number.
+  def self.count_of(params, noun)
+    count = params["count"].to_i
+    "#{count} #{noun.pluralize(count)}"
+  end
+
   # The CTA link for a step. Each STEPS path is already the full in-app path (it carries its
   # own /jobseeker or /employer workspace prefix), so the link is the frontend origin plus that
   # path, built exactly once. Never add NotificationEmail.workspace here: that doubled the
@@ -110,7 +116,7 @@ class LifecycleMailer
     heading = call_or_value(spec[:heading], params)
     copy = call_or_value(spec[:copy], params)
     link = step_link(key)
-    render_content(heading:, copy:, action: spec[:action], link:, user:)
+    render_content(subject:, heading:, copy:, action: spec[:action], link:, user:)
   end
 
   # Returns { subject:, html:, text: } for a weekly digest. `sections` is an ordered array
@@ -125,8 +131,8 @@ class LifecycleMailer
 
   def self.call_or_value(value, params) = value.respond_to?(:call) ? value.call(params) : value
 
-  def self.render_content(heading:, copy:, action:, link:, user:)
-    { subject: heading, html: html(heading:, copy:, action:, link:, user:), text: text(heading:, copy:, action:, link:, user:) }
+  def self.render_content(subject:, heading:, copy:, action:, link:, user:)
+    { subject:, html: html(heading:, copy:, action:, link:, user:), text: text(heading:, copy:, action:, link:, user:) }
   end
 
   def self.manage_emails_url(user) = "#{NotificationEmail.frontend_url}/unsubscribe?token=#{CGI.escape(NotificationEmail.unsubscribe_token(user))}"
@@ -135,18 +141,18 @@ class LifecycleMailer
 
   def self.footer_html(user)
     h = ERB::Util.method(:html_escape)
-    %(<p style="margin-top:28px;color:#94a3b8;font-size:13px">You are receiving this because of activity on your Verse account. <a href="#{h.call(manage_emails_url(user))}" style="color:#a78bfa">Manage emails</a>.</p>)
+    %(<p style="margin-top:28px;color:#94a3b8;font-size:13px">You are receiving this because of activity on your Verse account. <a href="#{h.call(manage_emails_url(user))}" style="color:#a78bfa">Manage emails</a> or turn them off.</p>)
   end
 
   def self.html(heading:, copy:, action:, link:, user:)
     h = ERB::Util.method(:html_escape)
     <<~HTML.squish
-      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px"><div style="font-size:22px;font-weight:800;color:#a78bfa">VERSE</div><h1 style="font-size:26px;margin:28px 0 12px">#{h.call(heading)}</h1><p style="color:#cbd5e1;line-height:1.6">#{h.call(copy)}</p><a href="#{h.call(link)}" style="display:inline-block;margin-top:18px;padding:13px 20px;border-radius:12px;background:#7c3aed;color:white;text-decoration:none;font-weight:700">#{h.call(action)}</a>#{footer_html(user)}</div></body></html>
+      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:26px;margin:28px 0 12px">#{h.call(heading)}</h1><p style="color:#cbd5e1;line-height:1.6">#{h.call(copy)}</p>#{EmailDelivery.button_html(action, link)}#{footer_html(user)}</div></body></html>
     HTML
   end
 
   def self.text(heading:, copy:, action:, link:, user:)
-    "#{heading}\n\n#{copy}\n\n#{action}: #{link}\n\n#{footer_text(user)}"
+    "Verse\n\n#{heading}\n\n#{copy}\n\n#{action}: #{link}\n\n#{footer_text(user)}"
   end
 
   def self.digest_html(sections, user)
@@ -158,7 +164,7 @@ class LifecycleMailer
       %(<h2 style="font-size:17px;margin:22px 0 6px;color:#f8fafc">#{h.call(section[:heading])}</h2>#{note}#{list})
     end.join
     <<~HTML.squish
-      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px"><div style="font-size:22px;font-weight:800;color:#a78bfa">VERSE</div><h1 style="font-size:24px;margin:28px 0 4px">This week on Verse</h1>#{body}#{footer_html(user)}</div></body></html>
+      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:24px;margin:28px 0 4px">This week on Verse</h1>#{body}#{footer_html(user)}</div></body></html>
     HTML
   end
 
@@ -167,7 +173,7 @@ class LifecycleMailer
       lines = Array(section[:items]).map { |i| "- #{i[:text]}: #{i[:link]}" }
       [section[:heading], section[:footnote], *lines].compact.join("\n")
     end.join("\n\n")
-    "This week on Verse\n\n#{body}\n\n#{footer_text(user)}"
+    "Verse\n\nThis week on Verse\n\n#{body}\n\n#{footer_text(user)}"
   end
   private_class_method :html, :digest_html, :digest_text, :footer_html
 end

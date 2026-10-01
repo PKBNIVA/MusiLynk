@@ -142,8 +142,8 @@ class JobsController < ApplicationController
     return render_error("The application deadline has passed.", :conflict) if job.application_deadline&.past?
     return render_error("This opportunity requires at least one portfolio item.", :conflict) if job.portfolio_required? && current_user.portfolio_items.none?
     cover_letter = params[:coverLetter]
-    return render_error("The note to the employer must be text.", :unprocessable_content) unless cover_letter.nil? || cover_letter.is_a?(String)
-    return render_error("The note to the employer must be 5,000 characters or fewer.", :unprocessable_content) if cover_letter.to_s.length > 5_000
+    return render_error("The note to the hirer must be text.", :unprocessable_content) unless cover_letter.nil? || cover_letter.is_a?(String)
+    return render_error("The note to the hirer must be 5,000 characters or fewer.", :unprocessable_content) if cover_letter.to_s.length > 5_000
     answers = screening_answers_for(job)
     return if performed?
     portfolio, resume = chosen_materials

@@ -74,8 +74,8 @@ class SharePagesController < ActionController::API
 
   def base = FrontendUrl.base
 
-  # The per-share 1200x630 card URL (/api/og/:type/:id). edge/og.ts would draw it, but it is not deployed
-  # yet, so vercel.json currently answers this path with the static default card.
+  # The per-share 1200x630 card URL (/api/og/:type/:id.png), drawn by the Vercel function api/og/[type]/[id].ts;
+  # an unknown id or a failed lookup gets the default card there, and a failed render redirects to /og-default.png.
   def og_image(type, id) = "#{base}/api/og/#{type}/#{ERB::Util.url_encode(id)}.png"
 
   # Demo and QA accounts never get a crawlable preview page (they are excluded from the sitemap too).

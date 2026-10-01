@@ -3,20 +3,19 @@
 // dynamic import of @vercel/og left as a bare specifier), and a rejected function fails the whole site
 // deploy. It lives outside api/ until it is rebuilt as a bundled function; meanwhile vercel.json answers
 // /api/og/:type/:id with the static /og-default.png so every share link still has a valid image.
-// Open Graph image for a share link: GET /api/og?type=professional|opportunity|act&id=<id>, reached as
-// /api/og/<type>/<id>.png through the rewrite in vercel.json. Draws a 1200x630 PNG from the same public
-// JSON the site itself reads (avatar or generated art, name, role, city, "from ₹", Verified) and falls
-// back to a default brand card for an unknown id, a failed lookup or no id at all. The share pages
-// (backend/app/controllers/share_pages_controller.rb) point og:image at it.
+// Open Graph image for a share link: GET /api/og/<type>/<id>.png (type = professional | opportunity | act),
+// served by the Vercel function api/og/[type]/[id].ts. This module is the part that needs no renderer: it
+// draws a 1200x630 card from the same public JSON the site itself reads (avatar or generated art, name,
+// role, city, "from ₹", Verified) and falls back to a default brand card for an unknown id, a failed
+// lookup or no id at all. The share pages (backend/app/controllers/share_pages_controller.rb) point og:image
+// at the route. The leading underscore keeps Vercel from deploying this file as a function of its own.
 //
-// Runs as a Vercel edge function with Satori through @vercel/og. The card is described as plain
-// { type, props } elements (no JSX, no React) so this file has no build step of its own. Everything
-// that can be checked without the renderer is exported and unit-tested (scripts/__tests__/og.test.mjs);
-// the renderer, the network and the clock are passed in.
-import { blobs, gradientAngle, paletteFor, ribbonBars, type Palette } from '../src/app/lib/coverArt';
-import { initialsOf } from '../src/app/lib/avatar';
-
-export const config = { runtime: 'edge' };
+// The card is described as plain { type, props } elements (no JSX, no React) so there is no build step.
+// Everything that can be checked without the renderer is exported and unit-tested
+// (scripts/__tests__/og.test.mjs); the renderer, the network and the clock are passed in. The renderer
+// itself (@vercel/og, a static import) lives only in the function file.
+import { blobs, gradientAngle, paletteFor, ribbonBars, type Palette } from '../../src/app/lib/coverArt.js';
+import { initialsOf } from '../../src/app/lib/avatar.js';
 
 export const CARD_TYPES = ['professional', 'opportunity', 'act'] as const;
 export type CardType = (typeof CARD_TYPES)[number];
@@ -369,10 +368,14 @@ export interface Deps {
   render: (tree: El) => Promise<ArrayBuffer>;
 }
 
-/** `professional`, `1f3a…` from ?type=&id= (an optional `.png` on the id is dropped). */
+/**
+ * `professional`, `1f3a…` from the path /api/og/<type>/<id>[.png] or, failing that, ?type=&id= (an optional
+ * `.png` on the id is dropped).
+ */
 export function parseRequest(url: URL): { type: CardType; id: string } | null {
-  const type = url.searchParams.get('type') as CardType | null;
-  const id = (url.searchParams.get('id') || '').replace(/\.png$/i, '');
+  const fromPath = /\/api\/og\/([^/?#]+)\/([^/?#]+)\/?$/.exec(url.pathname);
+  const type = (fromPath ? fromPath[1] : url.searchParams.get('type')) as CardType | null;
+  const id = (fromPath ? fromPath[2] : url.searchParams.get('id') || '').replace(/\.png$/i, '');
   if (!type || !CARD_TYPES.includes(type) || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return null;
   return { type, id };
 }
@@ -446,14 +449,16 @@ async function fetchImage(url: string): Promise<string | null> {
   return `data:${type};base64,${btoa(binary)}`;
 }
 
-async function render(tree: El): Promise<ArrayBuffer> {
-  const { ImageResponse } = await import('@vercel/og');
-  // Reading the body here (rather than returning the ImageResponse) makes a drawing error land in
-  // respond()'s fallbacks instead of in a half-sent response.
-  return new ImageResponse(tree as never, { ...SIZE }).arrayBuffer();
-}
-
-export default function handler(request: Request): Promise<Response> {
+/** Answers a request with the given renderer; the origin of the public API comes from OG_API_ORIGIN. */
+export function handle(request: Request, render: Deps['render']): Promise<Response> {
   const apiOrigin = (process.env.OG_API_ORIGIN || DEFAULT_API_ORIGIN).replace(/\/+$/, '');
   return respond(request, { apiOrigin, fetchJson, fetchImage, render });
+}
+
+/** The static default card, for when drawing fails altogether (so a share link always has an image). */
+export function staticFallback(request: Request): Response {
+  return new Response(null, {
+    status: 302,
+    headers: { Location: new URL('/og-default.png', request.url).toString(), 'Cache-Control': CACHE_FALLBACK },
+  });
 }

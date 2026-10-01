@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { readSeoPages } from '../prerender-heads.mjs';
+import { afterAll, describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { adminRoutePaths, readSeoPages } from '../prerender-heads.mjs';
 
 // vercel.json is the production router: a wrong rewrite 404s real pages, and a missing one lets unknown
 // URLs return 200 (a soft 404). These tests pin the contract without needing a deployment.
@@ -159,4 +161,85 @@ describe('public/robots.txt and the web manifest', () => {
     expect(manifest.lang).toBe('en-IN');
     expect(manifest.icons.map((icon) => icon.sizes)).toEqual(expect.arrayContaining(['192x192', '512x512']));
   });
+});
+
+// The same vercel.json routes both Vercel projects: the public site and the admin site
+// (VITE_APP_TARGET=admin). Build each for real and resolve URLs the way Vercel does: a file in the output
+// wins, then the first matching rewrite whose destination exists, otherwise 404.html with status 404.
+describe('built output resolved through vercel.json', () => {
+  const sandbox = mkdtempSync(join(tmpdir(), 'verse-vercel-'));
+  afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+
+  function build(target) {
+    const out = join(sandbox, target);
+    const env = { ...process.env, VITE_APP_TARGET: target, VITE_PUBLIC_URL: 'https://verse.example' };
+    execFileSync(
+      process.execPath,
+      [
+        resolve(root, 'node_modules/vite/bin/vite.js'),
+        'build',
+        '--outDir',
+        out,
+        '--emptyOutDir',
+        '--logLevel',
+        'silent',
+      ],
+      { cwd: root, env },
+    );
+    execFileSync(process.execPath, [resolve(root, 'scripts/prerender-heads.mjs'), out], { cwd: root, env });
+    return out;
+  }
+
+  function resolveUrl(out, url) {
+    const path = url.split('?')[0];
+    const fileFor = (p) => {
+      const file = join(out, p);
+      if (existsSync(file) && statSync(file).isFile()) return p;
+      if (existsSync(join(file, 'index.html'))) return `${p.replace(/\/$/, '')}/index.html`;
+      return null;
+    };
+    const direct = fileFor(path);
+    if (direct) return { status: 200, file: direct };
+    for (const rule of config.rewrites) {
+      if (rule.has || /^https?:/.test(rule.destination)) continue;
+      if (new RegExp(`^${rule.source}$`).test(path) && fileFor(rule.destination))
+        return { status: 200, file: fileFor(rule.destination) };
+    }
+    return { status: 404, file: '/404.html' };
+  }
+
+  it('serves every admin route and any unknown admin path as the admin app, never a bare 404', () => {
+    const out = build('admin');
+    const adminIndex = readFileSync(join(out, 'index.html'), 'utf8');
+    expect(adminIndex).toContain('noindex');
+    for (const url of ['/', '/admin', '/admin?tab=users', '/admin/tester', '/account']) {
+      const result = resolveUrl(out, url);
+      expect(result.status, url).toBe(200);
+      expect(readFileSync(join(out, result.file), 'utf8'), url).toBe(adminIndex);
+    }
+    // Unknown path: status 404, but the body is the app so its own not-found page renders.
+    const unknown = resolveUrl(out, '/some/unknown/path');
+    expect(unknown.status).toBe(404);
+    expect(readFileSync(join(out, unknown.file), 'utf8')).toBe(adminIndex);
+    // Every route in the admin route table has a file: a new admin route cannot be forgotten.
+    const source = readFileSync(resolve(root, 'src/app/routes.tsx'), 'utf8');
+    for (const path of adminRoutePaths(source)) expect(existsSync(join(out, path, 'index.html')), path).toBe(true);
+  }, 120_000);
+
+  it('keeps /admin and unknown URLs a 404 on the public site, while its routes resolve', () => {
+    const out = build('public');
+    for (const url of [
+      '/admin',
+      '/admin/tester',
+      '/account',
+      '/nonexistent',
+      '/assets/missing.js',
+      '/hire/violin/mumbai',
+    ])
+      expect(resolveUrl(out, url).status, url).toBe(404);
+    expect(resolveUrl(out, '/pricing')).toEqual({ status: 200, file: '/pricing/index.html' });
+    expect(resolveUrl(out, '/hire/drummer/mumbai').status).toBe(200);
+    expect(resolveUrl(out, '/professionals/user_1')).toEqual({ status: 200, file: '/app-shell.html' });
+    expect(resolveUrl(out, '/jobseeker/profile')).toEqual({ status: 200, file: '/app-shell.html' });
+  }, 120_000);
 });

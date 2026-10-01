@@ -234,8 +234,53 @@ export function rewriteRobots(robotsTxt, baseUrl) {
   return robotsTxt.replace(/^Sitemap:.*$/m, `Sitemap: ${baseUrl}/sitemap.xml`);
 }
 
+/**
+ * The paths of the admin site's route table (adminRoutes() in src/app/routes.tsx), without the root and the
+ * catch-all. Read from the source so a new admin route cannot be forgotten.
+ */
+export function adminRoutePaths(routesSource) {
+  const start = routesSource.indexOf('// The separate admin site');
+  if (start < 0) return [];
+  const paths = new Set();
+  for (const match of routesSource.slice(start).matchAll(/path:\s*'(\/[^'*]*)'/g))
+    if (match[1] !== '/') paths.add(match[1]);
+  const dynamic = [...paths].filter((path) => path.includes(':'));
+  if (dynamic.length)
+    throw new Error(
+      `Admin routes with parameters (${dynamic.join(', ')}) cannot be served as files; add a rewrite for them to vercel.json.`,
+    );
+  return [...paths];
+}
+
+/**
+ * The admin build (VITE_APP_TARGET=admin) shares vercel.json with the public site, whose rewrites only know the
+ * public routes. Files are served before rewrites, so the admin build writes its own shell to every admin
+ * route and to 404.html: a reload of /admin or /account, or any unknown path, still boots the SPA (which shows
+ * its own sign-in or not-found page). The admin site is noindex, so none of this is crawlable.
+ */
+export function writeAdminShells(distDir, routesSource) {
+  const indexPath = join(distDir, 'index.html');
+  if (!existsSync(indexPath)) {
+    console.error(`${indexPath} not found: run \`vite build\` first.`);
+    process.exitCode = 2;
+    return [];
+  }
+  const html = readFileSync(indexPath, 'utf8');
+  const paths = adminRoutePaths(routesSource);
+  for (const path of paths) {
+    mkdirSync(join(distDir, path), { recursive: true });
+    writeFileSync(join(distDir, path, 'index.html'), html);
+  }
+  writeFileSync(join(distDir, '404.html'), html);
+  return paths;
+}
+
 function main(distDir = join(root, 'dist')) {
-  if (process.env.VITE_APP_TARGET === 'admin') return; // never called for the admin build, kept as a safety net.
+  if (process.env.VITE_APP_TARGET === 'admin') {
+    const paths = writeAdminShells(distDir, readFileSync(join(root, 'src', 'app', 'routes.tsx'), 'utf8'));
+    console.log(`prerender-heads: admin build, wrote the app shell to ${paths.join(', ')} and 404.html`);
+    return;
+  }
   const indexPath = join(distDir, 'index.html');
   if (!existsSync(indexPath)) {
     console.error(`${indexPath} not found: run \`vite build\` first.`);

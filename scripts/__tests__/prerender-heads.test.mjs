@@ -9,6 +9,7 @@ import {
   seoPageBreadcrumbs,
   render,
   renderNotFound,
+  adminRoutePaths,
   apiPreconnect,
 } from '../prerender-heads.mjs';
 
@@ -82,14 +83,28 @@ describe('prerender-heads.mjs', () => {
     expect(robots).toContain('Sitemap: https://verse.example/sitemap.xml');
   });
 
-  it('does nothing when VITE_APP_TARGET=admin', () => {
+  it('writes only the app shell to the admin routes and 404.html when VITE_APP_TARGET=admin', () => {
     const dist = mkdtempSync(join(tmpdir(), 'verse-prerender-admin-'));
     dirs.push(dist);
     mkdirSync(dist, { recursive: true });
     writeFileSync(join(dist, 'index.html'), FAKE_INDEX);
     execFileSync(process.execPath, [scriptPath, dist], { env: { ...process.env, VITE_APP_TARGET: 'admin' } });
-    // No pricing/ directory should have been created.
+    for (const file of ['admin/index.html', 'admin/tester/index.html', 'account/index.html', '404.html'])
+      expect(readFileSync(join(dist, file), 'utf8')).toBe(FAKE_INDEX);
+    // None of the public pages is created, and index.html is left alone.
     expect(() => readFileSync(join(dist, 'pricing', 'index.html'), 'utf8')).toThrow();
+    expect(() => readFileSync(join(dist, 'app-shell.html'), 'utf8')).toThrow();
+    expect(readFileSync(join(dist, 'index.html'), 'utf8')).toBe(FAKE_INDEX);
+  });
+
+  it('reads the admin routes from routes.tsx', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/routes.tsx'), 'utf8');
+    expect(adminRoutePaths(source).sort()).toEqual(['/account', '/admin', '/admin/tester']);
+    expect(adminRoutePaths("// The separate admin site\n{ path: '/x' }, { path: '*' }, { path: '/' }")).toEqual(['/x']);
+    expect(() => adminRoutePaths("// The separate admin site\n{ path: '/x/:id' }")).toThrow(
+      /cannot be served as files/,
+    );
+    expect(adminRoutePaths('no admin here')).toEqual([]);
   });
 
   it('replaces the document-level og and twitter defaults instead of repeating them', () => {

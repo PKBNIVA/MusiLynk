@@ -11,7 +11,7 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
   setup do
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
-    @user = User.create!(name: "Throttle Target", email: "target@example.com", password: PASSWORD, role: "jobseeker", status: "active")
+    @user = User.create!(name: "Throttle Target", email: "target@example.com", password: PASSWORD, role: "jobseeker", status: "active", email_verified: true)
   end
 
   teardown do
@@ -28,7 +28,7 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
     assert_response :too_many_requests
     assert_equal "Too many requests. Try again later.", response.parsed_body["error"]
 
-    User.create!(name: "Other", email: "other@example.com", password: PASSWORD, role: "jobseeker", status: "active")
+    User.create!(name: "Other", email: "other@example.com", password: PASSWORD, role: "jobseeker", status: "active", email_verified: true)
     login("other@example.com", PASSWORD, ip: "198.51.100.1")
     assert_response :success
   end
@@ -133,6 +133,7 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
 
   test "verification request keeps debugLink outside production and reports unconfigured delivery" do
     token = login_token(@user.email)
+    @user.update_columns(email_verified: false) # signed in, address not yet confirmed
     with_env(NO_PROVIDER_ENV.merge("FRONTEND_URL" => "https://verse.example/")) do
       assert_no_enqueued_jobs do
         post "/api/auth/request-email-verification", params: {}, headers: auth(token), as: :json

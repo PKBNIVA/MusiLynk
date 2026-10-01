@@ -14,7 +14,7 @@ class AdminSecondFactorTest < ActionDispatch::IntegrationTest
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
     @admin = User.create!(name: "Two Step Admin", email: "two-step@example.com", password: PASSWORD, role: "admin", status: "active")
-    @member = User.create!(name: "Plain Member", email: "member@example.com", password: PASSWORD, role: "employer", status: "active")
+    @member = User.create!(name: "Plain Member", email: "member@example.com", password: PASSWORD, role: "employer", status: "active", email_verified: true)
   end
 
   teardown do

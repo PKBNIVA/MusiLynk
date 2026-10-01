@@ -310,6 +310,8 @@ class OtpAuthTest < ActionDispatch::IntegrationTest
   end
 
   test "PASSWORD_LOGIN_ENABLED=false turns off password login but not codes" do
+    # A verified address keeps its password when a code is used (an unverified one is reclaimed: see the audit tests).
+    User.find_by!(email: "coder@example.com").update_columns(email_verified: true)
     with_env("PASSWORD_LOGIN_ENABLED" => "false") do
       post "/api/auth/login", params: { email: "coder@example.com", password: PASSWORD }, as: :json
       assert_response :forbidden

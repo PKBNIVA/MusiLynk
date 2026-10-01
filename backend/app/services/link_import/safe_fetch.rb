@@ -30,9 +30,13 @@ module LinkImport
     MAX_BODY_BYTES = 1_048_576
     USER_AGENT = "VerseLinkBot/1.0 (+https://#{ENV.fetch('FRONTEND_URL', 'verse.app').sub(%r{\Ahttps?://}, '')}/about)".freeze
 
+    # Loopback, private, link-local, shared (CGNAT), benchmarking, documentation, multicast and
+    # reserved IPv4; and the IPv6 equivalents plus the ranges that embed an IPv4 address
+    # (NAT64 64:ff9b::/96, 6to4 2002::/16, Teredo 2001::/32) and so could reach a private one.
     BLOCKED_RANGES = %w[
-      127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 0.0.0.0/8 100.64.0.0/10
-      ::1/128 fc00::/7 fe80::/10
+      0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24
+      192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/4 240.0.0.0/4
+      ::/128 ::1/128 64:ff9b::/96 100::/64 2001::/32 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8
     ].map { IPAddr.new(_1) }.freeze
 
     # Tests replace this with a stub: ->(host) { ["1.2.3.4"] }.

@@ -73,6 +73,16 @@ class EmailDelivery
       notice: true,
       footer: "If you made this change, nothing else is needed. If you did not, sign in right away with an emailed code and change your password, or contact support."
     },
+    # data: { detail: the account email }. Sent when the password set before the address was confirmed
+    # is removed (User#reclaim_unverified_credentials!).
+    "account_password_removed" => {
+      subject: "We removed a password from your Verse account",
+      heading: "Password removed",
+      copy: "For your security we removed the password that was set before you confirmed this address. You can set a new one any time from Settings, or sign in with an emailed code. The account is:",
+      action: nil,
+      notice: true,
+      footer: "If you did not just sign in to Verse, contact support."
+    },
     # data: { link:, name: }. Sent to the invitee's address; they may not have a Verse account yet.
     "vouch_invite" => {
       subject: "You were vouched for on Verse",

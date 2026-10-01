@@ -79,7 +79,9 @@ class JobsController < ApplicationController
     hidden_synthetic = job.employer.synthetic_batch.present? && !job.employer.synthetic_batch.start_with?(SyntheticQa::Demo::PREFIX) && current_user&.synthetic_batch.blank?
     # A closed listing (deadline passed, JobsDeadlineSweepJob) stays reachable at its own URL
     # rather than 404ing — the client shows a "This listing has closed" banner and hides Apply.
-    unless ((job.published? || job.closed?) && !hidden_synthetic) || current_user&.admin? || current_user&.id == job.employer_id
+    # A listing whose poster erased their account is no longer readable (admins still see it).
+    gone = job.employer.deleted? && !current_user&.admin?
+    unless (((job.published? || job.closed?) && !hidden_synthetic) && !gone) || current_user&.admin? || (current_user&.id == job.employer_id && !gone)
       return render_error("Opportunity not found", :not_found)
     end
     applied = current_user&.jobseeker? && Application.exists?(candidate: current_user, job:)

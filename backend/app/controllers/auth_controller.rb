@@ -16,10 +16,11 @@ class AuthController < ApplicationController
   # Per-code attempts are capped by SignInCode::MAX_ATTEMPTS; this IP budget stops
   # one client spraying guesses across many addresses' codes.
   OTP_VERIFY_FAILURES_PER_IP = 25
-  OTP_UNAVAILABLE_MESSAGE = "Email sign-in codes are temporarily unavailable. Use your password instead.".freeze
+  OTP_UNAVAILABLE_MESSAGE = "Email sign-in codes are temporarily unavailable. Try again in a few minutes. If you have a confirmed account with a password you can use that, otherwise contact Verse support.".freeze
   OTP_REQUEST_MESSAGE = "If this email can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.".freeze
+  EMAIL_VERIFICATION_REQUIRED_MESSAGE = "Confirm your email address before signing in with a password. We can send the link again, or you can sign in with an emailed code.".freeze
   OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
-  EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so Verse can no longer send to it. Use a different email address, or sign in with your password.".freeze
+  EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so Verse can no longer send to it. Use a different email address. If this is your address and you cannot sign in, contact Verse support.".freeze
   CODE_ONLY_LOGIN_MESSAGE = "This account uses email codes — send me a code.".freeze
   PASSWORDLESS_LOGIN_MESSAGE = "Use Google to sign in, or set a password from your email.".freeze
   PHONE_OTP_UNAVAILABLE_MESSAGE = "WhatsApp sign-in codes are temporarily unavailable.".freeze
@@ -122,6 +123,8 @@ class AuthController < ApplicationController
       return render_error("Incorrect email or password.", :unauthorized)
     end
     return render_error("This account is not active.", :forbidden) unless user.active?
+    # A password chosen before the mailbox was proven may be a stranger's (account pre-hijacking).
+    return render_error(EMAIL_VERIFICATION_REQUIRED_MESSAGE, :forbidden, "EMAIL_VERIFICATION_REQUIRED") unless user.email_verified? || user.admin? || user.synthetic_batch.present?
     return unless admin_origin_allowed?(user)
     second_factor = user.admin? ? self.class.admin_second_factor_state(user.email) : nil
     return start_second_factor(user) if second_factor == :enforced
@@ -194,6 +197,7 @@ class AuthController < ApplicationController
   def exchange
     user = AuthExchangeCode.redeem!(params[:code])
     return render_error("This sign-in link has expired or was already used.", :unauthorized, "EXCHANGE_INVALID") unless user
+    return render_error("This sign-in link has expired or was already used.", :unauthorized, "EXCHANGE_INVALID") if admin_code_only_sign_in_blocked?(user)
     return render_error("This account is not active.", :forbidden) unless user.active?
     token = sign_in(user)
     render json: { user: public_user(user), accessToken: token }
@@ -275,6 +279,7 @@ class AuthController < ApplicationController
 
     user = User.where(phone:).where.not(phone_verified_at: nil).first
     return render_error(PHONE_OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID") unless user
+    return render_error(PHONE_OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID") if admin_code_only_sign_in_blocked?(user)
     return render_error("This account is not active.", :forbidden) unless user.active?
 
     user.update!(last_login_at: Time.current)
@@ -335,7 +340,9 @@ class AuthController < ApplicationController
     return render_error(OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID") if admin_code_only_sign_in_blocked?(user)
     return render_error("This account is not active.", :forbidden) unless user.active?
 
+    dropped = user.reclaim_unverified_credentials!
     user.update!(email_verified: true, last_login_at: Time.current)
+    notify_password_removed(user) if dropped
     token = sign_in(user)
     audit!(created ? "auth.register" : "auth.login", user, { method: "email_code" })
     render json: { user: public_user(user), accessToken: token }
@@ -360,6 +367,24 @@ class AuthController < ApplicationController
     render json: token_response(token, "/verify-email", current_user)
   end
 
+  # POST /auth/resend-verification {email}: signed out. Sends a fresh verification link to an
+  # unverified account; the answer is identical for every address.
+  def resend_verification
+    return unless throttle!("resend-verification", limit: 10, period: 1.hour)
+
+    email = normalized_email
+    user = User.find_by(email:)
+    if user && !user.email_verified? && user.active? && !user.admin?
+      # Over the per-address budget nothing is sent but the answer is identical (no oracle).
+      key_period = 1.hour
+      count_key = failure_key("resend-verification", :email, email, key_period)
+      if (Rails.cache.increment(count_key, 1, expires_in: key_period) || 1) <= 3
+        deliver_token(issue_token("verify_email", 24.hours, user), "/verify-email", user)
+      end
+    end
+    render json: { ok: true, message: "If that address has an unconfirmed account, a new link is on its way." }
+  end
+
   def verify_email
     token = EmailToken.usable("verify_email").find_by(token_digest: digest(params[:token]))
     return render_error("Verification link is invalid or expired.", :bad_request, "TOKEN_INVALID") unless token
@@ -373,17 +398,22 @@ class AuthController < ApplicationController
 
   def forgot_password
     return unless throttle!("password-reset", limit: 10, period: 1.hour)
-    if (user = User.find_by(email: normalized_email))
+    if (user = User.find_by(email: normalized_email)) && reset_email_allowed?(user)
       token = issue_token("reset_password", 2.hours, user)
       _link, delivery = deliver_token(token, "/reset-password", user)
       unless delivery[:queued]
         Rails.logger.warn({ event: "password_reset_email_skipped", userId: user.id, reason: delivery[:reason] }.to_json)
       end
     else
-      Rails.logger.info({ event: "password_reset_unknown_account" }.to_json)
+      Rails.logger.info({ event: "password_reset_unknown_account_or_capped" }.to_json)
     end
     render json: { ok: true, message: "If an account exists, password reset instructions have been sent." }
   end
+
+  # While a reset link sent within this window is still usable, another request sends nothing new:
+  # the owner already has a working link, and nobody can flood an inbox (at most one reset email
+  # per account per window, whichever networks ask). The answer is the same either way (no oracle).
+  RESET_RESEND_AFTER = 10.minutes
 
   RESET_TOKEN_INVALID_MESSAGE = "This link has expired or was already used. Request a new one.".freeze
 
@@ -405,13 +435,21 @@ class AuthController < ApplicationController
 
     token.with_lock do
       return render_error(RESET_TOKEN_INVALID_MESSAGE, :bad_request, "TOKEN_INVALID") if token.used_at? || token.expires_at <= Time.current
-      user.update!(password: params[:password], password_set_at: Time.current)
+      # Reaching the reset link proves the mailbox, so the address counts as confirmed from here on.
+      # Anything attached before that proof (a linked Google identity, a phone) may be a stranger's
+      # pre-hijack, so it is dropped first, exactly as a first proven sign-in would.
+      user.reclaim_unverified_credentials!
+      user.update!(password: params[:password], password_set_at: Time.current, email_verified: true)
       token.update!(used_at: Time.current)
       user.sessions.delete_all
       user.email_tokens.usable("reset_password").update_all(used_at: Time.current)
     end
-    accessToken = sign_in(user)
     AuditLog.create!(actor: user, action: "auth.password_reset", entity_type: "User", entity_id: user.id)
+    # An admin is never signed in by an emailed link alone: they sign in again with the new
+    # password and the emailed second factor, on the admin site.
+    return render json: { ok: true, signInRequired: true } if user.admin?
+
+    accessToken = sign_in(user)
     render json: { ok: true, user: public_user(user), accessToken: }
   end
 
@@ -422,6 +460,13 @@ class AuthController < ApplicationController
   def verification_state(user)
     pending = user.profile&.verified? ? nil : user.verification_requests.where(status: "pending").order(created_at: :desc).first
     { "verificationPending" => pending.present?, "verificationRequestedAt" => pending&.created_at }
+  end
+
+  def reset_email_allowed?(user)
+    # With the admin lock on, admins never use email-only recovery (see admin_code_only_sign_in_blocked?).
+    return false if admin_code_only_sign_in_blocked?(user)
+
+    !user.email_tokens.usable("reset_password").where(created_at: RESET_RESEND_AFTER.ago..).exists?
   end
 
   def find_usable_reset_token(raw)
@@ -522,6 +567,11 @@ class AuthController < ApplicationController
     # Registered by another path since the code was sent; the verifier still
     # proved control of the inbox, so sign in to that account.
     [User.find_by(email: code.email), false]
+  end
+
+  # Tells a person whose password was removed (see User#reclaim_unverified_credentials!) why.
+  def notify_password_removed(user)
+    AccountNotices.password_removed(user)
   end
 
   def queue_phone_otp(phone:, code:)

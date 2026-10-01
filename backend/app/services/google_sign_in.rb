@@ -52,21 +52,47 @@ class GoogleSignIn
     return Result.new(user: nil, created: false, notify_linked: false, error: "email_unverified") unless email_verified?
 
     connection = AuthConnection.google.find_by(provider_uid: uid)
+    if connection && unverified_foreign_connection?(connection)
+      # Linked to an account whose mailbox was never proven, from a Google identity with a different
+      # email: possibly an attacker's pre-link. Reclaim (drops the link) and treat this as a fresh sign-in.
+      reclaim!(connection.owner)
+      connection = nil
+    end
     if connection
+      return refused("disabled") if admin_sign_in_locked?(connection.owner)
       apply_claims!(connection)
       return Result.new(user: connection.owner, created: false, notify_linked: false, error: nil)
     end
 
     user = User.find_by(email:)
     if user
+      return refused("disabled") if admin_sign_in_locked?(user)
+      unless user.email_verified?
+        reclaim!(user)
+        user.update!(email_verified: true)
+      end
       connection = AuthConnection.new(owner: user, provider: "google", provider_uid: uid)
       apply_claims!(connection)
-      user.update!(email_verified: true) unless user.email_verified?
       return Result.new(user:, created: false, notify_linked: true, error: nil)
     end
 
     create_user!
   end
+
+  # With ADMIN_ORIGIN set, admins sign in only with password + emailed code on the admin site
+  # (see AuthController#admin_code_only_sign_in_blocked?); a third-party sign-in is no way round that.
+  def admin_sign_in_locked?(account) = account.is_a?(User) && account.admin? && AdminOrigin.locked?
+
+  def unverified_foreign_connection?(connection)
+    owner = connection.owner
+    owner.is_a?(User) && !owner.email_verified? && !owner.admin? && connection.email.to_s.downcase != owner.email.to_s.downcase
+  end
+
+  def reclaim!(user)
+    AccountNotices.password_removed(user) if user.reclaim_unverified_credentials!
+  end
+
+  def refused(code) = Result.new(user: nil, created: false, notify_linked: false, error: code)
 
   def create_user!
     return Result.new(user: nil, created: false, notify_linked: false, error: "role_required") if @role.blank?

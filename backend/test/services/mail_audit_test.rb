@@ -94,7 +94,7 @@ class MailAuditTest < ActiveSupport::TestCase
       assert_includes email.html, 'name="viewport"', "#{email.id}: viewport"
       assert_match(/display:none[^>]*>[^<]{10,}</, email.html, "#{email.id}: preheader")
       buttons = email.html.scan("display:inline-block;margin-top:18px;padding:13px 20px").size
-      code_email = %w[sign_in_code admin_email_change account_email_change admin_email_changed account_email_changed account_password_set].include?(email.id)
+      code_email = %w[sign_in_code admin_email_change account_email_change admin_email_changed account_email_changed account_password_set account_password_removed].include?(email.id)
       assert_equal(code_email ? 0 : 1, buttons, "#{email.id}: button count")
       assert_match(/\AVerse\n\n/, email.text, "#{email.id}: text starts with the brand")
       assert_no_match(/<[a-z]+[ >]/, email.text, "#{email.id}: no HTML in plain text")

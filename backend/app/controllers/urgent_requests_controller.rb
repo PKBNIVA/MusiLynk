@@ -1,4 +1,8 @@
 class UrgentRequestsController < ApplicationController
+  include UserRateLimit
+
+  # Each request alerts matching musicians (in-app, email, WhatsApp), so posting is capped per account.
+  CREATES_PER_HOUR = 10
   # The token-based one-click action from the expiry-warning email carries its own signed
   # authorization (UrgentActionToken) and is not necessarily hit by a signed-in session.
   before_action -> { authenticate!("jobseeker", "employer") }, except: :action_from_token
@@ -57,6 +61,7 @@ class UrgentRequestsController < ApplicationController
   # rest (venue, end time, instrument, requirements) is optional. The title is optional too: it
   # is written from the role and city when the client sends none. Every problem is returned at once.
   def create
+    return unless within_user_rate_limit?("urgent-request-create", limit: CREATES_PER_HOUR, period: 1.hour)
     role, city = params[:roleName], params[:city]
     title = params[:title].presence || ("#{role} needed in #{city}" if role.is_a?(String) && city.is_a?(String) && role.present? && city.present?)
     item = UrgentRequest.new(requester: current_user, title:, role_name: role, instrument: params[:instrument],
@@ -213,8 +218,13 @@ class UrgentRequestsController < ApplicationController
     end
   end
 
+  # Columns only the founders (admin site) and, for delivery counts, the requester may see.
+  INTERNAL_COLUMNS = %w[founder_notes expiry_warned_at].freeze
+  DELIVERY_COLUMNS = %w[notified_count first_notified_at last_notified_at].freeze
+
   def serialize(item, responded_ids, my_reasons = nil)
-    item.attributes.merge(requesterName: item.requester.name, requesterVerified: item.requester.profile&.verified || false,
+    hidden = item.requester_id == current_user.id ? INTERNAL_COLUMNS : INTERNAL_COLUMNS + DELIVERY_COLUMNS
+    item.attributes.except(*hidden).merge(requesterName: item.requester.name, requesterVerified: item.requester.profile&.verified || false,
       myResponse: responded_ids.include?(item.id), responseCount: item.urgent_request_responses.size,
       myMatchReasons: my_reasons, filledByName: item.filled_by&.name, conversationId: @threads&.dig(item.requester_id))
   end

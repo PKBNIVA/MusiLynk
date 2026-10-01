@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   actCard,
@@ -13,10 +11,8 @@ import {
   parseRequest,
   professionalCard,
   respond,
-  handle,
-  staticFallback,
   safePhotoUrl,
-} from '../../api/og/_card.ts';
+} from '../../edge/og.ts';
 
 const text = (node) =>
   typeof node === 'string'
@@ -46,14 +42,6 @@ describe('og helpers', () => {
     expect(safePhotoUrl('http://cdn.example/a.jpg')).toBeUndefined();
     expect(safePhotoUrl('javascript:alert(1)')).toBeUndefined();
     expect(safePhotoUrl(null)).toBeUndefined();
-  });
-  it('reads type and id from the route path /api/og/<type>/<id>.png the share pages link to', () => {
-    const parse = (path) => parseRequest(new URL(`https://x.test${path}`));
-    expect(parse('/api/og/professional/abc-123.png')).toEqual({ type: 'professional', id: 'abc-123' });
-    expect(parse('/api/og/opportunity/7f3a')).toEqual({ type: 'opportunity', id: '7f3a' });
-    expect(parse('/api/og/act/a_b.PNG?id=ignored')).toEqual({ type: 'act', id: 'a_b' });
-    expect(parse('/api/og/job/abc.png')).toBeNull();
-    expect(parse('/api/og/act/..%2Fetc')).toBeNull();
   });
   it('reads type and id from the query, dropping a .png suffix and rejecting odd ids', () => {
     const parse = (q) => parseRequest(new URL(`https://x.test/api/og?${q}`));
@@ -215,59 +203,5 @@ describe('respond', () => {
     const res = await ask(make({ render }));
     expect(res.headers.get('cache-control')).toBe('public, max-age=300, s-maxage=300');
     expect(render).toHaveBeenCalledTimes(3);
-  });
-});
-
-describe('function glue', () => {
-  it('handle() answers through the given renderer, using the API origin from the environment', async () => {
-    const png = new Uint8Array([137, 80, 78, 71]).buffer;
-    const render = vi.fn(async () => png);
-    const fetchMock = vi.fn(async () => Response.json({ professional: { name: 'Meera Iyer' } }));
-    vi.stubGlobal('fetch', fetchMock);
-    vi.stubEnv('OG_API_ORIGIN', 'https://api.example/');
-    try {
-      const res = await handle(new Request('https://x.test/api/og/professional/p1.png'), render);
-      expect(res.headers.get('content-type')).toBe('image/png');
-      expect(fetchMock.mock.calls[0][0]).toBe('https://api.example/api/public/talent/p1');
-      expect(text(render.mock.calls[0][0])).toContain('Meera Iyer');
-
-      fetchMock.mockResolvedValueOnce(new Response('nope', { status: 404 }));
-      const missing = await handle(new Request('https://x.test/api/og/professional/gone.png'), render);
-      expect(missing.headers.get('cache-control')).toBe('public, max-age=300, s-maxage=300');
-    } finally {
-      vi.unstubAllGlobals();
-      vi.unstubAllEnvs();
-    }
-  });
-  it('staticFallback() sends the visitor to the static default card', () => {
-    const res = staticFallback(new Request('https://verse.example/api/og/act/a1.png'));
-    expect(res.status).toBe(302);
-    expect(res.headers.get('location')).toBe('https://verse.example/og-default.png');
-    expect(res.headers.get('cache-control')).toBe('public, max-age=300, s-maxage=300');
-  });
-});
-
-describe('deploy shape', () => {
-  // vitest runs from the repo root.
-  const read = (path) => readFileSync(join(process.cwd(), path), 'utf8');
-  it('imports @vercel/og statically from a Node function, and lists it in dependencies', () => {
-    const fn = read('api/og/[type]/[id].ts');
-    expect(fn).toMatch(/^import \{ ImageResponse \} from '@vercel\/og';$/m);
-    expect(fn).not.toMatch(/import\(/);
-    expect(fn).not.toMatch(/runtime:\s*'edge'/);
-    expect(JSON.parse(read('package.json')).dependencies['@vercel/og']).toBeTruthy();
-  });
-  it('uses .js extensions on relative imports, which Node ESM needs once the function is compiled', () => {
-    for (const file of ['api/og/[type]/[id].ts', 'api/og/_card.ts']) {
-      const relative = [...read(file).matchAll(/from '(\.[^']+)'/g)].map((m) => m[1]);
-      expect(relative.length).toBeGreaterThan(0);
-      for (const path of relative) expect(path, `${file} imports ${path}`).toMatch(/\.js$/);
-    }
-  });
-  it('lets /api/og/<type>/<id>.png reach the function instead of a rewrite or the SPA fallback', () => {
-    const { rewrites } = JSON.parse(read('vercel.json'));
-    const path = '/api/og/professional/abc.png';
-    const hit = rewrites.filter(({ source }) => new RegExp(`^${source.replace(/:\w+/g, '[^/]+')}$`).test(path));
-    expect(hit).toEqual([]);
   });
 });

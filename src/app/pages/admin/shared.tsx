@@ -133,8 +133,8 @@ export const jobsQuery = (status: JobStatusFilter, page: number, perPage = 100) 
   return `${SOURCES.jobs[0]}?${qs.toString()}`;
 };
 
-// The console's tabs, in display order. The active one lives in the URL (?tab=) so a reload,
-// a shared link and the back button all keep it. Unknown values fall back to the queue.
+// The console's tabs, in display order. The active one lives in the URL (?tab=) so a reload
+// and a shared link both keep it. Unknown values fall back to the queue.
 export const ADMIN_TABS = [
   'queue',
   'verification',

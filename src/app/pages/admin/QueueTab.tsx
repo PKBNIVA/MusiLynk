@@ -64,7 +64,11 @@ export default function QueueTab({
         (status === 'pending' ? (
           <Empty icon={Briefcase} text="No opportunities waiting for review." hint="New posts will show up here." />
         ) : (
-          <Empty icon={Briefcase} text="No opportunities with this status." />
+          <Empty
+            icon={Briefcase}
+            text="No opportunities with this status."
+            hint="Switch the Status filter above to see other opportunities."
+          />
         ))}
       {jobs.map((j) => (
         <Card key={j.id} className="bg-white/[.05] border-white/10">

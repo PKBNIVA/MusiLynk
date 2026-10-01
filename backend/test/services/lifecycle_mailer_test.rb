@@ -1,12 +1,18 @@
 require "test_helper"
 
 class LifecycleMailerTest < ActiveSupport::TestCase
-  # Every in-app route a lifecycle CTA may point at (src/app/routes.tsx). A path missing here
-  # lands on the 404 page, so add the route to the SPA first.
-  SPA_ROUTES = %w[
-    /jobseeker/library /jobseeker/profile /jobseeker/availability /jobseeker/urgent
-    /employer/post-job /employer/candidates /employer/applications /employer/urgent
-  ].freeze
+  # Every in-app route a lifecycle CTA may point at, read from src/app/routes.tsx so a renamed or removed
+  # route fails here instead of sending members to the 404 page. Child routes sit under their workspace;
+  # the work library is a jobseeker-only showcase path declared in the showcasePaths table.
+  SPA_ROUTES = begin
+    source = File.read(Rails.root.join("../src/app/routes.tsx"))
+    routes = %w[jobseeker employer].flat_map do |ws|
+      block = source[/path: '\/#{ws}',\s*children: \[(.*?)\n    \},\n/m, 1].to_s
+      block.scan(/^ {10}path: '([a-z-]+)'/).flatten.map { |child| "/#{ws}/#{child}" }
+    end
+    routes << "/jobseeker/library" if source.match?(/^ {4}library: 'library',/)
+    routes.freeze
+  end
 
   PARAMS = { "count" => 3, "city" => "Mumbai", "role" => "Drummer", "title" => "Wedding set", "hours" => 2,
              "candidate" => "A. Singh", "job" => "Wedding set", "minutes" => 12 }.freeze

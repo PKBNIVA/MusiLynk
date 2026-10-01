@@ -371,7 +371,11 @@ export default function Bookings() {
                   ? 'Bookings appear here once a hirer confirms'
                   : 'Bookings appear here once a musician accepts'
               }
-              action={{ label: 'Book talent', to: `${base}/book-talent` }}
+              action={
+                base === '/jobseeker'
+                  ? { label: 'Set availability', to: `${base}/availability` }
+                  : { label: 'Book talent', to: `${base}/book-talent` }
+              }
             />
           </div>
         ) : (

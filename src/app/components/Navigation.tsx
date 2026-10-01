@@ -168,7 +168,46 @@ export function Navigation() {
   // Top-bar dropdowns, the full mobile menu, and the extra groups in the account menu.
   const groups: NavGroup[] = isJobSeeker ? [myWork] : employerGroups;
   const menuGroups: NavGroup[] = isJobSeeker ? [myWork, performAndBook, hireSomeone] : employerGroups;
-  const accountGroups: NavGroup[] = isJobSeeker ? [hireSomeone, performAndBook] : [];
+  // The musician's account menu: four short groups, twelve items in all. (The hirer-only tools
+  // such as seats and the applicant list stay on the full menu / the hirer workspace.)
+  const accountGroups: NavGroup[] = isJobSeeker
+    ? [
+        {
+          label: 'You',
+          icon: User,
+          items: [
+            { path: `${baseUrl}/profile`, icon: User, label: 'Profile & verification' },
+            { path: `${baseUrl}/review`, icon: Inbox, label: 'Review changes' },
+            { path: `${baseUrl}/reviews`, icon: Star, label: 'Hirer reviews' },
+          ],
+        },
+        {
+          label: 'Perform & book',
+          icon: Mic2,
+          items: performAndBook.items.filter(
+            (item) => !item.path.endsWith('/book-talent') && !item.path.endsWith('/bookings'),
+          ),
+        },
+        {
+          label: 'Hire someone',
+          icon: UserSearch,
+          items: [
+            hireSomeone.items[0],
+            hireSomeone.items[1],
+            { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
+          ],
+        },
+        {
+          label: 'Settings',
+          icon: Settings,
+          items: [
+            { path: `${baseUrl}/settings`, icon: Settings, label: 'Account settings' },
+            { path: `${baseUrl}/billing`, icon: WalletCards, label: 'Plan & billing' },
+            { path: `${baseUrl}/account`, icon: ShieldCheck, label: 'Your data & account' },
+          ],
+        },
+      ]
+    : [];
   // Warm the Messages chunk before the click so the page does not paint empty.
   const preloadMessages = () => {
     void import('../pages/Messages').catch(() => undefined);
@@ -353,11 +392,18 @@ export function Navigation() {
                     </DropdownMenuLabel>
                     {group.items.map((item) => {
                       const Icon = item.icon;
+                      const isReview = item.path === `${baseUrl}/review`;
                       return (
                         <DropdownMenuItem key={item.path} asChild className={active(item.path) ? 'bg-accent' : ''}>
-                          <Link to={item.path}>
+                          <Link to={item.path} data-testid={isReview ? 'review-menu-item' : undefined}>
                             <Icon className="mr-2 h-4 w-4" />
                             {item.label}
+                            {isReview && pendingReview > 0 && (
+                              <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-[10px] font-bold text-white">
+                                {pendingReview}
+                                <span className="sr-only"> to review</span>
+                              </span>
+                            )}
                           </Link>
                         </DropdownMenuItem>
                       );
@@ -365,57 +411,53 @@ export function Navigation() {
                     <DropdownMenuSeparator />
                   </div>
                 ))}
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/profile`}>
-                    <User className="mr-2 h-4 w-4" />
-                    Profile & verification
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/review`} data-testid="review-menu-item">
-                    <Inbox className="mr-2 h-4 w-4" />
-                    Review changes
-                    {pendingReview > 0 && (
-                      <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-[10px] font-bold text-white">
-                        {pendingReview}
-                        <span className="sr-only"> to review</span>
-                      </span>
-                    )}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/settings`}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Account settings
-                  </Link>
-                </DropdownMenuItem>
-                {isJobSeeker && (
-                  <DropdownMenuItem asChild>
-                    <Link to={`${baseUrl}/reviews`}>
-                      <Star className="mr-2 h-4 w-4" />
-                      Employer reviews
-                    </Link>
-                  </DropdownMenuItem>
+                {!isJobSeeker && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to={`${baseUrl}/profile`}>
+                        <User className="mr-2 h-4 w-4" />
+                        Profile & verification
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to={`${baseUrl}/review`} data-testid="review-menu-item">
+                        <Inbox className="mr-2 h-4 w-4" />
+                        Review changes
+                        {pendingReview > 0 && (
+                          <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-[10px] font-bold text-white">
+                            {pendingReview}
+                            <span className="sr-only"> to review</span>
+                          </span>
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to={`${baseUrl}/settings`}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Account settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to={`${baseUrl}/billing`}>
+                        <WalletCards className="mr-2 h-4 w-4" />
+                        Plan & billing
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to={`${baseUrl}/workspace`}>
+                        <Building2 className="mr-2 h-4 w-4" />
+                        Workspace & seats
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to={`${baseUrl}/account`}>
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        Your data & account
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
                 )}
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/billing`}>
-                    <WalletCards className="mr-2 h-4 w-4" />
-                    Plan & billing
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/workspace`}>
-                    <Building2 className="mr-2 h-4 w-4" />
-                    Workspace & seats
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/account`}>
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    Your data & account
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <div className="px-2 py-2">
                   <TourLauncher role={isJobSeeker ? 'jobseeker' : 'employer'} />
                   <Link to="/guide" className="mt-2 flex items-center gap-2 text-sm text-slate-400 hover:text-white">
@@ -423,11 +465,14 @@ export function Navigation() {
                     How to use Verse
                   </Link>
                 </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-rose-500">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
+                {/* Pinned to the bottom of the scrolling menu so Sign out is on screen on a phone. */}
+                <div className="sticky bottom-0 -mx-1 -mb-1 bg-popover px-1 pb-1">
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-rose-500">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>

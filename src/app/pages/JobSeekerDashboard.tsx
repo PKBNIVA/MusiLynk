@@ -38,6 +38,21 @@ export default function JobSeekerDashboard() {
       .then((x) => setConvs(x?.conversations || []))
       .catch(() => undefined);
   }, []);
+  // The "getting started" strip ticks itself from what the person has actually done.
+  const [hasSample, setHasSample] = useState<boolean>();
+  const [hasAvailability, setHasAvailability] = useState<boolean>();
+  useEffect(() => {
+    apiGet<{ items?: unknown[] }>('/portfolio')
+      .then((x) => setHasSample((x?.items?.length ?? 0) > 0))
+      .catch(() => setHasSample(false));
+    apiGet<{ windows?: unknown[] }>('/availability')
+      .then((x) => setHasAvailability((x?.windows?.length ?? 0) > 0))
+      .catch(() => setHasAvailability(false));
+  }, []);
+  const tourDone =
+    state === 'ready' && hasSample !== undefined && hasAvailability !== undefined
+      ? { sample: hasSample, availability: hasAvailability, applied: (d.applications ?? 0) > 0 }
+      : undefined;
   const goodFits = d.recommendedJobs.filter((j) => (j.fitScore ?? 0) >= 60).slice(0, 3);
   const unread = convs.reduce((n, c) => n + (c.unreadCount || 0), 0);
   const latestUnread = convs
@@ -97,7 +112,7 @@ export default function JobSeekerDashboard() {
             </Button>
           }
         />
-        {!welcome && <TourStrip role="jobseeker" />}
+        {!welcome && tourDone && <TourStrip role="jobseeker" done={tourDone} />}
         <WelcomeNextStep role="jobseeker" />
         {state === 'error' && (
           <div
@@ -173,12 +188,24 @@ export default function JobSeekerDashboard() {
             <VouchCard />
           </div>
         )}
-        {state === 'ready' && isEmpty && (
+        {state === 'ready' && isEmpty && hasSample !== undefined && (
           <EmptyState
             scene="stage"
-            title="Your first gig starts with your work"
-            hint="Hirers hear a sample before they message."
-            action={{ label: 'Add a work sample', to: '/jobseeker/library', variant: 'outline' }}
+            title={hasSample ? 'Your work is up. Now get booked' : 'Your first gig starts with your work'}
+            hint={
+              hasSample
+                ? hasAvailability
+                  ? 'Look through open gigs and apply to the ones that fit.'
+                  : 'Tell hirers when you are free so they can book you.'
+                : 'Hirers hear a sample before they message.'
+            }
+            action={
+              hasSample
+                ? hasAvailability
+                  ? { label: 'Find work', to: '/jobseeker/jobs', variant: 'outline' }
+                  : { label: 'Set availability', to: '/jobseeker/availability', variant: 'outline' }
+                : { label: 'Add a work sample', to: '/jobseeker/library', variant: 'outline' }
+            }
           />
         )}
         {state === 'ready' && (

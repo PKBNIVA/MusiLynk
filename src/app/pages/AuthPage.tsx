@@ -85,7 +85,9 @@ export default function AuthPage() {
 
   const go = (r: string, complete = true) => {
     const requested = (location.state as { from?: unknown } | null)?.from ?? consumeReturnTo();
-    const allowed = typeof requested === 'string' && requested.startsWith(`/${r}`);
+    // Role-neutral pages (the Stage) are open to either role, so a deep link to one survives sign-in.
+    const allowed =
+      typeof requested === 'string' && (requested.startsWith(`/${r}`) || /^\/stage(?:[/?#]|$)/.test(requested));
     navigate(
       allowed
         ? requested
@@ -169,7 +171,12 @@ export default function AuthPage() {
     } catch (e: unknown) {
       /* The API refuses admin passwords from this site once the admin site is live. */
       if (errorCode(e) === 'ADMIN_USE_ADMIN_SITE') setError(errorMessage(e, ADMIN_SITE_MESSAGE));
-      else {
+      else if (errorCode(e) === 'USE_EMAIL_CODE') {
+        /* This account has no password: say so, and put the code step in front of them. */
+        const message = errorMessage(e, 'This account uses email codes — send me a code.');
+        switchMethod('code');
+        setError(message);
+      } else {
         /* Inline, announced, next to the fields; focus goes to the field to fix (FORM-08). */
         setError(errorMessage(e, 'Unable to continue'));
         focusField('auth-password');

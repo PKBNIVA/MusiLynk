@@ -45,6 +45,8 @@ export function notificationDestination(link: string | null | undefined, role: R
   const cut = link.search(/[?#]/);
   const path = cut < 0 ? link : link.slice(0, cut);
   const suffix = cut < 0 ? '' : link.slice(cut);
+  // Review prompts written before the link carried a workspace: musicians have a Reviews page, hirers do not.
+  if (path === '/reviews') return role === 'jobseeker' ? `${base}/reviews${suffix}` : base;
   if (SHARED[path]) return `${base}/${SHARED[path]}${suffix}`;
   if (PUBLIC_PAGES.has(path)) return link;
   // The Stage is a single top-level app for both roles (see routes.tsx), not role-prefixed.

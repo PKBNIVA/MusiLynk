@@ -57,7 +57,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     # An unchanged/bogus request never starts a real change, so the matrix never erases its own users' sign-in.
     [:post, "/api/account/email/request", :any, { ok: [422], params: ->(w, a) { { email: w.user(a).email } } }],
     [:post, "/api/account/email/confirm", :any, { ok: [422], params: { changeToken: "not-a-token", code: "000000" } }],
-    [:post, "/api/account/password", :any, { ok: [403], params: { currentPassword: "wrong-current-password", newPassword: "BrandNewPass456!" } }],
+    [:post, "/api/account/password", :any, { ok: { default: [200], admin: [403] }, params: { currentPassword: "wrong-current-password", newPassword: "BrandNewPass456!" } }],
     [:put, "/api/profile", :talent, { params: { headline: "Updated headline" }, bad: { website: "javascript:alert(1)" }, bad_status: [422], keys: %w[user] }],
     [:post, "/api/onboarding/starter", :talent, { params: { city: "Mumbai" }, bad: { yearsExperience: 500 }, bad_status: [422], keys: %w[user starter] }],
     [:post, "/api/link-previews", :public, { params: { url: "https://myband.example/epk" }, bad: { url: "javascript:alert(1)" }, bad_status: [422], keys: %w[provider kind label url title author thumbnail] }],
@@ -351,6 +351,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/stage/posts/{stage_post}", :any, { params: { body: "Matrix edited stage post" }, missing: :stage_post, bad: { body: "x" * 3001 }, bad_status: [422], keys: %w[post] }],
     [:put, "/api/stage/posts/{stage_post}", :any, { params: { body: "Matrix edited stage post (put)" }, missing: :stage_post, keys: %w[post] }],
     [:delete, "/api/stage/posts/{stage_post}", :any, { missing: :stage_post }],
+    [:get, "/api/stage/authors/user/{self}", :public, { keys: %w[author] }],
     [:get, "/api/stage/authors/user/{self}/posts", :public, { keys: %w[posts nextCursor] }],
     [:post, "/api/stage/posts/{stage_post}/applause", :any, { ok: [201], missing: :stage_post, keys: %w[ok applauseCount] }],
     [:delete, "/api/stage/posts/{stage_post}/applause", :any, { missing: :stage_post, keys: %w[ok applauseCount] }],

@@ -136,13 +136,15 @@ export default function UrgentRequests() {
         rate: reply.rate.trim() ? Number(reply.rate) : null,
       });
       trackUrgentResponseSubmitted();
-      toast.success('Availability sent', {
-        action: sent?.conversationId
-          ? { label: 'Open conversation', onClick: () => openThread(sent.conversationId) }
-          : undefined,
-      });
+      // The server opens the conversation with the hirer (B7); the response is already sent, so a
+      // missing id just leaves the toast.
+      const conversationId = sent?.conversationId || undefined;
+      toast.success(
+        conversationId ? `Availability sent. Say hello to ${reply.request.requesterName}.` : 'Availability sent',
+      );
       setReply(null);
       await load();
+      if (conversationId) openThread(conversationId);
     } catch (e: unknown) {
       setFormError(errorMessage(e, 'Unable to send your availability.'));
     } finally {

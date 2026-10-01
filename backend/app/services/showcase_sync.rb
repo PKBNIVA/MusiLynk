@@ -23,26 +23,29 @@ module ShowcaseSync
   def sync_item(item)
     portfolios = Portfolio.over_library_of(item.user_id).where(status: "active").with_owner.to_a
     result = PortfolioItemClassifier.current.classify(item, portfolios:)
+    raised = []
     portfolios.each do |portfolio|
       if portfolio.member?(item)
         settle(portfolio, item)
       elsif (reason = result.reasons[portfolio.id]) && result.suggested_portfolio_ids.include?(portfolio.id)
-        ShowcaseSuggestion.raise!(owner_type: portfolio.owner_type, owner_id: portfolio.owner_id, target: portfolio, subject: item,
+        raised << ShowcaseSuggestion.raise!(owner_type: portfolio.owner_type, owner_id: portfolio.owner_id, target: portfolio, subject: item,
           kind: "include", reason:)
       end
     end
-    return unless result.any_facets?
-
-    payload = result.facets.reject { |_facet, values| values.empty? }
-    found = payload.values.flatten.first(4).join(", ")
-    ShowcaseSuggestion.raise!(owner_type: "user", owner_id: item.user_id, target: item, subject: item, kind: "tags",
-      reason: "Its title or description mentions #{found}", payload:)
+    if result.any_facets?
+      payload = result.facets.reject { |_facet, values| values.empty? }
+      found = payload.values.flatten.first(4).join(", ")
+      raised << ShowcaseSuggestion.raise!(owner_type: "user", owner_id: item.user_id, target: item, subject: item, kind: "tags",
+        reason: "Its text mentions #{found}", payload:)
+    end
+    withdraw_stale(item, raised)
   end
 
   # Career entries: a resume that asks for tags the entry's text mentions (but the entry is not
   # tagged with), or for some but not all of its tags, gets an "include" suggestion.
   def sync_entry(entry)
     resumes = Resume.where(user_id: entry.user_id).to_a
+    raised = []
     resumes.each do |resume|
       next settle(resume, entry) if resume.member?(entry)
       next if resume.excluded?(entry)
@@ -52,8 +55,17 @@ module ShowcaseSync
       inferred = { "tags" => wanted.select { |tag| text.match?(/(?<![[:alnum:]])#{Regexp.escape(tag.downcase)}(?![[:alnum:]])/) } }
       reason = set.near_miss(entry.facets, inferred, entry.year)
       next unless reason
-      ShowcaseSuggestion.raise!(owner_type: "user", owner_id: entry.user_id, target: resume, subject: entry, kind: "include", reason:)
+      raised << ShowcaseSuggestion.raise!(owner_type: "user", owner_id: entry.user_id, target: resume, subject: entry, kind: "include", reason:)
     end
+    withdraw_stale(entry, raised)
+  end
+
+  # A pending suggestion was raised from what the text said at the time; once the text (or the
+  # rules) no longer say it, the suggestion must go too, or it keeps citing words that are gone.
+  def withdraw_stale(subject, raised)
+    ShowcaseSuggestion.pending.where(subject_type: ShowcaseSuggestion.type_name(subject), subject_id: subject.id, kind: %w[include tags])
+      .where.not(id: raised.compact.map(&:id))
+      .update_all(status: "obsolete", resolved_at: Time.current, updated_at: Time.current)
   end
 
   # A deleted work sample: drop its id from every portfolio's pins, exclusions and manual order

@@ -9,7 +9,7 @@ import { useSearchParams } from 'react-router';
  * `keys` order (use it as the effect dependency that runs the search). Pass `keys` as a
  * module-level constant so its identity is stable. `update` and `clear` return whether the URL
  * changed (when it did not, a caller that wants a fresh search runs it itself). `update` pushes a new entry
- * (unless nothing changed); `clear` removes every key.
+ * (unless nothing changed, or `{ replace: true }` rewrites the current one); `clear` removes every key.
  */
 export function useUrlFilters<K extends string>(keys: readonly K[]) {
   const [params, setParams] = useSearchParams();
@@ -27,25 +27,25 @@ export function useUrlFilters<K extends string>(keys: readonly K[]) {
   }, [params, keys]);
 
   const apply = useCallback(
-    (change: (next: URLSearchParams) => void) => {
+    (change: (next: URLSearchParams) => void, replace = false) => {
       const next = new URLSearchParams(params);
       change(next);
       if (next.toString() === params.toString()) return false;
-      setParams(next);
+      setParams(next, replace ? { replace: true } : undefined);
       return true;
     },
     [params, setParams],
   );
 
   const update = useCallback(
-    (changes: Partial<Record<K, string>>) =>
+    (changes: Partial<Record<K, string>>, options: { replace?: boolean } = {}) =>
       apply((next) => {
         (Object.entries(changes) as [K, string | undefined][]).forEach(([key, value]) => {
           const text = (value || '').trim();
           if (text) next.set(key, text);
           else next.delete(key);
         });
-      }),
+      }, options.replace),
     [apply],
   );
 

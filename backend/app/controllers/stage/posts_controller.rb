@@ -19,6 +19,7 @@ module Stage
         .order(created_at: :desc, id: :desc).limit(500).to_a
         .select { post_visible_to?(_1, current_user) }
       page, next_cursor = paginate(candidates)
+      Post.preload_media_urls(page)
       applauded = applauded_post_ids(page)
       render json: { posts: page.map { _1.api_json(applauded_post_ids: applauded) }, nextCursor: next_cursor }
     end
@@ -37,6 +38,7 @@ module Stage
       post.status = "active"
       post.save!
       bump_reshare_count(post)
+      Notifier.stage_reshare(post.reshared_post, post, actor) if post.reshared_post && !blocked_pair?(post.reshared_post.created_by_user_id, current_user.id)
       flags = ScamSignals.detect(post.body, from_hiring_side: true, early: true)
       audit!("stage.post.create", post, flags.present? ? { safetyFlags: flags } : {})
       render json: { id: post.id, post: post.api_json }, status: :created

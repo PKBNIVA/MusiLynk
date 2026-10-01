@@ -84,7 +84,9 @@ export default function AuthPage() {
 
   const go = (r: string, complete = true) => {
     const requested = (location.state as { from?: unknown } | null)?.from ?? consumeReturnTo();
-    const allowed = typeof requested === 'string' && requested.startsWith(`/${r}`);
+    // The Stage has no role in its path; an expired session there comes back to it after sign-in.
+    const allowed =
+      typeof requested === 'string' && (requested.startsWith(`/${r}`) || /^\/stage(\/|$)/.test(requested));
     navigate(
       allowed
         ? requested

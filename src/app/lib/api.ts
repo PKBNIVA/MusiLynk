@@ -1,5 +1,6 @@
 import { reportApiFailure } from './monitoring';
 import { PROTECTED_AREA, signInPath } from './appTarget';
+import { saveUnsentDrafts } from './unsentDraft';
 
 // `?.`: the Node smoke tests import this module without Vite, where import.meta.env is undefined.
 export const API_BASE = import.meta.env?.VITE_API_URL || '/api';
@@ -151,6 +152,24 @@ function requestIdFor(response: Response, data?: ApiErrorBody) {
   return response.headers.get('x-request-id') || data?.requestId || data?.request_id;
 }
 
+// The role of the signed-in person, for pages whose path carries no role (/stage): an expired
+// session there signs in again as the same kind of account. Set by AuthProvider.
+let sessionRoleHint: string | null = null;
+export function rememberSessionRole(role?: string | null) {
+  sessionRoleHint = role ?? null;
+}
+const signInRole = (pathname: string) => {
+  const first = pathname.split('/')[1];
+  if (first === 'jobseeker' || first === 'employer' || first === 'admin') return first;
+  return sessionRoleHint === 'employer' ? 'employer' : 'jobseeker';
+};
+
+/**
+ * The one place an expired session is handled (a 401 on a request that carried a token): the
+ * token is cleared, any unsent text a form registered is kept for after sign-in, the page is
+ * remembered, and the visitor is sent to sign in. Returns without redirecting on pages that do
+ * not need a session. Reloading the page leaves no usable signed-in screen behind.
+ */
 function redirectAfterUnauthorized(path: string, rejectedToken: string | null, skipRedirect = false) {
   const currentToken = readToken();
   // Another tab may have signed in again while this request was in flight; only the
@@ -164,9 +183,9 @@ function redirectAfterUnauthorized(path: string, rejectedToken: string | null, s
   if (!PROTECTED_AREA.test(window.location.pathname)) return;
 
   authRedirectStarted = true;
+  saveUnsentDrafts();
   writeStored('session', RETURN_TO_KEY, currentPath);
-  const role = window.location.pathname.split('/')[1] || 'jobseeker';
-  window.location.replace(signInPath(role));
+  window.location.replace(signInPath(signInRole(window.location.pathname)));
 }
 
 function retryDelay(response?: Response) {

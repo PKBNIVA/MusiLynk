@@ -7,6 +7,7 @@ import { AppSelect } from '../ui/app-select';
 import { AutocompleteInput } from '../ai/AutocompleteInput';
 import { AiSuggestButton } from '../ai/AiSuggestButton';
 import { errorMessage } from '../../lib/errors';
+import { useUnsentDraft } from '../../lib/unsentDraft';
 import { discardUpload, uploadContentType, uploadMedia, validateUploadFile } from '../../lib/api';
 import {
   createPost,
@@ -60,6 +61,16 @@ export function Composer({ onPosted, prefill, reshareOf, compact }: ComposerProp
   const isShare = Boolean(prefill?.sharedJobId || prefill?.sharedPortfolioItemId || reshareOf);
   const embed = embedPreviewFor(linkUrl);
   const remaining = BODY_LIMIT - body.length;
+  // A session that expires mid-post sends the person to sign in; the caption comes back with them.
+  useUnsentDraft(
+    'stage-composer',
+    body,
+    (text) => {
+      setBody(text.slice(0, BODY_LIMIT));
+      toast.message('We kept your unsent post.');
+    },
+    !isShare && !compact,
+  );
 
   async function onFilesPicked(files: FileList | null) {
     if (!files || !files.length) return;

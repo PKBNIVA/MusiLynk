@@ -405,7 +405,7 @@ Checklist:
    no `problems` (codes such as `missing_credentials`, `missing_public_base_url`,
    `insecure_endpoint`; values are never echoed). The admin tester's "Upload storage" check
    shows the same. Then, in the browser, upload an image, an MP3 and a PDF on
-   `/jobseeker/portfolio`, play them, confirm a renamed `.txt → .png` is rejected, delete each
+   `/jobseeker/library`, play them, confirm a renamed `.txt → .png` is rejected, delete each
    sample and confirm the object is gone from the bucket.
 8. **After migrating.** Remove `PERSISTENT_UPLOADS` and the volume only after existing
    `/rails/active_storage/...` work samples have been re-uploaded or accepted as lost; the

@@ -16,16 +16,13 @@ import { BookingDepositPanel } from '../components/BookingDepositPanel';
 import { BookingFeeBreakdown } from '../components/booking/BookingFeeBreakdown';
 import { trackBookingQuoteAccepted, trackBookingQuoteSent } from '../lib/analytics';
 import { errorMessage } from '../lib/errors';
+import { formatDate, formatMoney, formatWhen } from '../lib/format';
 import type { Booking, BookingPayment, ConversationCreated } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
 
 const money = (currency: string | null | undefined, value: unknown) =>
-  `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
-const formatDate = (value: string | null | undefined) => {
-  if (!value) return 'Date to be confirmed';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString(undefined, { dateStyle: 'medium' });
-};
+  formatMoney(Number(value || 0), currency || 'INR');
+const eventDate = (value: string | null | undefined) => formatDate(value, { fallback: 'Date to be confirmed' });
 
 // Mirrors BookingRequest::OWNER_TRANSITIONS / REQUESTER_TRANSITIONS; the API also sends allowedTransitions.
 const OWNER_TRANSITIONS: Record<string, string[]> = {
@@ -150,7 +147,11 @@ export default function Bookings() {
     [quote, setQuote] = useState<QuoteForm | null>(null),
     [payments, setPayments] = useState<Record<string, BookingPayment[]>>({}),
     [paymentOpen, setPaymentOpen] = useState<Record<string, boolean>>({});
+  const nav = useNavigate();
   const { ask, element: confirmDialog } = useConfirm();
+  const [changes, setChanges] = useState<{ booking: Booking; message: string } | null>(null),
+    [changesError, setChangesError] = useState('');
+  const changesSubmit = useSubmitOnce();
   const quoteErrors = useFormErrors<QuoteField>({ ids: QUOTE_IDS });
   const quoteSubmit = useSubmitOnce();
   const sendingQuote = quoteSubmit.busy;
@@ -168,13 +169,17 @@ export default function Bookings() {
   useEffect(() => {
     void load();
   }, []);
-  async function changeStatus(id: string, s: string, success: string, noShow?: 'musician' | 'hirer') {
-    const res = await apiPost<{ refund?: { amount: number; currency: string; note: string } | null }>(
-      `/bookings/${id}/status`,
-      { status: s, ...(noShow ? { noShow } : {}) },
-    );
+  async function changeStatus(id: string, s: string, success: string, noShow?: 'musician' | 'hirer', message?: string) {
+    const res = await apiPost<{
+      refund?: { amount: number; currency: string; note: string } | null;
+      conversationId?: string | null;
+    }>(`/bookings/${id}/status`, { status: s, ...(noShow ? { noShow } : {}), ...(message ? { message } : {}) });
     if (s === 'accepted') trackBookingQuoteAccepted();
-    toast.success(res.refund ? `${success} · ${res.refund.note}` : success);
+    toast.success(res.refund ? `${success} · ${res.refund.note}` : success, {
+      action: res.conversationId
+        ? { label: 'Open conversation', onClick: () => nav(`${base}/messages?c=${res.conversationId}`) }
+        : undefined,
+    });
     await load();
   }
   function sendQuote() {
@@ -227,7 +232,6 @@ export default function Bookings() {
       if (d) setPayments((x) => ({ ...x, [id]: d.payments || [] }));
     }
   }
-  const nav = useNavigate();
   async function message(id: string) {
     try {
       const d = await apiPost<ConversationCreated>('/conversations', { bookingId: id });
@@ -256,19 +260,13 @@ export default function Bookings() {
   };
   const confirmStatus = (b: Booking, s: string, noShow?: 'musician' | 'hirer') => {
     const q = b.latestQuote;
-    const copy: Record<string, [string, string, string, boolean]> = {
+    const copy: Partial<Record<string, [string, string, string, boolean]>> = {
       accepted: [
         'Accept this quote?',
         q
           ? `You agree to ${money(q.currency, q.total)} with a ${q.depositPercent}% deposit (${money(q.currency, Math.round((q.total * q.depositPercent) / 100))}) due next.`
           : 'You agree to the latest quote.',
         'Accept quote',
-        false,
-      ],
-      negotiating: [
-        'Ask for a revised quote?',
-        'The act is told you want changes. Use Messages to explain what should change.',
-        'Ask for changes',
         false,
       ],
       cancelled: [
@@ -311,10 +309,9 @@ export default function Bookings() {
             true,
           ],
     };
-    const [title, description, confirmLabel, destructive] = copy[s];
+    const [title, description, confirmLabel, destructive] = copy[s] ?? [s, '', s, false];
     const success: Record<string, string> = {
       accepted: 'Quote accepted. Pay the deposit to confirm.',
-      negotiating: 'Asked for a revised quote',
       cancelled: 'Booking cancelled',
       declined: 'Enquiry declined',
       completed: 'Booking marked completed',
@@ -322,6 +319,28 @@ export default function Bookings() {
     };
     ask({ title, description, confirmLabel, destructive, action: () => changeStatus(b.id, s, success[s], noShow) });
   };
+  const askForChanges = (b: Booking) => {
+    setChangesError('');
+    setChanges({ booking: b, message: '' });
+  };
+  function sendChanges() {
+    if (!changes) return;
+    return changesSubmit.run(async () => {
+      setChangesError('');
+      try {
+        await changeStatus(
+          changes.booking.id,
+          'negotiating',
+          'Asked for a revised quote',
+          undefined,
+          changes.message.trim() || undefined,
+        );
+        setChanges(null);
+      } catch (e: unknown) {
+        setChangesError(errorMessage(e, 'Unable to ask for changes.'));
+      }
+    });
+  }
   const setQ = (key: keyof QuoteForm, value: string) => {
     setQuote((current) => (current ? { ...current, [key]: value } : current));
     quoteErrors.clear(key as QuoteField);
@@ -352,7 +371,11 @@ export default function Bookings() {
                   ? 'Bookings appear here once a hirer confirms'
                   : 'Bookings appear here once a musician accepts'
               }
-              action={{ label: 'Book talent', to: `${base}/book-talent` }}
+              action={
+                base === '/jobseeker'
+                  ? { label: 'Set availability', to: `${base}/availability` }
+                  : { label: 'Book talent', to: `${base}/book-talent` }
+              }
             />
           </div>
         ) : (
@@ -371,7 +394,7 @@ export default function Bookings() {
                         </div>
                         <p className="text-sm text-slate-400 mt-2 break-words">
                           <span className="capitalize">{String(b.event_type || 'event').replace(/-/g, ' ')}</span> ·{' '}
-                          {formatDate(b.event_date)} · {b.city}
+                          {eventDate(b.event_date)} · {b.city}
                           {b.venue_name ? ` · ${b.venue_name}` : ''}
                         </p>
                         <p className="text-sm mt-2">
@@ -400,7 +423,7 @@ export default function Bookings() {
                           </Button>
                         )}
                         {b.isRequester && b.status === 'quoted' && can.includes('negotiating') && (
-                          <Button size="sm" variant="outline" onClick={() => confirmStatus(b, 'negotiating')}>
+                          <Button size="sm" variant="outline" onClick={() => askForChanges(b)}>
                             Ask for changes
                           </Button>
                         )}
@@ -463,9 +486,7 @@ export default function Bookings() {
                           </h3>
                           <span className="text-sm text-emerald-300">
                             Deposit {b.latestQuote.depositPercent}%
-                            {b.latestQuote.validUntil
-                              ? ` · valid until ${new Date(b.latestQuote.validUntil).toLocaleDateString()}`
-                              : ''}
+                            {b.latestQuote.validUntil ? ` · valid until ${formatDate(b.latestQuote.validUntil)}` : ''}
                           </span>
                         </div>
                         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-3 text-xs text-slate-400">
@@ -514,7 +535,7 @@ export default function Bookings() {
                                   {p.kind} · {money(p.currency, p.amount)}
                                 </span>
                                 <span className="flex items-center gap-3">
-                                  {p.status} · {new Date(p.created_at).toLocaleString()}
+                                  {p.status} · {formatWhen(p.created_at)}
                                   {p.invoiceId && (
                                     <Link
                                       to={`${base}/invoices/${p.invoiceId}/print`}
@@ -674,6 +695,32 @@ export default function Bookings() {
               </Field>
             </>
           )}
+        </FormDialog>
+        <FormDialog
+          open={Boolean(changes)}
+          onOpenChange={(open) => !open && setChanges(null)}
+          title="Ask for changes"
+          description={`${changes?.booking.actName || 'The act'} is told you want a revised quote.`}
+          submitLabel="Ask for changes"
+          busyLabel="Sending…"
+          busy={changesSubmit.busy}
+          error={changesError}
+          onSubmit={sendChanges}
+        >
+          <Field
+            id="changes-message"
+            label="What should change?"
+            optional
+            help="Sent to them in Messages with your request."
+          >
+            <textarea
+              className={textareaClass}
+              maxLength={1000}
+              placeholder="A shorter set, a lower price, a different date…"
+              value={changes?.message || ''}
+              onChange={(e) => setChanges((current) => (current ? { ...current, message: e.target.value } : current))}
+            />
+          </Field>
         </FormDialog>
         {confirmDialog}
       </main>

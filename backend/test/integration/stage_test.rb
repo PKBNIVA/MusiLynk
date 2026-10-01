@@ -350,6 +350,130 @@ class StageTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.parsed_body["posts"].length
   end
 
+  # ---- Audit fixes (A-30..A-39) ---------------------------------------------------------------
+
+  test "the feed cursor keeps advancing as time decay re-ranks posts between requests" do
+    25.times { |n| Post.create!(author_type: "user", author_id: @bob.id, created_by_user_id: @bob.id, body: "Decay #{n}", applause_count: n, visibility: "public") }
+
+    get "/api/stage/feed", headers: auth(@alice)
+    first_page = response.parsed_body
+    assert_equal 20, first_page["posts"].length
+
+    travel_to 5.hours.from_now do
+      get "/api/stage/feed", params: { cursor: first_page["nextCursor"] }, headers: auth(@alice)
+      second_page = response.parsed_body
+      assert_equal 5, second_page["posts"].length
+      assert_empty (first_page["posts"].map { _1["id"] } & second_page["posts"].map { _1["id"] })
+      assert_nil second_page["nextCursor"], "the last page ends the feed"
+    end
+  end
+
+  test "post media carries a public url for every viewer, only for the author's own finished uploads" do
+    upload = Upload.create!(user: @alice, storage: "s3", key: "uploads/#{@alice.id}/a/photo.jpg", filename: "photo.jpg", content_type: "image/jpeg",
+      byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/photo.jpg")
+    foreign = Upload.create!(user: @bob, storage: "s3", key: "uploads/#{@bob.id}/b/other.jpg", filename: "other.jpg", content_type: "image/jpeg",
+      byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/other.jpg")
+    post "/api/stage/posts", params: { body: "Photo day", media: [{ uploadId: upload.id, type: "image" }, { uploadId: foreign.id, type: "image" }] },
+      headers: auth(@alice), as: :json
+    assert_response :created
+
+    get "/api/stage/posts/#{response.parsed_body["id"]}", headers: auth(@bob)
+    media = response.parsed_body["post"]["media"]
+    assert_equal "https://cdn.example.com/photo.jpg", media.first["url"]
+    assert_nil media.last["url"]
+  end
+
+  test "a page of posts with photos looks the urls up in one query" do
+    posts = 4.times.map do |i|
+      upload = Upload.create!(user: @alice, storage: "s3", key: "uploads/#{@alice.id}/a/p#{i}.jpg", filename: "p#{i}.jpg", content_type: "image/jpeg",
+        byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/p#{i}.jpg")
+      Post.create!(author_type: "user", author_id: @alice.id, created_by_user_id: @alice.id, body: "Pic #{i}", media: [{ uploadId: upload.id, type: "image" }])
+    end
+    upload_selects = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, payload| upload_selects << payload[:sql] if payload[:sql].match?(/FROM "uploads"/) }
+    get "/api/stage/feed", headers: auth(@bob)
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+    urls = response.parsed_body["posts"].select { posts.map(&:id).include?(_1["id"]) }.map { _1["media"].first["url"] }
+    assert_equal 4, urls.compact.size
+    assert_operator upload_selects.size, :<=, 1, "uploads should be queried once per page, not once per post"
+  end
+
+  test "stage post uploads are not swept as unreferenced" do
+    upload = Upload.create!(user: @alice, storage: "s3", key: "uploads/#{@alice.id}/a/p.jpg", filename: "p.jpg", content_type: "image/jpeg",
+      byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/p.jpg", created_at: 3.days.ago)
+    assert_includes Upload.unreferenced, upload
+    Post.create!(author_type: "user", author_id: @alice.id, created_by_user_id: @alice.id, body: "Pic", media: [{ uploadId: upload.id, type: "image" }])
+    assert_not_includes Upload.unreferenced, upload
+    assert upload.referenced?
+  end
+
+  test "media of a deleted stage post no longer counts as referenced" do
+    upload = Upload.create!(user: @alice, storage: "s3", key: "uploads/#{@alice.id}/a/q.jpg", filename: "q.jpg", content_type: "image/jpeg",
+      byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/q.jpg", created_at: 3.days.ago)
+    gone = Post.create!(author_type: "user", author_id: @alice.id, created_by_user_id: @alice.id, body: "Pic", media: [{ uploadId: upload.id, type: "image" }])
+    assert upload.referenced?
+    gone.update!(status: "deleted")
+    assert_not upload.referenced?
+    assert_includes Upload.unreferenced, upload
+  end
+
+  test "resharing notifies the original author, but not when resharing your own post" do
+    original = Post.create!(author_type: "user", author_id: @alice.id, created_by_user_id: @alice.id, body: "Original", visibility: "public")
+    post "/api/stage/posts", params: { body: "Worth a look", resharedPostId: original.id }, headers: auth(@bob), as: :json
+    assert_response :created
+    note = @alice.notifications.find_by(kind: "stage_reshare")
+    assert_equal "/stage/posts/#{response.parsed_body["id"]}", note.link
+
+    assert_no_difference -> { @alice.notifications.count } do
+      post "/api/stage/posts", params: { body: "Again", resharedPostId: original.id }, headers: auth(@alice), as: :json
+    end
+  end
+
+  test "replying to a comment notifies the commenter, once, and not the post owner twice" do
+    post "/api/stage/posts", params: { body: "Thread" }, headers: auth(@alice), as: :json
+    post_id = response.parsed_body["id"]
+    post "/api/stage/posts/#{post_id}/comments", params: { body: "Top level" }, headers: auth(@bob), as: :json
+    comment_id = response.parsed_body["id"]
+    carol = create_user("Carol Stage", "jobseeker")
+
+    post "/api/stage/posts/#{post_id}/comments", params: { body: "Replying to Bob", parentId: comment_id }, headers: auth(carol), as: :json
+    assert_response :created
+    assert_equal 1, @bob.notifications.where(kind: "stage_reply").count
+
+    assert_no_difference -> { @bob.notifications.count } do
+      post "/api/stage/posts/#{post_id}/comments", params: { body: "Replying to myself", parentId: comment_id }, headers: auth(@bob), as: :json
+    end
+
+    post "/api/stage/posts/#{post_id}/comments", params: { body: "Alice's comment" }, headers: auth(@alice), as: :json
+    alice_comment = response.parsed_body["id"]
+    assert_difference -> { @alice.notifications.where(kind: "stage_reply").count }, 0 do
+      post "/api/stage/posts/#{post_id}/comments", params: { body: "Reply to the owner", parentId: alice_comment }, headers: auth(@bob), as: :json
+    end
+  end
+
+  test "hashtags keep letters from every script and ignore single characters" do
+    assert_equal %w[मुंबई jazz_night tabla], Post.extract_hashtags("#मुंबई #Jazz_Night #a #tabla")
+    post "/api/stage/posts", params: { body: "Aaj ki raat #संगीत" }, headers: auth(@alice), as: :json
+    get "/api/stage/tags/#{ERB::Util.url_encode("संगीत")}"
+    assert_response :success
+    assert_equal 1, response.parsed_body["posts"].length
+  end
+
+  test "an author endpoint answers for members without posts and 404s for unknown ones" do
+    get "/api/stage/authors/user/#{@alice.id}", headers: auth(@bob)
+    assert_response :success
+    assert_equal "Alice Stage", response.parsed_body["author"]["name"]
+
+    get "/api/stage/authors/user/does-not-exist", headers: auth(@bob)
+    assert_response :not_found
+    get "/api/stage/authors/act/#{@act.id}"
+    assert_equal "The Act", response.parsed_body["author"]["name"]
+    get "/api/stage/authors/system/verse"
+    assert_response :success
+    get "/api/stage/authors/bogus/x"
+    assert_response :unprocessable_content
+  end
+
   # ---- Notifications -------------------------------------------------------------
 
   test "notifies the author on applause and comment, coalesced per post" do

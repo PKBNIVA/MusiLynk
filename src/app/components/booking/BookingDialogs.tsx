@@ -20,6 +20,8 @@ type FormDialogProps = {
   canSubmit?: boolean;
   error?: string;
   wide?: boolean;
+  /** A promise or reassurance under the buttons ("We reply within 2 hours"). */
+  footerNote?: ReactNode;
   onSubmit: () => void | Promise<void>;
   children: ReactNode;
 };
@@ -35,6 +37,7 @@ export function FormDialog({
   canSubmit = true,
   error,
   wide,
+  footerNote,
   onSubmit,
   children,
 }: FormDialogProps) {
@@ -65,6 +68,11 @@ export function FormDialog({
               {busy ? busyLabel || 'Saving…' : submitLabel}
             </Button>
           </DialogFooter>
+          {footerNote && (
+            <p data-testid="dialog-footer-note" className="text-center text-sm text-slate-300 sm:text-right">
+              {footerNote}
+            </p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

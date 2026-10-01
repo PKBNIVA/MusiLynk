@@ -15,6 +15,8 @@ export interface StageAuthor {
   verified?: boolean;
   /** True for the platform's own "Verse" author (StageSystemPostsJob, FastResponderWeekJob). */
   system?: boolean;
+  /** Demo/showcase account: drawn as generated art rather than initials. */
+  demo?: boolean;
 }
 
 export type PostKind =
@@ -33,6 +35,8 @@ export interface StageMedia {
   uploadId: string;
   type: 'image' | 'audio' | 'video';
   caption?: string;
+  /** Public URL of the stored file, supplied by the API for every viewer. */
+  url?: string | null;
 }
 
 export type SharedEntity =
@@ -86,6 +90,10 @@ const base = '/stage';
 
 export function fetchFeed(cursor?: string | null) {
   return apiGet<FeedPage>(`${base}/feed${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`);
+}
+
+export function fetchAuthor(type: StageAuthorType, id: string) {
+  return apiGet<{ author: StageAuthor }>(`${base}/authors/${type}/${encodeURIComponent(id)}`);
 }
 
 export function fetchAuthorPosts(type: StageAuthorType, id: string, cursor?: string | null) {
@@ -285,7 +293,9 @@ export function isOwnedByActor(author: StageAuthor, selfUserId: string | undefin
 
 // ---- text helpers --------------------------------------------------------
 
-const HASHTAG_PATTERN = /#(\w+)/g;
+// Letters, combining marks (Devanagari vowel signs and the like), digits and underscores, 2-50
+// characters: identical to Post::HASHTAG_PATTERN in backend/app/models/post.rb.
+const HASHTAG_PATTERN = /#([\p{L}\p{M}\p{N}_]{2,50})/gu;
 
 /**
  * Splits a post body into plain text and hashtag segments (hashtags become `/stage/tags/:tag`
@@ -306,6 +316,34 @@ export function splitHashtags(body: string): TextSegment[] {
   }
   if (lastIndex < body.length) segments.push({ kind: 'text', value: body.slice(lastIndex) });
   return segments;
+}
+
+export type FeedEntry = { kind: 'post'; post: StagePost } | { kind: 'system'; posts: StagePost[] };
+
+const isSystemPost = (post: StagePost) => post.kind === 'system' || Boolean(post.author.system);
+
+/**
+ * The feed as render entries: a run of two or more consecutive Verse system posts ("X joined",
+ * "N urgent requests filled") becomes one "This week on Verse" entry instead of a wall of
+ * near-identical cards; every other post stays as it is.
+ */
+export function groupFeed(posts: StagePost[]): FeedEntry[] {
+  const entries: FeedEntry[] = [];
+  let run: StagePost[] = [];
+  const flush = () => {
+    if (run.length >= 2) entries.push({ kind: 'system', posts: run });
+    else run.forEach((post) => entries.push({ kind: 'post', post }));
+    run = [];
+  };
+  for (const post of posts) {
+    if (isSystemPost(post)) run.push(post);
+    else {
+      flush();
+      entries.push({ kind: 'post', post });
+    }
+  }
+  flush();
+  return entries;
 }
 
 /** A short "3h", "2d", "just now" label; falls back to a date past a week. */
@@ -371,17 +409,14 @@ export function embedPreviewFor(url: string | null | undefined): EmbedPreview {
   return null;
 }
 
-// Media rendered from a post keeps its image/audio URL only for uploads made in this browser
-// session (the API never returns a URL alongside a stored post's media — only `uploadId`,
-// `type` and `caption`, see backend/docs/api-stage-feed.md). This small session cache lets a
-// person's own freshly-posted media render immediately; older or other people's media shows as
-// a labelled attachment instead of a broken image.
+// The API returns each media item's public `url`. This small session cache only bridges the moment
+// between an upload finishing in the Composer and the saved post coming back with its own url.
 const mediaUrlCache = new Map<string, string>();
 export function rememberMediaUrl(uploadId: string, url: string) {
   mediaUrlCache.set(uploadId, url);
 }
-export function mediaUrlFor(uploadId: string): string | undefined {
-  return mediaUrlCache.get(uploadId);
+export function mediaUrlFor(media: Pick<StageMedia, 'uploadId' | 'url'>): string | undefined {
+  return media.url || mediaUrlCache.get(media.uploadId);
 }
 
 export function authorPath(author: StageAuthor) {

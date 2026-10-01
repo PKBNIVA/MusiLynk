@@ -35,6 +35,7 @@ class Upload < ApplicationRecord
       AND (uploads.public_url IS NULL OR NOT EXISTS (SELECT 1 FROM profiles pr WHERE pr.photo_url = uploads.public_url))
       AND (uploads.public_url IS NULL OR NOT EXISTS (SELECT 1 FROM acts a WHERE a.photo_url = uploads.public_url))
       AND NOT EXISTS (SELECT 1 FROM resumes r WHERE r.upload_id = uploads.id)
+      AND NOT EXISTS (SELECT 1 FROM posts po WHERE po.status <> 'deleted' AND po.media @> jsonb_build_array(jsonb_build_object('uploadId', uploads.id)))
       AND NOT EXISTS (
         SELECT 1 FROM applications a
         WHERE a.materials_snapshot IS NOT NULL AND (a.materials_snapshot #>> '{resume,uploadId}') = uploads.id
@@ -58,6 +59,7 @@ class Upload < ApplicationRecord
     (public_url.present? && PortfolioItem.where(url: public_url).or(PortfolioItem.where(thumbnail_url: public_url)).or(PortfolioItem.where(waveform_url: public_url)).exists?) ||
       (public_url.present? && (Profile.exists?(photo_url: public_url) || Act.exists?(photo_url: public_url))) ||
       Resume.exists?(upload_id: id) ||
+      Post.where.not(status: "deleted").where("media @> ?", [{ uploadId: id }].to_json).exists? ||
       Application.where.not(materials_snapshot: nil).where("(materials_snapshot #>> '{resume,uploadId}') = ?", id).exists?
   end
 

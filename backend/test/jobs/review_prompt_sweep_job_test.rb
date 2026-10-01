@@ -25,6 +25,8 @@ class ReviewPromptSweepJobTest < ActiveJob::TestCase
     assert requester_prompt.notified_at.present?
     assert_equal 1, requester.notifications.where(kind: "review_prompt").count
     assert_equal 1, filled_by.notifications.where(kind: "review_prompt").count
+    assert_equal "/jobseeker/reviews?employerId=#{requester.id}", filled_by.notifications.find_by(kind: "review_prompt").link
+    assert_equal "/employer", requester.notifications.find_by(kind: "review_prompt").link
   end
 
   test "never creates a second prompt for the same source and party" do

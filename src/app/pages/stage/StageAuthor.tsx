@@ -4,19 +4,27 @@ import { ShieldCheck, Music4 } from 'lucide-react';
 import { Navigation } from '../../components/Navigation';
 import { EmptyState } from '../../components/kit/EmptyState';
 import { Skeleton } from '../../components/ui/skeleton';
-import { Avatar, AvatarFallback } from '../../components/ui/avatar';
+import { UserAvatar } from '../../components/kit/UserAvatar';
 import { PostCard } from '../../components/stage/PostCard';
 import { FollowButton } from '../../components/stage/FollowButton';
 import { useFeedList } from '../../components/stage/useFeedList';
-import { fetchAuthorPosts, fetchFollowers, type StageAuthorType } from '../../lib/stage';
+import { errorStatus } from '../../lib/errors';
+import {
+  fetchAuthor,
+  fetchAuthorPosts,
+  fetchFollowers,
+  type StageAuthor as Author,
+  type StageAuthorType,
+} from '../../lib/stage';
 import { usePageMeta } from '../../components/PageMeta';
 
 export default function StageAuthor() {
   const { type = 'user', id = '' } = useParams<{ type: StageAuthorType; id: string }>();
-  const [name, setName] = useState('');
-  const [verified, setVerified] = useState(false);
+  const [author, setAuthor] = useState<Author | null>(null);
+  const [authorState, setAuthorState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
   const [followersCount, setFollowersCount] = useState<number | null>(null);
   const [following, setFollowing] = useState(false);
+  const name = author?.name ?? '';
   usePageMeta(name || 'Stage profile', name ? `${name}'s posts on the Stage.` : undefined);
 
   const fetchPage = useCallback(
@@ -30,11 +38,20 @@ export default function StageAuthor() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (posts[0]) {
-      setName(posts[0].author.name);
-      setVerified(Boolean(posts[0].author.verified));
-    }
-  }, [posts]);
+    let alive = true;
+    setAuthor(null);
+    setAuthorState('loading');
+    fetchAuthor(type as StageAuthorType, id)
+      .then((d) => {
+        if (!alive) return;
+        setAuthor(d.author);
+        setAuthorState('ready');
+      })
+      .catch((e: unknown) => alive && setAuthorState(errorStatus(e) === 404 ? 'missing' : 'error'));
+    return () => {
+      alive = false;
+    };
+  }, [type, id]);
 
   useEffect(() => {
     let alive = true;
@@ -60,36 +77,60 @@ export default function StageAuthor() {
     return () => observer.disconnect();
   }, [loadMore]);
 
+  if (authorState === 'missing') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Navigation />
+        <main className="mx-auto max-w-2xl px-4 pt-24 pb-16 md:px-6">
+          <EmptyState
+            icon={Music4}
+            title="We couldn't find this member"
+            hint="The profile may have been removed, or the link is wrong."
+            action={{ label: 'Back to the Stage', to: '/stage' }}
+          />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="mx-auto max-w-2xl px-4 pt-24 pb-16 md:px-6">
         <header className="flex items-center gap-4">
-          <Avatar className="size-16">
-            <AvatarFallback className="bg-violet-500/20 text-2xl text-violet-200">
-              {(name || '?').charAt(0)}
-            </AvatarFallback>
-          </Avatar>
+          {author ? (
+            <UserAvatar id={author.id} name={author.name} size="lg" photoUrl={author.avatar} demo={author.demo} />
+          ) : (
+            <Skeleton className="size-16 rounded-full" />
+          )}
           <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-1.5 truncate text-2xl font-bold">
-              {name || 'Loading…'}
-              {verified && <ShieldCheck aria-hidden="true" size={18} className="text-emerald-400" />}
-            </h1>
+            {author ? (
+              <h1 className="flex items-center gap-1.5 truncate text-2xl font-bold">
+                {author.name}
+                {author.verified && <ShieldCheck aria-hidden="true" size={18} className="text-emerald-400" />}
+              </h1>
+            ) : (
+              <h1 className="text-2xl font-bold">
+                {authorState === 'error' ? 'Stage profile' : <Skeleton className="h-7 w-40" />}
+              </h1>
+            )}
             {followersCount !== null && (
               <p className="text-sm text-slate-400">
                 {followersCount} follower{followersCount === 1 ? '' : 's'}
               </p>
             )}
           </div>
-          <FollowButton
-            type={type as StageAuthorType}
-            id={id}
-            initialFollowing={following}
-            onChange={(now) => {
-              setFollowing(now);
-              setFollowersCount((count) => (count === null ? count : Math.max(0, count + (now ? 1 : -1))));
-            }}
-          />
+          {author && (
+            <FollowButton
+              type={type as StageAuthorType}
+              id={id}
+              initialFollowing={following}
+              onChange={(now) => {
+                setFollowing(now);
+                setFollowersCount((count) => (count === null ? count : Math.max(0, count + (now ? 1 : -1))));
+              }}
+            />
+          )}
         </header>
 
         {loading && (

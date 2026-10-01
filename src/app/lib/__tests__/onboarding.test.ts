@@ -58,7 +58,10 @@ describe('providers and previews', () => {
     const base = localPreview('https://www.myband.in/epk');
     expect(previewTitle({ ...base, title: 'Set' })).toBe('Set');
     expect(previewTitle(base)).toBe('myband.in');
-    expect(previewTitle(localPreview('https://open.spotify.com/1'))).toBe('Spotify track');
+    expect(previewTitle(localPreview('https://open.spotify.com/1'))).toBe('Spotify link');
+    expect(previewTitle(localPreview('https://open.spotify.com/track/1'))).toBe('Spotify track');
+    expect(previewTitle(localPreview('https://open.spotify.com/artist/1'))).toBe('Spotify artist');
+    expect(previewTitle(localPreview('https://open.spotify.com/intl-in/album/1'))).toBe('Spotify album');
     expect(previewTitle(localPreview('https://youtu.be/1'))).toBe('YouTube post');
     expect(previewTitle({ ...base, url: 'nonsense' })).toBe('nonsense');
   });

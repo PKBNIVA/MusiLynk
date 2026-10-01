@@ -172,7 +172,7 @@ module Onboarding
       provider = LinkPreview.provider_for(url)
       cached = LinkPreview.cached(url) || {}
       title = LinkPreview.clean_text(link[:title], LinkPreview::TITLE_LIMIT) || cached[:title] ||
-        "#{LinkPreview.label_for(provider)} #{provider == 'link' ? 'to my work' : 'work sample'}"
+        LinkPreview.default_title(url, provider, plain: provider == "link" ? "to my work" : "work sample")
       thumbnail = LinkPreview.clean_thumbnail(link[:thumbnail]) || cached[:thumbnail]
       thumbnail = nil if thumbnail && PortfolioItem.storage_url?(thumbnail)
       description = LinkPreview.clean_text(link[:caption], 2_000)

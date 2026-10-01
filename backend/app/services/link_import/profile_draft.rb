@@ -15,16 +15,21 @@ module LinkImport
     YEARS_SINCE_PATTERN = /\bsince\s+(19|20)(\d{2})\b/i
     YEARS_COUNT_PATTERN = /\b(\d{1,2})\+?\s*years?\b/i
 
-    Result = Struct.new(:sources, :draft, :ai_used, :provenance, keyword_init: true) do
-      def as_json = { sources:, draft:, aiUsed: ai_used, provenance: }
+    Result = Struct.new(:sources, :draft, :ai_used, :provenance, :failures, keyword_init: true) do
+      def as_json = { sources:, draft:, aiUsed: ai_used, provenance:, failures: failures || [] }
     end
 
     # `identity` is {user:} for a signed-in caller or {anonymous_ip:} for the public sign-up path
     # — whichever the launch-mode usage cap should be checked against. `resolver:` is only ever
     # overridden by tests (anything responding to `.call(url, own_hosts:)`).
-    def self.build(urls, own_hosts: [], identity: {}, resolver: Resolver, ai: AiAssist.new)
+    #
+    # `known` is what the person already told us (`{roles:, city:}`): it fills the draft where the
+    # links yielded nothing, so a link we cannot read never comes back as a blank form.
+    # `failures` lists every link that could not be read, with a message to show next to it.
+    def self.build(urls, own_hosts: [], identity: {}, resolver: Resolver, ai: AiAssist.new, known: {})
       urls = Array(urls).select { _1.is_a?(String) }.first(MAX_LINKS)
-      sources = urls.filter_map { |url| resolve_source(url, own_hosts, resolver) }
+      failures = []
+      sources = urls.filter_map { |url| resolve_source(url, own_hosts, resolver, failures) }
       flat = flatten(sources)
 
       deterministic_draft, provenance = extract_deterministic(flat)
@@ -33,16 +38,34 @@ module LinkImport
       if ai_draft
         draft = deterministic_draft.slice(:city, :yearsExperience).merge(ai_draft)
         provenance = provenance.merge(ai_provenance(ai_draft, flat))
-        Result.new(sources:, draft:, ai_used: true, provenance:)
+        Result.new(sources:, draft: with_known(draft, known), ai_used: true, provenance: known_provenance(provenance, known), failures:)
       else
-        Result.new(sources:, draft: deterministic_draft, ai_used: false, provenance:)
+        Result.new(sources:, draft: with_known(deterministic_draft, known), ai_used: false, provenance: known_provenance(provenance, known), failures:)
       end
     end
 
-    def self.resolve_source(url, own_hosts, resolver)
+    def self.resolve_source(url, own_hosts, resolver, failures = [])
       resolver.call(url, own_hosts:)
-    rescue LinkPreview::InvalidUrl, SafeFetch::Blocked
+    rescue LinkPreview::InvalidUrl => error
+      failures << { url: url.to_s.first(300), message: error.message }
       nil
+    rescue SafeFetch::Blocked
+      failures << { url: url.to_s.first(300), message: "We couldn't open that link. Check it is public and try again." }
+      nil
+    end
+
+    def self.known_provenance(provenance, known)
+      known[:city].to_s.strip.present? ? provenance.except("city") : provenance
+    end
+
+    # The person's own answers come first (they chose them); whatever the links found follows.
+    def self.with_known(draft, known)
+      roles = Array(known[:roles]).map { _1.to_s.strip }.reject(&:blank?).first(10)
+      city = known[:city].to_s.strip.presence
+      draft.merge(
+        roles: (roles + Array(draft[:roles])).uniq { _1.downcase },
+        city: city || draft[:city]
+      )
     end
 
     # Every source plus, one level down, a link-in-bio page's expanded links — each carries the

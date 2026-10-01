@@ -276,10 +276,10 @@ test.describe('payments against the Razorpay simulator', () => {
     await signIn(page, user);
     await page.goto('/employer/bookings');
 
-    const pay = page.getByRole('button', { name: 'Pay deposit · INR 10,500' });
+    const pay = page.getByRole('button', { name: 'Pay deposit · ₹10,500' });
     await pay.click();
     const checkout = page.getByTestId('razorpay-simulator');
-    await expect(checkout).toContainText('INR 10,500');
+    await expect(checkout).toContainText('₹10,500');
     await checkout.getByRole('button', { name: 'Decline payment' }).click();
     await expect(checkout.getByRole('alert')).toContainText('declined');
     await checkout.getByRole('button', { name: 'Close checkout' }).click();
@@ -300,9 +300,9 @@ test.describe('payments against the Razorpay simulator', () => {
     expect(refund.status).toBe(200);
     expect(refund.body.deliveries.map((d: { status: number }) => d.status)).toEqual([200, 200]);
     await page.reload();
-    await expect(page.getByTestId('deposit-status')).toHaveText('Deposit refunded · INR 10,500');
+    await expect(page.getByTestId('deposit-status')).toHaveText('Deposit refunded · ₹10,500');
     await page.getByRole('button', { name: /Payment history/ }).click();
-    await expect(page.getByText(/deposit · INR 10,500/).first()).toBeVisible();
+    await expect(page.getByText(/deposit · ₹10,500/).first()).toBeVisible();
     await expect(page.getByText(/^refunded ·/)).toBeVisible();
   });
 

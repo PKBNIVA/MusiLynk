@@ -38,7 +38,7 @@ class WeeklyDigestTest < ActiveSupport::TestCase
 
     sections = WeeklyDigest.build(musician, since: @since, until_time: Time.current)
     community = sections.find { _1[:heading] == "This week on Verse" }
-    assert_equal "1 request were filled through Verse this week.", community[:footnote]
+    assert_equal "1 request was filled through Verse this week.", community[:footnote]
   end
 
   test "musician digest ignores demo urgent requests, in the list and in the filled count" do

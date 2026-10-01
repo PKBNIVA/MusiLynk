@@ -13,7 +13,7 @@ import type { Job } from '../lib/apiTypes';
 
 const STATUS_COPY: Record<string, string> = {
   draft: 'Only you can see this draft. Submit it for review when it is ready.',
-  pending: 'We review every listing within 24 hours, then it goes live. You can edit it any time.',
+  pending: 'We review every opportunity within 24 hours, then it goes live. You can edit it any time.',
   published: 'Live: musicians can find it and apply.',
   rejected: 'We asked for changes before it can go live. Edit it and send it back.',
   closed: 'Closed: it no longer takes applications. Reopen it from Your opportunities.',

@@ -70,7 +70,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Opportunities and hiring',
-        'Listings must describe legitimate work. Misleading jobs, unlawful discrimination, fake auditions, undisclosed application fees and fraudulent offers are prohibited.',
+        'Opportunities must describe legitimate work. Misleading jobs, unlawful discrimination, fake auditions, undisclosed application fees and fraudulent offers are prohibited.',
       ],
       [
         'Bookings and payments',
@@ -78,7 +78,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Content and rights',
-        'Only upload or link work you have the right to share. You retain responsibility for your portfolio, credits, media and listing content.',
+        'Only upload or link work you have the right to share. You retain responsibility for your portfolio, credits, media and opportunity content.',
       ],
       [
         'Platform enforcement',
@@ -201,7 +201,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Reporting and enforcement',
-        'Use Report on a conversation, profile or listing. Moderators review the report with the relevant messages and the account’s history, then dismiss it, send a warning or suspend the account. Blocking stops messages both ways at any time.',
+        'Use Report on a conversation, profile or opportunity. Moderators review the report with the relevant messages and the account’s history, then dismiss it, send a warning or suspend the account. Blocking stops messages both ways at any time.',
       ],
     ],
   },
@@ -227,7 +227,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ['Operator', 'Verse is operated by Alien Brains Private Limited.'],
       [
         'Support and grievances',
-        `Email ${SUPPORT_EMAIL}. Include your account email and any relevant listing, booking or transaction reference, but never send a password, one-time code or full payment-card details.`,
+        `Email ${SUPPORT_EMAIL}. Include your account email and any relevant opportunity, booking or transaction reference, but never send a password, one-time code or full payment-card details.`,
       ],
       [
         'Response and escalation',

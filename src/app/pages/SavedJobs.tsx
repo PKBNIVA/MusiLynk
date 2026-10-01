@@ -56,7 +56,7 @@ export default function SavedJobs() {
           <SceneEmptyState
             scene="bookmark"
             title="Nothing saved yet"
-            hint="Tap the bookmark on any listing to keep it here."
+            hint="Tap the bookmark on any opportunity to keep it here."
             action={{ label: 'Browse opportunities', to: '/jobseeker/jobs' }}
           />
         ) : (

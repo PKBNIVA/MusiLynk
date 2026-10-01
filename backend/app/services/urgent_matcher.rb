@@ -124,7 +124,7 @@ class UrgentMatcher
     end
     if available_on_request_date?(user)
       points += 5
-      reasons << "Available on #{@request.start_at.to_date.strftime('%d %b')}"
+      reasons << "Available on #{IndianFormat.date_time(@request.start_at).split(',').first}"
     end
     Candidate.new(user:, score: points, reasons: reasons.first(3))
   end

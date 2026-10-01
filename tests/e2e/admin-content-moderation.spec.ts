@@ -63,7 +63,7 @@ test('unpublish job asks for confirmation, then closes the report', async ({ pag
     status: 'open',
     entity_type: 'job',
     entity_id: 'job-1',
-    reason: 'Misleading listing',
+    reason: 'Misleading opportunity',
     created_at: '2026-09-01T00:00:00Z',
     reporterName: 'Asha',
   };
@@ -72,7 +72,7 @@ test('unpublish job asks for confirmation, then closes the report', async ({ pag
       id: 'rep-1',
       entityType: 'job',
       entityId: 'job-1',
-      reason: 'Misleading listing',
+      reason: 'Misleading opportunity',
       status: 'open',
       createdAt: '2026-09-01T00:00:00Z',
       reporterId: 'r1',

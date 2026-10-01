@@ -247,14 +247,14 @@ export default function JobDetails() {
                       )}
                       {job.saved ? 'Saved' : 'Save'}
                     </Button>
-                    <Button variant="ghost" size="icon" aria-label="Report listing" onClick={() => setReporting(true)}>
+                    <Button variant="ghost" size="icon" aria-label="Report opportunity" onClick={() => setReporting(true)}>
                       <Flag size={17} />
                     </Button>
                   </div>
                 )}
                 {job.status === 'closed' && !isOwner && (
                   <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-slate-300">
-                    This listing has closed.
+                    This opportunity has closed.
                   </div>
                 )}
                 {asSeeker && job.status !== 'closed' && (
@@ -370,7 +370,7 @@ export default function JobDetails() {
                 <div className="text-xs text-slate-500 mt-5 pt-4 border-t border-white/10">
                   <b className="text-slate-400">Trust note:</b>{' '}
                   {asSeeker
-                    ? 'Never pay an application/audition fee through private channels. Use Report if listing terms change materially or feel unsafe.'
+                    ? 'Never pay an application/audition fee through private channels. Use Report if the terms change materially or feel unsafe.'
                     : 'Only publish terms your organization is prepared to honor, and keep applicant communication on Verse.'}
                 </div>
               </CardContent>
@@ -391,7 +391,7 @@ export default function JobDetails() {
       <ReportDialog
         open={reporting}
         onOpenChange={setReporting}
-        title="Report this listing"
+        title="Report this opportunity"
         description="Tell our moderators what is wrong with this opportunity."
         onSubmit={report}
       />

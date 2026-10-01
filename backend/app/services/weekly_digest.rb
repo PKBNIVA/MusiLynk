@@ -71,14 +71,14 @@ class WeeklyDigest
 
   def community_footnote
     count = ResponseTimeStats.organic_requests.where(status: "filled", updated_at: since..until_time).count
-    "#{count} #{'request'.pluralize(count)} were filled through Verse this week."
+    "#{count} #{'request'.pluralize(count)} #{count == 1 ? 'was' : 'were'} filled through Verse this week."
   end
 
   # --- Hirer digest ----------------------------------------------------------------
   def hirer_sections
     [
       section("Newly verified musicians in #{user.profile&.location.presence || 'your city'}", newly_verified_musicians, footnote: nil),
-      section("Your open listings and requests", open_listings_status, footnote: nil),
+      section("Your open opportunities and requests", open_listings_status, footnote: nil),
       { heading: "Response time this week", items: [], footnote: response_time_footnote },
       { heading: "Fastest responders this week", items: fastest_responders, footnote: nil }
     ]
@@ -96,7 +96,7 @@ class WeeklyDigest
     scope = scope.where("profiles.roles::text ~* ?", roles.map { Regexp.escape(_1) }.join("|")) if roles.any?
     scope.map do |vr|
       profile = vr.user.profile
-      { text: "#{vr.user.name} — #{profile.headline || profile.roles&.first}", link: "#{NotificationEmail.frontend_url}/talent/#{vr.user_id}" }
+      { text: "#{vr.user.name} — #{profile.headline || profile.roles&.first}", link: "#{NotificationEmail.frontend_url}/professionals/#{vr.user_id}" }
     end
   end
 

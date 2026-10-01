@@ -14,7 +14,7 @@ export const REPORT_REASONS = [
   'Asks for payment',
   'Spam or scam',
   'Unsafe contact request',
-  'Misleading listing',
+  'Misleading opportunity',
   'Other',
 ] as const;
 

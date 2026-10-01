@@ -766,7 +766,7 @@ export default function PostJob() {
                 <Label htmlFor="job-posted-as">Posting as</Label>
                 <FieldHelp topic="Posting as">
                   Post this opportunity as yourself, or as a studio, label or act you run. It shows the Page's name
-                  instead of yours and appears on that Page's public listings.
+                  instead of yours and appears on that Page's public opportunities.
                 </FieldHelp>
               </div>
               <AppSelect
@@ -864,7 +864,7 @@ export default function PostJob() {
                 role="note"
                 className="mt-3 rounded-lg border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
               >
-                Listings that don’t show the pay get fewer applicants. Add a range if you can; you can change it later.
+                Opportunities that don’t show the pay get fewer applicants. Add a range if you can; you can change it later.
               </p>
             )}
           </fieldset>
@@ -922,7 +922,7 @@ export default function PostJob() {
             label="Application deadline"
             hint={formatInputEcho(f.applicationDeadline)}
             error={form.errors.applicationDeadline}
-            help="The listing closes to new applicants after this day. Leave it blank to keep it open until you close it."
+            help="The opportunity closes to new applicants after this day. Leave it blank to keep it open until you close it."
           >
             <Input
               type="date"
@@ -1020,7 +1020,7 @@ export default function PostJob() {
             }
             required
             hint="At least 60 characters."
-            help="Cover the scope, the dates or schedule, who they will work with and what a great result looks like. Specific listings get better applicants."
+            help="Cover the scope, the dates or schedule, who they will work with and what a great result looks like. Specific opportunities get better applicants."
             error={form.errors.description}
           >
             <Textarea
@@ -1100,7 +1100,7 @@ export default function PostJob() {
           <div className="rounded-2xl border border-white/10 bg-white/[.03] p-5">
             <h3 className="mb-2 flex items-center gap-2 font-semibold">
               <ListChecks aria-hidden="true" size={20} className="text-violet-300" />
-              Review your listing
+              Review your opportunity
             </h3>
             <dl>
               <ReviewRow label="Title" value={f.title} onEdit={() => goTo(0)} />
@@ -1142,7 +1142,7 @@ export default function PostJob() {
           <div className="rounded-xl border border-emerald-400/15 bg-emerald-500/[.06] p-4 flex gap-3 text-sm text-emerald-100">
             <ShieldCheck aria-hidden="true" className="shrink-0" size={20} />
             <p>
-              Listings are reviewed for clarity, trust and suspicious off-platform fee/contact language. Verified hirers
+              Opportunities are reviewed for clarity, trust and suspicious off-platform fee/contact language. Verified hirers
               receive a trust marker, but verification never replaces your own checks on an applicant.
             </p>
           </div>
@@ -1165,7 +1165,7 @@ export default function PostJob() {
                   {
                     icon: BadgeCheck,
                     title: 'We review it',
-                    text: 'Our team checks every listing for clarity and safety before it goes live.',
+                    text: 'Our team checks every opportunity for clarity and safety before it goes live.',
                   },
                   {
                     icon: Inbox,
@@ -1262,7 +1262,7 @@ export default function PostJob() {
               role="note"
               className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
             >
-              Changes to the title, description or requirements send the listing back to review. It stays hidden from
+              Changes to the title, description or requirements send the opportunity back to review. It stays hidden from
               search until it is approved.
             </p>
           )}

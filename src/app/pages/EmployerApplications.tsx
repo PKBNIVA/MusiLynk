@@ -462,8 +462,8 @@ export default function EmployerApplications() {
                 title={filteredJob ? `No applicants for ${filteredJob.title} yet` : 'No applicants yet'}
                 hint={
                   inReview
-                    ? 'Your listing is in review. It goes live within 24 hours, and applicants can find it then.'
-                    : 'Most listings get their first applicant within 48 hours. Sharing the link speeds that up.'
+                    ? 'Your opportunity is in review. It goes live within 24 hours, and applicants can find it then.'
+                    : 'Most opportunities get their first applicant within 48 hours. Sharing the link speeds that up.'
                 }
                 action={
                   live && live.status === 'published'

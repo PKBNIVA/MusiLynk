@@ -184,7 +184,7 @@ class ReportModerationTest < ActionDispatch::IntegrationTest
 
   test "unpublish_job removes the job, auto-resolves other open reports on it and is audited" do
     job = create_job(@employer)
-    report_a = Report.create!(reporter: @talent, entity_type: "job", entity_id: job.id, reason: "Misleading listing", status: "open")
+    report_a = Report.create!(reporter: @talent, entity_type: "job", entity_id: job.id, reason: "Misleading opportunity", status: "open")
     other_reporter = create_user("Other Reporter", "jobseeker")
     report_b = Report.create!(reporter: other_reporter, entity_type: "job", entity_id: job.id, reason: "Spam or scam", status: "open")
 

@@ -100,7 +100,7 @@ test.describe('in-app dialogs', () => {
     await dialog.getByRole('radio', { name: 'Other' }).check();
     await dialog.getByRole('button', { name: 'Send report' }).click();
     await expect(dialog.getByRole('alert')).toContainText('Tell us briefly what is wrong');
-    await dialog.getByRole('radio', { name: 'Misleading listing' }).check();
+    await dialog.getByRole('radio', { name: 'Misleading opportunity' }).check();
     await dialog.getByRole('button', { name: 'Send report' }).click();
     await expect(dialog).toBeHidden();
     await page.getByRole('button', { name: 'Report listing' }).click();
@@ -118,7 +118,7 @@ test.describe('in-app dialogs', () => {
       .click();
     await expect(page.getByRole('dialog')).toBeHidden();
     expect(state.reports).toEqual([
-      { entityType: 'job', entityId: REPORT_JOB_ID, reason: 'Misleading listing' },
+      { entityType: 'job', entityId: REPORT_JOB_ID, reason: 'Misleading opportunity' },
       { entityType: 'job', entityId: REPORT_JOB_ID, reason: 'Spam or scam', details: 'Same post under five names.' },
     ]);
     expect(state.nativeDialogs).toEqual([]);

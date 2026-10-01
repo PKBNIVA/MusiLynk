@@ -4,7 +4,7 @@ class ReportsController < ApplicationController
   CREATE_LIMIT_PER_HOUR = 30
   FIELD_LIMITS = { entityType: 40, entityId: 120, reason: 200, details: 5_000 }.freeze
   # Kept in step with src/app/components/ReportDialog.tsx REPORT_REASONS.
-  REASONS = ["Harassment", "Asks for payment", "Spam or scam", "Unsafe contact request", "Misleading listing", "Other"].freeze
+  REASONS = ["Harassment", "Asks for payment", "Spam or scam", "Unsafe contact request", "Misleading opportunity", "Other"].freeze
   ENTITY_TYPES = %w[user job act review portfolio resume post comment].freeze
 
   def create

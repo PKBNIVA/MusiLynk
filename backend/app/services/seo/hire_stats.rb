@@ -18,6 +18,12 @@ module Seo
       Search::Query.new(city_name).filter(scope, LOCATION_FIELDS)
     end
 
+    # Just the head count: one COUNT query, for the callers (popular searches, related roles, the
+    # sitemap) that rank or filter 192 combinations by size and never read verified or availability.
+    def self.professionals_in(role_label, city_name, include_demo: false)
+      scope_for(role_label, city_name, include_demo:).count
+    end
+
     def self.counts_for(role_label, city_name, include_demo: false)
       scope = scope_for(role_label, city_name, include_demo:)
       professionals = scope.count

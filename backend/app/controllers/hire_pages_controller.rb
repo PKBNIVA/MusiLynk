@@ -11,7 +11,7 @@ class HirePagesController < ApplicationController
   # lists Mumbai first), each with real professional counts so the links are never dead ends.
   def popular_searches
     expires_in CACHE_TTL, public: true
-    render json: Rails.cache.fetch("hire-page/popular-searches/v2", expires_in: CACHE_TTL) { build_popular_searches }
+    render json: Rails.cache.fetch("hire-page/popular-searches/v2", expires_in: CACHE_TTL, race_condition_ttl: 30.seconds) { build_popular_searches }
   end
 
   def show
@@ -22,7 +22,7 @@ class HirePagesController < ApplicationController
     return render_not_found unless role_label && city_name
 
     expires_in CACHE_TTL, public: true
-    body = Rails.cache.fetch("hire-page/v3/#{role_slug}/#{city_slug}", expires_in: CACHE_TTL) do
+    body = Rails.cache.fetch("hire-page/v3/#{role_slug}/#{city_slug}", expires_in: CACHE_TTL, race_condition_ttl: 30.seconds) do
       build_payload(role_slug, role_label, city_slug, city_name)
     end
     render json: body
@@ -35,7 +35,7 @@ class HirePagesController < ApplicationController
     combos = city_slugs.keys.flat_map do |city_slug|
       city_name = Seo::Pages.city_name(city_slug)
       Seo::Pages.roles.map do |role_slug, role_label|
-        count = Seo::HireStats.counts_for(role_label, city_name, include_demo: true)[:professionals]
+        count = Seo::HireStats.professionals_in(role_label, city_name, include_demo: true)
         { role: { slug: role_slug, label: role_label }, city: { slug: city_slug, name: city_name }, count:,
           citySort: city_slugs.fetch(city_slug) }
       end
@@ -70,7 +70,7 @@ class HirePagesController < ApplicationController
   def related_roles(role_slug, city_name)
     Seo::Pages.sibling_roles(role_slug).map do |slug|
       label = Seo::Pages.role_label(slug)
-      { slug:, label:, count: Seo::HireStats.counts_for(label, city_name, include_demo: true)[:professionals] }
+      { slug:, label:, count: Seo::HireStats.professionals_in(label, city_name, include_demo: true) }
     end
   end
 

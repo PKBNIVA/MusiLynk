@@ -21,7 +21,7 @@ class SitemapsController < ActionController::API
   ].freeze
 
   def show
-    xml = Rails.cache.fetch("sitemap/v1", expires_in: 1.hour) { build_xml }
+    xml = Rails.cache.fetch("sitemap/v2", expires_in: 1.hour, race_condition_ttl: 30.seconds) { build_xml }
     expires_in 1.hour, public: true
     render xml: xml, content_type: "application/xml"
   end
@@ -32,9 +32,11 @@ class SitemapsController < ActionController::API
     base = FrontendUrl.base
     entries = []
     STATIC_PAGES.each { |path, freq| entries << { loc: "#{base}#{path}", changefreq: freq } }
-    Job.published.joins(:employer).merge(User.organic).find_each { |job| entries << { loc: "#{base}/opportunities/#{job.id}", lastmod: job.updated_at } }
-    talent_scope.find_each { |user| entries << { loc: "#{base}/professionals/#{user.id}", lastmod: user.updated_at } }
-    act_scope.find_each { |act| entries << { loc: "#{base}/acts/#{act.id}", lastmod: act.updated_at } }
+    # pluck, not find_each: a sitemap only needs the id and the timestamp, not whole rows (job
+    # descriptions and profile bios are the wide columns).
+    job_scope.pluck("jobs.id", "jobs.updated_at").each { |id, updated_at| entries << { loc: "#{base}/opportunities/#{id}", lastmod: updated_at } }
+    talent_scope.pluck("users.id", "users.updated_at").each { |id, updated_at| entries << { loc: "#{base}/professionals/#{id}", lastmod: updated_at } }
+    act_scope.pluck("acts.id", "acts.updated_at").each { |id, updated_at| entries << { loc: "#{base}/acts/#{id}", lastmod: updated_at } }
     portfolio_scope.each { |portfolio| entries << { loc: "#{base}/p/#{portfolio.slug}", lastmod: portfolio.updated_at } }
     indexable_hire_pages.each { |role_slug, city_slug| entries << { loc: "#{base}/hire/#{role_slug}/#{city_slug}", changefreq: "weekly" } }
     indexable_rates_pages.each { |city_slug| entries << { loc: "#{base}/rates/#{city_slug}", changefreq: "weekly" } }
@@ -49,6 +51,12 @@ class SitemapsController < ActionController::API
 
   # Demo and QA accounts are shown to people browsing the site but never to search engines:
   # every scope below is limited to organic (non-synthetic) owners.
+  # Open postings only: one whose application deadline has passed is a JobPosting past its validThrough.
+  def job_scope
+    Job.published.joins(:employer).merge(User.organic)
+      .where("jobs.application_deadline IS NULL OR jobs.application_deadline >= ?", Time.current)
+  end
+
   def talent_scope
     User.discoverable_talent.organic
   end
@@ -70,7 +78,8 @@ class SitemapsController < ActionController::API
     Seo::Pages.city_slugs.flat_map do |city_slug|
       city_name = Seo::Pages.city_name(city_slug)
       Seo::Pages.roles.filter_map do |role_slug, role_label|
-        count = Seo::HireStats.counts_for(role_label, city_name)[:professionals]
+        # One COUNT per page (the organic scope HirePagesController uses for `indexable`).
+        count = Seo::HireStats.professionals_in(role_label, city_name)
         [role_slug, city_slug] if count >= HirePagesController::INDEXABLE_MIN_PROFESSIONALS
       end
     end

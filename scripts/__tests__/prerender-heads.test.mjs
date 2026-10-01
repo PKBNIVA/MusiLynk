@@ -3,7 +3,14 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { readSeoPages, seoPageRoutes, render } from '../prerender-heads.mjs';
+import {
+  readSeoPages,
+  seoPageRoutes,
+  seoPageBreadcrumbs,
+  render,
+  renderNotFound,
+  apiPreconnect,
+} from '../prerender-heads.mjs';
 
 const scriptPath = resolve(process.cwd(), 'scripts/prerender-heads.mjs');
 
@@ -140,5 +147,86 @@ describe('prerender-heads.mjs', () => {
   it('parses a small list and ignores comments and other keys', () => {
     const lists = readSeoPages('# c\nroles:\n  a-b: A b\n\nother:\n  x: y\ncities:\n  pune: Pune\n');
     expect(lists).toEqual({ roles: [['a-b', 'A b']], cities: [['pune', 'Pune']] });
+  });
+
+  it('writes 404.html as a noindex copy of the app shell, so unknown URLs are a real 404 that still mounts the SPA', () => {
+    const dist = makeDist();
+    execFileSync(process.execPath, [scriptPath, dist], {
+      env: { ...process.env, VITE_PUBLIC_URL: 'https://verse.example' },
+    });
+    const html = readFileSync(join(dist, '404.html'), 'utf8');
+    expect(html).toContain('<title>Page not found | Verse</title>');
+    expect(html).toContain('<div id="root"></div>');
+    expect(html).toContain('<script type="module" src="/assets/index-abc.js"></script>');
+    expect(html).not.toContain('rel="canonical"');
+    const shell =
+      '<head><title>Verse</title><meta name="robots" content="index, follow"><link rel="canonical" href="https://x.test/"></head>';
+    expect(renderNotFound(shell)).toContain('<meta name="robots" content="noindex, nofollow">');
+    expect(renderNotFound(shell)).not.toContain('index, follow');
+  });
+
+  it('gives every hire and rates page a BreadcrumbList with absolute URLs, marked so the page replaces it', () => {
+    const dist = makeDist();
+    execFileSync(process.execPath, [scriptPath, dist], {
+      env: { ...process.env, VITE_PUBLIC_URL: 'https://verse.example' },
+    });
+    const html = readFileSync(join(dist, 'hire', 'drummer', 'mumbai', 'index.html'), 'utf8');
+    const match = html.match(/<script type="application\/ld\+json" data-page-meta>(.*?)<\/script>/);
+    expect(match).not.toBeNull();
+    const ld = JSON.parse(match[1]);
+    expect(ld['@type']).toBe('BreadcrumbList');
+    expect(ld.itemListElement.map((item) => item.position)).toEqual([1, 2, 3]);
+    for (const item of ld.itemListElement) expect(item.item).toMatch(/^https:\/\/verse\.example\//);
+    expect(ld.itemListElement[2].item).toBe('https://verse.example/hire/drummer/mumbai');
+    // Static pages carry none: their JSON-LD (Organization, WebSite) is rendered by the page itself.
+    expect(readFileSync(join(dist, 'pricing', 'index.html'), 'utf8')).not.toContain('application/ld+json');
+    const rates = readFileSync(join(dist, 'rates', 'goa', 'index.html'), 'utf8');
+    expect(rates).toContain('"item":"https://verse.example/rates/goa"');
+  });
+
+  it('has a breadcrumb for each of the 208 seo pages', () => {
+    const lists = readSeoPages(readFileSync(resolve(process.cwd(), 'backend/config/seo_pages.yml'), 'utf8'));
+    expect(Object.keys(seoPageBreadcrumbs(lists, 'https://verse.example'))).toHaveLength(12 * 16 + 16);
+  });
+
+  it('keeps the hire and rates titles and descriptions unique across all pages', () => {
+    const lists = readSeoPages(readFileSync(resolve(process.cwd(), 'backend/config/seo_pages.yml'), 'utf8'));
+    const routes = seoPageRoutes(lists);
+    const titles = Object.values(routes).map(([title]) => title);
+    const descriptions = Object.values(routes).map(([, description]) => description);
+    expect(new Set(titles).size).toBe(titles.length);
+    expect(new Set(descriptions).size).toBe(descriptions.length);
+    expect(routes['/rates/goa'][1]).toContain('reported by verified and unverified musicians');
+  });
+
+  it('writes app-shell.html: the neutral shell for dynamic URLs, with no canonical and not the landing head', () => {
+    const dist = makeDist();
+    execFileSync(process.execPath, [scriptPath, dist], {
+      env: { ...process.env, VITE_PUBLIC_URL: 'https://verse.example' },
+    });
+    const shell = readFileSync(join(dist, 'app-shell.html'), 'utf8');
+    expect(shell).toContain('<title>Verse</title>');
+    expect(shell).not.toContain('rel="canonical"');
+    expect(shell).not.toContain('Hire verified musicians in Mumbai');
+    expect(shell).toContain('<div id="root"></div>');
+    expect(readFileSync(join(dist, 'index.html'), 'utf8')).toContain(
+      '<link rel="canonical" href="https://verse.example/">',
+    );
+  });
+
+  it('adds a preconnect to a cross-origin API and nothing for a same-origin one', () => {
+    expect(apiPreconnect('https://api.verse.example/api')).toBe(
+      '<link rel="preconnect" href="https://api.verse.example" crossorigin>',
+    );
+    expect(apiPreconnect('')).toBe('');
+    expect(apiPreconnect('/api')).toBe('');
+    const dist = makeDist();
+    execFileSync(process.execPath, [scriptPath, dist], {
+      env: { ...process.env, VITE_PUBLIC_URL: 'https://verse.example', VITE_API_URL: 'https://api.verse.example/api' },
+    });
+    for (const file of ['index.html', 'app-shell.html', 'pricing/index.html', '404.html'])
+      expect(readFileSync(join(dist, file), 'utf8')).toContain(
+        '<link rel="preconnect" href="https://api.verse.example" crossorigin>',
+      );
   });
 });

@@ -9,6 +9,13 @@
       "claude/**": false
     }
   },
+  "redirects": [
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/sitemap.xml",
@@ -42,7 +49,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot).*"
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot|Googlebot|Google-InspectionTool).*"
         }
       ],
       "destination": "https://verse-music-platform-production.up.railway.app/share/acts/:id"
@@ -53,14 +60,26 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot).*"
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot|Googlebot|Google-InspectionTool).*"
         }
       ],
       "destination": "https://verse-music-platform-production.up.railway.app/share/p/:slug"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/",
       "destination": "/index.html"
+    },
+    {
+      "source": "/hire/(drummer|guitarist|bassist|keyboard-player|singer|tabla-player|dhol-player|violinist|saxophonist|dj|sound-engineer|music-producer)/(mumbai|delhi|gurgaon|noida|bengaluru|pune|hyderabad|chennai|kolkata|goa|ahmedabad|jaipur|chandigarh|kochi|lucknow|indore)",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/rates/(mumbai|delhi|gurgaon|noida|bengaluru|pune|hyderabad|chennai|kolkata|goa|ahmedabad|jaipur|chandigarh|kochi|lucknow|indore)",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/(about|accessibility|acts|auth|book-music|community-guidelines|contact|cookies|credits|employer|forgot-password|guide|jobseeker|join|login|music-jobs|music-professionals|opportunities|p|pages|pricing|privacy|professionals|refund-policy|reset-password|safety|search|signup|sitemap|stage|start|terms|unsubscribe|urgent|verify-email)(/.*)?",
+      "destination": "/app-shell.html"
     }
   ],
   "headers": [
@@ -75,15 +94,57 @@
     },
     {
       "source": "/img/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
     },
     {
       "source": "/favicon.ico",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
     },
     {
       "source": "/og-default.png",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
+    },
+    {
+      "source": "/(manifest.webmanifest|icon-192.png|icon-512.png|apple-touch-icon.png|verse-mark.svg)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/(jobseeker|employer|auth|admin|search|start|forgot-password|reset-password|verify-email|unsubscribe|login|signup)(/.*)?",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/(app-shell|404).html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     },
     {
       "source": "/(.*)",
@@ -114,5 +175,6 @@
         }
       ]
     }
-  ]
+  ],
+  "trailingSlash": false
 }

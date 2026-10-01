@@ -116,6 +116,7 @@ class AccountController < ApplicationController
     # Adding a first password does not sign anyone out; changing an existing one does.
     revoke_other_sessions! unless first_password
     audit!(first_password ? "account.password_set" : "account.password_changed", current_user, { ip: request.remote_ip })
+    notify_password_set if first_password
     render json: { ok: true, passwordSet: true }
   end
 
@@ -144,6 +145,17 @@ class AccountController < ApplicationController
   # change stays (matches Admin::AccountController's behaviour for the admin's own account).
   def revoke_other_sessions!
     current_user.sessions.where.not(id: current_session.id).delete_all
+  end
+
+  # A new way into the account is a security event: tell the owner so they can act if it was not them.
+  def notify_password_set
+    email = current_user.email
+    return unless EmailDelivery.configured?
+    return if EmailDelivery.reserved_address?(email) || EmailSuppression.blocks_all?(email)
+    EmailDeliveryJob.enqueue_notice(template: "account_password_set", detail: email, email:)
+  rescue StandardError => error
+    Rails.logger.error({ event: "email_enqueue_failed", template: "account_password_set", error: error.class.name }.to_json)
+    ErrorReporter.capture(error, tags: { source: "email_enqueue_failed", template: "account_password_set" })
   end
 
   def notify_previous_address(previous_email, new_email)

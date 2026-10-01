@@ -182,9 +182,18 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     post "/api/account/password", params: { newPassword: "short" }, headers: bearer(token), as: :json
     assert_response :unprocessable_content
 
-    post "/api/account/password", params: { newPassword: "BrandNewPass456!" }, headers: bearer(token), as: :json
+    with_env(PROVIDER_ENV) do
+      assert_enqueued_jobs 1, only: EmailDeliveryJob do
+        post "/api/account/password", params: { newPassword: "BrandNewPass456!" }, headers: bearer(token), as: :json
+      end
+    end
     assert_response :success
     assert codeonly.reload.password_set?
+    notice = enqueued_jobs.find { _1[:job] == EmailDeliveryJob }
+    _uid, notice_template, sealed_detail, sealed_notice_email = ActiveJob::Arguments.deserialize(notice[:args])
+    assert_equal "account_password_set", notice_template
+    assert_equal "codeonly@example.com", EmailDeliveryJob.unseal(sealed_detail)
+    assert_equal "codeonly@example.com", EmailDeliveryJob.unseal(sealed_notice_email, purpose: EmailDeliveryJob::RECIPIENT_PURPOSE)
     assert AuditLog.exists?(actor: codeonly, action: "account.password_set")
     get "/api/me", headers: bearer(other_device)
     assert_response :success, "adding a first password does not sign out the other devices"
@@ -194,6 +203,23 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
 
     change_password("WrongPass123!x", "AnotherNewPass789!", token:)
     assert_response :forbidden, "once a password exists the current one is required"
+
+    clear_enqueued_jobs
+    with_env(PROVIDER_ENV) do
+      assert_no_enqueued_jobs only: EmailDeliveryJob do
+        change_password("BrandNewPass456!", "AnotherNewPass789!", token:)
+      end
+    end
+    assert_response :success
+  end
+
+  test "the password-added notice renders the account and a recovery path without a link" do
+    content = EmailDelivery::TEMPLATES.fetch("account_password_set")
+    text = EmailDelivery.send(:email_text, content:, data: { detail: "codeonly@example.com" })
+    assert_includes text, "A password was just added"
+    assert_includes text, "codeonly@example.com"
+    assert_includes text, "If you did not"
+    assert_no_match %r{https?://}, text
   end
 
   test "signing in with a password to a code-only account says it uses email codes" do

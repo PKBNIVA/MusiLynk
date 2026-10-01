@@ -134,7 +134,7 @@ export default function Reviews() {
               <EmptyState
                 scene="stage"
                 title="No published reviews yet."
-                hint="Reviews of hirers show up here once musicians have worked with them."
+                hint="Published reviews of hirers appear here. Browse open gigs to line up your first booking."
                 action={{ label: 'Find work', to: '/jobseeker/jobs', variant: 'outline' }}
               />
             ) : (

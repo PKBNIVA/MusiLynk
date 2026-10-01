@@ -252,7 +252,7 @@ export default function Notifications() {
                                   onClick={() => void read(n)}
                                   className="text-xs text-violet-300 hover:text-violet-200"
                                 >
-                                  Open
+                                  See details
                                 </Link>
                               )}
                             </span>

@@ -264,7 +264,7 @@ function EmailCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }
         setChallenge(null);
         return;
       }
-      setError(errorMessage(err, 'Invalid or expired code.'));
+      setError(errorMessage(err, 'That code is wrong or has expired. Request a new one.'));
       setCode('');
     } finally {
       setBusy(false);

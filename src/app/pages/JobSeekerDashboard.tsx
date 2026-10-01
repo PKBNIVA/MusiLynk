@@ -79,7 +79,7 @@ export default function JobSeekerDashboard() {
           Icon: MessageSquare,
           title: `${unread} unread message${unread === 1 ? '' : 's'}`,
           line: latestUnread?.counterpartName || latestUnread?.employerName || '',
-          cta: 'Open',
+          cta: 'Read messages',
           to: '/jobseeker/messages',
         }
       : null,

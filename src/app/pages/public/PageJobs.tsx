@@ -66,7 +66,7 @@ export default function PageJobs() {
         </header>
         {data.jobs.length === 0 ? (
           <EmptyState icon={Briefcase} title={`${page.name} has no open opportunities right now`}>
-            Check back soon, or browse every music job on Verse.
+            Check back soon, or browse every open opportunity on Verse.
           </EmptyState>
         ) : (
           <div className="space-y-4">

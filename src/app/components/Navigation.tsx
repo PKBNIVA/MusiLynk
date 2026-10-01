@@ -223,7 +223,7 @@ export function Navigation() {
       ]
     : [
         { path: baseUrl, icon: Home, label: 'Home' },
-        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Create' },
+        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Post' },
         { path: `${baseUrl}/candidates`, icon: Users, label: 'Talent' },
         { path: `${baseUrl}/messages`, icon: MessageSquare, label: 'Inbox' },
       ];

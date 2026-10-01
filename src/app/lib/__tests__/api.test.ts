@@ -185,7 +185,7 @@ describe('api() error mapping', () => {
     const { api } = await loadApi();
     fetchMock.mockResolvedValue(jsonResponse({ request_id: 'body-id' }, 409));
     await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({
-      message: 'Request failed (409)',
+      message: 'That did not go through. Check what you entered and try again.',
       requestId: 'body-id',
     });
   });
@@ -229,7 +229,10 @@ describe('api() error mapping', () => {
     fetchMock.mockResolvedValue(
       new Response('Bad gateway', { status: 400, headers: { 'content-type': 'text/plain' } }),
     );
-    await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({ status: 400, message: 'Request failed (400)' });
+    await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({
+      status: 400,
+      message: 'That did not go through. Check what you entered and try again.',
+    });
   });
 
   it('announces server plan limits (402) for the upgrade prompt', async () => {

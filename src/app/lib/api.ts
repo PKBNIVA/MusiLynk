@@ -1,5 +1,6 @@
 import { reportApiFailure } from './monitoring';
 import { PROTECTED_AREA, signInPath } from './appTarget';
+import { requestFailedMessage } from './errors';
 
 // `?.`: the Node smoke tests import this module without Vite, where import.meta.env is undefined.
 export const API_BASE = import.meta.env?.VITE_API_URL || '/api';
@@ -314,7 +315,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
         if (response.status >= 500)
           reportApiFailure({ status: response.status, code: data.code, method, path, requestId });
         throw new ApiError(
-          data.error || `Request failed (${response.status})`,
+          data.error || requestFailedMessage(response.status),
           response.status,
           data.code,
           requestId,
@@ -680,7 +681,7 @@ export async function uploadMedia(
       throw new ApiError(
         sent.status === 403
           ? 'Storage refused the file (size or type did not match, or the link expired). Please retry.'
-          : `Upload failed (${sent.status}). Please retry.`,
+          : 'The upload failed. Try again.',
         sent.status,
         'UPLOAD_FAILED',
       );
@@ -705,12 +706,7 @@ export async function uploadMedia(
   const sent = await sendWithProgress('PUT', uploadUrl, file, headers, options);
   if (sent.status === 401) redirectAfterUnauthorized('/uploads/local', token);
   if (sent.status < 200 || sent.status >= 300)
-    throw new ApiError(
-      sent.data.error || `Upload failed (${sent.status})`,
-      sent.status,
-      sent.data.code,
-      sent.requestId,
-    );
+    throw new ApiError(sent.data.error || 'The upload failed. Try again.', sent.status, sent.data.code, sent.requestId);
   options.onProgress?.(100);
   return {
     ...sent.data,

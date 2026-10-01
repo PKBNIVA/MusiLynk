@@ -278,10 +278,10 @@ test('career record: add an entry with inline validation', async ({ page }) => {
   await page.goto('/jobseeker/career');
   await expect(page.getByTestId('career-entry')).toHaveCount(5);
   await page.getByRole('button', { name: 'Add to awards' }).click();
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByRole('button', { name: 'Add link', exact: true }).click();
   await expect(page.locator('#career-award-title-error')).toHaveText('Add the award.');
   await page.getByRole('textbox', { name: /^Award/ }).fill('Best score');
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByRole('button', { name: 'Add link', exact: true }).click();
   await expect(page.getByTestId('career-entry')).toHaveCount(6);
   expect(calls.find((c) => c.method === 'POST' && c.path === '/career-entries')?.body).toMatchObject({
     kind: 'award',

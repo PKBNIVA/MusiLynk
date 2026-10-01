@@ -555,7 +555,7 @@ export default function Library() {
             <Button size="sm" variant="outline" asChild>
               <Link to={`${base}/review`}>
                 <Inbox size={14} aria-hidden="true" />
-                Review
+                Review new items
               </Link>
             </Button>
           )}

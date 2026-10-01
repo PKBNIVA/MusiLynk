@@ -254,7 +254,7 @@ export default function AuthPage() {
       }
       setCode('');
       focusCode();
-      fail(e, 'Invalid or expired code.');
+      fail(e, 'That code is wrong or has expired. Request a new one.');
     } finally {
       verifying.current = false;
       setLoading(false);

@@ -44,7 +44,7 @@ export default function HirePage() {
         if (alive) setData(body);
       })
       .catch((err) => {
-        if (alive) setError(errorMessage(err, 'This page could not be found.'));
+        if (alive) setError(errorMessage(err, 'This page could not be found. Check the link or pick another city.'));
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -104,7 +104,9 @@ export default function HirePage() {
           </p>
         ) : error || !data ? (
           <div className="text-center py-16" role="alert">
-            <p className="text-rose-300">{error || 'This page could not be found.'}</p>
+            <p className="text-rose-300">
+              {error || 'This page could not be found. Check the link or pick another city.'}
+            </p>
             <Button variant="outline" className="mt-4" asChild>
               <Link to="/music-professionals">Browse all musicians</Link>
             </Button>

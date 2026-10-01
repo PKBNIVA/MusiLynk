@@ -70,7 +70,7 @@ export function UrgentBand({ city }: { city: string }) {
             type="submit"
             className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 font-semibold text-slate-950 hover:bg-violet-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
           >
-            Continue
+            Continue my request
             <ArrowRight aria-hidden="true" size={16} />
           </button>
         </form>

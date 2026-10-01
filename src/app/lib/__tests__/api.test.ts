@@ -185,7 +185,7 @@ describe('api() error mapping', () => {
     const { api } = await loadApi();
     fetchMock.mockResolvedValue(jsonResponse({ request_id: 'body-id' }, 409));
     await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({
-      message: 'That did not go through. Check what you entered and try again.',
+      message: 'That did not go through. Try again.',
       requestId: 'body-id',
     });
   });
@@ -231,7 +231,7 @@ describe('api() error mapping', () => {
     );
     await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({
       status: 400,
-      message: 'That did not go through. Check what you entered and try again.',
+      message: 'That did not go through. Try again.',
     });
   });
 

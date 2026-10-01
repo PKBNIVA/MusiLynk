@@ -54,7 +54,7 @@ describe('apiDownload()', () => {
     fetchMock.mockResolvedValue(new Response('oops', { status: 500 }));
 
     await expect(apiDownload('/x')).rejects.toMatchObject({
-      message: 'Something went wrong on our side. Try again in a moment.',
+      message: 'Something went wrong. Try again in a moment.',
       status: 500,
     });
   });

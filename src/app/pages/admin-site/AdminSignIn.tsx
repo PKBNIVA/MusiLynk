@@ -8,7 +8,7 @@ import { Label } from '../../components/ui/label';
 import { PageLoading } from '../../components/ExperienceStates';
 import { usePageMeta } from '../../components/PageMeta';
 import { CodeStep, FormError, focusField, useResendCooldown } from '../../components/auth/CodeStep';
-import { consumeReturnTo, SESSION_EXPIRED_MESSAGE } from '../../lib/api';
+import { consumeReturnTo } from '../../lib/api';
 import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User } from '../../lib/authContext';
 import { errorCode, errorMessage } from '../../lib/errors';
 
@@ -166,7 +166,7 @@ export default function AdminSignIn() {
           <h1 className="mt-1 text-2xl font-black">{challenge ? 'Check your email' : 'Sign in'}</h1>
           {searchParams.get('reason') === 'expired' && (
             <p role="status" data-testid="session-expired" className="mt-2 text-sm text-amber-200">
-              {SESSION_EXPIRED_MESSAGE}
+              Your session expired. Sign in to continue.
             </p>
           )}
         </div>

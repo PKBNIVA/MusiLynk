@@ -68,7 +68,11 @@ export const HELP: Record<string, { id: string; title: string; steps: HelpStep[]
         title: 'Search and filter',
         text: 'Narrow by format, function and workplace. Filters apply instantly.',
       },
-      { icon: Bookmark, title: 'Save and get alerts', text: 'Save opportunities, or turn a search into an email alert.' },
+      {
+        icon: Bookmark,
+        title: 'Save and get alerts',
+        text: 'Save opportunities, or turn a search into an email alert.',
+      },
       { icon: FileAudio, title: 'Apply with proof', text: 'Your profile and work samples go with every application.' },
     ],
   },
@@ -89,7 +93,11 @@ export const HELP: Record<string, { id: string; title: string; steps: HelpStep[]
     id: 'employer-applications',
     title: 'Reviewing applicants',
     steps: [
-      { icon: Filter, title: 'Pick an opportunity', text: 'Filter the list to one opportunity to compare like for like.' },
+      {
+        icon: Filter,
+        title: 'Pick an opportunity',
+        text: 'Filter the list to one opportunity to compare like for like.',
+      },
       { icon: Star, title: 'Rate and note', text: 'Private ratings and notes are only visible to your team.' },
       {
         icon: CalendarCheck,

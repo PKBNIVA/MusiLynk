@@ -6,13 +6,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User } from '../lib/authContext';
-import {
-  consumeReturnTo,
-  GOOGLE_AUTH_ERROR_MESSAGES,
-  getSignInMethods,
-  requestSignInCode,
-  SESSION_EXPIRED_MESSAGE,
-} from '../lib/api';
+import { consumeReturnTo, GOOGLE_AUTH_ERROR_MESSAGES, getSignInMethods, requestSignInCode } from '../lib/api';
 import { GoogleButton } from '../components/auth/GoogleButton';
 import { submitUrgentDraft } from '../lib/urgentDraft';
 import { toast } from 'sonner';
@@ -418,7 +412,7 @@ export default function AuthPage() {
                 </CardTitle>
                 {searchParams.get('reason') === 'expired' && (
                   <p role="status" data-testid="session-expired" className="mt-1 text-sm text-amber-200">
-                    {SESSION_EXPIRED_MESSAGE}
+                    Your session expired. Sign in to continue.
                   </p>
                 )}
                 <CardDescription className="text-slate-300">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError } from '../api';
-import { errorCode, errorMessage, errorStatus, requestFailedMessage, withNextStep } from '../errors';
+import { ApiError, requestFailedMessage } from '../api';
+import { errorCode, errorMessage, errorStatus, withNextStep } from '../errors';
 
 describe('errorMessage', () => {
   it('reads the message of an Error or ApiError', () => {
@@ -39,8 +39,8 @@ describe('withNextStep', () => {
 
 describe('requestFailedMessage', () => {
   it('never prints a bare status code', () => {
-    expect(requestFailedMessage(503)).toBe('Something went wrong on our side. Try again in a moment.');
-    expect(requestFailedMessage(409)).toBe('That did not go through. Check what you entered and try again.');
+    expect(requestFailedMessage(503)).toBe('Something went wrong. Try again in a moment.');
+    expect(requestFailedMessage(409)).toBe('That did not go through. Try again.');
   });
 });
 

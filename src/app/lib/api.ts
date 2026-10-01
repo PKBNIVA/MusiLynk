@@ -1,6 +1,5 @@
 import { reportApiFailure } from './monitoring';
 import { PROTECTED_AREA, signInPath } from './appTarget';
-import { requestFailedMessage } from './errors';
 
 // `?.`: the Node smoke tests import this module without Vite, where import.meta.env is undefined.
 export const API_BASE = import.meta.env?.VITE_API_URL || '/api';
@@ -132,6 +131,11 @@ export function parseFieldErrors(raw: unknown): ApiFieldErrors | undefined {
   return Object.keys(fields).length ? fields : undefined;
 }
 
+/** What a request that failed without a message from the server says. */
+export function requestFailedMessage(status: number): string {
+  return status >= 500 ? 'Something went wrong. Try again in a moment.' : 'That did not go through. Try again.';
+}
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -166,7 +170,6 @@ export function onBeforeSignInRedirect(listener: () => void) {
 // still signs in as the right kind of account.
 /** Added to the sign-in address after an expired session, so that page can say why it is showing. */
 export const SESSION_EXPIRED_QUERY = 'reason=expired';
-export const SESSION_EXPIRED_MESSAGE = 'Your session expired. Sign in to continue.';
 const ROLE_HINT_KEY = 'verse_session_role';
 let sessionRoleHint: string | null = null;
 export function rememberSessionRole(role?: string | null) {

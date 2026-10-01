@@ -1,18 +1,11 @@
 // Helpers for `catch (e: unknown)` blocks: read what a thrown value says without assuming its shape.
 
 const FAILURE = /could not|couldn.t|can.?t |cannot|unable|failed|not saved/i;
-const HAS_NEXT_STEP = /try|retry|refresh|request a new|check|choose|go back|contact|sign in|upgrade|again/i;
+const HAS_NEXT_STEP = /try|refresh|request|check|choose|go back|contact|sign in|upgrade|again/i;
 
 /** A failure message that says what to do next: "Unable to send your message." → "… Try again." */
 export function withNextStep(text: string): string {
   return FAILURE.test(text) && !HAS_NEXT_STEP.test(text) ? `${text.replace(/\.?\s*$/, '')}. Try again.` : text;
-}
-
-/** What a request that failed without a message from the server says. */
-export function requestFailedMessage(status: number): string {
-  return status >= 500
-    ? 'Something went wrong on our side. Try again in a moment.'
-    : 'That did not go through. Check what you entered and try again.';
 }
 
 /** The thrown value's `message` when it has a non-empty one, otherwise `fallback` (always with a next step). */

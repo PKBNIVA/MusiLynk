@@ -247,7 +247,12 @@ export default function JobDetails() {
                       )}
                       {job.saved ? 'Saved' : 'Save'}
                     </Button>
-                    <Button variant="ghost" size="icon" aria-label="Report opportunity" onClick={() => setReporting(true)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Report opportunity"
+                      onClick={() => setReporting(true)}
+                    >
                       <Flag size={17} />
                     </Button>
                   </div>

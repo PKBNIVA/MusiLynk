@@ -864,7 +864,8 @@ export default function PostJob() {
                 role="note"
                 className="mt-3 rounded-lg border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
               >
-                Opportunities that don’t show the pay get fewer applicants. Add a range if you can; you can change it later.
+                Opportunities that don’t show the pay get fewer applicants. Add a range if you can; you can change it
+                later.
               </p>
             )}
           </fieldset>
@@ -1142,8 +1143,8 @@ export default function PostJob() {
           <div className="rounded-xl border border-emerald-400/15 bg-emerald-500/[.06] p-4 flex gap-3 text-sm text-emerald-100">
             <ShieldCheck aria-hidden="true" className="shrink-0" size={20} />
             <p>
-              Opportunities are reviewed for clarity, trust and suspicious off-platform fee/contact language. Verified hirers
-              receive a trust marker, but verification never replaces your own checks on an applicant.
+              Opportunities are reviewed for clarity, trust and suspicious off-platform fee/contact language. Verified
+              hirers receive a trust marker, but verification never replaces your own checks on an applicant.
             </p>
           </div>
         </div>
@@ -1262,8 +1263,8 @@ export default function PostJob() {
               role="note"
               className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
             >
-              Changes to the title, description or requirements send the opportunity back to review. It stays hidden from
-              search until it is approved.
+              Changes to the title, description or requirements send the opportunity back to review. It stays hidden
+              from search until it is approved.
             </p>
           )}
           {submitBlocked && step === last && (

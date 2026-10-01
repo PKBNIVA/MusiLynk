@@ -104,8 +104,22 @@ class AccountErasure
     ActMember.where(user_id: id).delete_all
     OrganizationMember.where(user_id: id).delete_all
     UrgentRequestResponse.where(user_id: id).delete_all
+    erase_third_party_contact_details
+    @user.band_projects.destroy_all
+    @user.crew_plans.destroy_all
     UserBlock.where(blocker_id: id).or(UserBlock.where(blocked_id: id)).delete_all
     @user.profile&.destroy!
+  end
+
+  # Addresses and billing details this person held about others, or others held about them:
+  # vouch invitations they sent are removed, invitations sent to their own address are
+  # anonymised, and the tax id and billing address of workspaces they own are cleared.
+  def erase_third_party_contact_details
+    Vouch.where(voucher_id: @user.id).delete_all
+    Vouch.where(vouchee_id: @user.id).or(Vouch.where(vouchee_email: @user.email)).find_each do |vouch|
+      vouch.update_columns(vouchee_email: "deleted-#{vouch.id.to_s.downcase.gsub(/[^a-z0-9]/, "")}@deleted.invalid", vouchee_id: nil)
+    end
+    Organization.where(owner_id: @user.id).update_all(tax_id: nil, billing_email: nil, updated_at: Time.current)
   end
 
   # --- Showcase: portfolios, career record, resumes and suggestions -------------------------

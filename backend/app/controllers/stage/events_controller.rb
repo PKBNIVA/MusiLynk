@@ -12,7 +12,7 @@ module Stage
 
     def ics
       post = Post.find(params[:id])
-      return render_error("Not an event.", :not_found) unless post.kind == "event" && post.active?
+      return render_error("Not an event.", :not_found) unless post.kind == "event" && post.active? && post.visibility == "public"
       send_data post.to_ics, type: "text/calendar", filename: "#{post.event_title.to_s.parameterize.presence || 'event'}.ics", disposition: "attachment"
     end
   end

@@ -50,6 +50,18 @@ class User < ApplicationRecord
   # Professionals whose profiles may be shown to other users (talent pages, folders).
   scope :discoverable_talent, -> { jobseeker.active.where(profile_complete: true) }
 
+  # Someone has just proved they control this account's mailbox (an emailed sign-in code, or
+  # Google's verified email) but the address was never verified: whoever registered it first
+  # may be a stranger who chose the password. Drop that password, its sessions and any pending
+  # links so only the proven mailbox owner can get in (they sign in with a code, Google or a reset).
+  def reclaim_unverified_credentials!
+    return if email_verified? || admin?
+
+    update!(password: SecureRandom.base58(32), password_set_at: nil)
+    sessions.delete_all
+    email_tokens.where(used_at: nil).update_all(used_at: Time.current)
+  end
+
   def profileComplete = profile_complete
   def emailVerified = email_verified
 

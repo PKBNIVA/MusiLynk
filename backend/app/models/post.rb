@@ -61,7 +61,7 @@ class Post < ApplicationRecord
   # the ordering the Stage feed and StageSystemPostsJob rely on to show the weekly pinned post on top.
   scope :pinned_first, -> { order(Arel.sql("(pinned_until IS NOT NULL AND pinned_until > NOW()) DESC"), created_at: :desc, id: :desc) }
   scope :upcoming_events, ->(city: nil) {
-    scope = where(kind: "event").where("event_starts_at >= ?", Time.current).visible
+    scope = where(kind: "event", visibility: "public").where("event_starts_at >= ?", Time.current).visible
     scope = scope.where(city: city) if city.present?
     scope.order(featured: :desc, event_starts_at: :asc)
   }
@@ -200,7 +200,9 @@ class Post < ApplicationRecord
   private
 
   def reshared_post_preview
-    reshared_post ? { type: "post", post: reshared_post.api_json } : unavailable("post")
+    # Only a public, live original is embedded: a reshare is itself public, so a followers-only,
+    # hidden (moderated) or deleted original must not be readable through it.
+    reshared_post&.then { _1.active? && _1.visibility == "public" } ? { type: "post", post: reshared_post.api_json } : unavailable("post")
   end
 
   def unavailable(type) = { type:, unavailable: true }
@@ -253,6 +255,6 @@ class Post < ApplicationRecord
   def reshared_post_is_visible
     original = reshared_post
     return errors.add(:reshared_post_id, "was not found") unless original
-    errors.add(:reshared_post_id, "is not available") unless original.active?
+    errors.add(:reshared_post_id, "is not available") unless original.active? && original.visibility == "public"
   end
 end

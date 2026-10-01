@@ -194,6 +194,7 @@ class AuthController < ApplicationController
   def exchange
     user = AuthExchangeCode.redeem!(params[:code])
     return render_error("This sign-in link has expired or was already used.", :unauthorized, "EXCHANGE_INVALID") unless user
+    return render_error("This sign-in link has expired or was already used.", :unauthorized, "EXCHANGE_INVALID") if admin_code_only_sign_in_blocked?(user)
     return render_error("This account is not active.", :forbidden) unless user.active?
     token = sign_in(user)
     render json: { user: public_user(user), accessToken: token }
@@ -275,6 +276,7 @@ class AuthController < ApplicationController
 
     user = User.where(phone:).where.not(phone_verified_at: nil).first
     return render_error(PHONE_OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID") unless user
+    return render_error(PHONE_OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID") if admin_code_only_sign_in_blocked?(user)
     return render_error("This account is not active.", :forbidden) unless user.active?
 
     user.update!(last_login_at: Time.current)
@@ -335,6 +337,7 @@ class AuthController < ApplicationController
     return render_error(OTP_INVALID_MESSAGE, :unauthorized, "OTP_INVALID") if admin_code_only_sign_in_blocked?(user)
     return render_error("This account is not active.", :forbidden) unless user.active?
 
+    user.reclaim_unverified_credentials!
     user.update!(email_verified: true, last_login_at: Time.current)
     token = sign_in(user)
     audit!(created ? "auth.register" : "auth.login", user, { method: "email_code" })
@@ -373,17 +376,21 @@ class AuthController < ApplicationController
 
   def forgot_password
     return unless throttle!("password-reset", limit: 10, period: 1.hour)
-    if (user = User.find_by(email: normalized_email))
+    if (user = User.find_by(email: normalized_email)) && reset_email_allowed?(user)
       token = issue_token("reset_password", 2.hours, user)
       _link, delivery = deliver_token(token, "/reset-password", user)
       unless delivery[:queued]
         Rails.logger.warn({ event: "password_reset_email_skipped", userId: user.id, reason: delivery[:reason] }.to_json)
       end
     else
-      Rails.logger.info({ event: "password_reset_unknown_account" }.to_json)
+      Rails.logger.info({ event: "password_reset_unknown_account_or_capped" }.to_json)
     end
     render json: { ok: true, message: "If an account exists, password reset instructions have been sent." }
   end
+
+  # At most this many reset emails per account per hour, whichever networks ask, so an inbox
+  # cannot be flooded from many addresses. Over the cap the answer is unchanged (no oracle).
+  RESET_EMAILS_PER_ACCOUNT = 5
 
   RESET_TOKEN_INVALID_MESSAGE = "This link has expired or was already used. Request a new one.".freeze
 
@@ -422,6 +429,11 @@ class AuthController < ApplicationController
   def verification_state(user)
     pending = user.profile&.verified? ? nil : user.verification_requests.where(status: "pending").order(created_at: :desc).first
     { "verificationPending" => pending.present?, "verificationRequestedAt" => pending&.created_at }
+  end
+
+  def reset_email_allowed?(user)
+    key = failure_key("password-reset-account", :user, user.id, 1.hour)
+    (Rails.cache.increment(key, 1, expires_in: 1.hour) || 1) <= RESET_EMAILS_PER_ACCOUNT
   end
 
   def find_usable_reset_token(raw)

@@ -45,6 +45,8 @@ export interface User {
   verified?: boolean;
   skills?: string[];
   genres?: string[];
+  /** The roles on the musician's profile ("Tabla Player", …). */
+  roles?: string[];
   credits?: string[];
   openTo?: string[];
   /** The photo the person uploaded (or their Google picture); UserAvatar falls back to initials. */

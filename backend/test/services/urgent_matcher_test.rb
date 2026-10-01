@@ -18,6 +18,23 @@ class UrgentMatcherTest < ActiveSupport::TestCase
     assert ids.index(match.id) < (ids.index(unrelated.id) || ids.size), "matching candidate should rank first"
   end
 
+  test "roles match on whole words: a Dholak player is not a Dhol player, a Drum Kit player is a drummer" do
+    dhol = UrgentRequest.create!(requester: @hirer, title: "Dhol needed", role_name: "Dhol Player", city: "Mumbai",
+      start_at: 6.hours.from_now, end_at: 9.hours.from_now, currency: "INR", status: "open")
+    dholak = create_musician("Dholak Dev", city: "Mumbai", roles: ["Dholak Player"])
+    dhol_player = create_musician("Dhol Dev", city: "Mumbai", roles: ["Dhol Player"])
+    kit = create_musician("Kit Kiran", city: "Mumbai", roles: ["Percussionist"], instruments: ["Drum Kit"])
+
+    ids = UrgentMatcher.call(dhol).map { _1.user.id }
+    assert_includes ids, dhol_player.id
+    assert_not_includes ids, dholak.id
+
+    assert_includes UrgentMatcher.call(@request).map { _1.user.id }, kit.id, "Drum Kit counts for a Drummer request"
+    assert UrgentMatcher.same_role?("Lead Vocalist", "Vocalist")
+    assert_not UrgentMatcher.same_role?("Bass Guitarist", "Electric Guitarist")
+    assert_not UrgentMatcher.same_role?("", "Drummer")
+  end
+
   test "excludes the requester even when their own profile would otherwise match" do
     @hirer.create_profile!(headline: "Also a drummer", location: "Mumbai", roles: ["Drummer"])
     assert_not_includes UrgentMatcher.call(@request).map { _1.user.id }, @hirer.id
@@ -105,9 +122,9 @@ class UrgentMatcherTest < ActiveSupport::TestCase
     User.create!(name:, email:, password: "StrongPass123!", role:, status: "active", email_verified: true, profile_complete: true)
   end
 
-  def create_musician(name, city:, roles:, verified: false)
+  def create_musician(name, city:, roles:, verified: false, instruments: [])
     user = create_user(name, "matcher-#{name.parameterize}-#{SecureRandom.hex(3)}@example.com", "jobseeker")
-    user.create_profile!(headline: name, location: city, roles:, verified:)
+    user.create_profile!(headline: name, location: city, roles:, verified:, instruments:)
     user
   end
 end

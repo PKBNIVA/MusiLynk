@@ -113,15 +113,7 @@ class JobsController < ApplicationController
     if !draft && (error = submission_error(job))
       return render_error(error, :unprocessable_content)
     end
-    repeat = nil
     Job.transaction do
-      # One submission per click (A-16): the same listing sent again within seconds, say by a
-      # double-click or a retry, answers with the one just created. The user row lock makes the
-      # second request wait for the first to commit.
-      current_user.lock! unless draft
-      repeat = recent_duplicate(job) unless draft
-      next if repeat
-
       if !draft && (limit_error = active_post_limit_error)
         render_error(limit_error, :payment_required, "PLAN_LIMIT")
         raise ActiveRecord::Rollback
@@ -129,8 +121,6 @@ class JobsController < ApplicationController
       job.save!
     end
     return if performed?
-    return render json: { id: repeat.id, status: repeat.status, moderationFlags: repeat.moderation_note.to_s.split("; "), postedAs: repeat.posted_as_json(current_user) }, status: :created if repeat
-
     audit!("job.create", job, { postedAs: (job.posted_as_page && actor.key) }.compact)
     render json: { id: job.id, status: job.status, moderationFlags: flags, postedAs: job.posted_as_json(current_user) }, status: :created
   end
@@ -182,14 +172,6 @@ class JobsController < ApplicationController
   end
 
   private
-
-  DUPLICATE_WINDOW = 15.seconds
-
-  # A submitted (not draft) listing by this person that matches `job` and was made moments ago.
-  def recent_duplicate(job)
-    current_user.jobs.where(status: %w[pending published], created_at: DUPLICATE_WINDOW.ago..)
-      .find_by(title: job.title, description: job.description, company: job.company, location: job.location)
-  end
 
   # The portfolio and resume the applicant chose to send (portfolioId/resumeId, both optional).
   # Only the applicant's own: a personal portfolio or one of a Page they manage (not hidden by a

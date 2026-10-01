@@ -248,27 +248,6 @@ class HirerFlowsTest < ActionDispatch::IntegrationTest
     assert_equal false, response.parsed_body.dig("user", "verificationPending")
   end
 
-  # ---- A-16 ----
-
-  test "submitting the same opportunity twice in a row creates one listing" do
-    body = { status: "pending", title: "Session drummer", description: "A day of recording in Mumbai, tracking drums for an EP release.", company: "Hira Studios", location: "Mumbai", opportunityKind: "session" }
-    post "/api/jobs", params: body, headers: auth(@hirer), as: :json
-    assert_response :created
-    first_id = response.parsed_body.fetch("id")
-    first_flags = response.parsed_body.fetch("moderationFlags")
-    assert_no_difference "Job.count" do
-      post "/api/jobs", params: body, headers: auth(@hirer), as: :json
-    end
-    assert_response :created
-    assert_equal first_id, response.parsed_body.fetch("id")
-    assert_equal first_flags, response.parsed_body.fetch("moderationFlags")
-
-    # A different listing, or a draft, is not a repeat.
-    assert_difference "Job.count", 1 do
-      post "/api/jobs", params: body.merge(status: "draft"), headers: auth(@hirer), as: :json
-    end
-  end
-
   private
 
   def create_user(name, email, role)

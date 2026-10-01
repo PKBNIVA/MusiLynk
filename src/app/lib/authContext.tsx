@@ -55,6 +55,8 @@ export interface User {
   passwordSet?: boolean;
   phoneE164?: string | null;
   whatsappConsentedAt?: string | null;
+  verificationPending?: boolean;
+  verificationRequestedAt?: string | null;
 }
 /* Admin password sign-in answers with this instead of a session; the code emailed to the admin completes it. */
 export interface SecondFactorChallenge {

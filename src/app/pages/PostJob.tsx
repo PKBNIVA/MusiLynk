@@ -48,6 +48,7 @@ import {
 } from '../components/templates/JobPostTemplates';
 import { trackJobPosted } from '../lib/analytics';
 import { formatDate, formatPay } from '../lib/format';
+import { SubmittedListing } from '../components/SubmittedListing';
 import { PostJobPlanLimitDialog } from '../components/PostJobPlanLimitDialog';
 
 /** ActorResolver::Actor#as_json — the identities a person can post an opportunity as. */
@@ -253,6 +254,8 @@ export default function PostJob() {
   // is what the save logic reads, since a save can finish between two renders.
   const [draftId, setDraftId] = useState('');
   const draftRef = useRef('');
+  // Set once an opportunity has been submitted for review: the page shows what happens next (J-12).
+  const [submitted, setSubmitted] = useState<{ id: string; title: string } | null>(null);
   const [autosave, setAutosave] = useState<'' | 'saved' | 'failed'>('');
   const autosaveQueue = useRef<Promise<unknown>>(Promise.resolve());
   // The 402 plan-limit dialog (V-14): non-null holds the server's verbatim message and keeps
@@ -477,19 +480,28 @@ export default function PostJob() {
     }
     goTo(Math.min(step + 1, last));
   }
+  // Back to an empty first step (and a fresh draft slot).
+  function resetForm() {
+    setStep(0);
+    setReached(0);
+    setF(blank);
+    setJob(null);
+    draftRef.current = '';
+    setDraftId('');
+    setAutosave('');
+    setSubmitted(null);
+    setPipelineKey((k) => k + 1);
+    if (editId) setSp({}, { replace: true });
+    window.scrollTo({ top: 0 });
+  }
   function done() {
-    if (seeker) {
-      setStep(0);
-      setReached(0);
-      setF(blank);
-      setJob(null);
-      draftRef.current = '';
-      setDraftId('');
-      setAutosave('');
-      setPipelineKey((k) => k + 1);
-      if (editId) setSp({}, { replace: true });
-      window.scrollTo({ top: 0 });
-    } else nav('/employer');
+    if (seeker) resetForm();
+    else nav('/employer');
+  }
+  // After a submission for review: show the "what happens next" card rather than leaving the page.
+  function submittedForReview(id: string) {
+    setSubmitted({ id, title: f.title.trim() });
+    window.scrollTo({ top: 0 });
   }
   function submit(e: React.FormEvent | React.MouseEvent, mode: 'primary' | 'draft' = 'primary') {
     e.preventDefault();
@@ -531,7 +543,8 @@ export default function PostJob() {
         toast.success(
           next === 'draft' ? 'Draft saved' : next === 'pending' ? 'Saved and submitted for review' : 'Changes saved',
         );
-        done();
+        if (next === 'pending' && currentStatus !== 'pending') submittedForReview(existing);
+        else done();
       } else {
         const d = await apiPost<CreatedJob>(
           '/jobs',
@@ -544,7 +557,8 @@ export default function PostJob() {
             `Submitted with ${d.moderationFlags.length} moderation note${d.moderationFlags.length === 1 ? '' : 's'}`,
           );
         else toast.success(draft ? 'Draft saved. Finish it any time from your opportunities.' : 'Submitted for review');
-        done();
+        if (!draft && d.id) submittedForReview(d.id);
+        else done();
       }
     } catch (e: unknown) {
       if (errorStatus(e) === 402 && !draft) {
@@ -578,6 +592,20 @@ export default function PostJob() {
   }
   const backTo = seeker ? '/jobseeker/hiring/post' : '/employer';
   const continueDraft = useCallback((id: string) => setSp({ edit: id }), [setSp]);
+  if (submitted)
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Navigation />
+        <main className="max-w-3xl mx-auto px-5 md:px-6 pt-28 pb-16">
+          <SubmittedListing
+            title={submitted.title}
+            viewPath={`${seeker ? '/jobseeker' : '/employer'}/jobs/${encodeURIComponent(submitted.id)}`}
+            dashboardPath={seeker ? '/jobseeker/hiring/post' : '/employer'}
+            onAnother={resetForm}
+          />
+        </main>
+      </div>
+    );
   if (editId && (loadingJob || loadError || job?.id !== editId))
     return (
       <div className="min-h-screen bg-slate-950 text-white">
@@ -1177,11 +1205,21 @@ export default function PostJob() {
           >
             <span className="min-w-0 flex-1">
               You have an unfinished draft: <strong className="break-words">{offeredDraft.title || 'Untitled'}</strong>
+              <span className="block text-violet-200/80">Starting a new one replaces it, so drafts never pile up.</span>
             </span>
             <Button size="sm" onClick={() => continueDraft(offeredDraft.id)}>
               Continue draft
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setOfferedDraft(null)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                // One draft at a time: the new listing is saved into the old draft's slot, not beside it.
+                draftRef.current = offeredDraft.id;
+                setDraftId(offeredDraft.id);
+                setOfferedDraft(null);
+              }}
+            >
               Start a new one
             </Button>
           </div>

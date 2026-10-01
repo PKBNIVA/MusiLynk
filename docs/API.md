@@ -190,7 +190,7 @@ Every `q` (global search, jobs, talent, candidates, acts) goes through `Search::
 | DELETE | `/acts/:id/members/:memberId` | talent (owner) | — | `{ok}`; 409 leader |
 | GET | `/bookings` | talent | — | `{bookings: [… actName, requesterName, isOwner, isRequester, latestQuote, paidAmount, paymentCount]}` **unbounded** |
 | GET | `/bookings/limits` | talent | — | `{activeAllowed, activeUsed, plan, planName}` (enquiry limit, shown before the form) |
-| POST | `/bookings` | talent | `actId` or `musicianId` (a musician who fronts no act gets a direct-enquiry solo act), `eventType, eventDate, city, budgetMin/Max, …` | 201 `{id}`; 409 own act; 402 plan |
+| POST | `/bookings` | talent | `actId` or `musicianId` (a musician who fronts no act gets a hidden direct-enquiry solo act, kept out of My acts and every public listing), `eventType, eventDate, city, budgetMin/Max, …` | 201 `{id}`; 409 own act; 402 plan |
 | POST | `/bookings/:id/quote` | talent (act owner) | `performanceFee, travelFee, productionFee, otherFee, depositPercent, validUntil, …` | 201 `{id, total}`; 409 state |
 | POST | `/bookings/:id/status` | party | `status` per owner/requester transition table; optional `message` (posted into the pair's thread, used by Ask for changes) | `{ok}`; 409 |
 | POST | `/bookings/:id/payment-order` | requester | `Idempotency-Key` header | `{payment, checkout: {mode: mock\|razorpay, …}}`; 409/502/503 |

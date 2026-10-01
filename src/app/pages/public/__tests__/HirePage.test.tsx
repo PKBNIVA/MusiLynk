@@ -96,6 +96,18 @@ describe('HirePage', () => {
     expect(container.textContent).toContain('Hire a verified drummer in Mumbai');
   });
 
+  it("names a person's city at most once on the card (the page heading already says it)", async () => {
+    vi.mocked(apiGet).mockResolvedValue({
+      ...HIRE_PAGE_DATA,
+      featured: [{ ...HIRE_PAGE_DATA.featured[0], headline: 'Session drummer · Mumbai', location: 'Mumbai' }],
+    });
+    await mount('/hire/drummer/mumbai');
+    await act(async () => {});
+    const card = container.querySelector('[data-testid="featured-grid"]')?.textContent ?? '';
+    expect(card.match(/Mumbai/g)).toHaveLength(1);
+    expect(container.querySelector('[data-testid="featured-grid"] svg.lucide-map-pin')).toBeNull();
+  });
+
   it('prefills the urgent CTA with role and city', async () => {
     vi.mocked(apiGet).mockResolvedValue(HIRE_PAGE_DATA);
     await mount('/hire/drummer/mumbai');

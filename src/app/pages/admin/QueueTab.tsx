@@ -34,7 +34,7 @@ export default function QueueTab({
   onStatus: (status: JobStatusFilter) => void;
   error?: string;
   loading: boolean;
-  /** A new page or filter is on its way; the previous list stays up but dimmed. */
+  /** A new page or filter is on its way; the previous list stays up, dimmed and not clickable, under a loading line. */
   refreshing?: boolean;
   retry: () => void;
   actions: AdminActions;
@@ -64,7 +64,13 @@ export default function QueueTab({
           />
         </div>
       </div>
-      {jobs.length === 0 &&
+      {refreshing && (
+        <p role="status" data-testid="queue-loading" className="text-sm text-slate-300">
+          Loading opportunities…
+        </p>
+      )}
+      {!refreshing &&
+        jobs.length === 0 &&
         (status === 'pending' ? (
           <Empty icon={Briefcase} text="No opportunities waiting for review." hint="New posts will show up here." />
         ) : (
@@ -74,7 +80,11 @@ export default function QueueTab({
             hint="Switch the Status filter above to see other opportunities."
           />
         ))}
-      <div aria-busy={refreshing} className={refreshing ? 'space-y-3 opacity-50 transition-opacity' : 'space-y-3'}>
+      <div
+        aria-busy={refreshing}
+        {...({ inert: refreshing ? '' : undefined } as object)}
+        className={refreshing ? 'pointer-events-none space-y-3 opacity-50 transition-opacity' : 'space-y-3'}
+      >
         {jobs.map((j) => (
           <Card key={j.id} className="bg-white/[.05] border-white/10">
             <CardContent className="p-5">

@@ -141,6 +141,68 @@ describe('AuthProvider', () => {
     expect(modules.api.hasAccessToken()).toBe(false);
   });
 
+  it('remembers the signed-in role (not the token) for an expired-session redirect, and forgets it on sign-out', async () => {
+    const roleKey = 'verse_session_role';
+    await mount();
+    await settle();
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: ravi, accessToken: 'hirer-token' }));
+    await act(async () => {
+      await auth.login('ravi@example.com', 'pw');
+    });
+    expect(localStorage.getItem(roleKey)).toBe('employer');
+    expect(localStorage.getItem(roleKey)).not.toContain('hirer-token');
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }));
+    await act(async () => {
+      await auth.logout();
+    });
+    expect(localStorage.getItem(roleKey)).toBeNull();
+
+    // Other sign-in routes remember it too.
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: ravi, accessToken: 'code-token' }));
+    await act(async () => {
+      await auth.verifyCode('ravi@example.com', '123456');
+    });
+    expect(localStorage.getItem(roleKey)).toBe('employer');
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: asha, accessToken: 'new-token' }));
+    await act(async () => {
+      await auth.register({ name: 'Asha', email: 'asha@example.com', password: 'longpassword', role: 'jobseeker' });
+    });
+    expect(localStorage.getItem(roleKey)).toBe('jobseeker');
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: ravi, accessToken: 'second-factor-token' }));
+    await act(async () => {
+      await auth.completeSecondFactor('challenge', '123456');
+    });
+    expect(localStorage.getItem(roleKey)).toBe('employer');
+  });
+
+  it('keeps the remembered role through a failed /me, so a cold load that expires still signs in as the same role', async () => {
+    localStorage.setItem('verse_session_role', 'employer');
+    modules.api.setAccessToken('tok');
+    fetchMock.mockResolvedValue(jsonResponse({ error: 'down' }, 500));
+    await mount();
+    await settle();
+    expect(auth.user).toBeNull();
+    expect(localStorage.getItem('verse_session_role')).toBe('employer');
+  });
+
+  it('drops the remembered role when another tab signs out', async () => {
+    await mount();
+    await settle();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: ravi, accessToken: 'hirer-token' }));
+    await act(async () => {
+      await auth.login('ravi@example.com', 'pw');
+    });
+    localStorage.removeItem('verse_access_token');
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: 'verse_access_token', newValue: null, storageArea: localStorage }),
+      );
+    });
+    expect(localStorage.getItem('verse_session_role')).toBeNull();
+  });
+
   it('never lets a slow, older /me response overwrite a newer sign-in', async () => {
     modules.api.setAccessToken('old');
     let resolveMe!: (response: Response) => void;

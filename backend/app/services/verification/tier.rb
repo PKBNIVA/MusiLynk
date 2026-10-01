@@ -11,6 +11,24 @@ module Verification
       pro?(user) ? "verified_pro" : "verified"
     end
 
+    # { user_id => "verified" | "verified_pro" } for the verified users among `users`, in three grouped
+    # queries instead of the three per-user COUNTs `for` runs (a directory page lists 24 people at once).
+    def batch(users)
+      verified = users.select { _1.profile&.verified? }
+      return {} if verified.empty?
+      ids = verified.map(&:id)
+      completed = Hash.new(0)
+      UrgentRequest.where(status: "filled", filled_by_id: ids).group(:filled_by_id).count.each { |id, n| completed[id] += n }
+      BookingRequest.where(status: "completed").joins(:act).where(acts: { owner_id: ids }).group("acts.owner_id").count.each { |id, n| completed[id] += n }
+      reviews = Review.where(status: "published", employer_id: ids).group(:employer_id).count
+      min_completed = Config.pro.fetch(:min_completed)
+      min_reviews = Config.pro.fetch(:min_reviews)
+      verified.to_h do |user|
+        pro = completed[user.id] >= min_completed && reviews.fetch(user.id, 0) >= min_reviews
+        [user.id, pro ? "verified_pro" : "verified"]
+      end
+    end
+
     def pro?(user)
       completed_count(user) >= Config.pro.fetch(:min_completed) && reviews_count(user) >= Config.pro.fetch(:min_reviews)
     end

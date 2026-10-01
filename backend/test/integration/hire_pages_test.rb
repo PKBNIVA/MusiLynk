@@ -88,4 +88,14 @@ class HirePagesTest < ActionDispatch::IntegrationTest
     other_index = items.index { |item| item.dig("city", "slug") != "mumbai" }
     assert(mumbai_index.nil? || other_index.nil? || mumbai_index < other_index)
   end
+
+  test "professionals_in is the head count of counts_for, in one query" do
+    3.times { |i| create_talent(name: "Count Drummer #{i}", headline: "drummer", location: "Pune", verified: i.zero?) }
+    assert_equal 3, Seo::HireStats.professionals_in("Drummer", "Pune")
+    assert_equal Seo::HireStats.counts_for("Drummer", "Pune")[:professionals], Seo::HireStats.professionals_in("Drummer", "Pune")
+    queries = []
+    callback = ->(*, payload) { queries << payload[:sql] unless payload[:name] == "SCHEMA" }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { Seo::HireStats.professionals_in("Drummer", "Pune") }
+    assert_equal 1, queries.length
+  end
 end

@@ -1,4 +1,5 @@
 require "test_helper"
+require "nokogiri"
 
 class SharePagesTest < ActionDispatch::IntegrationTest
   setup do
@@ -140,5 +141,68 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     get "/share/opportunities/#{demo_job.id}"
     assert_response :not_found
+  end
+
+  def job_ld(job)
+    get "/share/opportunities/#{job.id}"
+    assert_response :success
+    JSON.parse(response.body[%r{<script type="application/ld\+json">(.*?)</script>}m, 1])
+  end
+
+  test "JobPosting carries every field Google requires and a valid baseSalary unit" do
+    job = create_job("published")
+    job.update_columns(compensation_min: 20_000, compensation_max: 40_000, compensation_period: "month", application_deadline: 10.days.from_now)
+    ld = job_ld(job)
+    %w[title description datePosted validThrough hiringOrganization jobLocation baseSalary].each { assert ld.key?(_1), "missing #{_1}" }
+    assert_equal "Organization", ld["hiringOrganization"]["@type"]
+    assert_equal "IN", ld["jobLocation"]["address"]["addressCountry"]
+    assert_equal "MONTH", ld["baseSalary"]["value"]["unitText"]
+    assert_equal 20_000, ld["baseSalary"]["value"]["minValue"]
+    assert_nothing_raised { Time.iso8601(ld["datePosted"]) }
+    assert_nothing_raised { Time.iso8601(ld["validThrough"]) }
+  end
+
+  test "baseSalary is omitted for per-session, per-show and per-project pay, which schema.org has no unit for" do
+    %w[session show project].each do |period|
+      job = create_job("published")
+      job.update_columns(compensation_min: 5_000, compensation_max: 9_000, compensation_period: period)
+      assert_not job_ld(job).key?("baseSalary"), "#{period} must not produce a baseSalary"
+    end
+    job = create_job("published")
+    job.update_columns(compensation_min: 900, compensation_max: nil, compensation_period: "day")
+    value = job_ld(job)["baseSalary"]["value"]
+    assert_equal "DAY", value["unitText"]
+    assert_not value.key?("maxValue"), "a missing maximum must be left out, not published as null"
+  end
+
+  test "a remote JobPosting declares who may apply, as Google requires with TELECOMMUTE" do
+    job = create_job("published")
+    job.update_columns(workplace: "remote")
+    ld = job_ld(job)
+    assert_equal "TELECOMMUTE", ld["jobLocationType"]
+    assert_equal({ "@type" => "Country", "name" => "IN" }, ld["applicantLocationRequirements"])
+    assert_not ld.key?("jobLocation")
+  end
+
+  test "a profile with no bio or headline still gets a non-empty meta description" do
+    user = create_user("Share Bare Profile", "jobseeker")
+    get "/share/professionals/#{user.id}"
+    assert_response :success
+    assert_no_match(/name="description" content=""/, response.body)
+    assert_no_match(/og:description" content=""/, response.body)
+  end
+
+  test "an unknown id renders the default page as noindex so a 404 body is never indexed" do
+    get "/share/acts/does-not-exist"
+    assert_response :not_found
+    assert_includes response.body, %(<meta name="robots" content="noindex">)
+  end
+
+  test "the share page body carries the title and description as text for crawlers that read the document" do
+    job = create_job("published", description: "Evening house band for a hotel lounge, four nights a week, with a written contract and a stable rota.")
+    get "/share/opportunities/#{job.id}", headers: { "User-Agent" => "Googlebot/2.1" }
+    body = Nokogiri::HTML(response.body)
+    assert_equal "#{job.title} at #{job.company} | Verse", body.at_css("main h1").text
+    assert_includes body.at_css("main p").text, "Evening house band for a hotel lounge"
   end
 end

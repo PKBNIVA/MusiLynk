@@ -111,4 +111,33 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "/p/#{real_portfolio.slug}<"
     assert_not_includes response.body, "/p/#{demo_portfolio.slug}<"
   end
+
+  test "a job whose application deadline has passed is not in the sitemap, and every record URL has a lastmod" do
+    open_job = create_job("published")
+    expired = create_job("published")
+    expired.update_columns(application_deadline: 2.days.ago)
+    dated = create_job("published")
+    dated.update_columns(application_deadline: 5.days.from_now)
+
+    get "/sitemap.xml"
+    assert_match "/opportunities/#{open_job.id}", response.body
+    assert_match "/opportunities/#{dated.id}", response.body
+    assert_no_match(/opportunities\/#{expired.id}</, response.body)
+
+    doc = Nokogiri::XML(response.body)
+    doc.remove_namespaces!
+    doc.xpath("//url").each do |url|
+      loc = url.at_xpath("loc").text
+      next unless loc.match?(%r{/(opportunities|professionals|acts)/})
+      assert_match(/\A\d{4}-\d{2}-\d{2}\z/, url.at_xpath("lastmod")&.text.to_s, "#{loc} has no lastmod")
+    end
+  end
+
+  test "the sitemap lists no URL twice" do
+    create_job("published")
+    create_user("Sitemap Unique Person", "jobseeker")
+    get "/sitemap.xml"
+    locs = Nokogiri::XML(response.body).remove_namespaces!.xpath("//loc").map(&:text)
+    assert_equal locs.uniq, locs
+  end
 end

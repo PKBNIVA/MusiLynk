@@ -9,5 +9,8 @@ Disallow: /verify-email
 Disallow: /unsubscribe
 Disallow: /search
 Disallow: /start
+Disallow: /forgot-password
+Disallow: /app-shell.html
+Disallow: /404.html
 
 Sitemap: https://verse-music-platform.vercel.app/sitemap.xml

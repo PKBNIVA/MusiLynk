@@ -24,6 +24,7 @@ import {
   DEFAULT_CITY,
   HIRER_KINDS,
   MUSICIAN_ROLES,
+  ROLE_MAX_LENGTH,
   starterLinks,
   type HirerKind,
   type StarterPayload,
@@ -323,6 +324,7 @@ function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user:
             id="join-other-role"
             field="roles"
             label="Something else? Add it here"
+            maxLength={ROLE_MAX_LENGTH}
             values={otherRoles}
             onChange={(next) => {
               setOtherRoles(next);

@@ -32,6 +32,9 @@ export const HIRER_KINDS = [
 ] as const;
 export type HirerKind = (typeof HIRER_KINDS)[number]['value'];
 
+/** The server refuses a role longer than this (Onboarding::Starter::ROLE_LIMIT). */
+export const ROLE_MAX_LENGTH = 60;
+
 export type LinkProvider = 'youtube' | 'soundcloud' | 'instagram' | 'spotify' | 'link';
 
 export interface LinkPreview {

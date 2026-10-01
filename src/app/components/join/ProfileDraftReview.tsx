@@ -4,6 +4,7 @@ import { AutocompleteInput } from '../ai/AutocompleteInput';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
+import { ROLE_MAX_LENGTH } from '../../lib/onboarding';
 import { foundInLink, sourceLabel, type DraftResult, type DraftSource, type ProfileDraft } from '../../lib/linkImport';
 
 function thumbnailFor(url: string, sources: DraftSource[]): string | null {
@@ -91,6 +92,7 @@ export function ProfileDraftReview({ result, onUse, onSkip, useLabel = 'Use this
         id="draft-roles"
         field="roles"
         label="Roles"
+        maxLength={ROLE_MAX_LENGTH}
         values={state.roles}
         onChange={(roles) => setState({ ...state, roles })}
       />

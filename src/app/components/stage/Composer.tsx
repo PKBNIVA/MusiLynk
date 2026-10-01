@@ -169,8 +169,8 @@ export function Composer({ onPosted, prefill, reshareOf, compact }: ComposerProp
       aria-label={isShare ? 'Add a comment and share' : 'Create a post'}
       className={`verse-surface rounded-2xl border border-white/10 bg-white/[.04] p-4 ${compact ? '' : 'md:p-5'}`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-slate-400">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-slate-400">
           <span>Posting as</span>
           {options.length > 1 ? (
             <AppSelect
@@ -248,6 +248,7 @@ export function Composer({ onPosted, prefill, reshareOf, compact }: ComposerProp
             <input
               ref={fileInputRef}
               type="file"
+              aria-label="Attach photo or audio"
               accept="image/jpeg,image/png,image/webp,audio/mpeg,audio/wav"
               multiple
               className="sr-only"

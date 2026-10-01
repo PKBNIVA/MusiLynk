@@ -40,7 +40,7 @@ class WeeklyDigest
   end
 
   def matching_open_requests(profile)
-    scope = UrgentRequest.open_and_recent.order(created_at: :desc).limit(MAX_ITEMS)
+    scope = ResponseTimeStats.organic_requests.open_and_recent.order(created_at: :desc).limit(MAX_ITEMS)
     city = profile&.location
     scope = scope.where("city ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(city)}%") if city.present?
     roles = Array(profile&.roles)
@@ -70,7 +70,7 @@ class WeeklyDigest
   end
 
   def community_footnote
-    count = UrgentRequest.where(status: "filled", updated_at: since..until_time).count
+    count = ResponseTimeStats.organic_requests.where(status: "filled", updated_at: since..until_time).count
     "#{count} #{'request'.pluralize(count)} were filled through Verse this week."
   end
 
@@ -110,7 +110,7 @@ class WeeklyDigest
     jobs = user.jobs.where(status: "published").left_joins(:applications).group(:id)
       .select("jobs.*, COUNT(applications.id) AS applicant_count").limit(MAX_ITEMS)
     requests = user.urgent_requests.where(status: "open").limit(MAX_ITEMS)
-    job_items = jobs.map { |j| { text: "#{j.title}: #{j.applicant_count} applicant#{'s' unless j.applicant_count == 1}", link: "#{app_url}/applicants" } }
+    job_items = jobs.map { |j| { text: "#{j.title}: #{j.applicant_count} applicant#{'s' unless j.applicant_count == 1}", link: "#{app_url}/applications" } }
     request_items = requests.map { |r| { text: "#{r.title}: #{r.urgent_request_responses.count} response#{'s' unless r.urgent_request_responses.count == 1}", link: "#{app_url}/urgent" } }
     (job_items + request_items).first(MAX_ITEMS)
   end

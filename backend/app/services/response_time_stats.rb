@@ -3,6 +3,10 @@
 # The core computation mirrors FunnelQueries.median_first_response_minutes (this app's
 # existing admin metric), scoped optionally to a city and/or a time window.
 class ResponseTimeStats
+  # Urgent requests filed by real (non-demo) users. Demo/synthetic accounts file requests too;
+  # none of them may count toward response-time figures or appear in a real person's digest.
+  def self.organic_requests = UrgentRequest.where(requester_id: User.organic.select(:id))
+
   # Median minutes between an urgent request's creation and its first response, over
   # requests (optionally in `city`, optionally created in `since..`) that have a response.
   # Returns nil when there's no data — callers use that to skip rather than show a made-up number.
@@ -21,7 +25,7 @@ class ResponseTimeStats
   # Returns [[user_id, median_minutes], ...] sorted fastest first, only for responders with
   # at least one qualifying response in the window/city.
   def self.fastest_responders(city: nil, since: nil, limit: 3)
-    requests = UrgentRequest.all
+    requests = organic_requests
     requests = requests.where("city ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(city)}%") if city.present?
     requests = requests.where(created_at: since..) if since
 
@@ -35,7 +39,7 @@ class ResponseTimeStats
   end
 
   def self.deltas(city:, since:)
-    requests = UrgentRequest.all
+    requests = organic_requests
     requests = requests.where("city ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(city)}%") if city.present?
     requests = requests.where(created_at: since..) if since
 

@@ -594,8 +594,8 @@ export default function Billing() {
         )}
 
         <div className="mt-8 text-xs text-slate-500 max-w-4xl">
-          Plan changes: cancel your current plan first; you can subscribe to another plan once it has ended. Payment
-          state is confirmed by signed Razorpay webhooks; closing or refreshing checkout never charges you twice.
+          To change plans, cancel your current plan first, then subscribe to another once it has ended. Closing or
+          refreshing checkout never charges you twice.
         </div>
       </main>
 

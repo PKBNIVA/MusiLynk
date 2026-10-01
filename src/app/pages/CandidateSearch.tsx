@@ -90,7 +90,18 @@ export default function CandidateSearch() {
     try {
       c.shortlisted ? await apiDelete(`/shortlists/${c.id}`) : await apiPost(`/shortlists/${c.id}`, {});
       setItems((xs) => xs.map((x) => (x.id === c.id ? { ...x, shortlisted: !x.shortlisted } : x)));
-      toast.success(c.shortlisted ? 'Removed from shortlist' : 'Added to talent shortlist');
+      if (c.shortlisted) {
+        toast.success('Removed from shortlist', {
+          action: {
+            label: 'Undo',
+            onClick: () => {
+              apiPost(`/shortlists/${c.id}`, {})
+                .then(() => setItems((xs) => xs.map((x) => (x.id === c.id ? { ...x, shortlisted: true } : x))))
+                .catch((e: unknown) => toast.error(errorMessage(e, 'Could not restore the shortlist entry.')));
+            },
+          },
+        });
+      } else toast.success('Added to talent shortlist');
     } catch (e: unknown) {
       toastJobError(e, user?.role === 'jobseeker' ? '/jobseeker/billing' : '/employer/billing', nav);
     }

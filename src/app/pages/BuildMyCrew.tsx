@@ -110,7 +110,7 @@ export default function BuildMyCrew() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-5 pt-28 pb-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
         <PageHeader title="Build my crew" />
         <div className="grid lg:grid-cols-[.8fr_1.2fr] gap-6 mt-8">
           <Card className="bg-white/[.055] border-white/10">
@@ -125,7 +125,7 @@ export default function BuildMyCrew() {
                     onChange={(e) => setF({ ...f, title: e.target.value })}
                   />
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field id="crew-event-type" label="Event type">
                     <AppSelect
                       className="min-w-0"
@@ -152,7 +152,7 @@ export default function BuildMyCrew() {
                     />
                   </Field>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field id="crew-date" label="Event date" hint={formatInputEcho(f.eventDate)}>
                     <Input
                       type="date"

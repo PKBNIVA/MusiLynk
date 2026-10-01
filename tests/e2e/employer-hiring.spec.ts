@@ -199,6 +199,65 @@ test('hitting the plan limit keeps the opportunity as a draft and links to plans
   expect(statuses.slice(-2)).toEqual(['pending', 'draft']);
 });
 
+test('applicant cards never expose an email address; hirers use the in-app Message action', async ({ page }) => {
+  // Even if an older API still returns candidateEmail on a shortlisted applicant, it must not be rendered.
+  await signIn(page, 'employer', (request, url) => {
+    if (url.pathname === '/api/employer/applications' && request.method() === 'GET')
+      return { body: { applications: [{ ...application, status: 'Shortlisted' }] } };
+    return undefined;
+  });
+  await page.goto('/employer/applications');
+  await expect(page.getByRole('heading', { name: 'Asha Rao' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Message' })).toBeVisible();
+  await expect(page.locator('a[href^="mailto:"]')).toHaveCount(0);
+  await expect(page.getByText('asha@example.invalid')).toHaveCount(0);
+  await expect(page.getByText('Email this applicant')).toHaveCount(0);
+});
+
+test('rejecting an applicant asks for confirmation first and can be cancelled', async ({ page }) => {
+  const { calls } = await signIn(page, 'employer', (request, url) => {
+    if (url.pathname === '/api/employer/applications' && request.method() === 'GET')
+      return { body: { applications: [application] } };
+    if (url.pathname === '/api/employer/applications/app-1') return { body: { ok: true } };
+    return undefined;
+  });
+  await page.goto('/employer/applications');
+  await page.getByRole('button', { name: 'Move to…' }).click();
+  await page.getByRole('menuitem', { name: 'Rejected' }).click();
+  const confirm = page.getByRole('alertdialog', { name: 'Reject Asha Rao?' });
+  await expect(confirm).toBeVisible();
+  expect(calls.filter((c) => c.method === 'PATCH')).toHaveLength(0);
+  await confirm.getByRole('button', { name: 'Keep as is' }).click();
+  await expect(confirm).toBeHidden();
+  expect(calls.filter((c) => c.method === 'PATCH')).toHaveLength(0);
+
+  await page.getByRole('button', { name: 'Move to…' }).click();
+  await page.getByRole('menuitem', { name: 'Rejected' }).click();
+  await page
+    .getByRole('alertdialog', { name: 'Reject Asha Rao?' })
+    .getByRole('button', { name: 'Reject applicant' })
+    .click();
+  await expect
+    .poll(() => calls.filter((c) => c.method === 'PATCH').map((c) => c.body))
+    .toEqual([{ status: 'Rejected' }]);
+});
+
+test('the talent filter rows scroll inside themselves instead of widening the page on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page, 'employer', (_request, url) => {
+    if (url.pathname === '/api/candidates') return { body: { candidates } };
+    return undefined;
+  });
+  await page.goto('/employer/candidates');
+  await page.getByRole('button', { name: /More filters/ }).click();
+  await expect(page.getByRole('group', { name: 'Language' })).toBeVisible();
+  const widths = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth,
+  }));
+  expect(widths.scroll).toBeLessThanOrEqual(widths.client);
+});
+
 test('interview scheduling and recruiter notes use in-page dialogs, not browser prompts', async ({ page }) => {
   const { calls, dialogs, errors } = await signIn(page, 'employer', (request, url) => {
     if (url.pathname === '/api/employer/applications' && request.method() === 'GET')

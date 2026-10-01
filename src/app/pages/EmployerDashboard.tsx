@@ -39,7 +39,7 @@ export default function EmployerDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-5 md:px-6 pt-28 pb-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-5 md:px-6 pt-28 pb-16">
         <PageHeader
           help={<HelpCallout {...HELP.employerDashboard} />}
           title={`Hi, ${user?.name?.split(' ')[0] || 'there'}`}
@@ -68,7 +68,9 @@ export default function EmployerDashboard() {
         {!(empty && welcome) && (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4 mt-8">
-              <h2 className="text-xl font-semibold flex items-center gap-2">Live opportunities</h2>
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                {empty ? 'Get started' : 'Live opportunities'}
+              </h2>
               <Link to="/employer/candidates" className="text-sm text-violet-300">
                 Search talent
               </Link>
@@ -146,6 +148,7 @@ function ChoiceCards() {
       >
         <FormatGlyph kind="job" size={24} className="size-10 text-violet-300" />
         <span className="mt-4 text-lg font-semibold">Post an opportunity</span>
+        <span className="mt-1 text-sm text-slate-400">A gig, a tour or a long-term role. Musicians apply to you.</span>
       </Link>
       <Link
         to="/employer/urgent"
@@ -153,6 +156,9 @@ function ChoiceCards() {
       >
         <Zap aria-hidden="true" className="size-10 text-amber-300" />
         <span className="mt-4 text-lg font-semibold">Need someone by tomorrow?</span>
+        <span className="mt-1 text-sm text-slate-400">
+          Post an urgent request. Free musicians respond within hours.
+        </span>
       </Link>
     </div>
   );

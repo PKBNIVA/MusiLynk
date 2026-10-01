@@ -134,6 +134,8 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/admin/billing-attempts/{billing_attempt}/reconcile", :admin, { ok: [503], missing: :billing_attempt, note: "fails closed (503 PAYMENTS_NOT_CONFIGURED) without Razorpay keys" }],
     [:get, "/api/admin/bookings", :admin, { keys: %w[bookings] }],
     [:post, "/api/admin/search/reindex", :admin, { keys: %w[count] }],
+    [:get, "/api/admin/payments-open-email", :admin, { keys: %w[usable waiting sendable] }],
+    [:post, "/api/admin/payments-open-email", :admin, { ok: [503], note: "fails closed (503 PAYMENTS_NOT_CONFIGURED) until Razorpay is usable" }],
     [:get, "/api/admin/refunds", :admin, { keys: %w[refunds] }],
     [:patch, "/api/admin/refunds/{refund}", :admin, { params: { note: "Reviewed" }, missing: :refund, keys: %w[status] }],
     [:put, "/api/admin/refunds/{refund}", :admin, { params: { note: "Reviewed" }, missing: :refund, keys: %w[status] }],

@@ -107,6 +107,8 @@ Rails.application.routes.draw do
       resources :promo_codes, path: "promo-codes", only: %i[index create update] do
         member { get :redemptions }
       end
+      get "payments-open-email", to: "payments_open_emails#show"
+      post "payments-open-email", to: "payments_open_emails#create"
       get "billing-attempts", to: "operations#billing_attempts"
       post "billing-attempts/:id/reconcile", to: "operations#reconcile_billing_attempt"
       resources :billing_events, path: "billing-events", only: %i[index show]

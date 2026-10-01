@@ -45,11 +45,46 @@ module Search
 
     def self.parse(raw) = new(raw)
 
+    # One query that matches rows matching ANY of `raws` (for example a musician's roles).
+    # Single-word roles fold into one token whose alternatives are OR-ed; a role of several words
+    # that is not a known phrase is matched as that exact phrase, so "sound engineer" is never
+    # split into "sound" OR "engineer". Roles that parse to nothing are ignored; if none are left
+    # the result is the (inert) query of what was typed.
+    def self.any_of(raws)
+      raws = Array(raws)
+      queries = raws.map { new(_1) }.reject(&:blank?)
+      return new(raws.join(" ")) if queries.empty?
+      return queries.first if queries.one?
+
+      words = []
+      prefixes = []
+      queries.each do |query|
+        token = query.tokens.first
+        if query.tokens.one? && !token.location?
+          words.concat(token.words)
+          prefixes.concat(token.prefixes)
+        else
+          words << query.text
+        end
+      end
+      text = queries.map(&:text).join(" or ")
+      new(text, tokens: [Token.new(text:, words: words.uniq, prefixes: prefixes.uniq)])
+    end
+
     def initialize(raw, tokens: nil)
       @typed = raw.to_s.strip.present?
       @natural = !raw.to_s.match?(CODE_LIKE)
       @text = self.class.normalize(raw)
       @tokens = tokens || tokenize(@text)
+    end
+
+    # Rows must match this query and `other` (used to narrow a typed search by roles).
+    def and(other)
+      return self if inert?
+      return other if other.inert? || blank?
+      return self if other.blank?
+
+      self.class.new([text, other.text].join(" "), tokens: tokens + other.tokens)
     end
 
     # Something was typed but nothing searchable is left ("%", "' OR '1'='1"): matches no rows.

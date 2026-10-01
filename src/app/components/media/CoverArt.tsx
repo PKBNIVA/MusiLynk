@@ -35,6 +35,7 @@ export function CoverArt({ seed, kind, genres = [], size, rounded = false, bars 
   const y1 = 50 - Math.sin(rad) * 50;
   const x2 = 50 + Math.cos(rad) * 50;
   const y2 = 50 + Math.sin(rad) * 50;
+  const glows = blobs(seed);
   const heights = ribbonBars(seed, bars);
   const step = 84 / bars;
   const px = size === 'fill' ? '100%' : size;
@@ -60,17 +61,39 @@ export function CoverArt({ seed, kind, genres = [], size, rounded = false, bars 
             <stop offset="0" stopColor={palette.from} />
             <stop offset="1" stopColor={palette.to} />
           </linearGradient>
-          {blobs(seed).map((b, i) => (
+        </defs>
+        <rect width="100" height="100" fill={`url(#${uid}g)`} />
+      </svg>
+      {/* The glows are fitted inside the shorter side (meet), not stretched to cover the longer one,
+          so in a wide card they stay soft circles instead of growing into one huge disc. */}
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="xMidYMid meet"
+        width="100%"
+        height="100%"
+        className="absolute inset-0 block"
+        data-testid="cover-art-glows"
+      >
+        <defs>
+          {glows.map((b, i) => (
             <radialGradient key={i} id={`${uid}b${i}`}>
               <stop offset="0" stopColor={i === 0 ? palette.accent : '#ffffff'} stopOpacity={b.opacity} />
+              <stop offset="0.55" stopColor={i === 0 ? palette.accent : '#ffffff'} stopOpacity={b.opacity * 0.35} />
               <stop offset="1" stopColor={i === 0 ? palette.accent : '#ffffff'} stopOpacity="0" />
             </radialGradient>
           ))}
         </defs>
-        <rect width="100" height="100" fill={`url(#${uid}g)`} />
-        {blobs(seed).map((b, i) => (
+        {glows.map((b, i) => (
           <circle key={i} cx={b.cx} cy={b.cy} r={b.r} fill={`url(#${uid}b${i})`} />
         ))}
+      </svg>
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="xMidYMid slice"
+        width="100%"
+        height="100%"
+        className="absolute inset-0 block"
+      >
         <g fill="#ffffff" fillOpacity="0.55">
           {heights.map((h, i) => {
             const barHeight = Math.max(2, h * BAND.height);

@@ -84,10 +84,14 @@ class UrgentRequestsController < ApplicationController
     first_response = !UrgentRequestResponse.exists?(urgent_request_id: item.id, user_id: current_user.id)
     note = params[:message].to_s.strip.presence
     UrgentRequestResponse.upsert({ urgent_request_id: item.id, user_id: current_user.id, message: note, rate: rate&.to_i, status: "available", created_at: Time.current, updated_at: Time.current }, unique_by: :idx_urgent_response_unique)
-    Notification.create!(user: item.requester, kind: "urgent_response", title: "Availability response", body: "#{current_user.name} responded to #{item.title}.", link: "/urgent-requests")
     Notifier.milestone_first_urgent_response(current_user, item)
     # The conversation exists from the first response, so the musician can open it at once (J-03).
+    # The hirer gets one notice for the response, which opens that conversation; the note the
+    # musician wrote is its first message, but only the email (not a second in-app notice) tells
+    # the hirer about it.
     conversation = open_thread(item.requester, current_user, note: (note if first_response))
+    Notification.create!(user: item.requester, kind: "urgent_response", title: "Availability response", body: "#{current_user.name} responded to #{item.title}.",
+      link: conversation ? Notifier.message_link(conversation) : urgent_link(item.requester))
     render json: { ok: true, conversationId: conversation&.id }, status: :created
   end
 
@@ -110,9 +114,10 @@ class UrgentRequestsController < ApplicationController
       UrgentRequestResponse.where(urgent_request_id: item.id, user_id: chosen.id).update_all(status: "accepted", updated_at: Time.current)
     end
     conversation = open_thread(current_user, chosen)
-    link = conversation ? Notifier.message_link(conversation) : "/urgent-requests"
-    Notification.create!(user: chosen, kind: "urgent_accepted", title: "You were chosen", body: "#{current_user.name} chose you for #{item.title}. Message them to confirm the details.", link:)
-    Notification.create!(user: current_user, kind: "urgent_accepted", title: "Request filled", body: "Request filled by #{chosen.name}: #{item.title}.", link:)
+    # Each person's notice opens the conversation, or their own urgent-requests page when there is none.
+    thread = conversation && Notifier.message_link(conversation)
+    Notification.create!(user: chosen, kind: "urgent_accepted", title: "You were chosen", body: "#{current_user.name} chose you for #{item.title}. Message them to confirm the details.", link: thread || urgent_link(chosen))
+    Notification.create!(user: current_user, kind: "urgent_accepted", title: "Request filled", body: "Request filled by #{chosen.name}: #{item.title}.", link: thread || urgent_link(current_user))
     Notifier.milestone_5th_filled_request(current_user)
     audit!("urgent_request.accept", item)
     render json: { ok: true, request: serialize(item.reload, Set.new), conversationId: conversation&.id }
@@ -171,10 +176,13 @@ class UrgentRequestsController < ApplicationController
     conversation = Conversation.open_between!(candidate: musician, employer: hirer)
     if note
       message = conversation.messages.new(sender: musician, body: note.first(MessagesController::MAX_LENGTH)).tap { _1.flag_scam_signals; _1.save! }
-      Notifier.new_message(message)
+      Notifier.new_message(message, in_app: false)
     end
     conversation
   end
+
+  # The requester's own urgent-requests page (a workspace route; "/urgent-requests" is the API path).
+  def urgent_link(user) = "#{NotificationEmail.workspace(user)}/urgent"
 
   def words(text) = text.to_s.downcase.scan(/[[:alnum:]]+/) - ROLE_FILLER
 

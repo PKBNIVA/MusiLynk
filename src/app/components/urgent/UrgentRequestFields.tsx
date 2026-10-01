@@ -8,6 +8,11 @@ import { MoreDetails } from '../help/MoreDetails';
 import { BUDGET_BANDS, URGENT_IDS, type UrgentField, type UrgentFormValues } from '../../lib/urgentForm';
 import { formatInputEcho } from '../../lib/format';
 
+// Phone browsers give a date-and-time field a wide native minimum that clips the value at 390px;
+// letting its inner parts shrink and left-align keeps the whole value visible.
+const DATETIME_CLASS =
+  'max-w-full min-w-0 [&::-webkit-date-and-time-value]:min-w-0 [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:min-w-0';
+
 /**
  * The urgent request's fields: five required answers, then "More details". The public /urgent
  * page and the signed-in urgent page both render this, so the two can never drift apart again.
@@ -53,7 +58,12 @@ export function UrgentRequestFields({
           error={errors.startAt}
           hint={formatInputEcho(values.startAt, true)}
         >
-          <Input type="datetime-local" value={values.startAt} onChange={(e) => onChange('startAt', e.target.value)} />
+          <Input
+            type="datetime-local"
+            className={DATETIME_CLASS}
+            value={values.startAt}
+            onChange={(e) => onChange('startAt', e.target.value)}
+          />
         </Field>
         <div>
           <AutocompleteInput
@@ -117,6 +127,7 @@ export function UrgentRequestFields({
           >
             <Input
               type="datetime-local"
+              className={DATETIME_CLASS}
               min={values.startAt}
               value={values.endAt}
               onChange={(e) => onChange('endAt', e.target.value)}

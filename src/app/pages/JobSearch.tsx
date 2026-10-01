@@ -23,12 +23,13 @@ import { useFunctionAreas } from '../lib/useTaxonomy';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
 import type { Job } from '../lib/apiTypes';
+import { MAX_ROLE_CHIPS, hasRole, joinRoles, roleChips, splitRoles, toggleRole } from '../lib/roleFilter';
 import { AppSelect } from '../components/ui/app-select';
 
 const kinds = ['', 'job', 'gig', 'audition', 'session', 'tour', 'internship', 'collaboration'];
 const workplaces = ['', 'onsite', 'hybrid', 'remote', 'travel'];
 // URL keys are the API's filter names, so the URL is the search.
-const FILTERS = ['q', 'location', 'kind', 'function', 'workplace', 'paid', 'verified'] as const;
+const FILTERS = ['q', 'roles', 'location', 'kind', 'function', 'workplace', 'paid', 'verified'] as const;
 
 export default function JobSearch() {
   const { user } = useAuth();
@@ -55,7 +56,8 @@ export default function JobSearch() {
   // First visit with no search in the URL: start from the musician's own roles and city. They show
   // as chips below and are removed like any other filter; this runs once per visit, so removing
   // them (or pressing Back) is never undone. The first fetch waits for them, so it is one request.
-  const profileRoles = (user?.roles ?? []).filter(Boolean).slice(0, 6);
+  const profileRoles = (user?.roles ?? []).filter(Boolean).slice(0, MAX_ROLE_CHIPS);
+  const roleList = roleChips(profileRoles, f.roles);
   const defaultsApplied = useRef(false);
   const waitingForDefaults =
     Boolean(user) && !defaultsApplied.current && !query && Boolean(user?.location || profileRoles[0]);
@@ -66,7 +68,7 @@ export default function JobSearch() {
     if (defaultsApplied.current || !user) return;
     defaultsApplied.current = true;
     if (query) return;
-    update({ location: user.location || '', q: profileRoles[0] || '' }, { replace: true });
+    update({ location: user.location || '', roles: joinRoles(profileRoles) }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
   const submit = (e: FormEvent) => {
@@ -83,10 +85,12 @@ export default function JobSearch() {
     }
   }
   async function createAlert() {
+    // Alerts match one search phrase, so with no typed search they keep the first selected role.
+    const firstRole = splitRoles(f.roles)[0] || '';
     try {
       await apiPost('/job-alerts', {
-        name: f.q || f.kind || 'Music opportunities',
-        query: f.q,
+        name: f.q || firstRole || f.kind || 'Music opportunities',
+        query: f.q || firstRole,
         location: f.location,
         opportunityKind: f.kind,
         functionArea: f.function,
@@ -196,17 +200,17 @@ export default function JobSearch() {
             )}
           </CardContent>
         </Card>
-        {profileRoles.length > 0 && (
+        {roleList.length > 0 && (
           <div role="group" aria-label="Your roles" className="mb-2 flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-400">Your roles</span>
-            {profileRoles.map((role) => {
-              const on = f.q.toLowerCase() === role.toLowerCase();
+            {roleList.map((role) => {
+              const on = hasRole(f.roles, role);
               return (
                 <button
                   key={role}
                   type="button"
                   aria-pressed={on}
-                  onClick={() => update({ q: on ? '' : role })}
+                  onClick={() => update({ roles: toggleRole(f.roles, role) })}
                   className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 ${
                     on
                       ? 'border-violet-400/50 bg-violet-500/15 text-violet-100'

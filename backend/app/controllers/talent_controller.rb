@@ -6,10 +6,10 @@ class TalentController < ApplicationController
   FACET_PARAMS = %i[language eventType genre budgetMax].freeze
   LIST_PARAMS = (%i[q location role instrument verified remoteRecording limit cursor] + FACET_PARAMS).freeze
 
-  # Ranking rewards proof (plan 5.1.4): verified, then a playable public sample, then how complete the
+  # Ranking rewards proof (plan 5.1.4): verified, then a playable public sample (audio or video with a link, not an image, PDF or project), then how complete the
   # profile is, then any published rate, then the most recent sign-in. An empty profile therefore never
   # outranks a populated one. COMPLETENESS mirrors the dashboard's profileScore (six signals, 0-6).
-  HAS_SAMPLE_SQL = "EXISTS (SELECT 1 FROM portfolio_items ranked_samples WHERE ranked_samples.user_id = users.id AND ranked_samples.visibility = 'public')".freeze
+  HAS_SAMPLE_SQL = "EXISTS (SELECT 1 FROM portfolio_items ranked_samples WHERE ranked_samples.user_id = users.id AND ranked_samples.visibility = 'public' AND ranked_samples.kind IN ('audio', 'video') AND btrim(COALESCE(ranked_samples.url, '')) <> '')".freeze
   COMPLETENESS_SQL = [
     *%w[headline bio location].map { "(CASE WHEN btrim(COALESCE(profiles.#{_1}, '')) <> '' THEN 1 ELSE 0 END)" },
     *%w[skills genres].map { "(CASE WHEN profiles.#{_1} <> '[]'::jsonb THEN 1 ELSE 0 END)" },

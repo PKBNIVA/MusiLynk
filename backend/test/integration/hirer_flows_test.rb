@@ -5,6 +5,8 @@ require "test_helper"
 # enquiry limit and change-request message, the verificationPending flag on /me, and the
 # double-submit guard on posting an opportunity.
 class HirerFlowsTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
   setup do
     @hirer = create_user("Hira Hirer", "hf-hirer@example.com", "employer")
     @drummer = create_user("Dev Drummer", "hf-drummer@example.com", "jobseeker")
@@ -31,6 +33,39 @@ class HirerFlowsTest < ActionDispatch::IntegrationTest
     post "/api/urgent-requests/#{item.id}/respond", params: { message: "Free from 7 pm" }, headers: auth(@drummer), as: :json
     assert_equal conversation.id, response.parsed_body.fetch("conversationId")
     assert_equal 1, conversation.messages.count
+  end
+
+  test "a first response sends the hirer one in-app notice, which opens the conversation" do
+    item = urgent_request
+    with_email_provider do
+      assert_enqueued_jobs 1, only: NotificationEmailJob do
+        post "/api/urgent-requests/#{item.id}/respond", params: { message: "Free from 6 pm" }, headers: auth(@drummer), as: :json
+      end
+    end
+    assert_response :created
+    notices = @hirer.notifications.reload
+    assert_equal ["urgent_response"], notices.map(&:kind), "the note's message does not raise a second in-app notice"
+    assert_equal "/messages?c=#{response.parsed_body.fetch('conversationId')}", notices.first.link
+    assert_equal 1, Message.count, "the note is still the first message of the conversation"
+
+    # Updating the response is still one notice, not one per update plus a message.
+    assert_difference -> { @hirer.notifications.count }, 1 do
+      post "/api/urgent-requests/#{item.id}/respond", params: { message: "Free from 7 pm" }, headers: auth(@drummer), as: :json
+    end
+  end
+
+  test "urgent notices never link to the API path and fall back to the recipient's own workspace page" do
+    item = urgent_request
+    UserBlock.create!(blocker: @hirer, blocked: @drummer)
+    post "/api/urgent-requests/#{item.id}/respond", params: { message: "Free from 6 pm" }, headers: auth(@drummer), as: :json
+    assert_nil response.parsed_body["conversationId"]
+    assert_equal "/employer/urgent", @hirer.notifications.find_by!(kind: "urgent_response").link
+
+    post "/api/urgent-requests/#{item.id}/accept", params: { userId: @drummer.id }, headers: auth(@hirer), as: :json
+    assert_response :success
+    assert_equal "/employer/urgent", @hirer.notifications.find_by!(kind: "urgent_accepted").link
+    assert_equal "/jobseeker/urgent", @drummer.notifications.find_by!(kind: "urgent_accepted").link
+    assert_empty Notification.where(link: "/urgent-requests")
   end
 
   test "a response without a note still opens an empty conversation, unless either side blocked the other" do
@@ -181,14 +216,16 @@ class HirerFlowsTest < ActionDispatch::IntegrationTest
     assert_response :created
     booking = BookingRequest.find(response.parsed_body.fetch("id"))
     assert_equal @drummer.id, booking.act.owner_id
-    assert_equal ["solo", "inactive"], [booking.act.act_type, booking.act.status]
+    assert_equal ["solo", "hidden"], [booking.act.act_type, booking.act.status]
     assert Notification.exists?(user: @drummer, kind: "booking")
 
-    # The hidden solo act is reused, and never shows up in the public acts list.
+    # The hidden solo act is reused, and never shows up in the public acts list or the musician's My acts.
     post "/api/bookings", params: { musicianId: @drummer.id, eventType: "corporate", city: "Mumbai", eventDate: 3.months.from_now.to_date.iso8601 }, headers: auth(@hirer), as: :json
     assert_equal 1, @drummer.owned_acts.count
     get "/api/public/acts"
     refute_includes response.parsed_body.fetch("acts").map { _1["id"] }, booking.act_id
+    get "/api/acts/me", headers: auth(@drummer)
+    assert_empty response.parsed_body.fetch("acts")
     get "/api/bookings", headers: auth(@drummer)
     assert_equal 2, response.parsed_body.fetch("bookings").size
   end
@@ -249,6 +286,14 @@ class HirerFlowsTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def with_email_provider
+    previous = ENV["EMAIL_DELIVERY_WEBHOOK"]
+    ENV["EMAIL_DELIVERY_WEBHOOK"] = "https://email-hook.example.invalid/send"
+    yield
+  ensure
+    previous ? ENV["EMAIL_DELIVERY_WEBHOOK"] = previous : ENV.delete("EMAIL_DELIVERY_WEBHOOK")
+  end
 
   def create_user(name, email, role)
     User.create!(name:, email:, password: "StrongPass123!", role:, status: "active", email_verified: true, profile_complete: true)

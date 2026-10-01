@@ -143,6 +143,21 @@ class SecurityReReviewTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "RR-9 the admin users list shows an unconfirmed account's linked sign-ins and a masked phone" do
+    admin = User.create!(name: "Ad Min", email: "rr9-admin@example.com", password: PASSWORD, role: "admin", status: "active", profile_complete: true, email_verified: true)
+    user = register_unverified("rr9-unverified@example.com")
+    user.update!(phone: "+919876543210")
+    AuthConnection.create!(owner: user, provider: "google", provider_uid: "sub-rr9", email: "someone-else@example.com")
+    get "/api/admin/users", params: { q: "rr9" }, headers: auth(admin)
+    assert_response :success
+    rows = response.parsed_body["users"].index_by { _1["id"] }
+    row = rows.fetch(user.id)
+    assert_equal [{ "provider" => "google", "email" => "someone-else@example.com" }], row["connections"]
+    assert_equal "•••• 3210", row["phone"]
+    assert_equal false, row["phoneVerified"]
+    assert_not rows.fetch(admin.id).key?("connections")
+  end
+
   private
 
   def create_job(owner, status)

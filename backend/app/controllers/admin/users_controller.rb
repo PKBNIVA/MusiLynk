@@ -15,7 +15,24 @@ module Admin
       end
       rows, meta = admin_paginate(scope)
       early_access_until = Subscription.where(user_id: rows.map(&:id), status: "early_access").pluck(:user_id, :trial_ends_at).to_h
-      render json: { users: rows.map { public_user(_1).merge("createdAt" => _1.created_at, "earlyAccessUntil" => early_access_until[_1.id]) } }.merge(meta)
+      sign_in_methods = unverified_sign_in_methods(rows)
+      render json: { users: rows.map { public_user(_1).merge("createdAt" => _1.created_at, "earlyAccessUntil" => early_access_until[_1.id]).merge(sign_in_methods[_1.id] || {}) } }.merge(meta)
+    end
+
+    # For unconfirmed accounts only: what else can sign in to them (linked identities, phone), so
+    # support can spot a stranger's pre-registration before confirming the email by hand.
+    # The phone is masked to its last four digits.
+    def unverified_sign_in_methods(rows)
+      ids = rows.reject { _1.email_verified? || _1.admin? }.map(&:id)
+      return {} if ids.empty?
+      connections = AuthConnection.where(owner_type: "User", owner_id: ids).order(:created_at).group_by(&:owner_id)
+      rows.select { ids.include?(_1.id) }.to_h do |user|
+        [user.id, {
+          "connections" => (connections[user.id] || []).map { { "provider" => _1.provider, "email" => _1.email } },
+          "phone" => (user.phone.present? ? "•••• #{user.phone.to_s.gsub(/\D/, "").last(4)}" : nil),
+          "phoneVerified" => user.phone_verified_at.present?
+        }]
+      end
     end
 
     def update

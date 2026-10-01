@@ -175,6 +175,8 @@ export type Confirm = {
   title: string;
   description: string;
   confirmLabel: string;
+  /** Extra read-only context shown under the description (e.g. an account's linked sign-in methods). */
+  details?: ReactNode;
   reasonLabel?: string;
   reasonRequired?: boolean;
   destructive?: boolean;
@@ -346,6 +348,7 @@ export function ConfirmDialog({ value, onClose }: { value: Confirm | null; onClo
             <DialogTitle>{value?.title}</DialogTitle>
             <DialogDescription className="text-slate-400">{value?.description}</DialogDescription>
           </DialogHeader>
+          {value?.details}
           {value?.reasonLabel && (
             <div className="grid gap-2">
               <Label htmlFor="admin-confirm-reason">

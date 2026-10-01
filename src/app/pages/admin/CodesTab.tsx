@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../../components/ui/sheet';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Empty, Pager, Panel, date, type AdminActions, type PageMeta } from './shared';
 import { AdminPageHeader, AdminSelect, HowToCallout } from './ui';
 import { formatInputEcho } from '../../lib/format';
@@ -270,8 +270,14 @@ export default function CodesTab({ actions }: { actions: AdminActions }) {
             }
           />
         ) : (
-          <Card className="bg-white/[.04] border-white/10 overflow-x-auto">
-            <Table>
+          <Card
+            className="bg-white/[.04] border-white/10 overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
+            tabIndex={0}
+            role="region"
+            aria-label="Promo codes table, scrolls sideways on small screens"
+          >
+            {/* A plain table (not the shared <Table>, whose own wrapper would be the scroller) so this focusable region is the one that scrolls. */}
+            <table className="w-full min-w-[44rem] caption-bottom text-sm">
               <TableHeader>
                 <TableRow className="border-white/10 hover:bg-transparent">
                   {['Code', 'Kind', 'Effect', 'Plan · interval', 'Used', 'Expires', 'State', ''].map((h) => (
@@ -328,7 +334,7 @@ export default function CodesTab({ actions }: { actions: AdminActions }) {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </table>
           </Card>
         )}
         <Pager

@@ -154,6 +154,14 @@ class HirerFlowsTest < ActionDispatch::IntegrationTest
     assert_equal old, Conversation.open_between!(candidate: @drummer, employer: @hirer, job:)
   end
 
+  test "compare says which professionals this hirer has shortlisted" do
+    TalentShortlist.create!(employer: @hirer, candidate: @drummer)
+    get "/api/candidates/compare/list", params: { ids: [@drummer.id, @singer.id].join(",") }, headers: auth(@hirer)
+    assert_response :success
+    flags = response.parsed_body.fetch("professionals").to_h { [_1["id"], _1["shortlisted"]] }
+    assert_equal({ @drummer.id => true, @singer.id => false }, flags)
+  end
+
   # ---- A-09: a quote asked of a musician ----
 
   test "an enquiry addressed to a musician who fronts no act goes to their solo act" do

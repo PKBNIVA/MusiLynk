@@ -1,22 +1,27 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { useSearchParams, Link } from 'react-router';
+import { useNavigate, useSearchParams, Link } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
-import { apiGet } from '../lib/api';
+import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { WorkSamplePlayer } from '../components/WorkSamplePlayer';
-import { ShieldCheck, MapPin, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, MapPin, ArrowLeft, BookmarkCheck, BookmarkPlus, MessageSquare, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { errorMessage } from '../lib/errors';
+import { formatDate, formatMoney } from '../lib/format';
 import { useAuth } from '../lib/authContext';
 import type { ComparedProfessional } from '../lib/apiTypes';
 export default function CandidateCompare() {
-  const [sp] = useSearchParams(),
+  const [sp, setSp] = useSearchParams(),
+    nav = useNavigate(),
     [people, setPeople] = useState<ComparedProfessional[]>([]),
     [error, setError] = useState(''),
     [loaded, setLoaded] = useState(false),
     { user } = useAuth();
   const backTo = user?.role === 'jobseeker' ? '/jobseeker/hiring/talent' : '/employer/candidates';
+  const base = user?.role === 'jobseeker' ? '/jobseeker' : '/employer';
   const idsParam = sp.get('ids') || '';
   const ids = useMemo(
     () =>
@@ -42,6 +47,26 @@ export default function CandidateCompare() {
       })
       .catch((e) => setError(e.message));
   }, [ids]);
+  // Takes one column out of the comparison (the address keeps the rest, so Back still works).
+  const remove = (id: string) => setSp({ ids: ids.filter((x) => x !== id).join(',') }, { replace: true });
+  async function message(p: ComparedProfessional) {
+    try {
+      const d = await apiPost<{ conversation: { id: string } }>('/conversations', { candidateId: p.id });
+      nav(`${base}/messages?c=${d.conversation.id}`);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Unable to open the conversation.'));
+    }
+  }
+  async function toggleShortlist(p: ComparedProfessional) {
+    try {
+      if (p.shortlisted) await apiDelete(`/shortlists/${p.id}`);
+      else await apiPost(`/shortlists/${p.id}`, {});
+      setPeople((xs) => xs.map((x) => (x.id === p.id ? { ...x, shortlisted: !p.shortlisted } : x)));
+      toast.success(p.shortlisted ? 'Removed from shortlist' : 'Added to talent shortlist');
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Unable to update your shortlist.'));
+    }
+  }
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -92,22 +117,13 @@ export default function CandidateCompare() {
                   </div>
                 )}
                 <Row k="Experience" v={p.yearsExperience ? `${p.yearsExperience} years` : '—'} />
-                <Row
-                  k="Session rate"
-                  v={p.sessionRate ? `${p.currency || 'INR'} ${Number(p.sessionRate).toLocaleString()}` : '—'}
-                />
-                <Row
-                  k="Show rate"
-                  v={p.showRate ? `${p.currency || 'INR'} ${Number(p.showRate).toLocaleString()}` : '—'}
-                />
-                <Row
-                  k="Tour day"
-                  v={p.tourDayRate ? `${p.currency || 'INR'} ${Number(p.tourDayRate).toLocaleString()}` : '—'}
-                />
+                <Row k="Session rate" v={p.sessionRate ? formatMoney(p.sessionRate, p.currency || 'INR') : '—'} />
+                <Row k="Show rate" v={p.showRate ? formatMoney(p.showRate, p.currency || 'INR') : '—'} />
+                <Row k="Tour day" v={p.tourDayRate ? formatMoney(p.tourDayRate, p.currency || 'INR') : '—'} />
                 <div className="mt-4">
                   <div className="text-xs uppercase text-slate-500">Roles & skills</div>
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {[...(p.roles || []), ...(p.instruments || []), ...(p.skills || [])]
+                    {uniqueTags([...(p.roles || []), ...(p.instruments || []), ...(p.skills || [])])
                       .slice(0, 12)
                       .map((x: string) => (
                         <Badge key={x} variant="secondary">
@@ -127,7 +143,7 @@ export default function CandidateCompare() {
                   {p.availability?.length ? (
                     p.availability.slice(0, 3).map((a) => (
                       <div key={a.startAt} className="text-xs text-slate-300 py-1">
-                        {new Date(a.startAt).toLocaleDateString()} · {a.status}
+                        {formatDate(a.startAt)} · {a.status}
                         {a.city ? ` · ${a.city}` : ''}
                       </div>
                     ))
@@ -140,9 +156,34 @@ export default function CandidateCompare() {
                     <WorkSamplePlayer key={s.id} sample={s} compact />
                   ))}
                 </div>
-                <Button className="w-full mt-4" asChild>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Button variant="outline" onClick={() => void message(p)}>
+                    <MessageSquare aria-hidden="true" size={15} className="mr-1.5" />
+                    Message
+                  </Button>
+                  <Button variant="outline" aria-pressed={!!p.shortlisted} onClick={() => void toggleShortlist(p)}>
+                    {p.shortlisted ? (
+                      <BookmarkCheck aria-hidden="true" size={15} className="mr-1.5 text-violet-300" />
+                    ) : (
+                      <BookmarkPlus aria-hidden="true" size={15} className="mr-1.5" />
+                    )}
+                    {p.shortlisted ? 'Shortlisted' : 'Shortlist'}
+                  </Button>
+                </div>
+                <Button className="w-full mt-2" asChild>
                   <Link to={`/professionals/${p.id}`}>Open full profile</Link>
                 </Button>
+                {people.length > 2 && (
+                  <Button
+                    variant="ghost"
+                    className="w-full mt-2 text-slate-400"
+                    aria-label={`Remove ${p.name} from the comparison`}
+                    onClick={() => remove(p.id)}
+                  >
+                    <X aria-hidden="true" size={15} className="mr-1.5" />
+                    Remove
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -150,6 +191,16 @@ export default function CandidateCompare() {
       </main>
     </div>
   );
+}
+/** Each tag once, however it is cased ("Tabla" listed as a role and as a skill). */
+function uniqueTags(tags: string[]) {
+  const seen = new Set<string>();
+  return tags.filter((tag) => {
+    const key = tag.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 function Row({ k, v }: { k: string; v: ReactNode }) {
   return (

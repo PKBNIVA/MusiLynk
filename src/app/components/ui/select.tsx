@@ -61,14 +61,16 @@ function SelectContent({
           className,
         )}
         position={position}
+        tabIndex={0}
         {...props}
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
+          // the listbox itself scrolls (and is focusable); a second scroller inside it would be unreachable by keyboard
+          style={{ overflow: 'visible' }}
           className={cn(
             'p-1.5',
-            position === 'popper' &&
-              'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1',
+            position === 'popper' && 'w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1',
           )}
         >
           {children}

@@ -1,8 +1,7 @@
 import type { Booking, BookingQuote } from '../../lib/apiTypes';
-import { formatMoney } from '../../lib/format';
 
 const money = (currency: string | null | undefined, value: unknown) =>
-  formatMoney(Number(value || 0), currency || 'INR');
+  `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
 
 /**
  * "What you pay" breakdown (deposit, platform fee, GST, total) and the cancellation/no-show

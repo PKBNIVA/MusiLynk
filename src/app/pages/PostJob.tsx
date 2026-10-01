@@ -598,6 +598,7 @@ export default function PostJob() {
         <Navigation />
         <main className="max-w-3xl mx-auto px-5 md:px-6 pt-28 pb-16">
           <SubmittedListing
+            id={submitted.id}
             title={submitted.title}
             viewPath={`${seeker ? '/jobseeker' : '/employer'}/jobs/${encodeURIComponent(submitted.id)}`}
             dashboardPath={seeker ? '/jobseeker/hiring/post' : '/employer'}

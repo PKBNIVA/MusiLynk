@@ -33,6 +33,22 @@ class HirerFlowsTest < ActionDispatch::IntegrationTest
     assert_equal 1, conversation.messages.count
   end
 
+  test "the hirer gets one notice per response and it leads to the conversation" do
+    item = urgent_request
+    assert_difference -> { Notification.where(user: @hirer).count }, 1 do
+      post "/api/urgent-requests/#{item.id}/respond", params: { message: "Free from 6 pm" }, headers: auth(@drummer), as: :json
+    end
+    notice = Notification.find_by!(user: @hirer, kind: "urgent_response")
+    assert_equal "/messages?c=#{response.parsed_body.fetch('conversationId')}", notice.link
+  end
+
+  test "a notice with no thread to open leads to the person's own urgent list" do
+    item = urgent_request
+    UserBlock.create!(blocker: @hirer, blocked: @singer)
+    post "/api/urgent-requests/#{item.id}/respond", params: { message: "Hi" }, headers: auth(@singer), as: :json
+    assert_equal "/employer/urgent", Notification.find_by!(user: @hirer, kind: "urgent_response").link
+  end
+
   test "a response without a note still opens an empty conversation, unless either side blocked the other" do
     item = urgent_request
     post "/api/urgent-requests/#{item.id}/respond", params: {}, headers: auth(@drummer), as: :json

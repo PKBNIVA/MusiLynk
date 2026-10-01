@@ -1,4 +1,5 @@
 import { EmptyState as SceneEmptyState } from '../components/kit/EmptyState';
+import { CoverArt } from '../components/media/CoverArt';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
@@ -380,7 +381,10 @@ export default function Bookings() {
               const can = allowed(b);
               const hint = nextStep(b);
               return (
-                <Card key={b.id} className="bg-white/[.055] border-white/10" data-testid="booking-card">
+                <Card key={b.id} className="bg-white/[.055] border-white/10 overflow-hidden" data-testid="booking-card">
+                  <div className="h-20 sm:h-24" data-testid="booking-art">
+                    <CoverArt seed={b.act_id || b.id} size="fill" bars={56} className="block size-full" />
+                  </div>
                   <CardContent className="p-5">
                     <div className="flex flex-col md:flex-row justify-between gap-4">
                       <div className="min-w-0">

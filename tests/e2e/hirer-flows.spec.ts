@@ -594,6 +594,36 @@ test.describe('applicants and comparing', () => {
     await page.getByRole('button', { name: 'Remove Raj Tabla from the comparison' }).click();
     await expect(page).toHaveURL(/ids=m1%2Cm2$/);
     await expect(page.getByRole('heading', { name: 'Raj Tabla' })).toHaveCount(0);
+    // With two left the button stays, says why it cannot be used, and does nothing.
+    const last = page.getByRole('button', { name: 'Remove Sia Singer from the comparison' });
+    await expect(last).toHaveAttribute('aria-disabled', 'true');
+    await expect(last).toHaveAttribute('title', /needs at least two/);
+    await last.click({ force: true });
+    await expect(page).toHaveURL(/ids=m1%2Cm2$/);
+  });
+});
+
+test.describe('the hirer dashboard and top bar', () => {
+  test('an empty dashboard shows the two choice cards once, and the top bar has no performer tools', async ({
+    page,
+  }) => {
+    await mock(page, (path, _method, _body, route) => {
+      if (path === '/dashboard') return (json(route, {}), true);
+      return false;
+    });
+    await page.goto('/employer');
+    const choices = page.getByTestId('dashboard-choices');
+    await expect(choices).toBeVisible();
+    await expect(page.getByRole('link', { name: /Post an opportunity/ })).toHaveCount(1);
+    await expect(choices.getByRole('link')).toHaveCount(2);
+    await page
+      .getByRole('navigation', { name: 'Workspace navigation' })
+      .getByRole('button', { name: 'Book talent' })
+      .click();
+    const menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem', { name: 'Bookings' })).toBeVisible();
+    for (const gone of ['My acts', 'Availability', 'Page portfolios'])
+      await expect(menu.getByRole('menuitem', { name: gone })).toHaveCount(0);
   });
 });
 

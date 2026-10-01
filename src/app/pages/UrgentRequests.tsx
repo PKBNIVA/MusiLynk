@@ -159,26 +159,23 @@ export default function UrgentRequests() {
       toast.error(errorMessage(e));
     }
   }
-  const applyStatus = async (r: UrgentRequest, status: 'filled' | 'closed', filledByUserId?: string) => {
-    await apiPatch(`/urgent-requests/${r.id}`, { status, filledByUserId });
+  const applyStatus = async (r: UrgentRequest, status: 'filled' | 'closed') => {
+    await apiPatch(`/urgent-requests/${r.id}`, { status });
     toast.success(status === 'filled' ? 'Request marked filled' : 'Request closed');
     setExpanded(null);
     await load();
   };
-  const closeRequest = (r: UrgentRequest, status: 'filled' | 'closed', filledByUserId?: string) =>
+  const closeRequest = (r: UrgentRequest, status: 'filled' | 'closed') =>
     ask({
       title: status === 'filled' ? 'Mark this request filled?' : 'Close this request?',
-      description: 'It stops appearing to professionals and cannot be reopened.',
+      description:
+        status === 'filled'
+          ? 'Use this when you filled it another way. To fill it with someone who replied, choose them from Responses instead. It stops appearing to musicians and cannot be reopened.'
+          : 'It stops appearing to musicians and cannot be reopened.',
       confirmLabel: status === 'filled' ? 'Mark filled' : 'Close request',
       destructive: status === 'closed',
-      action: () => applyStatus(r, status, filledByUserId),
+      action: () => applyStatus(r, status),
     });
-  const [pickResponder, setPickResponder] = useState<UrgentRequest | null>(null);
-  const markFilled = async (r: UrgentRequest) => {
-    // "asks which responder, optional": load responses first so the hirer can pick one.
-    if (!responses[r.id]) await viewResponses(r.id);
-    setPickResponder(r);
-  };
   // Opens (or creates) the one conversation with this person and goes to it.
   async function messageResponder(response: UrgentRequestResponse) {
     try {
@@ -372,7 +369,7 @@ export default function UrgentRequests() {
                         </Button>
                         {r.status === 'open' && (
                           <>
-                            <Button variant="outline" onClick={() => markFilled(r)}>
+                            <Button variant="outline" onClick={() => closeRequest(r, 'filled')}>
                               Mark filled
                             </Button>
                             <Button variant="ghost" onClick={() => closeRequest(r, 'closed')}>
@@ -518,37 +515,6 @@ export default function UrgentRequests() {
                 />
               </Field>
             </>
-          )}
-        </FormDialog>
-        <FormDialog
-          open={Boolean(pickResponder)}
-          onOpenChange={(open) => !open && setPickResponder(null)}
-          title="Mark this request filled"
-          description="Optionally choose who you picked — they'll see they were chosen; other responders see it's filled."
-          submitLabel="Mark filled"
-          busyLabel="Marking filled…"
-          busy={Boolean(pickResponder && pending === pickResponder.id)}
-          error={formError}
-          onSubmit={async () => {
-            if (!pickResponder) return;
-            const chosen = (document.querySelector('input[name="filled-by"]:checked') as HTMLInputElement | null)
-              ?.value;
-            await applyStatus(pickResponder, 'filled', chosen || undefined);
-            setPickResponder(null);
-          }}
-        >
-          {pickResponder && (
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm text-slate-300">
-                <input type="radio" name="filled-by" value="" defaultChecked /> No particular responder
-              </label>
-              {(responses[pickResponder.id] || []).map((response) => (
-                <label key={response.user_id} className="flex items-center gap-2 text-sm text-slate-300">
-                  <input type="radio" name="filled-by" value={response.user_id} />
-                  {response.name}
-                </label>
-              ))}
-            </div>
           )}
         </FormDialog>
         {confirmDialog}

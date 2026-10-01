@@ -84,10 +84,12 @@ class UrgentRequestsController < ApplicationController
     first_response = !UrgentRequestResponse.exists?(urgent_request_id: item.id, user_id: current_user.id)
     note = params[:message].to_s.strip.presence
     UrgentRequestResponse.upsert({ urgent_request_id: item.id, user_id: current_user.id, message: note, rate: rate&.to_i, status: "available", created_at: Time.current, updated_at: Time.current }, unique_by: :idx_urgent_response_unique)
-    Notification.create!(user: item.requester, kind: "urgent_response", title: "Availability response", body: "#{current_user.name} responded to #{item.title}.", link: "/urgent-requests")
-    Notifier.milestone_first_urgent_response(current_user, item)
-    # The conversation exists from the first response, so the musician can open it at once (J-03).
+    # The conversation exists from the first response, so the musician can open it at once (J-03). Its
+    # note is the thread's first message; the one "responded" notice below leads to it, so the hirer is
+    # not told twice.
     conversation = open_thread(item.requester, current_user, note: (note if first_response))
+    Notification.create!(user: item.requester, kind: "urgent_response", title: "Availability response", body: "#{current_user.name} responded to #{item.title}.", link: conversation ? Notifier.message_link(conversation) : urgent_path_for(item.requester))
+    Notifier.milestone_first_urgent_response(current_user, item)
     render json: { ok: true, conversationId: conversation&.id }, status: :created
   end
 
@@ -110,7 +112,7 @@ class UrgentRequestsController < ApplicationController
       UrgentRequestResponse.where(urgent_request_id: item.id, user_id: chosen.id).update_all(status: "accepted", updated_at: Time.current)
     end
     conversation = open_thread(current_user, chosen)
-    link = conversation ? Notifier.message_link(conversation) : "/urgent-requests"
+    link = conversation ? Notifier.message_link(conversation) : urgent_path_for(chosen)
     Notification.create!(user: chosen, kind: "urgent_accepted", title: "You were chosen", body: "#{current_user.name} chose you for #{item.title}. Message them to confirm the details.", link:)
     Notification.create!(user: current_user, kind: "urgent_accepted", title: "Request filled", body: "Request filled by #{chosen.name}: #{item.title}.", link:)
     Notifier.milestone_5th_filled_request(current_user)
@@ -169,12 +171,12 @@ class UrgentRequestsController < ApplicationController
     return nil if UserBlock.between?(hirer, musician) || !hirer.active? || !musician.active?
 
     conversation = Conversation.open_between!(candidate: musician, employer: hirer)
-    if note
-      message = conversation.messages.new(sender: musician, body: note.first(MessagesController::MAX_LENGTH)).tap { _1.flag_scam_signals; _1.save! }
-      Notifier.new_message(message)
-    end
+    conversation.messages.new(sender: musician, body: note.first(MessagesController::MAX_LENGTH)).tap { _1.flag_scam_signals; _1.save! } if note
     conversation
   end
+
+  # Where the person's list of urgent requests lives, for a notice with no thread to lead to.
+  def urgent_path_for(user) = user.role == "jobseeker" ? "/jobseeker/urgent" : "/employer/urgent"
 
   def words(text) = text.to_s.downcase.scan(/[[:alnum:]]+/) - ROLE_FILLER
 

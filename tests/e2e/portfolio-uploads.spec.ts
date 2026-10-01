@@ -40,22 +40,35 @@ async function signInFreshArtist(page: Page, request: APIRequestContext) {
   return token;
 }
 
+const uploadInput = (page: Page) => page.getByLabel(/Or upload a file/);
+
+/** My work: the form is open when the list is empty; later works start from "Add work". */
+async function openAddForm(page: Page) {
+  if (!(await page.getByRole('heading', { name: 'Add work', exact: true }).isVisible())) {
+    await page.getByRole('button', { name: 'Add work', exact: true }).click();
+  }
+  await expect(page.getByRole('heading', { name: 'Add work', exact: true })).toBeVisible();
+}
+
+async function saveWork(page: Page, title: string) {
+  await page.locator('#work-title').fill(title);
+  await page.getByRole('button', { name: 'Next: what you did' }).click();
+  await page.getByRole('button', { name: 'Add to my work' }).click();
+}
+
 async function uploadAndSave(page: Page, name: string, mimeType: string, buffer: Buffer, title: string) {
-  await page.getByLabel('Upload a work-sample file').setInputFiles({ name, mimeType, buffer });
+  await openAddForm(page);
+  await uploadInput(page).setInputFiles({ name, mimeType, buffer });
   await expect(page.getByRole('button', { name: 'Remove file' })).toBeVisible();
-  await expect(page.getByTestId('sample-preview')).toBeVisible();
-  await page.getByLabel('Title', { exact: true }).fill(title);
-  await page.getByRole('button', { name: 'Add sample' }).click();
-  const card = page.getByTestId('work-sample').filter({ has: page.getByRole('heading', { name: title }) });
+  await expect(page.getByTestId('work-preview')).toBeVisible();
+  await saveWork(page, title);
+  const card = page.getByTestId('library-item').filter({ has: page.getByRole('heading', { name: title }) });
   await expect(card).toBeVisible();
   return card;
 }
 
 test.describe('portfolio uploads', () => {
   test.skip(process.env.QA_INTEGRATION !== 'true', 'Run against a disposable Rails API with QA_INTEGRATION=true.');
-  // The legacy "Work samples" page this spec drove was removed (J-22); /jobseeker/portfolio now redirects to
-  // My work (/jobseeker/library), whose form has different labels. Port the selectors before re-enabling.
-  test.fixme(true, 'Targets the removed /jobseeker/portfolio page; port to My work.');
 
   test('uploads an image, an MP3 and a PDF, renders them, then deletes them and their files', async ({
     page,
@@ -63,16 +76,24 @@ test.describe('portfolio uploads', () => {
   }) => {
     const token = await signInFreshArtist(page, request);
     const auth = { Authorization: `Bearer ${token}` };
-    await page.goto('/jobseeker/portfolio');
-    await expect(page.getByRole('heading', { name: 'Work samples' })).toBeVisible();
+    await page.goto('/jobseeker/library');
+    await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible();
+    await openAddForm(page);
 
     // Wrong type is refused in the browser with a clear message and no request.
-    await page
-      .getByLabel('Upload a work-sample file')
-      .setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
-    await expect(page.getByRole('alert')).toContainText('Unsupported file type');
+    await uploadInput(page).setInputFiles({
+      name: 'notes.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('hello'),
+    });
+    await expect(page.getByRole('alert').filter({ hasText: 'Unsupported file type' })).toBeVisible();
 
-    // A dropped connection offers a retry that then succeeds.
+    // A text file renamed to .png is refused by the server's content check, not trusted by its name.
+    await uploadInput(page).setInputFiles({ name: 'fake.png', mimeType: 'image/png', buffer: Buffer.from('hello') });
+    await expect(page.getByRole('alert').filter({ hasText: /./ }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Remove file' })).toHaveCount(0);
+
+    // A dropped connection says so; choosing the file again then succeeds.
     let failNext = true;
     await page.route('**/api/uploads/local', (route) => {
       if (failNext) {
@@ -81,15 +102,12 @@ test.describe('portfolio uploads', () => {
       }
       return route.fallback();
     });
-    await page
-      .getByLabel('Upload a work-sample file')
-      .setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG });
-    await expect(page.getByRole('alert')).toContainText('Upload interrupted');
-    await page.getByRole('button', { name: 'Retry upload' }).click();
+    await uploadInput(page).setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG });
+    await expect(page.getByRole('alert').filter({ hasText: 'Upload interrupted' })).toBeVisible();
+    await uploadInput(page).setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG });
     await expect(page.getByRole('button', { name: 'Remove file' })).toBeVisible();
-    await page.getByLabel('Title', { exact: true }).fill('Cover art');
-    await page.getByRole('button', { name: 'Add sample' }).click();
-    const image = page.getByTestId('work-sample').filter({ has: page.getByRole('heading', { name: 'Cover art' }) });
+    await saveWork(page, 'Cover art');
+    const image = page.getByTestId('library-item').filter({ has: page.getByRole('heading', { name: 'Cover art' }) });
     await expect(image.locator('img[alt="Cover art"]')).toBeVisible();
     await expect
       .poll(() => image.locator('img[alt="Cover art"]').evaluate((img: HTMLImageElement) => img.naturalWidth))
@@ -110,17 +128,17 @@ test.describe('portfolio uploads', () => {
     expect(urls).toHaveLength(3);
     for (const url of urls) expect((await request.get(url)).status()).toBe(200);
 
-    // Delete asks for confirmation; "Keep it" keeps the sample.
+    // Delete asks for confirmation; "Keep it" keeps the work.
     await page.getByRole('button', { name: 'Delete Tech rider' }).click();
-    await expect(page.getByRole('alertdialog')).toContainText('uploaded file is permanently deleted');
+    await expect(page.getByRole('alertdialog')).toContainText('This cannot be undone');
     await page.getByRole('button', { name: 'Keep it' }).click();
     await expect(pdf).toBeVisible();
 
     for (const title of ['Tech rider', 'Demo take', 'Cover art']) {
       await page.getByRole('button', { name: `Delete ${title}` }).click();
-      await page.getByRole('button', { name: 'Delete work sample' }).click();
+      await page.getByRole('button', { name: 'Delete work', exact: true }).click();
       await expect(
-        page.getByTestId('work-sample').filter({ has: page.getByRole('heading', { name: title }) }),
+        page.getByTestId('library-item').filter({ has: page.getByRole('heading', { name: title }) }),
       ).toHaveCount(0);
     }
     for (const url of urls) {
@@ -179,18 +197,17 @@ test.describe('portfolio uploads', () => {
     });
     await page.route(publicUrl, (route) => route.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
 
-    await page.goto('/jobseeker/portfolio');
-    await page
-      .getByLabel('Upload a work-sample file')
-      .setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG });
+    await page.goto('/jobseeker/library');
+    await openAddForm(page);
+    await uploadInput(page).setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG });
     await expect(page.getByRole('button', { name: 'Remove file' })).toBeVisible();
     expect(completed).toBe(true);
     expect(posted.indexOf('name="policy"')).toBeGreaterThan(-1);
     expect(posted.indexOf('name="policy"')).toBeLessThan(posted.indexOf('name="file"'));
-    await expect(page.getByTestId('sample-preview').locator('img')).toBeVisible();
+    await expect(page.getByTestId('work-preview').locator('img')).toBeVisible();
 
     // The real API has no completed upload with this URL for the user, so it refuses to save it.
-    await page.getByRole('button', { name: 'Add sample' }).click();
+    await saveWork(page, 'Cover');
     await expect(page.getByText(/must be one of your own completed uploads/)).toBeVisible();
   });
 
@@ -199,8 +216,9 @@ test.describe('portfolio uploads', () => {
     await page.route(/youtube-nocookie\.com|open\.spotify\.com\/embed|w\.soundcloud\.com/, (route) =>
       route.fulfill({ contentType: 'text/html', body: '<p>player</p>' }),
     );
-    await page.goto('/jobseeker/portfolio');
-    const link = page.getByLabel('Link', { exact: true });
+    await page.goto('/jobseeker/library');
+    await openAddForm(page);
+    const link = page.locator('#work-url');
     const cases = [
       ['https://youtu.be/dQw4w9WgXcQ?t=42', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=42'],
       ['https://www.youtube.com/shorts/dQw4w9WgXcQ', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'],
@@ -215,16 +233,15 @@ test.describe('portfolio uploads', () => {
     ];
     for (const [url, embed] of cases) {
       await link.fill(url);
-      await expect(page.getByTestId('sample-preview').locator('iframe')).toHaveAttribute(
+      await expect(page.getByTestId('work-preview').locator('iframe')).toHaveAttribute(
         'src',
         new RegExp(`^${embed.replace(/[.?+]/g, '\\$&')}`),
       );
     }
-    await page.getByLabel('Title', { exact: true }).fill('Album');
     await link.fill(cases[2][0]);
-    await page.getByRole('button', { name: 'Add sample' }).click();
+    await saveWork(page, 'Album');
     await expect(
-      page.getByTestId('work-sample').locator('iframe[src^="https://open.spotify.com/embed/album/"]'),
+      page.getByTestId('library-item').locator('iframe[src^="https://open.spotify.com/embed/album/"]'),
     ).toBeVisible();
   });
 });

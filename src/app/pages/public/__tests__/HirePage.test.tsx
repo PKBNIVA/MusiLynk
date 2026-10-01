@@ -20,6 +20,12 @@ function meta(attr: 'name' | 'property', key: string) {
   return document.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
 }
 
+function breadcrumbItems() {
+  const raw = document.querySelector('script[type="application/ld+json"][data-page-meta]')?.textContent ?? '[]';
+  const graph = JSON.parse(raw) as Array<{ '@type': string; itemListElement?: { item: string }[] }>;
+  return graph.find((entry) => entry['@type'] === 'BreadcrumbList')?.itemListElement?.map((entry) => entry.item);
+}
+
 async function mount(url: string) {
   const router = createMemoryRouter([{ path: '/hire/:role/:city', element: <HirePage /> }], { initialEntries: [url] });
   await act(async () =>
@@ -129,11 +135,22 @@ describe('HirePage', () => {
     expect(meta('name', 'robots')?.content).toBe('noindex, nofollow');
   });
 
-  it('is never noindex before the API answers', async () => {
+  it('is noindex from the first render, until the API says the page qualifies', async () => {
     vi.mocked(apiGet).mockReturnValue(new Promise(() => {}));
     await mount('/hire/drummer/mumbai');
     expect(container.textContent).toContain('Loading');
-    expect(meta('name', 'robots')?.content ?? '').not.toContain('noindex');
+    expect(meta('name', 'robots')?.content).toBe('noindex, nofollow');
+  });
+
+  it('emits a BreadcrumbList with absolute URLs', async () => {
+    vi.mocked(apiGet).mockResolvedValue(HIRE_PAGE_DATA);
+    await mount('/hire/drummer/mumbai');
+    await act(async () => {});
+    expect(breadcrumbItems()).toEqual([
+      `${window.location.origin}/`,
+      `${window.location.origin}/music-professionals`,
+      `${window.location.origin}/hire/drummer/mumbai`,
+    ]);
   });
 
   it('stays indexable when the page qualifies', async () => {

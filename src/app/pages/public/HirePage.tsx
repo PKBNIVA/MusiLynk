@@ -6,7 +6,7 @@ import { VerifiedBadge } from '../../components/VerifiedBadge';
 import { UserAvatar } from '../../components/kit/UserAvatar';
 import { PhotoHeader } from '../../components/landing/PhotoHeader';
 import { ROLE_PHOTOS } from '../../components/landing/photos';
-import { usePageMeta } from '../../components/PageMeta';
+import { absoluteUrl, usePageMeta } from '../../components/PageMeta';
 import { PublicNav } from '../../components/PublicNav';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../components/ui/accordion';
 import { Button } from '../../components/ui/button';
@@ -73,13 +73,13 @@ export default function HirePage() {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Verse', item: '/' },
-            { '@type': 'ListItem', position: 2, name: 'Musicians', item: '/music-professionals' },
+            { '@type': 'ListItem', position: 1, name: 'Verse', item: absoluteUrl('/') },
+            { '@type': 'ListItem', position: 2, name: 'Musicians', item: absoluteUrl('/music-professionals') },
             {
               '@type': 'ListItem',
               position: 3,
               name: `${data.role.label} in ${data.city.name}`,
-              item: hirePagePath(data.role.slug, data.city.slug),
+              item: absoluteUrl(hirePagePath(data.role.slug, data.city.slug)),
             },
           ],
         },
@@ -89,8 +89,9 @@ export default function HirePage() {
   usePageMeta(title, description, {
     canonicalPath: hirePagePath(role, city),
     type: 'website',
-    // Indexable until the API has answered and says otherwise (thin pages); a failed lookup is not a page.
-    noindex: data ? !data.indexable : Boolean(error),
+    // Decided from the first render: noindex until the API confirms the page has enough to index, so a
+    // thin page is never indexable even for an instant. A failed lookup is not a page either.
+    noindex: data ? !data.indexable : true,
     jsonLd,
   });
 

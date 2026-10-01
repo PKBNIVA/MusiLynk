@@ -101,7 +101,7 @@ export default function QueueTab({
                 )}
               </div>
               <div className="flex xl:flex-col gap-2 shrink-0">
-                {j.status !== 'published' && (
+                {j.status !== 'published' && j.status !== 'closed' && (
                   <Button
                     size="sm"
                     disabled={!!busy}

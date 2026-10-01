@@ -67,7 +67,7 @@ export function Composer({ onPosted, prefill, reshareOf, compact }: ComposerProp
     body,
     (text) => {
       setBody(text.slice(0, BODY_LIMIT));
-      toast.message('We kept your unsent post.');
+      toast.message('We kept the text of your unsent post.');
     },
     !isShare && !compact,
   );

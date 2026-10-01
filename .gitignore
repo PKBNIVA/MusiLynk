@@ -18,3 +18,4 @@ backend/coverage/
 coverage/
 dist-admin/
 dist-*/
+.vercel

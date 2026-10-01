@@ -1,22 +1,16 @@
-// NOT DEPLOYED YET. Vercel rejected this file as an edge function at deploy time ("The Edge Function
-// api/og is referencing unsupported modules: @vercel: module": the builder ships it unbundled, with the
-// dynamic import of @vercel/og left as a bare specifier), and a rejected function fails the whole site
-// deploy. It lives outside api/ until it is rebuilt as a bundled function; meanwhile vercel.json answers
-// /api/og/:type/:id with the static /og-default.png so every share link still has a valid image.
-// Open Graph image for a share link: GET /api/og?type=professional|opportunity|act&id=<id>, reached as
-// /api/og/<type>/<id>.png through the rewrite in vercel.json. Draws a 1200x630 PNG from the same public
-// JSON the site itself reads (avatar or generated art, name, role, city, "from ₹", Verified) and falls
-// back to a default brand card for an unknown id, a failed lookup or no id at all. The share pages
-// (backend/app/controllers/share_pages_controller.rb) point og:image at it.
+// Open Graph image for a share link: GET /api/og/<type>/<id>.png (type professional|opportunity|act).
+// Draws a 1200x630 PNG from the same public JSON the site itself reads (photo or generated art, name,
+// role, city, "from ₹", Verified) and answers a redirect to the static /og-default.png for an unknown
+// id or any failed lookup/render. The share pages (backend/app/controllers/share_pages_controller.rb)
+// point og:image at it.
 //
-// Runs as a Vercel edge function with Satori through @vercel/og. The card is described as plain
-// { type, props } elements (no JSX, no React) so this file has no build step of its own. Everything
-// that can be checked without the renderer is exported and unit-tested (scripts/__tests__/og.test.mjs);
-// the renderer, the network and the clock are passed in.
-import { blobs, gradientAngle, paletteFor, ribbonBars, type Palette } from '../src/app/lib/coverArt';
-import { initialsOf } from '../src/app/lib/avatar';
-
-export const config = { runtime: 'edge' };
+// This file holds everything that does not need the renderer, so it is unit-tested without it
+// (scripts/__tests__/og.test.mjs). The Vercel Node function api/og/[type]/[id].ts supplies the renderer
+// (@vercel/og, a STATIC import: a dynamic one is left unbundled and fails Vercel's deploy validation).
+// The leading underscore keeps this folder from being deployed as a function of its own.
+// The card is described as plain { type, props } elements (no JSX, no React).
+import { blobs, gradientAngle, paletteFor, ribbonBars, type Palette } from '../../src/app/lib/coverArt.js';
+import { initialsOf } from '../../src/app/lib/avatar.js';
 
 export const CARD_TYPES = ['professional', 'opportunity', 'act'] as const;
 export type CardType = (typeof CARD_TYPES)[number];
@@ -26,8 +20,9 @@ export const DEFAULT_API_ORIGIN = 'https://verse-music-platform-production.up.ra
 
 export const SIZE = { width: 1200, height: 630 } as const;
 
-const CACHE_OK = 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
-const CACHE_FALLBACK = 'public, max-age=300, s-maxage=300';
+export const CACHE_OK = 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800';
+export const CACHE_FALLBACK = 'public, max-age=300, s-maxage=300';
+export const DEFAULT_IMAGE_PATH = '/og-default.png';
 
 /** What a card says, before it is drawn. */
 export interface Card {
@@ -369,12 +364,12 @@ export interface Deps {
   render: (tree: El) => Promise<ArrayBuffer>;
 }
 
-/** `professional`, `1f3a…` from ?type=&id= (an optional `.png` on the id is dropped). */
-export function parseRequest(url: URL): { type: CardType; id: string } | null {
-  const type = url.searchParams.get('type') as CardType | null;
-  const id = (url.searchParams.get('id') || '').replace(/\.png$/i, '');
-  if (!type || !CARD_TYPES.includes(type) || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return null;
-  return { type, id };
+/** Validates the route params; an optional `.png` on the id is dropped. */
+export function parseRequest(type: unknown, rawId: unknown): { type: CardType; id: string } | null {
+  const id = (typeof rawId === 'string' ? rawId : '').replace(/\.png$/i, '');
+  if (typeof type !== 'string' || !(CARD_TYPES as readonly string[]).includes(type)) return null;
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) return null;
+  return { type: type as CardType, id };
 }
 
 const ENDPOINT: Record<CardType, (id: string) => string> = {
@@ -392,32 +387,38 @@ export async function loadCard(type: CardType, id: string, deps: Pick<Deps, 'api
   return actCard(id, (body.act as Json) ?? {});
 }
 
-async function png(tree: El, deps: Deps, cache: string) {
-  const image = await deps.render(tree);
-  return new Response(image, { status: 200, headers: { 'Content-Type': 'image/png', 'Cache-Control': cache } });
+function pngResponse(image: ArrayBuffer) {
+  return new Response(image, { status: 200, headers: { 'Content-Type': 'image/png', 'Cache-Control': CACHE_OK } });
 }
 
-/** Answers one request: the card for the id, else the default card. Never throws to the caller. */
-export async function respond(request: Request, deps: Deps): Promise<Response> {
-  const wanted = parseRequest(new URL(request.url));
+/** A redirect to the static default card: what an unknown id or any failure answers. */
+export function fallbackResponse() {
+  return new Response(null, {
+    status: 302,
+    headers: { Location: DEFAULT_IMAGE_PATH, 'Cache-Control': CACHE_FALLBACK },
+  });
+}
+
+/** Answers one request: the card for the id, else a redirect to the default card. Never throws. */
+export async function respond(request: Request, type: unknown, id: unknown, deps: Deps): Promise<Response> {
+  const wanted = parseRequest(type, id);
+  if (!wanted) return fallbackResponse();
   let card: Card | null = null;
-  if (wanted) {
-    try {
-      card = await loadCard(wanted.type, wanted.id, deps);
-    } catch {
-      card = null;
-    }
+  try {
+    card = await loadCard(wanted.type, wanted.id, deps);
+  } catch {
+    card = null;
   }
-  if (!card) return png(cardTree(defaultCard()), deps, CACHE_FALLBACK);
+  if (!card) return fallbackResponse();
   const photo = card.photoUrl ? await deps.fetchImage(card.photoUrl).catch(() => null) : null;
   try {
-    return await png(cardTree(card, photo ?? undefined), deps, CACHE_OK);
+    return pngResponse(await deps.render(cardTree(card, photo ?? undefined)));
   } catch {
     // A photo the renderer cannot decode must not cost the whole card: draw the art instead.
     try {
-      return await png(cardTree(card), deps, CACHE_OK);
+      return pngResponse(await deps.render(cardTree(card)));
     } catch {
-      return png(cardTree(defaultCard()), deps, CACHE_FALLBACK);
+      return fallbackResponse();
     }
   }
 }
@@ -425,7 +426,7 @@ export async function respond(request: Request, deps: Deps): Promise<Response> {
 const TIMEOUT_MS = 4000;
 const MAX_IMAGE_BYTES = 2_000_000;
 
-async function fetchJson(url: string): Promise<Json | null> {
+export async function fetchJson(url: string): Promise<Json | null> {
   const response = await fetch(url, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -433,7 +434,7 @@ async function fetchJson(url: string): Promise<Json | null> {
   return response.ok ? ((await response.json()) as Json) : null;
 }
 
-async function fetchImage(url: string): Promise<string | null> {
+export async function fetchImage(url: string): Promise<string | null> {
   const response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
   const type = (response.headers.get('content-type') || '').split(';')[0].trim();
   // WebP is left out on purpose: the renderer's WebP support is not guaranteed and a photo it cannot
@@ -444,16 +445,4 @@ async function fetchImage(url: string): Promise<string | null> {
   let binary = '';
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return `data:${type};base64,${btoa(binary)}`;
-}
-
-async function render(tree: El): Promise<ArrayBuffer> {
-  const { ImageResponse } = await import('@vercel/og');
-  // Reading the body here (rather than returning the ImageResponse) makes a drawing error land in
-  // respond()'s fallbacks instead of in a half-sent response.
-  return new ImageResponse(tree as never, { ...SIZE }).arrayBuffer();
-}
-
-export default function handler(request: Request): Promise<Response> {
-  const apiOrigin = (process.env.OG_API_ORIGIN || DEFAULT_API_ORIGIN).replace(/\/+$/, '');
-  return respond(request, { apiOrigin, fetchJson, fetchImage, render });
 }

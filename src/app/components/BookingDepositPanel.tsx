@@ -4,20 +4,25 @@ import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
-import { errorMessage } from '../lib/errors';
+import { errorCode, errorMessage, errorStatus } from '../lib/errors';
+import { formatMoney } from '../lib/format';
+import { usePaymentMode } from '../lib/paymentMode';
 import type { Booking, BookingPayment, BookingPaymentOrder } from '../lib/apiTypes';
-import { BookingFeeBreakdown } from './booking/BookingFeeBreakdown';
 import { trackBookingDepositPaid } from '../lib/analytics';
 
 // Requester-side deposit state and payment for one booking. The amount, currency and order
 // always come from the server; the browser only relays the Razorpay handler payload back.
 const money = (currency: string | null | undefined, value: unknown) =>
-  `${currency || 'INR'} ${Number(value || 0).toLocaleString('en-IN')}`;
+  formatMoney(Number(value || 0), currency || 'INR');
 
 export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; onChanged: () => unknown }) {
   const [payments, setPayments] = useState<BookingPayment[] | null>(null);
   const [paying, setPaying] = useState(false);
   const [declined, setDeclined] = useState<string | null>(null);
+  // Online payment is switched off here: said up front when known, or learned from the order call (A-10).
+  const paymentMode = usePaymentMode();
+  const [refused, setRefused] = useState(false);
+  const unavailable = paymentMode === 'disabled' || refused;
   const inFlight = useRef(false);
   const eligible = booking.isRequester && ['accepted', 'completed', 'disputed'].includes(booking.status);
 
@@ -53,7 +58,7 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; 
       if (d.checkout?.mode === 'mock') {
         await apiPost(`/booking-payments/${d.payment.id}/confirm`, {});
         trackBookingDepositPaid();
-        toast.success('Mock deposit recorded');
+        toast.success('Deposit recorded');
       } else {
         const result = await openRazorpayCheckout(d.checkout, {
           description: `Booking deposit · ${booking.actName}`,
@@ -76,7 +81,8 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; 
         }
       }
     } catch (e: unknown) {
-      toast.error(errorMessage(e));
+      if (errorCode(e) === 'PAYMENTS_UNAVAILABLE' || errorStatus(e) === 503) setRefused(true);
+      else toast.error(errorMessage(e));
     } finally {
       inFlight.current = false;
       setPaying(false);
@@ -99,9 +105,28 @@ export function BookingDepositPanel({ booking, onChanged }: { booking: Booking; 
       </Badge>
     );
   if (booking.status !== 'accepted') return null;
+  if (unavailable)
+    return (
+      <div
+        role="status"
+        data-testid="deposit-unavailable"
+        className="w-full max-w-sm rounded-xl border border-amber-400/25 bg-amber-500/[.07] p-3 text-sm text-amber-100"
+      >
+        <p className="font-medium">Deposit payment is not open yet</p>
+        <p className="mt-1 text-amber-100/80">
+          Your booking is accepted and {booking.actName} has been told. We will email you the moment you can pay
+          {expected ? ` the ${money(quote?.currency, expected)} deposit` : ' the deposit'}. Until then, message{' '}
+          {booking.actName} to agree the next step.
+        </p>
+        {refused && (
+          <Button size="sm" variant="outline" className="mt-3" onClick={() => setRefused(false)}>
+            Check again
+          </Button>
+        )}
+      </div>
+    );
   return (
     <div className="flex flex-col items-start gap-3 w-full max-w-sm">
-      {quote && <BookingFeeBreakdown booking={booking} quote={quote} depositAmount={baseDeposit} />}
       <Button size="sm" disabled={paying} aria-busy={paying} onClick={pay}>
         {paying
           ? 'Processing payment…'

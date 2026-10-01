@@ -341,7 +341,12 @@ export default function Billing() {
     } catch (e: unknown) {
       const status = e instanceof ApiError ? e.status : 0;
       if (status !== 0 && status !== 502) delete intentKeys.current[intent];
-      toast.error(errorMessage(e));
+      // A 503 is billing being switched off, not something to retry: say so in plain words.
+      toast.error(
+        status === 503
+          ? 'Paid plans are not open yet. Your current plan is not affected; try again later.'
+          : errorMessage(e),
+      );
     } finally {
       inFlight.current = false;
       setPendingPlan(null);
@@ -368,6 +373,8 @@ export default function Billing() {
 
   const sub = state?.subscription;
   const summary = state?.summary || null;
+  // Billing is switched off here (A-11): paid upgrades cannot start, so their buttons say why instead of failing.
+  const paymentsOff = state?.paymentMode === 'disabled';
   const notice = state ? PAYMENT_MODE_NOTICE[state.paymentMode || (state.testMode ? 'test' : 'live')] : undefined;
   const currentCode = summary && !['cancelled'].includes(summary.status) ? summary.planCode : 'free';
   const cancellable = summary && ['pending', 'trialing', 'active', 'past_due', 'early_access'].includes(summary.status);
@@ -393,6 +400,7 @@ export default function Billing() {
         {notice && (
           <div
             role="status"
+            id="payments-notice"
             className="mt-6 flex gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100"
           >
             <FlaskConical className="shrink-0 text-amber-300" size={18} />
@@ -445,7 +453,11 @@ export default function Billing() {
               </div>
               <div className="flex gap-2 flex-wrap">
                 {summary.status === 'pending' && (
-                  <Button disabled={pendingPlan !== null} onClick={() => choose(summary.planCode)}>
+                  <Button
+                    disabled={pendingPlan !== null || paymentsOff}
+                    aria-describedby={paymentsOff ? 'payments-notice' : undefined}
+                    onClick={() => choose(summary.planCode)}
+                  >
                     Complete setup
                   </Button>
                 )}
@@ -522,7 +534,12 @@ export default function Billing() {
                   <Button
                     className="w-full mt-6"
                     variant={currentCode === p.code ? 'secondary' : 'default'}
-                    disabled={pendingPlan !== null || (currentCode === p.code && summary?.status !== 'pending')}
+                    disabled={
+                      pendingPlan !== null ||
+                      (currentCode === p.code && summary?.status !== 'pending') ||
+                      (paymentsOff && p.code !== 'enterprise')
+                    }
+                    aria-describedby={paymentsOff && p.code !== 'enterprise' ? 'payments-notice' : undefined}
                     aria-busy={pendingPlan === p.code}
                     onClick={() => choose(p.code)}
                   >
@@ -538,6 +555,11 @@ export default function Billing() {
                               ? `Switch to ${p.name}`
                               : 'Start free trial'}
                   </Button>
+                )}
+                {paymentsOff && p.code !== 'free' && p.code !== 'enterprise' && currentCode !== p.code && (
+                  <p className="mt-2 text-xs text-slate-400" data-testid={`plan-${p.code}-unavailable`}>
+                    Paid plans open once billing is set up. Your current plan is not affected.
+                  </p>
                 )}
               </CardContent>
             </Card>

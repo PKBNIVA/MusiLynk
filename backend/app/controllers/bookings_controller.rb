@@ -96,7 +96,7 @@ class BookingsController < ApplicationController
     booking = BookingRequest.includes(:booking_quotes).find(params[:id])
     return render_error("Booking not found", :not_found) unless booking.requester_id == current_user.id
     # Fail closed in production without usable keys, and anywhere a key is present but refused for this environment.
-    return render_error("Live payments are not configured.", :service_unavailable) if (Rails.env.production? || RazorpayConfig.key_present?) && !RazorpayConfig.usable?
+    return render_error("Online payment is not switched on yet.", :service_unavailable, "PAYMENTS_UNAVAILABLE") if (Rails.env.production? || RazorpayConfig.key_present?) && !RazorpayConfig.usable?
     payment = existing = quote = attempt = nil
     payment_error = nil
     booking.with_lock do
@@ -153,7 +153,7 @@ class BookingsController < ApplicationController
     return render_error("Payment is already confirmed.", :conflict) if payment.status == "paid" && payment.provider != "razorpay"
     return render_error("Mock payments are disabled in production.", :forbidden) if Rails.env.production? && payment.provider != "razorpay"
     if payment.provider == "razorpay"
-      return render_error("Live payments are not configured.", :service_unavailable) unless RazorpayConfig.usable?
+      return render_error("Online payment is not switched on yet.", :service_unavailable, "PAYMENTS_UNAVAILABLE") unless RazorpayConfig.usable?
       return render_error("Payment order mismatch", :unprocessable_content) unless payment.provider_order_id.present? && ActiveSupport::SecurityUtils.secure_compare(payment.provider_order_id, params[:orderId].to_s)
       expected = OpenSSL::HMAC.hexdigest("SHA256", ENV.fetch("RAZORPAY_KEY_SECRET"), "#{payment.provider_order_id}|#{params[:paymentId]}")
       return render_error("Invalid payment signature", :unprocessable_content) unless ActiveSupport::SecurityUtils.secure_compare(expected, params[:signature].to_s)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { EmptyState as SceneEmptyState } from '../components/kit/EmptyState';
 import { Link, useSearchParams } from 'react-router';
 import { ArrowLeft, Ban, Flag, MessageSquare, Send } from 'lucide-react';
@@ -17,6 +17,7 @@ import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { errorCode, errorMessage as messageOf, errorStatus } from '../lib/errors';
 import { announceUnreadChanged, useVisiblePolling } from '../lib/usePolling';
 import { linkify } from '../lib/linkify';
+import { formatWhen } from '../lib/format';
 import type { Conversation, Message, MessagePage } from '../lib/apiTypes';
 
 const MESSAGE_MAX_LENGTH = 5000;
@@ -29,11 +30,7 @@ const errorMessage = (e: unknown, fallback: string) => {
   return messageOf(e, fallback);
 };
 const byTime = (a: Message, b: Message) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
-const formatTime = (value?: string | null) => {
-  if (!value) return '';
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString();
-};
+const formatTime = (value?: string | null) => formatWhen(value);
 const isDesktop = () =>
   typeof window !== 'undefined' &&
   typeof window.matchMedia === 'function' &&
@@ -74,6 +71,24 @@ function SafetyNotice({ flags }: { flags: string[] }) {
     </div>
   );
 }
+
+/** One person and every thread with them: threads made before the one-per-pair rule stay reachable (J-19). */
+type Person = { primary: Conversation; threads: Conversation[]; unread: number };
+
+function groupByPerson(convs: Conversation[]): Person[] {
+  const people = new Map<string, Person>();
+  for (const c of convs) {
+    const key = c.counterpartId || c.id;
+    const person = people.get(key);
+    if (person) {
+      person.threads.push(c);
+      person.unread += c.unreadCount || 0;
+    } else people.set(key, { primary: c, threads: [c], unread: c.unreadCount || 0 });
+  }
+  return [...people.values()];
+}
+
+const contextLabel = (c: Conversation) => c.jobTitle || 'General';
 
 export default function Messages() {
   const { user } = useAuth();
@@ -362,6 +377,8 @@ export default function Messages() {
         (c.viewerSide === 'candidate' ? c.employerName : c.viewerSide === 'employer' ? c.candidateName : undefined) ||
         'Verse member';
   const active = convs.find((c) => c.id === activeId);
+  const people = useMemo(() => groupByPerson(convs), [convs]);
+  const activePerson = active ? people.find((p) => p.threads.some((t) => t.id === active.id)) : undefined;
   const trimmedLength = text.trim().length;
   const lastMineId = [...msgs].reverse().find((m) => m.senderId === user?.id)?.id;
   // Why the composer is closed for the open thread, if it is.
@@ -463,38 +480,44 @@ export default function Messages() {
                 </div>
               ) : (
                 <ul>
-                  {convs.map((c) => (
-                    <li key={c.id}>
-                      <button
-                        type="button"
-                        onClick={() => select(c.id)}
-                        aria-current={activeId === c.id ? 'true' : undefined}
-                        className={`w-full text-left p-4 border-b border-white/10 ${activeId === c.id ? 'bg-violet-500/10' : 'hover:bg-white/5'}`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="font-semibold truncate" data-testid="conversation-name">
-                            {nameOf(c)}
-                          </span>
-                          {(c.unreadCount || 0) > 0 && (
-                            <span
-                              className="shrink-0 rounded-full bg-fuchsia-700 px-2 py-0.5 text-[11px] font-bold text-white"
-                              aria-label={`${c.unreadCount} unread`}
-                            >
-                              {c.unreadCount}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-violet-300 mt-1 truncate">
-                          {c.jobTitle || 'General conversation'}
-                        </div>
-                        <div
-                          className={`text-sm mt-2 truncate ${(c.unreadCount || 0) > 0 ? 'text-slate-200 font-medium' : 'text-slate-500'}`}
+                  {people.map(({ primary: c, threads, unread }) => {
+                    const isActive = threads.some((t) => t.id === activeId);
+                    const contexts = [...new Set(threads.map(contextLabel))];
+                    return (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          onClick={() => select(c.id)}
+                          aria-current={isActive ? 'true' : undefined}
+                          className={`w-full text-left p-4 border-b border-white/10 ${isActive ? 'bg-violet-500/10' : 'hover:bg-white/5'}`}
                         >
-                          {c.lastMessage ? `${c.lastMessageFromMe ? 'You: ' : ''}${c.lastMessage}` : 'No messages yet'}
-                        </div>
-                      </button>
-                    </li>
-                  ))}
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-semibold truncate" data-testid="conversation-name">
+                              {nameOf(c)}
+                            </span>
+                            {unread > 0 && (
+                              <span
+                                className="shrink-0 rounded-full bg-fuchsia-700 px-2 py-0.5 text-[11px] font-bold text-white"
+                                aria-label={`${unread} unread`}
+                              >
+                                {unread}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-violet-300 mt-1 truncate">
+                            {c.jobTitle || contexts.length > 1 ? contexts.join(' · ') : 'General conversation'}
+                          </div>
+                          <div
+                            className={`text-sm mt-2 truncate ${unread > 0 ? 'text-slate-200 font-medium' : 'text-slate-500'}`}
+                          >
+                            {c.lastMessage
+                              ? `${c.lastMessageFromMe ? 'You: ' : ''}${c.lastMessage}`
+                              : 'No messages yet'}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </aside>
@@ -527,8 +550,28 @@ export default function Messages() {
                       {active ? nameOf(active) : threadState === 'missing' ? 'Conversation' : ' '}
                     </div>
                     {active && (
-                      <div className="text-xs text-violet-300 truncate">
-                        {active.jobTitle || 'General conversation'}
+                      <div className="mt-1 flex flex-wrap gap-1.5" data-testid="thread-context">
+                        {activePerson && activePerson.threads.length > 1 ? (
+                          activePerson.threads.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              aria-pressed={t.id === active.id}
+                              onClick={() => select(t.id)}
+                              className={`max-w-full truncate rounded-full border px-2.5 py-0.5 text-xs ${
+                                t.id === active.id
+                                  ? 'border-violet-400 bg-violet-500/20 text-white'
+                                  : 'border-white/15 text-violet-300 hover:bg-white/[.06]'
+                              }`}
+                            >
+                              {contextLabel(t)}
+                            </button>
+                          ))
+                        ) : (
+                          <span className="max-w-full truncate rounded-full border border-white/15 px-2.5 py-0.5 text-xs text-violet-300">
+                            {active.jobTitle ? `About: ${active.jobTitle}` : 'General conversation'}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

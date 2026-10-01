@@ -8,9 +8,10 @@ class LifecycleMailerTest < ActiveSupport::TestCase
     source = File.read(Rails.root.join("../src/app/routes.tsx"))
     routes = %w[jobseeker employer].flat_map do |ws|
       block = source[/path: '\/#{ws}',\s*children: \[(.*?)\n    \},\n/m, 1].to_s
-      block.scan(/^ {10}path: '([a-z-]+)'/).flatten.map { |child| "/#{ws}/#{child}" }
+      block.scan(/^\s+path: '([a-z-]+)'/).flatten.map { |child| "/#{ws}/#{child}" }
     end
-    routes << "/jobseeker/library" if source.match?(/^ {4}library: 'library',/)
+    routes << "/jobseeker/library" if source.match?(/^\s+library: 'library',/)
+    raise "no workspace routes found in routes.tsx; update the parser in this test" if routes.size < 4
     routes.freeze
   end
 

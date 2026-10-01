@@ -595,6 +595,22 @@ describe('401 handling', () => {
     }
   });
 
+  it('remembers the role across a cold load whose token expired before /me resolved', async () => {
+    const { location, restore } = fakeLocation('/stage');
+    try {
+      const first = await loadApi();
+      first.rememberSessionRole('employer');
+      vi.resetModules();
+      const { apiGet, setAccessToken } = await loadApi();
+      setAccessToken('expired');
+      fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
+      await expect(apiGet('/stage/feed')).rejects.toMatchObject({ status: 401 });
+      expect(location.replace).toHaveBeenCalledWith('/auth/employer');
+    } finally {
+      restore();
+    }
+  });
+
   it('sends an expired admin-site session back to the admin sign-in page', async () => {
     vi.stubEnv('VITE_APP_TARGET', 'admin');
     const { location, restore } = fakeLocation('/account');

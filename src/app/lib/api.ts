@@ -161,14 +161,18 @@ export function onBeforeSignInRedirect(listener: () => void) {
 
 // The role of the signed-in person, for pages whose path carries no role (/stage): an expired
 // session there signs in again as the same kind of account. Set by AuthProvider.
+// Kept in localStorage too, so a cold load whose token already expired (nothing has resolved /me)
+// still signs in as the right kind of account.
+const ROLE_HINT_KEY = 'verse_session_role';
 let sessionRoleHint: string | null = null;
 export function rememberSessionRole(role?: string | null) {
   sessionRoleHint = role ?? null;
+  writeStored('local', ROLE_HINT_KEY, sessionRoleHint);
 }
 const signInRole = (pathname: string) => {
   const first = pathname.split('/')[1];
   if (first === 'jobseeker' || first === 'employer' || first === 'admin') return first;
-  return sessionRoleHint === 'employer' ? 'employer' : 'jobseeker';
+  return (sessionRoleHint ?? readStored('local', ROLE_HINT_KEY)) === 'employer' ? 'employer' : 'jobseeker';
 };
 
 /**

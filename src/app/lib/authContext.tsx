@@ -137,8 +137,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
   /* An expired session on a role-less page (the Stage) signs in again as the same kind of account. */
   useEffect(() => {
-    rememberSessionRole(user?.role);
-  }, [user?.role]);
+    if (user) rememberSessionRole(user.role);
+    else if (!loading) rememberSessionRole(null);
+  }, [user, loading]);
   /* Sign-in or sign-out in another tab updates this one; a cleared token drops to signed-out state and protected routes send the user to sign-in. */
   useEffect(
     () =>

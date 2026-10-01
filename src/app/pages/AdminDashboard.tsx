@@ -103,6 +103,7 @@ export default function AdminDashboard() {
   const [reportFilters, setReportFilters] = useState<ReportFilters>(DEFAULT_REPORT_FILTERS);
   // The Opportunity queue's status filter; like the report filters it is sent to the server, so the
   // pager total always matches the rows listed.
+  const [queueLoading, setQueueLoading] = useState(false);
   const [jobStatus, setJobStatus] = useState<JobStatusFilter>(DEFAULT_JOB_STATUS);
   // The bulk reload (`load`) runs from stable callbacks, so it reads the live filters through a ref.
   const filtersRef = useRef({ reportFilters, jobStatus });
@@ -146,7 +147,7 @@ export default function AdminDashboard() {
   const loadPage = useCallback(
     (source: Source, page: number) => {
       const path = sourcePath(source, page, meta[source]?.perPage ?? 100);
-      apiGet<Payload | null>(path)
+      return apiGet<Payload | null>(path)
         .then((res) => {
           setData((prev) => ({ ...prev, [source]: SOURCES[source][1](res) }));
           const m = readMeta(res);
@@ -179,7 +180,8 @@ export default function AdminDashboard() {
       jobStatusMounted.current = true;
       return;
     }
-    loadPage('jobs', 1);
+    setQueueLoading(true);
+    void loadPage('jobs', 1).finally(() => setQueueLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when the filter itself changes
   }, [jobStatus]);
 
@@ -366,6 +368,7 @@ export default function AdminDashboard() {
                 onStatus={setJobStatus}
                 error={errors.jobs}
                 loading={loading}
+                refreshing={queueLoading}
                 retry={retry}
                 actions={actions}
                 meta={meta.jobs}

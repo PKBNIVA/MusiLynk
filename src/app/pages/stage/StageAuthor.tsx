@@ -81,7 +81,15 @@ export default function StageAuthor() {
               </p>
             )}
           </div>
-          <FollowButton type={type as StageAuthorType} id={id} initialFollowing={following} />
+          <FollowButton
+            type={type as StageAuthorType}
+            id={id}
+            initialFollowing={following}
+            onChange={(now) => {
+              setFollowing(now);
+              setFollowersCount((count) => (count === null ? count : Math.max(0, count + (now ? 1 : -1))));
+            }}
+          />
         </header>
 
         {loading && (

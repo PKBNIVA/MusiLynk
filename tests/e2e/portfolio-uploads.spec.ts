@@ -53,6 +53,9 @@ async function uploadAndSave(page: Page, name: string, mimeType: string, buffer:
 
 test.describe('portfolio uploads', () => {
   test.skip(process.env.QA_INTEGRATION !== 'true', 'Run against a disposable Rails API with QA_INTEGRATION=true.');
+  // The legacy "Work samples" page this spec drove was removed (J-22); /jobseeker/portfolio now redirects to
+  // My work (/jobseeker/library), whose form has different labels. Port the selectors before re-enabling.
+  test.fixme(true, 'Targets the removed /jobseeker/portfolio page; port to My work.');
 
   test('uploads an image, an MP3 and a PDF, renders them, then deletes them and their files', async ({
     page,

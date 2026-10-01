@@ -214,6 +214,9 @@ test.describe('The Stage', () => {
     let followed: Record<string, unknown> | null = null;
     await goToStage(page, {
       'GET /api/stage/feed': { body: { posts: [], nextCursor: null } },
+      'GET /api/stage/authors/user/user_2': {
+        body: { author: { type: 'user', id: 'user_2', name: 'Sam Rao', avatar: null, verified: false } },
+      },
       'GET /api/stage/authors/user/user_2/posts': {
         body: {
           posts: [post({ author: { type: 'user', id: 'user_2', name: 'Sam Rao', verified: false } })],
@@ -231,6 +234,27 @@ test.describe('The Stage', () => {
     await page.getByRole('button', { name: 'Follow' }).click();
     await expect(page.getByRole('button', { name: 'Following' })).toBeVisible();
     expect(followed).toEqual({ followableType: 'user', followableId: 'user_2' });
+  });
+
+  test('shows a member with no posts, and a not-found page for an unknown author', async ({ page }) => {
+    await goToStage(page, {
+      'GET /api/stage/feed': { body: { posts: [], nextCursor: null } },
+      'GET /api/stage/authors/user/user_3': {
+        body: { author: { type: 'user', id: 'user_3', name: 'Quiet Member', avatar: null, verified: false } },
+      },
+      'GET /api/stage/authors/user/user_3/posts': { body: { posts: [], nextCursor: null } },
+      'GET /api/stage/authors/user/user_3/followers': { body: { followersCount: 0, following: false } },
+      'GET /api/stage/authors/user/nobody': { status: 404, body: { error: 'This author could not be found.' } },
+      'GET /api/stage/authors/user/nobody/posts': { body: { posts: [], nextCursor: null } },
+      'GET /api/stage/authors/user/nobody/followers': { body: { followersCount: 0, following: false } },
+    });
+    await page.goto('/stage/authors/user/user_3');
+    await expect(page.getByRole('heading', { name: 'Quiet Member' })).toBeVisible();
+    await expect(page.getByText('No posts yet')).toBeVisible();
+
+    await page.goto('/stage/authors/user/nobody');
+    await expect(page.getByText("We couldn't find this member")).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Follow' })).toHaveCount(0);
   });
 
   test('shares a job to the Stage from the job details page', async ({ page }) => {

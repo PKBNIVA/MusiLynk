@@ -1,5 +1,6 @@
 import { EmptyState } from '../components/kit/EmptyState';
 import { useEffect, useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
 import { Card, CardContent } from '../components/ui/card';
@@ -22,6 +23,7 @@ const whole = (v: string) => /^\d+$/.test(v.trim());
 
 export default function UrgentRequests() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState<UrgentRequest[]>([]),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
@@ -83,9 +85,21 @@ export default function UrgentRequests() {
         rate: reply.rate.trim() ? Number(reply.rate) : null,
       });
       trackUrgentResponseSubmitted();
-      toast.success('Availability sent');
+      // Responding opens the conversation with the hirer, so there is somewhere to go next. The
+      // response is already sent: if the conversation cannot be opened, the toast alone is enough.
+      let conversationId: string | undefined;
+      try {
+        conversationId = (await apiPost<{ id?: string }>('/conversations', { employerId: reply.request.requester_id }))
+          .id;
+      } catch {
+        conversationId = undefined;
+      }
+      toast.success(
+        conversationId ? `Availability sent. Say hello to ${reply.request.requesterName}.` : 'Availability sent',
+      );
       setReply(null);
       await load();
+      if (conversationId) navigate(`/jobseeker/messages?c=${encodeURIComponent(conversationId)}`);
     } catch (e: unknown) {
       setFormError(errorMessage(e, 'Unable to send your availability.'));
     } finally {

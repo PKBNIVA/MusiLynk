@@ -340,6 +340,42 @@ test.describe('urgent requests', () => {
     await expect.poll(() => scopes).toContain('browse');
   });
 
+  test('Mark filled is a plain confirm: no responder picker, Accept stays the way to pick someone', async ({
+    page,
+  }) => {
+    const calls = await mock(page, (path, method, _body, route) => {
+      if (path === '/urgent-requests' && method === 'GET') {
+        const scope = new URL(route.request().url()).searchParams.get('scope') || '';
+        return (
+          json(route, {
+            requests: scope === 'mine' ? [mine] : [],
+            scope,
+            page: 1,
+            perPage: 20,
+            total: scope === 'mine' ? 1 : 0,
+            hasMore: false,
+          }),
+          true
+        );
+      }
+      if (path === '/urgent-requests/urg1' && method === 'PATCH') return (json(route, { ok: true }), true);
+      return false;
+    });
+    await page.goto('/employer/urgent');
+    await page.getByRole('button', { name: 'Mark filled' }).click();
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toContainText('Mark this request filled?');
+    await expect(dialog).toContainText('use Accept on their response');
+    await expect(dialog.getByRole('radio')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Keep as is' }).click();
+    expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
+
+    await page.getByRole('button', { name: 'Mark filled' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Mark filled' }).click();
+    await expect(page.getByText('Request marked filled')).toBeVisible();
+    expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ status: 'filled' });
+  });
+
   test('the post dialog keeps the 2-hour promise under the buttons', async ({ page }) => {
     await mock(page, (path, method, _body, route) => {
       if (path === '/urgent-requests' && method === 'GET')
@@ -606,6 +642,12 @@ test.describe('applicants and comparing', () => {
     await page.getByRole('button', { name: 'Remove Raj Tabla from the comparison' }).click();
     await expect(page).toHaveURL(/ids=m1%2Cm2$/);
     await expect(page.getByRole('heading', { name: 'Raj Tabla' })).toHaveCount(0);
+    // With two left, Remove stays visible but disabled, and says why.
+    const remove = page.getByRole('button', { name: 'Remove Dev Drummer from the comparison' });
+    await expect(remove).toBeVisible();
+    await expect(remove).toBeDisabled();
+    await expect(remove).toHaveAccessibleDescription('Comparing needs at least two musicians.');
+    await expect(page.getByText('Comparing needs at least two musicians.')).toHaveCount(2);
   });
 });
 

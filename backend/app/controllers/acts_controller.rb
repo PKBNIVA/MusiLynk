@@ -24,7 +24,7 @@ class ActsController < ApplicationController
 
   def mine
     return unless authenticate!("jobseeker", "employer")
-    render json: { acts: current_user.owned_acts.includes(:act_members, owner: :profile).order(updated_at: :desc).limit(200).map(&:api_json) }
+    render json: { acts: current_user.owned_acts.where.not(id: Act.direct_enquiry.select(:id)).includes(:act_members, owner: :profile).order(updated_at: :desc).limit(200).map(&:api_json) }
   end
 
   def create
@@ -56,7 +56,10 @@ class ActsController < ApplicationController
     return unless authenticate!("jobseeker", "employer")
     act = current_user.owned_acts.find(params[:id])
     return unless photo_allowed?(act)
-    act.update!(act_params)
+    attributes = act_params
+    # Hidden acts (moderated, or the direct-enquiry act) stay hidden; an update never re-lists them.
+    attributes.delete("status") if act.status == "hidden"
+    act.update!(attributes)
     audit!("act.update", act)
     render json: { act: act.reload.api_json }
   end
@@ -64,7 +67,7 @@ class ActsController < ApplicationController
   def destroy
     return unless authenticate!("jobseeker", "employer")
     act = current_user.owned_acts.find(params[:id])
-    act.update!(status: "inactive")
+    act.update!(status: "inactive") unless act.status == "hidden"
     audit!("act.deactivate", act)
     render json: { ok: true }
   end
@@ -118,6 +121,8 @@ class ActsController < ApplicationController
   def act_params
     raw = params.permit(:name, :actType, :tagline, :bio, :city, :lineupSize, :minFee, :maxFee, :currency, :feeBasis, :travelRadiusKm, :travelsNationally, :travelsInternationally, :techRiderUrl, :hospitalityRiderUrl, :promoUrl, :photoUrl, :status, genres: [], languages: [], eventTypes: []).to_h.transform_keys { _1.underscore }
     raw["photo_url"] = nil if raw.key?("photo_url") && raw["photo_url"].blank?
+    # "hidden" is not the owner's to set.
+    raw.delete("status") if raw["status"] == "hidden"
     raw["currency"] ||= "INR"; raw["fee_basis"] ||= "event"; raw["status"] ||= "active"; raw
   end
 end

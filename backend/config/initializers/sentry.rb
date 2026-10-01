@@ -32,7 +32,35 @@ module VerseSentry
     ActiveJob::QueueAdapters::TestAdapter
   ].freeze
 
+  # Delivery to Sentry is best effort. The SDK's at_exit hook flushes pending client reports
+  # synchronously and, when Sentry answers an error (a rejected DSN gives 403), raises
+  # Sentry::ExternalError out of at_exit: Ruby then exits non-zero even though the work (a rake
+  # task run as a Railway pre-deploy one-off, say) finished. A transport failure is logged
+  # instead, so it can never change an exit status or fail a request or job.
+  class Transport < Sentry::HTTPTransport
+    def send_data(data)
+      super
+    rescue Sentry::ExternalError => error
+      VerseSentry.log_delivery_failure(error)
+      nil
+    end
+
+    def flush
+      super
+    rescue Sentry::ExternalError => error
+      VerseSentry.log_delivery_failure(error)
+      nil
+    end
+  end
+
   module_function
+
+  def log_delivery_failure(error)
+    # The first line only: the response body is not ours to copy into logs.
+    Rails.logger.warn({ event: "sentry_delivery_failed", error: error.class.name, message: error.message.to_s.lines.first.to_s.strip.first(200) }.to_json)
+  rescue StandardError
+    nil
+  end
 
   def enabled_by_env?(env = ENV, rails_env = Rails.env)
     env["SENTRY_DSN"].to_s.strip.present? && !rails_env.test?
@@ -55,6 +83,7 @@ module VerseSentry
     config.environment = env["SENTRY_ENVIRONMENT"].presence || Rails.env.to_s
     config.release = env["RAILWAY_GIT_COMMIT_SHA"].presence if env["RAILWAY_GIT_COMMIT_SHA"].present?
     config.traces_sample_rate = traces_sample_rate(env["SENTRY_TRACES_SAMPLE_RATE"])
+    config.transport.transport_class = Transport
 
     # Privacy: no request bodies, cookies, query parameters, IPs or queue arguments.
     # (send_default_pii=false resets data_collection, so it is set first.)

@@ -2,7 +2,7 @@ class JobsController < ApplicationController
   include JobAuthoring
   include ListPaging
   include ActingAs
-  FILTER_PARAMS = %i[q location kind function workplace experience paid verified limit cursor].freeze
+  FILTER_PARAMS = %i[q roles location kind function workplace experience paid verified limit cursor].freeze
   LIST_LIMIT = 200
   # The public listing is paged with a keyset cursor: `?limit=` (default PAGE_SIZE, at most
   # MAX_PAGE_SIZE; anything else falls back to the default) and `?cursor=` from the previous
@@ -17,6 +17,8 @@ class JobsController < ApplicationController
   # (defensively) has no published_at; a published job is given one when it is approved, so this
   # only guards against that invariant ever slipping.
   BROWSE_SENTINEL = "-infinity"
+  # `?roles=Drummer,Vocalist` finds opportunities for any of those roles (a musician's own roles).
+  MAX_ROLES = 6
   LOCATION_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["jobs.location"])
 
   def index
@@ -36,7 +38,7 @@ class JobsController < ApplicationController
     jobs = jobs.where(paid: true) if params[:paid] == "true"
     jobs = jobs.joins(employer: :profile).where(profiles: { verified: true }) if params[:verified] == "true"
 
-    query = Search::Query.new(params[:q])
+    query = search_query
     if query.blank? && !query.inert?
       # Browsing: newest first, keyset cursor over (published_at, id) (V-16).
       jobs = jobs.reorder(*BROWSE_ORDER.map { Arel.sql(_1) })
@@ -182,6 +184,13 @@ class JobsController < ApplicationController
   end
 
   private
+
+  # The typed search, narrowed to any of the `roles` when given.
+  def search_query
+    query = Search::Query.new(params[:q])
+    roles = params[:roles].to_s.split(",").map { _1.squish.first(40) }.reject(&:blank?).uniq.first(MAX_ROLES)
+    roles.any? ? query.and(Search::Query.any_of(roles)) : query
+  end
 
   DUPLICATE_WINDOW = 15.seconds
 

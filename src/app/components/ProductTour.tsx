@@ -94,7 +94,7 @@ const tours: { [k: string]: TourStep[] } = {
       title: 'Use the right hiring format',
       text: 'Create a job, gig, audition, session, tour, internship or collaboration. Clear timing, pay and screening questions improve applicant quality.',
       to: '/employer/post-job',
-      cta: 'Create opportunity',
+      cta: 'Post an opportunity',
     },
     {
       icon: Users,

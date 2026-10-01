@@ -33,7 +33,7 @@ const IdentitySwitcher = lazy(() =>
 
 const links = [
   ['Music jobs', '/music-jobs', Briefcase],
-  ['Professionals', '/music-professionals', Users],
+  ['Musicians', '/music-professionals', Users],
   ['Book music', '/book-music', CalendarDays],
   ['How Verse works', '/guide', Compass],
 ] as const;

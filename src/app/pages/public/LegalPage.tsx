@@ -46,11 +46,11 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
   about: {
     title: 'About Verse',
     intro:
-      'Verse is a professional operating network for the music industry: careers, hiring, band building, talent discovery, live-act booking and music-production staffing.',
+      'Verse is an operating network for the music industry: careers, hiring, band building, talent discovery, live-act booking and music-production staffing.',
     items: [
       [
         'What Verse does',
-        'Verse helps musicians show proof of work, discover opportunities, build teams, book talent and manage professional relationships without forcing every use case into a generic job board.',
+        'Verse helps musicians show proof of work, discover opportunities, build teams, book talent and manage working relationships without forcing every use case into a generic job board.',
       ],
       [
         'Who it is for',
@@ -121,7 +121,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
   safety: {
     title: 'Trust & Safety',
     intro:
-      'Music work often moves quickly and informally. Verse is designed to make important professional terms more explicit and reportable.',
+      'Music work often moves quickly and informally. Verse is designed to make important terms more explicit and reportable.',
     items: [
       [
         'Avoid application fees',
@@ -178,9 +178,8 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
     ],
   },
   community: {
-    title: 'Community & Professional Conduct',
-    intro:
-      'Verse is a professional marketplace. Treat other participants as collaborators and counterparties, not content targets.',
+    title: 'Community conduct',
+    intro: 'Verse is a marketplace. Treat other participants as collaborators and counterparties, not content targets.',
     items: [
       ['Respect', 'No harassment, threats, hate, sexual solicitation, spam or repeated unwanted contact.'],
       [
@@ -192,7 +191,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
         'Never ask talent to pay to be considered: no “registration”, audition, portfolio, joining or security fees and no “advance” from the person being hired. Do not share UPI IDs or bank details to collect such money, and do not push people to WhatsApp or Telegram before terms are agreed. Verse flags these patterns in messages and moderators act on reports.',
       ],
       [
-        'Professional honesty',
+        'Be honest',
         'Do not fabricate credits, availability, rates, client names, verification evidence or completed work.',
       ],
       [
@@ -208,7 +207,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
   accessibility: {
     title: 'Accessibility',
     intro:
-      'Verse aims to make core hiring, booking and professional-profile workflows usable with keyboards, different screen sizes and assistive technologies.',
+      'Verse aims to make core hiring, booking and profile workflows usable with keyboards, different screen sizes and assistive technologies.',
     items: [
       [
         'Product approach',

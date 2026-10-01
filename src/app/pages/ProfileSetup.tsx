@@ -31,7 +31,7 @@ import { MoreDetails } from '../components/help/MoreDetails';
 import { Checkbox } from '../components/ui/checkbox';
 import { DebugLinkDialog, VerificationRequestDialog } from '../components/VerificationDialogs';
 import { errorMessage } from '../lib/errors';
-import { formatWhen } from '../lib/format';
+import { formatWhen, formatNumber } from '../lib/format';
 import type { AccountUser } from '../lib/apiTypes';
 import { Field, FormError } from '../components/form/Field';
 import {
@@ -190,7 +190,7 @@ function validateProfile(f: ProfileForm) {
   const errors: Partial<Record<ProfileField, string>> = {};
   const text = (k: TextField) => String(f[k] ?? '').trim();
   (Object.keys(LIMITS) as TextField[]).forEach((k) => {
-    if (text(k).length > LIMITS[k]) errors[k] = `Keep this under ${LIMITS[k].toLocaleString()} characters.`;
+    if (text(k).length > LIMITS[k]) errors[k] = `Keep this under ${formatNumber(LIMITS[k])} characters.`;
   });
   (['website', 'portfolioUrl'] as const).forEach((k) => {
     if (!errors[k] && text(k) && !isHttpUrl(text(k))) errors[k] = URL_MESSAGE;

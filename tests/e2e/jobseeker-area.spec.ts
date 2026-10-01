@@ -226,7 +226,7 @@ test('compare without a selection guides the user and skips the API', async ({ p
   let compareCalls = 0;
   await signIn(page, (_r, path) =>
     path === '/api/candidates/compare/list'
-      ? (compareCalls++, { status: 400, body: { error: 'Choose at least two professionals to compare.' } })
+      ? (compareCalls++, { status: 400, body: { error: 'Choose at least two musicians to compare.' } })
       : undefined,
   );
   await page.goto('/jobseeker/compare');

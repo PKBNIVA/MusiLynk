@@ -318,6 +318,34 @@ export function splitHashtags(body: string): TextSegment[] {
   return segments;
 }
 
+export type FeedEntry = { kind: 'post'; post: StagePost } | { kind: 'system'; posts: StagePost[] };
+
+const isSystemPost = (post: StagePost) => post.kind === 'system' || Boolean(post.author.system);
+
+/**
+ * The feed as render entries: a run of two or more consecutive Verse system posts ("X joined",
+ * "N urgent requests filled") becomes one "This week on Verse" entry instead of a wall of
+ * near-identical cards; every other post stays as it is.
+ */
+export function groupFeed(posts: StagePost[]): FeedEntry[] {
+  const entries: FeedEntry[] = [];
+  let run: StagePost[] = [];
+  const flush = () => {
+    if (run.length >= 2) entries.push({ kind: 'system', posts: run });
+    else run.forEach((post) => entries.push({ kind: 'post', post }));
+    run = [];
+  };
+  for (const post of posts) {
+    if (isSystemPost(post)) run.push(post);
+    else {
+      flush();
+      entries.push({ kind: 'post', post });
+    }
+  }
+  flush();
+  return entries;
+}
+
 /** A short "3h", "2d", "just now" label; falls back to a date past a week. */
 export function relativeTime(iso: string): string {
   const date = new Date(iso);

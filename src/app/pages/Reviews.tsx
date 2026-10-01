@@ -22,12 +22,14 @@ export default function Reviews() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [loaded, setLoaded] = useState(false);
   const [reportingReview, setReportingReview] = useState<Review | null>(null);
   const load = () =>
     apiGet<{ reviews?: Review[]; eligibleEmployers?: PublicEmployer[] }>('/reviews')
       .then((d) => {
         const eligible = d.eligibleEmployers || [];
         setLoadError('');
+        setLoaded(true);
         setReviews(d.reviews || []);
         setEmployers(eligible);
         setEmployerId((current) =>
@@ -64,13 +66,13 @@ export default function Reviews() {
           <Card className="bg-white/[.06] border-white/10 h-fit">
             <CardContent className="p-5">
               <h2 className="font-semibold text-lg mb-4">Write a review</h2>
-              <form onSubmit={submit} className="space-y-3">
-                {employers.length === 0 && (
-                  <p className="text-sm text-slate-400">
-                    You can review an employer after a completed hire. Employers you have already reviewed are not
-                    shown.
-                  </p>
-                )}
+              {loaded && employers.length === 0 && (
+                <p className="text-sm text-slate-400" data-testid="reviews-fill-later">
+                  This fills in after a completed booking or hire. Once you have worked with a hirer through Verse, they
+                  appear here so you can rate them.
+                </p>
+              )}
+              <form onSubmit={submit} className={`space-y-3 ${employers.length === 0 ? 'hidden' : ''}`}>
                 {employers.length > 0 && (
                   <AppSelect
                     aria-label="Employer"

@@ -49,6 +49,13 @@ test.describe('real frontend and Rails journeys', () => {
       expect(meUser.consented_at).toBeTruthy();
       const forbidden = await request.get(`${apiBase}/admin/stats`, { headers: { Authorization: `Bearer ${token}` } });
       expect(forbidden.status()).toBe(403);
+      // A password account starts unconfirmed; the confirmation link (returned outside production)
+      // is opened after sign-out, once a password sign-in has been refused.
+      const verification = await request.post(`${apiBase}/auth/request-email-verification`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(verification.status()).toBe(200);
+      const debugLink = new URL((await verification.json()).debugLink);
 
       // The product tour never opens by itself, on the profile-setup page or anywhere else.
       const tour = page.getByRole('dialog').filter({ hasText: /Step \d+ of \d+/ });
@@ -91,6 +98,13 @@ test.describe('real frontend and Rails journeys', () => {
         })
         .toBe(401);
       await expect.poll(() => page.evaluate(() => localStorage.getItem('verse_access_token'))).toBeNull();
+
+      // Password sign-in waits for the email to be confirmed.
+      const refused = await request.post(`${apiBase}/auth/login`, { data: { email, password } });
+      expect(refused.status()).toBe(403);
+      expect((await refused.json()).code).toBe('EMAIL_VERIFICATION_REQUIRED');
+      await page.goto(`${debugLink.pathname}${debugLink.search}`);
+      await expect(page.getByRole('heading', { name: 'Email verified' })).toBeVisible();
 
       await page.goto(`/auth/${role}`);
       await page.getByLabel('Email').fill(email);

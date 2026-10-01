@@ -122,7 +122,8 @@ test('a saved draft can be reopened from the dashboard, edited and submitted for
   await page.getByLabel(/^Description/).fill(description);
   await page.getByRole('button', { name: 'Submit for review' }).click();
 
-  await expect(page).toHaveURL(/\/employer$/);
+  // The page says what happens next instead of dropping the poster on the dashboard.
+  await expect(page.getByTestId('submitted-card')).toContainText('What happens next');
   // Moving between steps saves the draft along the way; the last save is the submission.
   const patch = calls.filter((c) => c.method === 'PATCH' && c.path === '/employer/jobs/job-draft').at(-1);
   expect(patch?.body).toMatchObject({ status: 'pending', location: 'Mumbai', description, skills: ['Guitar'] });
@@ -220,7 +221,7 @@ test('interview scheduling and recruiter notes use in-page dialogs, not browser 
   await page.getByRole('button', { name: 'Move to…' }).click();
   await page.getByRole('menuitem', { name: 'Rate / note' }).click();
   const notes = page.getByRole('dialog', { name: 'Rate and note' });
-  await notes.getByLabel('Recruiter note').fill('Great feel');
+  await notes.getByLabel('Private note').fill('Great feel');
   await chooseOption(notes.getByLabel('Internal rating'), '4 / 5');
   await notes.getByRole('button', { name: 'Save notes' }).click();
   await expect(notes).toBeHidden();
@@ -295,8 +296,8 @@ test('organization verification asks for a valid link in a dialog', async ({ pag
 test('compare without a selection guides back to talent search instead of erroring', async ({ page }) => {
   const { calls } = await signIn(page, 'jobseeker');
   await page.goto('/jobseeker/compare');
-  await expect(page.getByText(/(Pick|Select) two to four professionals/)).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Choose professionals' })).toHaveAttribute(
+  await expect(page.getByText(/(Pick|Select) two to four musicians/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Choose musicians' })).toHaveAttribute(
     'href',
     '/jobseeker/hiring/talent',
   );

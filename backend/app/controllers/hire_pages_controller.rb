@@ -82,11 +82,11 @@ class HirePagesController < ApplicationController
         answer: "Most urgent requests on Verse get a first response within hours. Posting an urgent request reaches every " \
           "available #{role} in #{city_name} at once, instead of waiting on one message at a time." },
       { question: "Are #{role}s on Verse in #{city_name} verified?",
-        answer: "Every profile shows real, reviewable work. A verified badge means Verse has confirmed that professional's " \
+        answer: "Every profile shows real, reviewable work. A verified badge means Verse has confirmed that musician's " \
           "identity and track record — filter to verified #{role}s in #{city_name} to hire with more confidence." },
       { question: "What does it cost to hire a #{role} for a gig or event in #{city_name}?",
-        answer: "Rates depend on the event, the professional's experience and how far ahead you book. See what verified and " \
-          "unverified professionals in #{city_name} report at /rates/#{city_slug}." }
+        answer: "Rates depend on the event, the musician's experience and how far ahead you book. See what verified and " \
+          "unverified musicians in #{city_name} report at /rates/#{city_slug}." }
     ]
   end
 

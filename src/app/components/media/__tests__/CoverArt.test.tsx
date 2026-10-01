@@ -53,6 +53,23 @@ describe('CoverArt', () => {
   });
 });
 
+describe('CoverArt glows', () => {
+  it('fit the glows inside the shorter side of a wide fill card and keep each circle small and soft', () => {
+    show(<CoverArt seed="Saanjh" genres={['Sufi']} size="fill" />);
+    const glows = host.querySelector('[data-testid=cover-art-glows]') as SVGElement;
+    expect(glows.getAttribute('preserveAspectRatio')).toBe('xMidYMid meet');
+    const circles = [...glows.querySelectorAll('circle')];
+    expect(circles).toHaveLength(3);
+    for (const circle of circles) expect(Number(circle.getAttribute('r'))).toBeLessThanOrEqual(40);
+    // Every glow fades out through a middle stop to nothing at its edge.
+    for (const gradient of glows.querySelectorAll('radialGradient')) {
+      const stops = [...gradient.querySelectorAll('stop')];
+      expect(stops).toHaveLength(3);
+      expect(stops.at(-1)?.getAttribute('stop-opacity')).toBe('0');
+    }
+  });
+});
+
 describe('ArtAvatar', () => {
   it('is a circle with a faint monogram', () => {
     show(<ArtAvatar id="u1" name="Asha Sharma" size="lg" />);

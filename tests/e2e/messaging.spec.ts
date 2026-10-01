@@ -567,10 +567,10 @@ test.describe('notifications', () => {
       const cards = page.getByTestId('notification');
       await expect(cards).toHaveCount(kinds.length);
       for (const [index, kind] of kinds.entries()) {
-        await expect(cards.nth(index).getByRole('link', { name: 'Open' }), `${kind.type} ${kind.link}`).toHaveAttribute(
-          'href',
-          kind[role],
-        );
+        await expect(
+          cards.nth(index).getByRole('link', { name: 'See details' }),
+          `${kind.type} ${kind.link}`,
+        ).toHaveAttribute('href', kind[role]);
       }
     });
   }
@@ -590,7 +590,7 @@ test.describe('notifications', () => {
 
     state.notifications = structuredClone(items.slice(1, 2));
     await page.reload();
-    await page.getByTestId('notification').getByRole('link', { name: 'Open' }).click();
+    await page.getByTestId('notification').getByRole('link', { name: 'See details' }).click();
     await expect(page).toHaveURL(/\/employer\/bookings$/);
     await expect.poll(() => state.patched).toContain('n2');
 

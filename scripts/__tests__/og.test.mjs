@@ -12,7 +12,7 @@ import {
   professionalCard,
   respond,
   safePhotoUrl,
-} from '../../api/og.ts';
+} from '../../api/_lib/og.ts';
 
 const text = (node) =>
   typeof node === 'string'
@@ -43,14 +43,13 @@ describe('og helpers', () => {
     expect(safePhotoUrl('javascript:alert(1)')).toBeUndefined();
     expect(safePhotoUrl(null)).toBeUndefined();
   });
-  it('reads type and id from the query, dropping a .png suffix and rejecting odd ids', () => {
-    const parse = (q) => parseRequest(new URL(`https://x.test/api/og?${q}`));
-    expect(parse('type=professional&id=abc-123.png')).toEqual({ type: 'professional', id: 'abc-123' });
-    expect(parse('type=act&id=a_b')).toEqual({ type: 'act', id: 'a_b' });
-    expect(parse('type=job&id=abc')).toBeNull();
-    expect(parse('type=act')).toBeNull();
-    expect(parse('type=act&id=../etc')).toBeNull();
-    expect(parse('type=act&id=' + 'a'.repeat(65))).toBeNull();
+  it('validates type and id, dropping a .png suffix and rejecting odd ids', () => {
+    expect(parseRequest('professional', 'abc-123.png')).toEqual({ type: 'professional', id: 'abc-123' });
+    expect(parseRequest('act', 'a_b')).toEqual({ type: 'act', id: 'a_b' });
+    expect(parseRequest('job', 'abc')).toBeNull();
+    expect(parseRequest('act', undefined)).toBeNull();
+    expect(parseRequest('act', '../etc')).toBeNull();
+    expect(parseRequest('act', 'a'.repeat(65))).toBeNull();
   });
 });
 
@@ -147,38 +146,44 @@ describe('respond', () => {
     render: vi.fn(async () => png),
     ...over,
   });
-  const ask = (deps, query = 'type=professional&id=p1') => respond(new Request(`https://x.test/api/og?${query}`), deps);
+  const ask = (deps, type = 'professional', id = 'p1') =>
+    respond(new Request('https://x.test/api/og/professional/p1.png'), type, id, deps);
+  const expectFallback = (res) => {
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/og-default.png');
+  };
 
   it('returns a cached PNG for a known id, fetching the public JSON', async () => {
     const deps = make();
-    const res = await ask(deps);
+    const res = await ask(deps, 'professional', 'p1.png');
     expect(deps.fetchJson).toHaveBeenCalledWith('https://api.test/api/public/talent/p1');
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('image/png');
-    expect(res.headers.get('cache-control')).toContain('s-maxage=86400');
+    expect(res.headers.get('cache-control')).toBe(
+      'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
+    );
     expect(await res.arrayBuffer()).toEqual(png);
   });
   it('asks the right endpoint for each type', async () => {
     const deps = make({ fetchJson: vi.fn(async () => ({ job: { title: 'Gig' }, act: { name: 'Act' } })) });
-    await ask(deps, 'type=opportunity&id=j1');
-    await ask(deps, 'type=act&id=a1');
+    await ask(deps, 'opportunity', 'j1');
+    await ask(deps, 'act', 'a1');
     expect(deps.fetchJson.mock.calls.map(([url]) => url)).toEqual([
       'https://api.test/api/jobs/j1',
       'https://api.test/api/public/acts/a1',
     ]);
     await expect(loadCard('act', 'a1', deps)).resolves.toMatchObject({ title: 'Act' });
   });
-  it('falls back to the default card, briefly cached, for no id, an unknown id or a failed lookup', async () => {
-    for (const [query, deps] of [
-      ['', make()],
-      ['type=professional&id=nope', make({ fetchJson: vi.fn(async () => null) })],
-      ['type=professional&id=p1', make({ fetchJson: vi.fn(async () => Promise.reject(new Error('down'))) })],
-      ['type=professional&id=p1', make({ fetchJson: vi.fn(async () => ({ professional: {} })) })],
+  it('redirects to the default card for a bad type, an unknown id or a failed lookup', async () => {
+    for (const [type, id, deps] of [
+      ['nope', 'p1', make()],
+      ['professional', null, make()],
+      ['professional', 'nope', make({ fetchJson: vi.fn(async () => null) })],
+      ['professional', 'p1', make({ fetchJson: vi.fn(async () => Promise.reject(new Error('down'))) })],
+      ['professional', 'p1', make({ fetchJson: vi.fn(async () => ({ professional: {} })) })],
     ]) {
-      const res = await ask(deps, query);
-      expect(res.status).toBe(200);
-      expect(res.headers.get('cache-control')).toBe('public, max-age=300, s-maxage=300');
-      expect(text(deps.render.mock.calls[0][0])).toContain('Hire a verified musician');
+      expectFallback(await ask(deps, type, id));
+      expect(deps.render).not.toHaveBeenCalled();
     }
   });
   it('draws the art when the photo cannot be fetched, or when the renderer cannot decode it', async () => {
@@ -187,21 +192,15 @@ describe('respond', () => {
     expect(JSON.stringify(noPhoto.render.mock.calls[0][0])).not.toContain('data:image/jpeg');
 
     const render = vi.fn().mockRejectedValueOnce(new Error('bad image')).mockResolvedValue(png);
-    const undecodable = make({ render });
-    const res = await ask(undecodable);
-    expect(res.headers.get('cache-control')).toContain('s-maxage=86400');
+    const res = await ask(make({ render }));
+    expect(res.status).toBe(200);
     expect(render).toHaveBeenCalledTimes(2);
     expect(JSON.stringify(render.mock.calls[0][0])).toContain('data:image/jpeg');
     expect(JSON.stringify(render.mock.calls[1][0])).not.toContain('data:image/jpeg');
   });
-  it('ends on the default card if even the art fails to draw', async () => {
-    const render = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('a'))
-      .mockRejectedValueOnce(new Error('b'))
-      .mockResolvedValue(png);
-    const res = await ask(make({ render }));
-    expect(res.headers.get('cache-control')).toBe('public, max-age=300, s-maxage=300');
-    expect(render).toHaveBeenCalledTimes(3);
+  it('redirects to the default card if even the art fails to draw', async () => {
+    const render = vi.fn().mockRejectedValue(new Error('a'));
+    expectFallback(await ask(make({ render })));
+    expect(render).toHaveBeenCalledTimes(2);
   });
 });

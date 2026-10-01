@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { personLines } from '../personLine';
+import { mentionsPlace, personLines } from '../personLine';
 
 describe('personLines', () => {
   it('uses the headline and drops what it already says', () => {
@@ -33,5 +33,15 @@ describe('personLines', () => {
   });
   it('is empty for an empty person', () => {
     expect(personLines({})).toEqual({ primary: '', secondary: [] });
+  });
+});
+
+describe('mentionsPlace', () => {
+  it('spots a city a headline already names, ignoring case', () => {
+    expect(mentionsPlace('Session drummer · Mumbai', 'mumbai')).toBe(true);
+    expect(mentionsPlace('Session drummer', 'Mumbai')).toBe(false);
+    expect(mentionsPlace('Session drummer', '')).toBe(false);
+    expect(mentionsPlace(null, 'Pune')).toBe(false);
+    expect(mentionsPlace('Tabla', null)).toBe(false);
   });
 });

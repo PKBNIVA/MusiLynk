@@ -94,6 +94,17 @@ class GoogleSignInTest < ActiveSupport::TestCase
     assert_equal "https://lh3.googleusercontent.com/a/abc=s96", result.user.profile.reload.photo_url
   end
 
+  test "signing in again never puts back a photo the person removed" do
+    picture = claims("picture" => "https://lh3.googleusercontent.com/a/abc=s96")
+    first = GoogleSignIn.call(claims: picture, intent: "signin", role: "jobseeker")
+    assert_equal "https://lh3.googleusercontent.com/a/abc=s96", first.user.profile.reload.photo_url
+
+    first.user.profile.update!(photo_url: nil)
+    again = GoogleSignIn.call(claims: picture, intent: "signin", role: "jobseeker")
+    assert_equal first.user.id, again.user.id
+    assert_nil again.user.profile.reload.photo_url
+  end
+
   test "connect keeps a photo the person already chose and ignores non-https avatars" do
     owner = User.create!(name: "Owner", email: "owner@example.com", password: PASSWORD, role: "jobseeker", status: "active")
     owner.create_profile!(photo_url: "https://cdn.example.com/mine.webp")

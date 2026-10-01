@@ -6,6 +6,7 @@ import { usePageMeta } from '../components/PageMeta';
 import { useWorkspaceBase } from '../components/showcase/parts';
 import { apiGet } from '../lib/api';
 import { errorMessage } from '../lib/errors';
+import { formatDate, formatMoney } from '../lib/format';
 
 // GET /api/invoices/:id (InvoicesController#show). GST fields come from config/legal.yml at
 // render time; a blank GSTIN prints blank rather than a placeholder, since a real GSTIN must
@@ -32,7 +33,7 @@ type InvoiceDetail = {
   };
 };
 
-const money = (currency: string, value: number) => `${currency} ${Number(value || 0).toLocaleString('en-IN')}`;
+const money = (currency: string, value: number) => formatMoney(Number(value || 0), currency);
 
 /**
  * The invoice laid out for paper: black on white, no navigation. The browser's own
@@ -102,7 +103,7 @@ export default function InvoicePrint() {
               <div className="text-right">
                 <p className="text-lg font-bold">Invoice {invoice.invoiceNumber}</p>
                 <p className="text-sm text-slate-700">FY {invoice.financialYear}</p>
-                <p className="text-sm text-slate-700">{new Date(invoice.createdAt).toLocaleDateString('en-IN')}</p>
+                <p className="text-sm text-slate-700">{formatDate(invoice.createdAt)}</p>
               </div>
             </header>
             <div className="mt-5 flex flex-wrap justify-between gap-4 text-sm text-slate-800">

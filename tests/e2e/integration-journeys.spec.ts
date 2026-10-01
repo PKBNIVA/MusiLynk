@@ -68,11 +68,14 @@ test.describe('real frontend and Rails journeys', () => {
         })
         .toBe(true);
 
-      // The first dashboard visit shows the dismissible three-card strip, never a modal.
+      // The first dashboard visit never opens a modal. A new musician gets the dismissible
+      // three-card strip; a new hirer gets the two choice cards once instead, with no strip repeating them.
       await page.goto(`/${role}`);
       await expect(tour).toBeHidden();
       const strip = page.getByTestId('tour-strip');
-      if ((page.viewportSize()?.width ?? 0) >= 768) {
+      if (role === 'employer') {
+        await expect(page.getByText('Need someone by tomorrow?')).toBeVisible();
+      } else if ((page.viewportSize()?.width ?? 0) >= 768) {
         await expect(strip).toBeVisible();
         await strip.getByRole('button', { name: 'Got it' }).click();
       }

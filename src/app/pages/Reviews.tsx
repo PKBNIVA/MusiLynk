@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
+import { useSearchParams } from 'react-router';
 import { Card, CardContent } from '../components/ui/card';
+import { EmptyState } from '../components/kit/EmptyState';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -13,6 +15,8 @@ import { errorMessage } from '../lib/errors';
 import type { PublicEmployer, Review } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
 export default function Reviews() {
+  const [searchParams] = useSearchParams();
+  const wantedEmployerId = useRef(searchParams.get('employerId') || '');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [employers, setEmployers] = useState<PublicEmployer[]>([]);
   const [employerId, setEmployerId] = useState('');
@@ -22,16 +26,20 @@ export default function Reviews() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [loaded, setLoaded] = useState(false);
   const [reportingReview, setReportingReview] = useState<Review | null>(null);
   const load = () =>
     apiGet<{ reviews?: Review[]; eligibleEmployers?: PublicEmployer[] }>('/reviews')
       .then((d) => {
         const eligible = d.eligibleEmployers || [];
         setLoadError('');
+        setLoaded(true);
         setReviews(d.reviews || []);
         setEmployers(eligible);
         setEmployerId((current) =>
-          eligible.some((employer) => employer.id === current) ? current : eligible[0]?.id || '',
+          eligible.some((employer) => employer.id === current)
+            ? current
+            : eligible.find((employer) => employer.id === wantedEmployerId.current)?.id || eligible[0]?.id || '',
         );
       })
       .catch((e: unknown) => setLoadError(errorMessage(e, 'Reviews could not be loaded.')));
@@ -59,21 +67,21 @@ export default function Reviews() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
       <main className="max-w-6xl mx-auto px-6 pt-28 pb-16">
-        <PageHeader title="Employer reviews" />
+        <PageHeader title="Hirer reviews" />
         <div className="grid lg:grid-cols-[360px_1fr] gap-6">
           <Card className="bg-white/[.06] border-white/10 h-fit">
             <CardContent className="p-5">
               <h2 className="font-semibold text-lg mb-4">Write a review</h2>
-              <form onSubmit={submit} className="space-y-3">
-                {employers.length === 0 && (
-                  <p className="text-sm text-slate-400">
-                    You can review an employer after a completed hire. Employers you have already reviewed are not
-                    shown.
-                  </p>
-                )}
+              {loaded && employers.length === 0 && (
+                <p className="text-sm text-slate-400" data-testid="reviews-fill-later">
+                  This fills in after a completed booking or hire. Once you have worked with a hirer through Verse, they
+                  appear here so you can rate them.
+                </p>
+              )}
+              <form onSubmit={submit} className={`space-y-3 ${employers.length === 0 ? 'hidden' : ''}`}>
                 {employers.length > 0 && (
                   <AppSelect
-                    aria-label="Employer"
+                    aria-label="Hirer"
                     value={employerId}
                     onValueChange={setEmployerId}
                     options={employers.map((e) => ({ value: e.id, label: e.companyName || e.name }))}
@@ -111,7 +119,7 @@ export default function Reviews() {
               </form>
             </CardContent>
           </Card>
-          <div className="space-y-4">
+          <div className={`space-y-4 ${loaded && employers.length === 0 ? 'order-first lg:order-none' : ''}`}>
             {loadError && (
               <Card className="bg-rose-500/10 border-rose-400/20" role="alert">
                 <CardContent className="p-5">
@@ -123,9 +131,12 @@ export default function Reviews() {
               </Card>
             )}
             {loadError ? null : reviews.length === 0 ? (
-              <Card className="bg-white/5 border-white/10">
-                <CardContent className="p-8 text-slate-400">No published reviews yet.</CardContent>
-              </Card>
+              <EmptyState
+                scene="stage"
+                title="No published reviews yet."
+                hint="Published reviews of hirers appear here. Browse open gigs to line up your first booking."
+                action={{ label: 'Find work', to: '/jobseeker/jobs', variant: 'outline' }}
+              />
             ) : (
               reviews.map((r) => (
                 <Card key={r.id} className="bg-white/[.06] border-white/10">

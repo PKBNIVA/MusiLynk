@@ -185,7 +185,7 @@ describe('api() error mapping', () => {
     const { api } = await loadApi();
     fetchMock.mockResolvedValue(jsonResponse({ request_id: 'body-id' }, 409));
     await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({
-      message: 'Request failed (409)',
+      message: 'That did not go through. Try again.',
       requestId: 'body-id',
     });
   });
@@ -229,7 +229,10 @@ describe('api() error mapping', () => {
     fetchMock.mockResolvedValue(
       new Response('Bad gateway', { status: 400, headers: { 'content-type': 'text/plain' } }),
     );
-    await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({ status: 400, message: 'Request failed (400)' });
+    await expect(api('/x', { method: 'POST' })).rejects.toMatchObject({
+      status: 400,
+      message: 'That did not go through. Try again.',
+    });
   });
 
   it('announces server plan limits (402) for the upgrade prompt', async () => {
@@ -546,7 +549,7 @@ describe('401 handling', () => {
 
       await expect(apiGet('/employer/jobs')).rejects.toMatchObject({ status: 401 });
       expect(hasAccessToken()).toBe(false);
-      expect(location.replace).toHaveBeenCalledWith('/auth/employer');
+      expect(location.replace).toHaveBeenCalledWith('/auth/employer?reason=expired');
 
       // Signing in again re-arms the redirect for the next expired session.
       setAccessToken('expired-again');
@@ -560,6 +563,57 @@ describe('401 handling', () => {
     }
   });
 
+  it('treats an expired session on the Stage like any protected page: keeps the unsent text, then signs in as the same role', async () => {
+    const { location, restore } = fakeLocation('/stage');
+    try {
+      const { apiPost, setAccessToken, hasAccessToken, consumeReturnTo, rememberSessionRole } = await loadApi();
+      const { registerUnsentDraft, takeUnsentDraft } = await import('../unsentDraft');
+      registerUnsentDraft('stage-composer', () => 'Playing Blue Frog on Friday');
+      rememberSessionRole('employer');
+      setAccessToken('expired');
+      fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
+
+      await expect(apiPost('/stage/posts', { body: 'x' })).rejects.toMatchObject({ status: 401 });
+      expect(hasAccessToken()).toBe(false);
+      expect(location.replace).toHaveBeenCalledWith('/auth/employer?reason=expired');
+      expect(consumeReturnTo()).toBe('/stage');
+      expect(takeUnsentDraft('stage-composer')).toBe('Playing Blue Frog on Friday');
+    } finally {
+      restore();
+    }
+  });
+
+  it('falls back to the musician sign-in when the Stage session had no known role, and forgets a cleared hint', async () => {
+    const { location, restore } = fakeLocation('/stage/posts/p1');
+    try {
+      const { apiGet, setAccessToken, rememberSessionRole } = await loadApi();
+      rememberSessionRole('employer');
+      rememberSessionRole(null);
+      setAccessToken('expired');
+      fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
+      await expect(apiGet('/stage/posts/p1')).rejects.toMatchObject({ status: 401 });
+      expect(location.replace).toHaveBeenCalledWith('/auth/jobseeker?reason=expired');
+    } finally {
+      restore();
+    }
+  });
+
+  it('remembers the role across a cold load whose token expired before /me resolved', async () => {
+    const { location, restore } = fakeLocation('/stage');
+    try {
+      const first = await loadApi();
+      first.rememberSessionRole('employer');
+      vi.resetModules();
+      const { apiGet, setAccessToken } = await loadApi();
+      setAccessToken('expired');
+      fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
+      await expect(apiGet('/stage/feed')).rejects.toMatchObject({ status: 401 });
+      expect(location.replace).toHaveBeenCalledWith('/auth/employer?reason=expired');
+    } finally {
+      restore();
+    }
+  });
+
   it('sends an expired admin-site session back to the admin sign-in page', async () => {
     vi.stubEnv('VITE_APP_TARGET', 'admin');
     const { location, restore } = fakeLocation('/account');
@@ -568,7 +622,7 @@ describe('401 handling', () => {
       setAccessToken('expired');
       fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
       await expect(apiGet('/admin/account')).rejects.toMatchObject({ status: 401 });
-      expect(location.replace).toHaveBeenCalledWith('/');
+      expect(location.replace).toHaveBeenCalledWith('/?reason=expired');
       expect(consumeReturnTo()).toBe('/account');
     } finally {
       restore();

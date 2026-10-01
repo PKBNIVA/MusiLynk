@@ -16,7 +16,10 @@ const CATEGORY_LABELS: Record<Category, { label: string; hint: string }> = {
     label: 'Weekly digest',
     hint: 'Requests and jobs near you, profile views, and what is new — every Tuesday.',
   },
-  lifecycle: { label: 'Getting started tips', hint: 'A few emails while you set up your profile or listing.' },
+  lifecycle: {
+    label: 'Getting started tips',
+    hint: 'A few emails while you set up your profile or first opportunity.',
+  },
   requests: { label: 'Urgent requests', hint: 'Alerts about urgent requests near you.' },
   product: { label: 'Milestones', hint: 'A note when you hit a milestone, like your first application.' },
 };

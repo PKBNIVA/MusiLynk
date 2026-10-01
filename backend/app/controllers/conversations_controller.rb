@@ -75,11 +75,7 @@ class ConversationsController < ApplicationController
     if UserBlock.between?(candidate, employer)
       return render_error("You can't start a conversation with this person.", :forbidden, "MESSAGING_BLOCKED")
     end
-    conversation = begin
-      Conversation.find_or_create_by!(candidate:, employer:, job:)
-    rescue ActiveRecord::RecordNotUnique
-      Conversation.find_by!(candidate:, employer:, job:)
-    end
+    conversation = Conversation.open_between!(candidate:, employer:, job:)
     render json: { id: conversation.id, conversation: { id: conversation.id } }, status: :created
   end
 

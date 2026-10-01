@@ -16,6 +16,7 @@ import type { AccountUser } from '../lib/apiTypes';
 import { Field, FormError, RequiredNote } from '../components/form/Field';
 import { PHONE_MESSAGE, URL_MESSAGE, isHttpUrl, isPhone, useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { normalizeWebAddress } from '../lib/profileForm';
+import { formatNumber } from '../lib/format';
 
 type OrgField = 'companyName' | 'companyWebsite' | 'companySize' | 'phone' | 'location' | 'companyDescription';
 const ORG_IDS: Record<OrgField, string> = {
@@ -35,7 +36,7 @@ function validateOrganization(f: Partial<AccountUser>) {
   if (f.companyWebsite?.trim() && !isHttpUrl(f.companyWebsite)) errors.companyWebsite = URL_MESSAGE;
   if (f.phone?.trim() && !isPhone(f.phone)) errors.phone = PHONE_MESSAGE;
   if ((f.companyDescription?.length ?? 0) > DESCRIPTION_MAX)
-    errors.companyDescription = `Keep the description under ${DESCRIPTION_MAX.toLocaleString()} characters.`;
+    errors.companyDescription = `Keep the description under ${formatNumber(DESCRIPTION_MAX)} characters.`;
   return errors;
 }
 

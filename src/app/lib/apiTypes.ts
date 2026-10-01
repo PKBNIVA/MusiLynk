@@ -73,6 +73,9 @@ export interface AccountUser extends ProfileFields {
   profileComplete: boolean;
   emailVerified: boolean;
   last_login_at?: string | null;
+  /** GET /me: a verification request is waiting for review, and when it was sent. */
+  verificationPending?: boolean;
+  verificationRequestedAt?: string | null;
 }
 
 /** ApplicationController#verification_summary: what the Verified badge's tooltip says. */
@@ -805,6 +808,8 @@ export interface UrgentRequest {
   /** Set only for the viewer's own row when they were notified about this request. */
   myMatchReasons?: string[];
   filledByName?: string | null;
+  /** The viewer's conversation with the requester, when there is one. */
+  conversationId?: string | null;
 }
 
 /** Admin::UrgentRequestsController#index row: the above plus founder-facing fields. */
@@ -847,6 +852,7 @@ export interface UrgentRequestResponse {
   updated_at?: string;
   name: string;
   headline?: string | null;
+  photoUrl?: string | null;
 }
 
 /** VouchesController: a vouches row (Vouch#api_json), token omitted. */

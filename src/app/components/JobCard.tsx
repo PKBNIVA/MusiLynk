@@ -68,9 +68,9 @@ export function JobCard({ job, to, index, aside, compact = false }: Props) {
               <p className="text-sm text-slate-400 truncate flex items-center gap-1.5" data-testid="job-facts-place">
                 <span className="text-violet-300 truncate">{job.company}</span>
                 {!compact && job.employerVerified && (
-                  <span className="shrink-0 text-emerald-300" title="Verified employer">
+                  <span className="shrink-0 text-emerald-300" title="Verified hirer">
                     <ShieldCheck size={14} aria-hidden="true" />
-                    <span className="sr-only">Verified employer</span>
+                    <span className="sr-only">Verified hirer</span>
                   </span>
                 )}
                 {!compact && place && <span className="truncate">· {place}</span>}

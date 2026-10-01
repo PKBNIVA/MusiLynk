@@ -14,7 +14,9 @@ class Post < ApplicationRecord
   SYSTEM_KINDS = %w[welcome welcome_aggregate verified urgent_filled weekly_roundup fastest_responders].freeze
   BODY_LIMIT = 3_000
   MEDIA_LIMIT = 10
-  HASHTAG_PATTERN = /#([a-z0-9_]{2,50})/i
+  # Letters, combining marks (Devanagari vowel signs and the like), digits and underscores, 2-50
+  # characters. src/app/lib/stage.ts HASHTAG_PATTERN must stay identical.
+  HASHTAG_PATTERN = /#([\p{L}\p{M}\p{N}_]{2,50})/
   TRENDING_WINDOW = 72.hours
   SYSTEM_AUTHOR_ID = "verse".freeze
   SYSTEM_AUTHOR_NAME = "Verse".freeze
@@ -111,7 +113,7 @@ class Post < ApplicationRecord
       author: { type: author_type, id: author_id, name: author_name, avatar: author_avatar, verified: author_verified?, system: author_type == "system" },
       kind: kind,
       body: body,
-      media: Array(media),
+      media: media_json,
       linkUrl: link_url,
       city: city,
       genres: Array(genres),
@@ -129,6 +131,34 @@ class Post < ApplicationRecord
       createdAt: created_at,
       updatedAt: updated_at
     }
+  end
+
+  # The stored media entries ({uploadId, type, caption}) plus each one's public `url`, looked up
+  # from the finished Upload the author owns, so every viewer (not just the uploading browser
+  # session) can render the file.
+  def media_json
+    items = Array(media).map { _1.is_a?(Hash) ? _1.stringify_keys : _1 }
+    return items if items.empty? || created_by_user_id.blank?
+    urls = @media_urls || Post.media_urls_for([self])
+    items.map { |item| item.is_a?(Hash) && urls[item["uploadId"]].present? ? item.merge("url" => urls[item["uploadId"]]) : item }
+  end
+
+  # Resolves the media urls of a whole page of posts in one query, so serialising N posts does
+  # not run N Upload lookups. Call before api_json on each; returns the posts.
+  def self.preload_media_urls(posts)
+    urls = media_urls_for(posts)
+    posts.each { _1.instance_variable_set(:@media_urls, urls) }
+  end
+
+  # {upload_id => public_url} for the finished uploads that the posts' own authors attached.
+  def self.media_urls_for(posts)
+    pairs = posts.filter_map do |post|
+      next if post.created_by_user_id.blank?
+      Array(post.media).filter_map { |item| [item["uploadId"] || item[:uploadId], post.created_by_user_id] if item.is_a?(Hash) }
+    end.flatten(1).reject { _1.first.blank? }
+    return {} if pairs.empty?
+    Upload.complete.where(id: pairs.map(&:first).uniq, user_id: pairs.map(&:last).uniq).pluck(:id, :user_id, :public_url)
+      .select { |id, user_id, _| pairs.include?([id, user_id]) }.to_h { |id, _, url| [id, url] }
   end
 
   def event_json

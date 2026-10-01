@@ -97,15 +97,25 @@ export function ribbonBars(seed: string, count = 48): number[] {
 
 export type Blob = { cx: number; cy: number; r: number; opacity: number };
 
-/** Three soft circles in a 100x100 field, placed from the seed. */
+/**
+ * Bounds that keep the soft circles soft: none may grow into one big flat disc that swallows the
+ * card (a radius of 40 is at most half of the square field's area), and none is opaque.
+ */
+export const BLOB_RADIUS = { min: 24, max: 40 } as const;
+export const BLOB_MAX_OPACITY = 0.45;
+
+/** Three soft circles in a 100x100 field, placed from the seed, with radius and opacity clamped. */
 export function blobs(seed: string): Blob[] {
   const random = seededRandom(hashSeed(`${seed}:blobs`));
-  return [0, 1, 2].map((i) => ({
-    cx: Math.round((10 + random() * 80) * 10) / 10,
-    cy: Math.round((10 + random() * 80) * 10) / 10,
-    r: Math.round((34 + random() * 30 - i * 4) * 10) / 10,
-    opacity: Math.round((0.55 - i * 0.12) * 100) / 100,
-  }));
+  return [0, 1, 2].map((i) => {
+    const r = BLOB_RADIUS.min + random() * (BLOB_RADIUS.max - BLOB_RADIUS.min) - i * 2;
+    return {
+      cx: Math.round((10 + random() * 80) * 10) / 10,
+      cy: Math.round((10 + random() * 80) * 10) / 10,
+      r: Math.round(Math.max(BLOB_RADIUS.min, Math.min(BLOB_RADIUS.max, r)) * 10) / 10,
+      opacity: Math.min(BLOB_MAX_OPACITY, Math.round((BLOB_MAX_OPACITY - i * 0.1) * 100) / 100),
+    };
+  });
 }
 
 /** Gradient angle in degrees, varied per seed so same-palette cards do not line up. */

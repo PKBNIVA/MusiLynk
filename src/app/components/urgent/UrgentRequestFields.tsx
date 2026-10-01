@@ -6,6 +6,12 @@ import { Textarea } from '../ui/textarea';
 import { Field } from '../form/Field';
 import { MoreDetails } from '../help/MoreDetails';
 import { BUDGET_BANDS, URGENT_IDS, type UrgentField, type UrgentFormValues } from '../../lib/urgentForm';
+import { formatInputEcho } from '../../lib/format';
+
+// Phone browsers give a date-and-time field a wide native minimum that clips the value at 390px;
+// letting its inner parts shrink and left-align keeps the whole value visible.
+const DATETIME_CLASS =
+  'max-w-full min-w-0 [&::-webkit-date-and-time-value]:min-w-0 [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:min-w-0';
 
 /**
  * The urgent request's fields: five required answers, then "More details". The public /urgent
@@ -45,8 +51,19 @@ export function UrgentRequestFields({
         {shown(errors.role)}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id={URGENT_IDS.startAt} label="Date & time" required error={errors.startAt}>
-          <Input type="datetime-local" value={values.startAt} onChange={(e) => onChange('startAt', e.target.value)} />
+        <Field
+          id={URGENT_IDS.startAt}
+          label="Date & time"
+          required
+          error={errors.startAt}
+          hint={formatInputEcho(values.startAt, true)}
+        >
+          <Input
+            type="datetime-local"
+            className={DATETIME_CLASS}
+            value={values.startAt}
+            onChange={(e) => onChange('startAt', e.target.value)}
+          />
         </Field>
         <div>
           <AutocompleteInput
@@ -101,9 +118,16 @@ export function UrgentRequestFields({
               placeholder="e.g. Blue Frog, Lower Parel"
             />
           </Field>
-          <Field id={URGENT_IDS.endAt} label="Ends" optional error={errors.endAt}>
+          <Field
+            id={URGENT_IDS.endAt}
+            label="Ends"
+            optional
+            error={errors.endAt}
+            hint={formatInputEcho(values.endAt, true)}
+          >
             <Input
               type="datetime-local"
+              className={DATETIME_CLASS}
               min={values.startAt}
               value={values.endAt}
               onChange={(e) => onChange('endAt', e.target.value)}

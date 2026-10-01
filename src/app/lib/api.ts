@@ -131,6 +131,11 @@ export function parseFieldErrors(raw: unknown): ApiFieldErrors | undefined {
   return Object.keys(fields).length ? fields : undefined;
 }
 
+/** What a request that failed without a message from the server says. */
+export function requestFailedMessage(status: number): string {
+  return status >= 500 ? 'Something went wrong. Try again in a moment.' : 'That did not go through. Try again.';
+}
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -151,6 +156,38 @@ function requestIdFor(response: Response, data?: ApiErrorBody) {
   return response.headers.get('x-request-id') || data?.requestId || data?.request_id;
 }
 
+// Work to do just before an expired session sends the visitor to sign in, such as keeping text they
+// had typed (see unsentDraft.ts). Registered from outside so this module stays free of page concerns.
+const beforeSignInRedirect = new Set<() => void>();
+export function onBeforeSignInRedirect(listener: () => void) {
+  beforeSignInRedirect.add(listener);
+  return () => void beforeSignInRedirect.delete(listener);
+}
+
+// The role of the signed-in person, for pages whose path carries no role (/stage): an expired
+// session there signs in again as the same kind of account. Set by AuthProvider.
+// Kept in localStorage too, so a cold load whose token already expired (nothing has resolved /me)
+// still signs in as the right kind of account.
+/** Added to the sign-in address after an expired session, so that page can say why it is showing. */
+export const SESSION_EXPIRED_QUERY = 'reason=expired';
+const ROLE_HINT_KEY = 'verse_session_role';
+let sessionRoleHint: string | null = null;
+export function rememberSessionRole(role?: string | null) {
+  sessionRoleHint = role ?? null;
+  writeStored('local', ROLE_HINT_KEY, sessionRoleHint);
+}
+const signInRole = (pathname: string) => {
+  const first = pathname.split('/')[1];
+  if (first === 'jobseeker' || first === 'employer' || first === 'admin') return first;
+  return (sessionRoleHint ?? readStored('local', ROLE_HINT_KEY)) === 'employer' ? 'employer' : 'jobseeker';
+};
+
+/**
+ * The one place an expired session is handled (a 401 on a request that carried a token): the
+ * token is cleared, any unsent text a form registered is kept for after sign-in, the page is
+ * remembered, and the visitor is sent to sign in. Returns without redirecting on pages that do
+ * not need a session. Reloading the page leaves no usable signed-in screen behind.
+ */
 function redirectAfterUnauthorized(path: string, rejectedToken: string | null, skipRedirect = false) {
   const currentToken = readToken();
   // Another tab may have signed in again while this request was in flight; only the
@@ -164,9 +201,9 @@ function redirectAfterUnauthorized(path: string, rejectedToken: string | null, s
   if (!PROTECTED_AREA.test(window.location.pathname)) return;
 
   authRedirectStarted = true;
+  beforeSignInRedirect.forEach((listener) => listener());
   writeStored('session', RETURN_TO_KEY, currentPath);
-  const role = window.location.pathname.split('/')[1] || 'jobseeker';
-  window.location.replace(signInPath(role));
+  window.location.replace(`${signInPath(signInRole(window.location.pathname))}?${SESSION_EXPIRED_QUERY}`);
 }
 
 function retryDelay(response?: Response) {
@@ -281,7 +318,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
         if (response.status >= 500)
           reportApiFailure({ status: response.status, code: data.code, method, path, requestId });
         throw new ApiError(
-          data.error || `Request failed (${response.status})`,
+          data.error || requestFailedMessage(response.status),
           response.status,
           data.code,
           requestId,
@@ -647,7 +684,7 @@ export async function uploadMedia(
       throw new ApiError(
         sent.status === 403
           ? 'Storage refused the file (size or type did not match, or the link expired). Please retry.'
-          : `Upload failed (${sent.status}). Please retry.`,
+          : 'The upload failed. Try again.',
         sent.status,
         'UPLOAD_FAILED',
       );
@@ -672,12 +709,7 @@ export async function uploadMedia(
   const sent = await sendWithProgress('PUT', uploadUrl, file, headers, options);
   if (sent.status === 401) redirectAfterUnauthorized('/uploads/local', token);
   if (sent.status < 200 || sent.status >= 300)
-    throw new ApiError(
-      sent.data.error || `Upload failed (${sent.status})`,
-      sent.status,
-      sent.data.code,
-      sent.requestId,
-    );
+    throw new ApiError(sent.data.error || 'The upload failed. Try again.', sent.status, sent.data.code, sent.requestId);
   options.onProgress?.(100);
   return {
     ...sent.data,

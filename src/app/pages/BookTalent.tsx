@@ -22,8 +22,10 @@ import { toast } from 'sonner';
 import { errorMessage, errorStatus } from '../lib/errors';
 import type { Act } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
+import { formatInputEcho } from '../lib/format';
 
 type ActPage = PageMeta & { acts?: Act[] };
+type BookingLimits = { activeAllowed: number; activeUsed: number; planName?: string };
 const pickActs = (page: ActPage) => page.acts;
 const FILTERS = ['q', 'city', 'type', 'member'] as const;
 const NOUN = ['act', 'acts'] as const;
@@ -47,7 +49,9 @@ const today = () => {
 };
 
 type Enquiry = {
+  /** The act's id, or the musician's own when they front no act (then `direct` is set). */
   id: string;
+  direct?: boolean;
   name: string;
   eventType: string;
   eventDate: string;
@@ -86,6 +90,21 @@ export default function BookTalent() {
     [formError, setFormError] = useState(''),
     [sending, setSending] = useState(false);
   const preselected = useRef<string | null>(null);
+  // The plan's room for active enquiries, shown before anything is typed (J-25).
+  const [limits, setLimits] = useState<BookingLimits | null>(null);
+  const loadLimits = useCallback(() => {
+    apiGet<Partial<BookingLimits>>('/bookings/limits')
+      .then((d) =>
+        setLimits(
+          typeof d.activeAllowed === 'number' && typeof d.activeUsed === 'number' ? (d as BookingLimits) : null,
+        ),
+      )
+      .catch(() => setLimits(null));
+  }, []);
+  useEffect(loadLimits, [loadLimits]);
+  const atLimit = Boolean(limits && limits.activeUsed >= limits.activeAllowed);
+  // A musician who fronts no act can still be asked for a quote (A-09): their name for the form.
+  const [musician, setMusician] = useState<{ id: string; name: string } | 'missing' | null>(null);
 
   const load = useLatestCallback(() => list.search(query));
   useEffect(() => {
@@ -141,6 +160,35 @@ export default function BookTalent() {
     openEnquiry(acts[0]);
   }, [member, loading, loadError, acts, openEnquiry]);
 
+  const directOpened = useRef<string | null>(null);
+  useEffect(() => {
+    if (!member || loading || loadError || acts.length > 0 || directOpened.current === member) return;
+    directOpened.current = member;
+    apiGet<{ professional?: { id: string; name: string; location?: string | null } }>(
+      `/public/talent/${encodeURIComponent(member)}`,
+    )
+      .then((d) => {
+        const person = d.professional;
+        if (!person) throw new Error('missing');
+        if (userId && person.id === userId) throw new Error('self');
+        setMusician({ id: person.id, name: person.name });
+        setFormError('');
+        setBooking({
+          id: person.id,
+          direct: true,
+          name: person.name,
+          eventType: 'wedding',
+          eventDate: '',
+          eventCity: city || person.location || '',
+          venueName: '',
+          budgetMin: '',
+          budgetMax: '',
+          requirements: '',
+        });
+      })
+      .catch(() => setMusician('missing'));
+  }, [member, loading, loadError, acts.length, userId, city]);
+
   const closeEnquiry = () => {
     setBooking(null);
     if (params.has('act')) {
@@ -157,7 +205,7 @@ export default function BookTalent() {
     setFormError('');
     try {
       await apiPost('/bookings', {
-        actId: booking.id,
+        ...(booking.direct ? { musicianId: booking.id } : { actId: booking.id }),
         eventType: booking.eventType || 'other',
         eventDate: booking.eventDate,
         city: booking.eventCity.trim(),
@@ -170,6 +218,7 @@ export default function BookTalent() {
         action: { label: 'View bookings', onClick: () => navigate(`${base}/bookings`) },
       });
       closeEnquiry();
+      loadLimits();
     } catch (e: unknown) {
       setFormError(errorMessage(e, 'Unable to send the enquiry.'));
     } finally {
@@ -184,6 +233,24 @@ export default function BookTalent() {
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
         <PageHeader title="Book talent" help={<HelpCallout {...HELP.bookTalent} />} />
+        {limits && (
+          <p
+            id="booking-limit"
+            data-testid="booking-limit"
+            className={`mb-4 text-sm ${atLimit ? 'text-amber-200' : 'text-slate-400'}`}
+          >
+            {limits.planName || 'Your'} plan: {limits.activeUsed} of {limits.activeAllowed} active enquiries
+            {atLimit && (
+              <>
+                {' '}
+                — upgrade to send more.{' '}
+                <Link to={`${base}/billing`} className="font-semibold underline underline-offset-4">
+                  See plans
+                </Link>
+              </>
+            )}
+          </p>
+        )}
         <ActSearchForm
           idPrefix="book-acts"
           values={filters}
@@ -245,18 +312,60 @@ export default function BookTalent() {
             </Button>
           </div>
         ) : acts.length === 0 && member ? (
-          <div className="mt-7 rounded-xl border border-dashed border-white/15 p-8 text-center" role="status">
-            <p className="font-medium">This musician has no act open for booking yet.</p>
-            <p className="mt-1 text-sm text-slate-400">Message them from their profile to ask about availability.</p>
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <Button asChild>
-                <Link to={`/professionals/${encodeURIComponent(member)}`}>Back to profile</Link>
-              </Button>
-              <Button variant="outline" onClick={() => update({ member: '' })}>
-                Browse all acts
-              </Button>
+          musician && musician !== 'missing' ? (
+            <div
+              className="mt-7 rounded-xl border border-white/10 bg-white/[.04] p-8 text-center"
+              data-testid="direct-quote"
+            >
+              <p className="font-medium">{musician.name} has no act listed yet, but you can still ask for a quote.</p>
+              <p className="mt-1 text-sm text-slate-400">
+                Tell them the date and your budget. They reply with a price.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <Button
+                  disabled={atLimit}
+                  aria-describedby={atLimit ? 'booking-limit' : undefined}
+                  onClick={() => {
+                    setFormError('');
+                    setBooking({
+                      id: musician.id,
+                      direct: true,
+                      name: musician.name,
+                      eventType: 'wedding',
+                      eventDate: '',
+                      eventCity: city || '',
+                      venueName: '',
+                      budgetMin: '',
+                      budgetMax: '',
+                      requirements: '',
+                    });
+                  }}
+                >
+                  Request a quote
+                </Button>
+                <Button asChild variant="outline">
+                  <Link to={`/professionals/${encodeURIComponent(member)}`}>Back to profile</Link>
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : musician === 'missing' ? (
+            <div className="mt-7 rounded-xl border border-dashed border-white/15 p-8 text-center" role="status">
+              <p className="font-medium">This musician is not taking enquiries right now.</p>
+              <p className="mt-1 text-sm text-slate-400">Browse other acts, or go back to their profile.</p>
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <Button asChild>
+                  <Link to={`/professionals/${encodeURIComponent(member)}`}>Back to profile</Link>
+                </Button>
+                <Button variant="outline" onClick={() => update({ member: '' })}>
+                  Browse all acts
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-slate-400 text-center py-16" role="status">
+              Loading…
+            </p>
+          )
         ) : acts.length === 0 ? (
           <div className="mt-7 rounded-xl border border-dashed border-white/15">
             <NoResults
@@ -290,7 +399,12 @@ export default function BookTalent() {
                       footer={
                         <>
                           <div className="flex gap-2">
-                            <Button className="flex-1 tap-target-44" onClick={() => openEnquiry(a)}>
+                            <Button
+                              className="flex-1 tap-target-44"
+                              disabled={atLimit}
+                              aria-describedby={atLimit ? 'booking-limit' : undefined}
+                              onClick={() => openEnquiry(a)}
+                            >
                               <Calendar size={16} className="mr-2" />
                               Request availability
                             </Button>
@@ -322,9 +436,12 @@ export default function BookTalent() {
         <FormDialog
           open={Boolean(booking)}
           onOpenChange={(open) => !open && closeEnquiry()}
-          title={`Enquire for ${booking?.name || 'this act'}`}
+          title={
+            booking?.direct ? `Request a quote from ${booking.name}` : `Enquire for ${booking?.name || 'this act'}`
+          }
           description="No payment is taken until you accept a quote."
-          submitLabel="Send enquiry"
+          submitLabel={booking?.direct ? 'Request quote' : 'Send enquiry'}
+          canSubmit={!atLimit}
           busyLabel="Sending…"
           busy={sending}
           error={formError}
@@ -342,7 +459,7 @@ export default function BookTalent() {
                 />
               </Field>
               <div className="grid sm:grid-cols-2 gap-3">
-                <Field label="Event date" htmlFor="enquiry-date">
+                <Field label="Event date" htmlFor="enquiry-date" hint={formatInputEcho(booking.eventDate)}>
                   <Input
                     id="enquiry-date"
                     type="date"

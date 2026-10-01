@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError } from '../api';
-import { errorCode, errorMessage, errorStatus } from '../errors';
+import { ApiError, requestFailedMessage } from '../api';
+import { errorCode, errorMessage, errorStatus, withNextStep } from '../errors';
 
 describe('errorMessage', () => {
   it('reads the message of an Error or ApiError', () => {
@@ -15,6 +15,32 @@ describe('errorMessage', () => {
     expect(errorMessage('a thrown string', 'Try again.')).toBe('Try again.');
     expect(errorMessage(null, 'Try again.')).toBe('Try again.');
     expect(errorMessage(undefined)).toBe('');
+  });
+});
+
+describe('withNextStep', () => {
+  it('adds a next step to a failure that has none', () => {
+    expect(withNextStep('Unable to send your message.')).toBe('Unable to send your message. Try again.');
+    expect(withNextStep('Your profile could not be loaded')).toBe('Your profile could not be loaded. Try again.');
+  });
+
+  it('leaves messages that already say what to do, and messages that are not failures', () => {
+    expect(withNextStep('Upload failed. Try again.')).toBe('Upload failed. Try again.');
+    expect(withNextStep('That link can’t be used. Choose another.')).toBe('That link can’t be used. Choose another.');
+    expect(withNextStep('Saved.')).toBe('Saved.');
+    expect(withNextStep('')).toBe('');
+  });
+
+  it('is applied to fallbacks only, never to what the server said', () => {
+    expect(errorMessage(null, 'Unable to load notifications.')).toBe('Unable to load notifications. Try again.');
+    expect(errorMessage(new Error('Unable to do it.'), 'x')).toBe('Unable to do it.');
+  });
+});
+
+describe('requestFailedMessage', () => {
+  it('never prints a bare status code', () => {
+    expect(requestFailedMessage(503)).toBe('Something went wrong. Try again in a moment.');
+    expect(requestFailedMessage(409)).toBe('That did not go through. Try again.');
   });
 });
 

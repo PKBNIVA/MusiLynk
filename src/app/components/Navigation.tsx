@@ -43,6 +43,8 @@ import {
 } from './ui/dropdown-menu';
 import { UserAvatar } from './kit/UserAvatar';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { SIGN_IN_CODE_TOAST } from '../lib/authToasts';
 import { apiGet } from '../lib/api';
 import { UNREAD_CHANGED_EVENT, useVisiblePolling } from '../lib/usePolling';
 import { TourLauncher } from './ProductTour';
@@ -66,6 +68,10 @@ export function Navigation() {
   const isJobSeeker = user?.role === 'jobseeker';
   const baseUrl = isJobSeeker ? '/jobseeker' : '/employer';
   const [unread, setUnread] = useState(0);
+  // The "check your email" toast is stale once the person is in and moving between pages (J-26).
+  useEffect(() => {
+    toast.dismiss(SIGN_IN_CODE_TOAST);
+  }, [location.pathname]);
   const [unreadMessages, setUnreadMessages] = useState(0);
   // Unread badges: fetched on mount and on route change, polled every 10 s while the tab is visible,
   // and refreshed immediately when a page reports that the viewer read something.
@@ -119,7 +125,7 @@ export function Navigation() {
     label: 'Hire someone',
     icon: UserSearch,
     items: [
-      { path: `${baseUrl}/hiring/post`, icon: Briefcase, label: 'Post opportunity' },
+      { path: `${baseUrl}/hiring/post`, icon: Briefcase, label: 'Post an opportunity' },
       { path: `${baseUrl}/hiring/talent`, icon: Users, label: 'Find talent' },
       { path: `${baseUrl}/hiring/applicants`, icon: FileText, label: 'Applicants' },
       { path: `${baseUrl}/build-my-crew`, icon: Users, label: 'Build my crew' },
@@ -141,30 +147,67 @@ export function Navigation() {
       label: 'Post & hire',
       icon: BriefcaseBusiness,
       items: [
-        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Create opportunity' },
+        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Post an opportunity' },
         { path: `${baseUrl}/candidates`, icon: Users, label: 'Find talent' },
         { path: `${baseUrl}/applications`, icon: FileText, label: 'Applicants' },
         { path: `${baseUrl}/build-my-crew`, icon: Users, label: 'Build my crew' },
       ],
     },
+    // Hirers book musicians; performing tools (acts, availability) belong to the musician workspace (J-16).
     {
-      label: 'Book & perform',
+      label: 'Book talent',
       icon: Mic2,
       items: [
         { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
         { path: `${baseUrl}/bookings`, icon: CalendarDays, label: 'Bookings' },
-        { path: `${baseUrl}/acts`, icon: Music, label: 'My acts' },
         { path: `${baseUrl}/band-builder`, icon: UserRoundPlus, label: 'Band builder' },
         { path: `${baseUrl}/urgent`, icon: Zap, label: 'Urgent replacement' },
-        { path: `${baseUrl}/availability`, icon: Clock3, label: 'Availability' },
-        { path: `${baseUrl}/portfolios`, icon: Layers, label: 'Page portfolios' },
       ],
     },
   ];
   // Top-bar dropdowns, the full mobile menu, and the extra groups in the account menu.
   const groups: NavGroup[] = isJobSeeker ? [myWork] : employerGroups;
   const menuGroups: NavGroup[] = isJobSeeker ? [myWork, performAndBook, hireSomeone] : employerGroups;
-  const accountGroups: NavGroup[] = isJobSeeker ? [hireSomeone, performAndBook] : [];
+  // The musician's account menu: four short groups, twelve items in all. (The hirer-only tools
+  // such as seats and the applicant list stay on the full menu / the hirer workspace.)
+  const accountGroups: NavGroup[] = isJobSeeker
+    ? [
+        {
+          label: 'You',
+          icon: User,
+          items: [
+            { path: `${baseUrl}/profile`, icon: User, label: 'Profile & verification' },
+            { path: `${baseUrl}/review`, icon: Inbox, label: 'Review changes' },
+            { path: `${baseUrl}/reviews`, icon: Star, label: 'Hirer reviews' },
+          ],
+        },
+        {
+          label: 'Perform & book',
+          icon: Mic2,
+          items: performAndBook.items.filter(
+            (item) => !item.path.endsWith('/book-talent') && !item.path.endsWith('/bookings'),
+          ),
+        },
+        {
+          label: 'Hire someone',
+          icon: UserSearch,
+          items: [
+            hireSomeone.items[0],
+            hireSomeone.items[1],
+            { path: `${baseUrl}/book-talent`, icon: Search, label: 'Book talent' },
+          ],
+        },
+        {
+          label: 'Settings',
+          icon: Settings,
+          items: [
+            { path: `${baseUrl}/settings`, icon: Settings, label: 'Account settings' },
+            { path: `${baseUrl}/billing`, icon: WalletCards, label: 'Plan & billing' },
+            { path: `${baseUrl}/account`, icon: ShieldCheck, label: 'Your data & account' },
+          ],
+        },
+      ]
+    : [];
   // Warm the Messages chunk before the click so the page does not paint empty.
   const preloadMessages = () => {
     void import('../pages/Messages').catch(() => undefined);
@@ -180,7 +223,7 @@ export function Navigation() {
       ]
     : [
         { path: baseUrl, icon: Home, label: 'Home' },
-        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Create' },
+        { path: `${baseUrl}/post-job`, icon: Briefcase, label: 'Post' },
         { path: `${baseUrl}/candidates`, icon: Users, label: 'Talent' },
         { path: `${baseUrl}/messages`, icon: MessageSquare, label: 'Inbox' },
       ];
@@ -196,9 +239,16 @@ export function Navigation() {
         aria-label="Workspace navigation"
       >
         <SkipLink />
-        <div className="mx-auto flex h-[72px] max-w-[1500px] items-center gap-4 px-4 md:px-6">
+        <div className="mx-auto flex h-[72px] max-w-[1500px] items-center gap-2 px-4 sm:gap-4 md:px-6">
           <Link to={baseUrl} aria-label="Verse dashboard" className="shrink-0">
-            <BrandMark />
+            {/* The tagline costs ~70px; below sm the header must also fit the identity switcher, bell,
+                account menu and the menu button inside 360px. */}
+            <span className="sm:hidden">
+              <BrandMark compact />
+            </span>
+            <span className="hidden sm:inline">
+              <BrandMark />
+            </span>
           </Link>
           <div className="ml-5 hidden items-center gap-1 lg:flex">
             <Button
@@ -336,94 +386,102 @@ export function Navigation() {
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="max-h-[80vh] w-72 overflow-y-auto">
-                <div className="px-2 py-2">
-                  <p className="text-sm font-semibold">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
-                </div>
-                <DropdownMenuSeparator />
-                {accountGroups.map((group) => (
-                  <div key={group.label}>
-                    <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                      {group.label}
-                    </DropdownMenuLabel>
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <DropdownMenuItem key={item.path} asChild className={active(item.path) ? 'bg-accent' : ''}>
-                          <Link to={item.path}>
-                            <Icon className="mr-2 h-4 w-4" />
-                            {item.label}
-                          </Link>
-                        </DropdownMenuItem>
-                      );
-                    })}
-                    <DropdownMenuSeparator />
+              {/* The items scroll; Sign out sits below them, never on top of them, so every item can be reached on a phone. */}
+              <DropdownMenuContent align="end" className="flex max-h-[80vh] w-72 flex-col overflow-hidden">
+                <div className="min-h-0 flex-1 overflow-y-auto" data-testid="account-menu-items">
+                  <div className="px-2 py-2">
+                    <p className="text-sm font-semibold">{user?.name}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
-                ))}
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/profile`}>
-                    <User className="mr-2 h-4 w-4" />
-                    Profile & verification
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/review`} data-testid="review-menu-item">
-                    <Inbox className="mr-2 h-4 w-4" />
-                    Review changes
-                    {pendingReview > 0 && (
-                      <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-[10px] font-bold text-white">
-                        {pendingReview}
-                        <span className="sr-only"> to review</span>
-                      </span>
-                    )}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/settings`}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Account settings
-                  </Link>
-                </DropdownMenuItem>
-                {isJobSeeker && (
-                  <DropdownMenuItem asChild>
-                    <Link to={`${baseUrl}/reviews`}>
-                      <Star className="mr-2 h-4 w-4" />
-                      Employer reviews
+                  <DropdownMenuSeparator />
+                  {accountGroups.map((group) => (
+                    <div key={group.label}>
+                      <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        {group.label}
+                      </DropdownMenuLabel>
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isReview = item.path === `${baseUrl}/review`;
+                        return (
+                          <DropdownMenuItem key={item.path} asChild className={active(item.path) ? 'bg-accent' : ''}>
+                            <Link to={item.path} data-testid={isReview ? 'review-menu-item' : undefined}>
+                              <Icon className="mr-2 h-4 w-4" />
+                              {item.label}
+                              {isReview && pendingReview > 0 && (
+                                <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-[10px] font-bold text-white">
+                                  {pendingReview}
+                                  <span className="sr-only"> to review</span>
+                                </span>
+                              )}
+                            </Link>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                      <DropdownMenuSeparator />
+                    </div>
+                  ))}
+                  {!isJobSeeker && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to={`${baseUrl}/profile`}>
+                          <User className="mr-2 h-4 w-4" />
+                          Profile & verification
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={`${baseUrl}/review`} data-testid="review-menu-item">
+                          <Inbox className="mr-2 h-4 w-4" />
+                          Review changes
+                          {pendingReview > 0 && (
+                            <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-[10px] font-bold text-white">
+                              {pendingReview}
+                              <span className="sr-only"> to review</span>
+                            </span>
+                          )}
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={`${baseUrl}/settings`}>
+                          <Settings className="mr-2 h-4 w-4" />
+                          Account settings
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={`${baseUrl}/billing`}>
+                          <WalletCards className="mr-2 h-4 w-4" />
+                          Plan & billing
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={`${baseUrl}/workspace`}>
+                          <Building2 className="mr-2 h-4 w-4" />
+                          Workspace & seats
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={`${baseUrl}/account`}>
+                          <ShieldCheck className="mr-2 h-4 w-4" />
+                          Your data & account
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <div className="px-2 py-2">
+                    <TourLauncher role={isJobSeeker ? 'jobseeker' : 'employer'} />
+                    <Link to="/guide" className="mt-2 flex items-center gap-2 text-sm text-slate-400 hover:text-white">
+                      <BookOpen size={15} />
+                      How to use Verse
                     </Link>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/billing`}>
-                    <WalletCards className="mr-2 h-4 w-4" />
-                    Plan & billing
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/workspace`}>
-                    <Building2 className="mr-2 h-4 w-4" />
-                    Workspace & seats
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to={`${baseUrl}/account`}>
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    Your data & account
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <div className="px-2 py-2">
-                  <TourLauncher role={isJobSeeker ? 'jobseeker' : 'employer'} />
-                  <Link to="/guide" className="mt-2 flex items-center gap-2 text-sm text-slate-400 hover:text-white">
-                    <BookOpen size={15} />
-                    How to use Verse
-                  </Link>
+                  </div>
                 </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-rose-500">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
+                <div className="shrink-0">
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-rose-500">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>

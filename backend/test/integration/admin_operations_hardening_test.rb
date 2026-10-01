@@ -83,6 +83,34 @@ class AdminOperationsHardeningTest < ActionDispatch::IntegrationTest
     assert_equal [], body.fetch("jobs")
   end
 
+  test "the opportunity queue filters by status before paging, so total counts what it lists" do
+    attrs = { employer: @studio, company: "Ops Studio", location: "Mumbai", kind: "Contract", genre: "Studio",
+              description: "A paid studio session with agreed terms, charts and a reference track." }
+    3.times { |i| Job.create!(attrs.merge(title: "Pending #{i}", status: "pending")) }
+    2.times { |i| Job.create!(attrs.merge(title: "Live #{i}", status: "published")) }
+    Job.create!(attrs.merge(title: "Turned down", status: "rejected"))
+
+    get "/api/admin/jobs", params: { status: "pending", perPage: 2 }, headers: auth(@token)
+    assert_response :success
+    body = response.parsed_body
+    assert_equal 3, body.fetch("total")
+    assert_equal 2, body.fetch("jobs").size
+    assert body.fetch("jobs").all? { _1.fetch("status") == "pending" }
+
+    get "/api/admin/jobs", params: { status: "pending", perPage: 2, page: 2 }, headers: auth(@token)
+    assert_equal 1, response.parsed_body.fetch("jobs").size
+
+    get "/api/admin/jobs", params: { status: "published" }, headers: auth(@token)
+    assert_equal 2, response.parsed_body.fetch("total")
+    get "/api/admin/jobs", params: { status: "all" }, headers: auth(@token)
+    assert_equal 6, response.parsed_body.fetch("total")
+    get "/api/admin/jobs", headers: auth(@token)
+    assert_equal 6, response.parsed_body.fetch("total")
+
+    get "/api/admin/jobs", params: { status: "bogus" }, headers: auth(@token)
+    assert_response :bad_request
+  end
+
   test "the other admin lists answer page, perPage and total without truncating silently" do
     [
       ["/api/admin/jobs", "jobs"],

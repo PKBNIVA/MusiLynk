@@ -63,20 +63,22 @@ for (const [label, size] of [
       await shot(page, `07-musician-first-dashboard-${label}`);
     });
 
+    // The hirer join is one screen: what you hire for, organisation, city, email and the Terms box;
+    // the name and the password choice sit under "More".
     test('hirer sign-up', async ({ page }) => {
       await mockSignupApi(page);
       await page.goto('/join/hiring');
-      await page.getByLabel('Event or wedding company').check();
-      await page.getByLabel('Company name').fill('Shaadi Beats Events');
-      await shot(page, `08-hirer-step1-${label}`);
-      await page.getByRole('button', { name: 'Next: your account' }).click();
-      await page.getByLabel('Your name').fill('Anita Kulkarni');
+      await page.getByLabel('Weddings and events').check();
+      await page.getByLabel('Organisation or team name').fill('Shaadi Beats Events');
       await page.getByLabel('Email').fill('anita@example.invalid');
       await page.getByLabel(/I agree to the Terms/).check();
       await page.evaluate(() => window.scrollTo(0, 0));
-      await shot(page, `09-hirer-step2-account-${label}`);
+      await shot(page, `08-hirer-one-screen-${label}`);
+      await page.getByRole('button', { name: /More: your name/ }).click();
+      await page.getByLabel('Your name (optional)').fill('Anita Kulkarni');
       await page.getByRole('button', { name: 'Use a password instead' }).click();
       await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
+      await shot(page, `09-hirer-more-${label}`);
       await page.getByRole('button', { name: 'Create my account' }).click();
       await expect(page.getByTestId('welcome-next-step')).toBeVisible();
       await shot(page, `10-hirer-first-dashboard-${label}`);

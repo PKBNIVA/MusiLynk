@@ -12,6 +12,7 @@ import { announceUnreadChanged } from '../lib/usePolling';
 import { Switch } from '../components/ui/switch';
 import { errorMessage } from '../lib/errors';
 import type { Notification, NotificationPreferences } from '../lib/apiTypes';
+import { formatWhen } from '../lib/format';
 
 type Role = 'jobseeker' | 'employer';
 type Item = Notification;
@@ -45,6 +46,8 @@ export function notificationDestination(link: string | null | undefined, role: R
   const cut = link.search(/[?#]/);
   const path = cut < 0 ? link : link.slice(0, cut);
   const suffix = cut < 0 ? '' : link.slice(cut);
+  // Review prompts written before the link carried a workspace: musicians have a Reviews page, hirers do not.
+  if (path === '/reviews') return role === 'jobseeker' ? `${base}/reviews${suffix}` : base;
   if (SHARED[path]) return `${base}/${SHARED[path]}${suffix}`;
   if (PUBLIC_PAGES.has(path)) return link;
   // The Stage is a single top-level app for both roles (see routes.tsx), not role-prefixed.
@@ -232,7 +235,7 @@ export default function Notifications() {
                           </div>
                           {n.body && <p className="text-sm text-slate-400 mt-1 break-words">{n.body}</p>}
                           <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
-                            <span className="text-xs text-slate-500">{new Date(n.createdAt).toLocaleString()}</span>
+                            <span className="text-xs text-slate-500">{formatWhen(n.createdAt)}</span>
                             <span className="flex gap-3">
                               {!n.readAt && (
                                 <button
@@ -249,7 +252,7 @@ export default function Notifications() {
                                   onClick={() => void read(n)}
                                   className="text-xs text-violet-300 hover:text-violet-200"
                                 >
-                                  Open
+                                  See details
                                 </Link>
                               )}
                             </span>

@@ -11,10 +11,6 @@
   },
   "rewrites": [
     {
-      "source": "/api/og/:type/:id",
-      "destination": "/api/og?type=:type&id=:id"
-    },
-    {
       "source": "/sitemap.xml",
       "destination": "https://verse-music-platform-production.up.railway.app/sitemap.xml"
     },
@@ -63,7 +59,7 @@
       "destination": "https://verse-music-platform-production.up.railway.app/share/p/:slug"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],

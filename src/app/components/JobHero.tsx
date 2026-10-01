@@ -38,7 +38,7 @@ export function JobHero({ job, actions }: { job: Job; actions?: ReactNode }) {
           {job.employerVerified && (
             <span className="inline-flex items-center gap-1 text-emerald-300">
               <ShieldCheck size={14} aria-hidden="true" />
-              Verified employer
+              Verified hirer
             </span>
           )}
         </div>

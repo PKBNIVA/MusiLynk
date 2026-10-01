@@ -6,10 +6,10 @@ class TalentController < ApplicationController
   FACET_PARAMS = %i[language eventType genre budgetMax].freeze
   LIST_PARAMS = (%i[q location role instrument verified remoteRecording limit cursor] + FACET_PARAMS).freeze
 
-  # Ranking rewards proof (plan 5.1.4): verified, then a playable public sample, then how complete the
+  # Ranking rewards proof (plan 5.1.4): verified, then a playable public sample (audio or video with a link, not an image, PDF or project), then how complete the
   # profile is, then any published rate, then the most recent sign-in. An empty profile therefore never
   # outranks a populated one. COMPLETENESS mirrors the dashboard's profileScore (six signals, 0-6).
-  HAS_SAMPLE_SQL = "EXISTS (SELECT 1 FROM portfolio_items ranked_samples WHERE ranked_samples.user_id = users.id AND ranked_samples.visibility = 'public')".freeze
+  HAS_SAMPLE_SQL = "EXISTS (SELECT 1 FROM portfolio_items ranked_samples WHERE ranked_samples.user_id = users.id AND ranked_samples.visibility = 'public' AND ranked_samples.kind IN ('audio', 'video') AND btrim(COALESCE(ranked_samples.url, '')) <> '')".freeze
   COMPLETENESS_SQL = [
     *%w[headline bio location].map { "(CASE WHEN btrim(COALESCE(profiles.#{_1}, '')) <> '' THEN 1 ELSE 0 END)" },
     *%w[skills genres].map { "(CASE WHEN profiles.#{_1} <> '[]'::jsonb THEN 1 ELSE 0 END)" },
@@ -54,14 +54,16 @@ class TalentController < ApplicationController
     return unless authenticate!("jobseeker", "employer")
     return unless require_scalar_params!(:ids)
     ids = params[:ids].to_s.split(",").map(&:strip).reject(&:blank?).uniq.first(4)
-    return render_error("Choose at least two professionals to compare.", :bad_request) if ids.length < 2
+    return render_error("Choose at least two musicians to compare.", :bad_request) if ids.length < 2
+    shortlisted = TalentShortlist.where(employer: current_user, candidate_id: ids).pluck(:candidate_id).to_set
     professionals = listing_scope.where(id: ids).map do |candidate|
       availability = AvailabilityWindow.where(user: candidate, status: "available").where("end_at > ?", Time.current).order(:start_at).limit(5).map do |window|
         { startAt: window.start_at, endAt: window.end_at, status: window.status, city: window.city }
       end
       public_profile(candidate).merge(
         "portfolio" => candidate.portfolio_items.where(visibility: "public").limit(8).map(&:api_json),
-        "availability" => availability
+        "availability" => availability,
+        "shortlisted" => shortlisted.include?(candidate.id)
       )
     end
     render json: { professionals: }

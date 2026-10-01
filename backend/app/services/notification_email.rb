@@ -18,7 +18,7 @@ class NotificationEmail
       subject: ->(p) { "Booking update: #{p['act']}" },
       heading: ->(_) { "Your booking was updated" },
       copy: ->(p) {
-        base = "The booking for #{p['act']} is now #{p['status']}."
+        base = "The booking for #{p['act']} is now #{p['status'].to_s.downcase.tr('_', ' ')}."
         p["status"] == "accepted" ? "#{base} If the act cancels, tell us and we'll help you find a replacement through Verse's urgent requests." : base
       },
       action: "View bookings", path: "/bookings"
@@ -26,7 +26,7 @@ class NotificationEmail
     "application_status" => {
       subject: ->(p) { "Application update: #{p['job']}" },
       heading: ->(_) { "Your application was updated" },
-      copy: ->(p) { "Your application for #{p['job']} is now #{p['status']}." },
+      copy: ->(p) { "Your application for #{p['job']} is now #{p['status'].to_s.downcase.tr('_', ' ')}." },
       action: "View applications", path: "/applications"
     },
     "new_message" => {
@@ -39,17 +39,18 @@ class NotificationEmail
       subject: ->(p) { "Urgent: #{p['role']} needed in #{p['city']}" },
       heading: ->(_) { "A hirer needs someone fast" },
       copy: ->(p) {
-        base = "#{p['title']} in #{p['city']}. If you're free, respond in one tap before someone else does."
+        starts = IndianFormat.date_time_from_iso(p["startAt"])
+        base = "#{p['title']} in #{p['city']}#{", #{starts}" if starts}. If you're free, respond before someone else does."
         reasons = Array(p["reasons"])
         reasons.present? ? "#{base} Why you: #{reasons.join(' · ')}." : base
       },
-      action: "See the request", path: "/jobseeker/urgent"
+      action: "See the request", path: "/urgent"
     },
     "early_access_granted" => {
       subject: ->(p) { "Your Early Access Pro is active until #{p['until']}" },
       heading: ->(_) { "Your Early Access Pro is active" },
       copy: ->(p) { "No card needed. Pro features are unlocked on Verse until #{p['until']}. We'll email you 7 days and 1 day before it ends." },
-      action: "Open your billing page", path: "/employer/billing"
+      action: "Open your billing page", path: "/billing"
     },
     # trial/renewal/early-access lifecycle reminders (BillingRemindersJob). Their `path` is
     # already the full one-click cancel URL (see NotificationEmail.render), not a relative path.
@@ -77,14 +78,15 @@ class NotificationEmail
     "urgent_request_expiry_warning" => {
       subject: ->(p) { "Your request expires in 6 hours" },
       heading: ->(_) { "Your request expires in 6 hours" },
-      copy: ->(p) { "\"#{p['title']}\" expires in 6 hours — mark it filled or close it. Mark filled: #{p['filledLink']} Close: #{p['closeLink']}" },
-      action: "Open your request", path: "/jobseeker/urgent"
+      copy: ->(p) { "\"#{p['title']}\" expires in 6 hours. If it is done, mark it filled or close it so musicians stop seeing it." },
+      links: ->(p) { [["Mark it filled", p["filledLink"]], ["Close it", p["closeLink"]]] },
+      action: "Open your request", path: "/urgent"
     },
     "urgent_request_expired" => {
       subject: ->(p) { "This request has expired" },
       heading: ->(_) { "This request has expired" },
-      copy: ->(p) { "\"#{p['title']}\" has expired. The hirer didn't confirm a booking through Verse." },
-      action: "See urgent requests", path: "/jobseeker/urgent"
+      copy: ->(p) { "\"#{p['title']}\" has expired. The hirer did not confirm a booking through Verse." },
+      action: "See urgent requests", path: "/urgent"
     },
     "verification_more_proof" => {
       subject: ->(_) { "Add more proof to get verified faster" },
@@ -93,21 +95,30 @@ class NotificationEmail
       action: "Update your profile", path: "/profile"
     },
     "job_deadline_closed" => {
-      subject: ->(p) { "Your listing for #{p['title']} closed" },
-      heading: ->(_) { "Your listing closed at its deadline" },
-      copy: ->(p) { "Your listing for #{p['title']} closed at its deadline. Reopen with a new date if you're still hiring." },
-      action: "View your listings", path: "/hiring"
+      subject: ->(p) { "#{p['title']} closed at its deadline" },
+      heading: ->(_) { "Your opportunity closed at its deadline" },
+      copy: ->(p) { "#{p['title']} closed at its deadline. Reopen it with a new date if you're still hiring." },
+      action: "View your opportunities", path: ""
     },
     "review_prompt" => {
       subject: ->(p) { p["reminder"] == "true" ? "Still time to review #{p['name']}" : "How did it go with #{p['name']}?" },
       heading: ->(p) { p["reminder"] == "true" ? "A quick reminder" : "Leave a review" },
-      copy: ->(p) { "Leave a quick review for #{p['name']} — it helps other musicians and hirers on Verse." },
+      copy: ->(p) { "Leave a quick review for #{p['name']}. It helps other musicians and hirers on Verse." },
       action: "Write a review", path: "/reviews"
+    },
+    # PaymentsOpenEmails: one email to each member who ticked "Email me when payments open". Its
+    # `path` is the full /pricing URL (it is the same page for musicians and hirers, so it must
+    # not get a workspace prefix).
+    "payments_open" => {
+      subject: ->(_) { "Payments are now open on Verse" },
+      heading: ->(_) { "Payments are now open on Verse" },
+      copy: ->(_) { "You asked us to tell you when payments open. You can now pay and get paid safely through Verse. See the plans and what each one costs." },
+      action: "See pricing"
     },
     "verification_approved" => {
       subject: ->(_) { "You're verified on Verse" },
       heading: ->(_) { "You're verified on Verse" },
-      copy: ->(_) { "Your profile now shows the Verified badge. Share it on Instagram or WhatsApp to reach more work." },
+      copy: ->(_) { "Your profile now shows the Verified badge. Share your profile on Instagram or WhatsApp to reach more hirers." },
       action: "Share your badge", path: "/profile"
     }
   }.freeze
@@ -136,15 +147,17 @@ class NotificationEmail
     path = params["path"].presence || spec[:path]
     # A lifecycle reminder's `path` is already the full one-click cancel URL
     # (BillingRemindersJob), never a relative in-app path — use it as-is.
-    link = path.to_s.start_with?("http") ? path : "#{frontend_url}#{workspace(user)}#{path}"
+    link = path.to_s.start_with?("http") ? path : "#{frontend_url}#{in_workspace(path, user)}"
     subject = spec[:subject].call(params).squish.first(150)
     heading = spec[:heading].call(params)
     copy = spec[:copy].call(params)
     token = CGI.escape(unsubscribe_token(user))
     unsubscribe_page = "#{frontend_url}/unsubscribe?token=#{token}"
+    links = spec[:links] ? spec[:links].call(params).select { |_, url| url.to_s.start_with?("http") } : []
+    secondary_text = links.map { |label, url| "#{label}: #{url}" }.join("\n")
     {
-      subject:, html: html(heading:, copy:, action: spec[:action], link:, unsubscribe: unsubscribe_page),
-      text: "#{heading}\n\n#{copy}\n\n#{link}\n\nTurn off these emails: #{unsubscribe_page}",
+      subject:, html: html(heading:, copy:, action: spec[:action], link:, unsubscribe: unsubscribe_page, links:),
+      text: ["Verse", heading, copy, "#{spec[:action]}: #{link}", secondary_text.presence, "Turn off these emails: #{unsubscribe_page}"].compact.join("\n\n"),
       headers: unsubscribe_headers(token, unsubscribe_page)
     }
   end
@@ -173,12 +186,23 @@ class NotificationEmail
 
   def self.workspace(user) = user.role == "employer" ? "/employer" : "/jobseeker"
 
+  # A role-relative path ("/urgent") gets the recipient's workspace prefix; a path that already
+  # carries it ("/jobseeker/reviews?..." from Notifier) is left alone, so it is never doubled.
+  def self.in_workspace(path, user)
+    prefix = workspace(user)
+    path = path.to_s
+    path == prefix || path.start_with?("#{prefix}/", "#{prefix}?") ? path : "#{prefix}#{path}"
+  end
+
   def self.frontend_url = FrontendUrl.base
 
-  def self.html(heading:, copy:, action:, link:, unsubscribe:)
+  def self.html(heading:, copy:, action:, link:, unsubscribe:, links: [])
     h = ERB::Util.method(:html_escape)
+    # Secondary text links (never a second button), e.g. the one-tap actions on an expiry warning.
+    extra = links.map { |label, url| %(<a href="#{h.call(url)}" style="color:#a78bfa">#{h.call(label)}</a>) }.join(" · ")
+    extra = %(<p style="margin:16px 0 0;font-size:14px">#{extra}</p>) if extra.present?
     <<~HTML.squish
-      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px"><div style="font-size:22px;font-weight:800;color:#a78bfa">VERSE</div><h1 style="font-size:26px;margin:28px 0 12px">#{h.call(heading)}</h1><p style="color:#cbd5e1;line-height:1.6">#{h.call(copy)}</p><a href="#{h.call(link)}" style="display:inline-block;margin-top:18px;padding:13px 20px;border-radius:12px;background:#7c3aed;color:white;text-decoration:none;font-weight:700">#{h.call(action)}</a><p style="margin-top:28px;color:#94a3b8;font-size:13px">You are receiving this because of activity on your Verse account. <a href="#{h.call(unsubscribe)}" style="color:#a78bfa">Turn off these emails</a>.</p></div></body></html>
+      <!doctype html><html><body style="margin:0;background:#0b0b12;color:#f8fafc;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:26px;margin:28px 0 12px">#{h.call(heading)}</h1><p style="color:#cbd5e1;line-height:1.6">#{h.call(copy)}</p>#{EmailDelivery.button_html(action, link)}#{extra}<p style="margin-top:28px;color:#94a3b8;font-size:13px">You are receiving this because of activity on your Verse account. <a href="#{h.call(unsubscribe)}" style="color:#a78bfa">Turn off these emails</a>.</p></div></body></html>
     HTML
   end
 

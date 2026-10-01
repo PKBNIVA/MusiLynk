@@ -19,7 +19,7 @@ export default function CreditsPage() {
         <p className="mt-3 max-w-2xl leading-7 text-slate-400">
           The photographs on Verse come from Wikimedia Commons and are used under their Creative Commons or
           public-domain licences. They show musicians at work; they are never attached to anyone’s profile. Generated
-          artwork on profiles and listings is not a photograph and is not credited here.
+          artwork on profiles and opportunities is not a photograph and is not credited here.
         </p>
         <ul className="mt-10 grid gap-5 sm:grid-cols-2">
           {IMAGE_CREDITS.map((credit) => (

@@ -9,7 +9,7 @@ const paths = [
   {
     icon: Briefcase,
     title: 'I want music work',
-    text: 'Create your professional profile, add 3–6 tagged work samples, set availability, then search jobs/gigs/auditions/sessions/tours. Apply with the most relevant proof.',
+    text: 'Create your musician profile, add 3–6 tagged work samples, set availability, then search jobs/gigs/auditions/sessions/tours. Apply with the most relevant proof.',
     steps: [
       'Complete role, instruments, genres, city and rates',
       'Add multiple samples—not one “everything” reel',
@@ -18,7 +18,7 @@ const paths = [
       'Track every application in Verse',
     ],
     to: '/auth/jobseeker',
-    cta: 'Join as a professional',
+    cta: 'Join as a musician',
   },
   {
     icon: Users,
@@ -28,7 +28,7 @@ const paths = [
       'Describe the actual role and commitment',
       'Disclose pay/range where possible',
       'Search in everyday language—Verse understands common music-industry synonyms',
-      'Compare candidates before messaging',
+      'Compare musicians before messaging',
       'Use folders for recurring talent pools',
     ],
     to: '/auth/employer',
@@ -80,11 +80,9 @@ const paths = [
   },
 ];
 export default function Guide() {
-  usePageMeta(
-    'How to use Verse',
-    'Step-by-step guides for music professionals, hiring teams, bands and event bookers on Verse.',
-    { canonicalPath: '/guide' },
-  );
+  usePageMeta('How to use Verse', 'Step-by-step guides for musicians, hirers, bands and event bookers on Verse.', {
+    canonicalPath: '/guide',
+  });
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />

@@ -36,14 +36,14 @@ test.describe('WCAG accessibility of in-app dialogs and signed-in forms', () => 
     {
       name: 'Listing report dialog',
       path: `/jobseeker/jobs/${REPORT_JOB_ID}`,
-      open: 'Report listing',
-      dialog: 'Report this listing',
+      open: 'Report opportunity',
+      dialog: 'Report this opportunity',
     },
     {
       name: 'Verification request dialog',
       path: '/jobseeker/profile',
       open: 'Request verification',
-      dialog: 'Request professional verification',
+      dialog: 'Request verification',
     },
   ];
   for (const scenario of scenarios) {
@@ -78,7 +78,7 @@ test.describe('WCAG accessibility of in-app dialogs and signed-in forms', () => 
   }
 
   for (const [name, path, ready] of [
-    ['Profile setup form', '/jobseeker/profile', 'Professional headline'],
+    ['Profile setup form', '/jobseeker/profile', 'Headline'],
     ['Job search', '/jobseeker/jobs', 'Search opportunities'],
   ] as const) {
     test(`${name} controls all have accessible labels`, async ({ page }) => {

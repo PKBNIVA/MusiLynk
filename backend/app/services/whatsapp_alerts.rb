@@ -59,7 +59,7 @@ class WhatsappAlerts
           parameters: [
             { type: "text", text: urgent_request.role_name.to_s },
             { type: "text", text: urgent_request.city.to_s },
-            { type: "text", text: urgent_request.start_at&.strftime("%d %b, %I:%M %p").to_s }
+            { type: "text", text: IndianFormat.date_time(urgent_request.start_at).to_s }
           ]
         }]
       }

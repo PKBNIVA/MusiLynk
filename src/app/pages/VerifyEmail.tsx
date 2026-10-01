@@ -26,7 +26,13 @@ export default function VerifyEmail() {
     apiPost('/auth/verify-email', { token }, { skipAuthRedirect: true })
       .then(() => setState({ kind: 'ok', message: 'Email verified successfully.' }))
       .catch((e: unknown) =>
-        setState({ kind: 'error', message: errorMessage(e, 'Verification link is invalid or expired.') }),
+        setState({
+          kind: 'error',
+          message: errorMessage(
+            e,
+            'This verification link is invalid or has expired. Request a new one from your account settings.',
+          ),
+        }),
       );
   }, [token]);
   return (

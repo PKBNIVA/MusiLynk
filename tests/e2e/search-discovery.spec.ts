@@ -152,9 +152,6 @@ test('a landing role link opens a hire page whose "browse all" link opens a labe
   page,
 }) => {
   const calls = await mockApi(page, null, {
-    '/api/public/hire-pages/popular-searches': () => ({
-      items: [{ role: { slug: 'drummer', label: 'Drummer' }, city: { slug: 'mumbai', name: 'Mumbai' }, count: 10 }],
-    }),
     '/api/public/hire-pages/drummer/mumbai': () => ({
       role: { slug: 'drummer', label: 'Drummer' },
       city: { slug: 'mumbai', name: 'Mumbai' },
@@ -182,10 +179,10 @@ test('a landing role link opens a hire page whose "browse all" link opens a labe
   await expect(page).toHaveURL(/\/music-professionals\?role=drummer/);
   const chip = page.getByTestId('role-filter');
   await expect(chip).toContainText('Showing: Artists & performers');
-  await expect(page.getByTestId('result-count')).toHaveText('1 professional');
+  await expect(page.getByTestId('result-count')).toHaveText('1 musician');
   await chip.getByRole('button', { name: 'Remove filter Artists & performers' }).click();
   await expect(page).not.toHaveURL(/role=/);
-  await expect(page.getByTestId('result-count')).toHaveText('2 professionals');
+  await expect(page.getByTestId('result-count')).toHaveText('2 musicians');
   expect(apiCalls(calls, '/api/public/talent').at(-1)?.searchParams.get('role')).toBeNull();
 });
 
@@ -202,9 +199,9 @@ test('the professional directory pages past the first 30 (SRCH-05)', async ({ pa
     },
   });
   await page.goto('/music-professionals');
-  await expect(page.getByText('Showing 30 of 45 professionals')).toBeVisible();
-  await page.getByRole('button', { name: 'Load more professionals' }).click();
-  await expect(page.getByText('Showing 45 of 45 professionals')).toBeVisible();
+  await expect(page.getByText('Showing 30 of 45 musicians')).toBeVisible();
+  await page.getByRole('button', { name: 'Load more musicians' }).click();
+  await expect(page.getByText('Showing 45 of 45 musicians')).toBeVisible();
   await expect(page.locator('[data-list-item="30"]')).toBeFocused();
 });
 
@@ -261,8 +258,8 @@ test('candidate search keeps the query in the URL and pages results', async ({ p
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await expect(page).toHaveURL(/q=singer/);
   await expect.poll(() => apiCalls(calls, '/api/candidates').at(-1)?.searchParams.get('q')).toBe('singer');
-  await page.getByRole('button', { name: 'Load more professionals' }).click();
-  await expect(page.getByText('Showing 35 of 35 professionals')).toBeVisible();
+  await page.getByRole('button', { name: 'Load more musicians' }).click();
+  await expect(page.getByText('Showing 35 of 35 musicians')).toBeVisible();
   expect(apiCalls(calls, '/api/candidates').at(-1)?.searchParams.get('q')).toBe('singer');
 });
 

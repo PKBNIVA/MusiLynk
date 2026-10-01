@@ -46,11 +46,11 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
   about: {
     title: 'About Verse',
     intro:
-      'Verse is a professional operating network for the music industry: careers, hiring, band building, talent discovery, live-act booking and music-production staffing.',
+      'Verse is an operating network for the music industry: careers, hiring, band building, talent discovery, live-act booking and music-production staffing.',
     items: [
       [
         'What Verse does',
-        'Verse helps music professionals show proof of work, discover opportunities, build teams, book talent and manage professional relationships without forcing every use case into a generic job board.',
+        'Verse helps musicians show proof of work, discover opportunities, build teams, book talent and manage working relationships without forcing every use case into a generic job board.',
       ],
       [
         'Who it is for',
@@ -70,7 +70,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Opportunities and hiring',
-        'Listings must describe legitimate work. Misleading jobs, unlawful discrimination, fake auditions, undisclosed application fees and fraudulent offers are prohibited.',
+        'Opportunities must describe legitimate work. Misleading jobs, unlawful discrimination, fake auditions, undisclosed application fees and fraudulent offers are prohibited.',
       ],
       [
         'Bookings and payments',
@@ -78,7 +78,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Content and rights',
-        'Only upload or link work you have the right to share. You retain responsibility for your portfolio, credits, media and listing content.',
+        'Only upload or link work you have the right to share. You retain responsibility for your portfolio, credits, media and opportunity content.',
       ],
       [
         'Platform enforcement',
@@ -94,7 +94,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
     items: [
       [
         'Data we process',
-        'Account details; professional profile and portfolio data; applications; messages; availability; booking and billing records; verification and safety reports; and device, session and operational logs.',
+        'Account details; musician profile and portfolio data; applications; messages; availability; booking and billing records; verification and safety reports; and device, session and operational logs.',
       ],
       [
         'Why we use it',
@@ -102,7 +102,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Public information',
-        'Fields deliberately published on public profiles, acts and opportunities may be visible to search engines. Private contact details and internal recruiter information are not intended to be public.',
+        'Fields deliberately published on public profiles, acts and opportunities may be visible to search engines. Private contact details and internal hirer notes are not intended to be public.',
       ],
       [
         'Your data and your account',
@@ -121,7 +121,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
   safety: {
     title: 'Trust & Safety',
     intro:
-      'Music work often moves quickly and informally. Verse is designed to make important professional terms more explicit and reportable.',
+      'Music work often moves quickly and informally. Verse is designed to make important terms more explicit and reportable.',
     items: [
       [
         'Avoid application fees',
@@ -178,9 +178,8 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
     ],
   },
   community: {
-    title: 'Community & Professional Conduct',
-    intro:
-      'Verse is a professional marketplace. Treat other participants as collaborators and counterparties, not content targets.',
+    title: 'Community conduct',
+    intro: 'Verse is a marketplace. Treat other participants as collaborators and counterparties, not content targets.',
     items: [
       ['Respect', 'No harassment, threats, hate, sexual solicitation, spam or repeated unwanted contact.'],
       [
@@ -192,7 +191,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
         'Never ask talent to pay to be considered: no “registration”, audition, portfolio, joining or security fees and no “advance” from the person being hired. Do not share UPI IDs or bank details to collect such money, and do not push people to WhatsApp or Telegram before terms are agreed. Verse flags these patterns in messages and moderators act on reports.',
       ],
       [
-        'Professional honesty',
+        'Be honest',
         'Do not fabricate credits, availability, rates, client names, verification evidence or completed work.',
       ],
       [
@@ -201,14 +200,14 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Reporting and enforcement',
-        'Use Report on a conversation, profile or listing. Moderators review the report with the relevant messages and the account’s history, then dismiss it, send a warning or suspend the account. Blocking stops messages both ways at any time.',
+        'Use Report on a conversation, profile or opportunity. Moderators review the report with the relevant messages and the account’s history, then dismiss it, send a warning or suspend the account. Blocking stops messages both ways at any time.',
       ],
     ],
   },
   accessibility: {
     title: 'Accessibility',
     intro:
-      'Verse aims to make core hiring, booking and professional-profile workflows usable with keyboards, different screen sizes and assistive technologies.',
+      'Verse aims to make core hiring, booking and profile workflows usable with keyboards, different screen sizes and assistive technologies.',
     items: [
       [
         'Product approach',
@@ -227,7 +226,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ['Operator', 'Verse is operated by Alien Brains Private Limited.'],
       [
         'Support and grievances',
-        `Email ${SUPPORT_EMAIL}. Include your account email and any relevant listing, booking or transaction reference, but never send a password, one-time code or full payment-card details.`,
+        `Email ${SUPPORT_EMAIL}. Include your account email and any relevant opportunity, booking or transaction reference, but never send a password, one-time code or full payment-card details.`,
       ],
       [
         'Response and escalation',
@@ -269,7 +268,7 @@ function dynamicItems(key: string, policy: LegalPolicy | null): [string, string]
     return [
       [
         'Data Protection (DPDP Act, 2023) — Draft, pending legal review',
-        'What we collect: account and contact details, professional profile and portfolio data, booking and payment records, and device/session logs. Purpose: to provide the service, process bookings and payments, prevent abuse and meet legal obligations. Consent: creating an account and using booking/payment features is your consent to this processing for those purposes; where a feature asks for separate consent (e.g. optional analytics), it is requested there. Withdrawal: you can withdraw consent for optional processing at any time from account settings, and delete your account entirely (see "Your data and your account" above) — Verse then deletes what the law allows it to delete and keeps only what tax and company law requires.',
+        'What we collect: account and contact details, musician profile and portfolio data, booking and payment records, and device/session logs. Purpose: to provide the service, process bookings and payments, prevent abuse and meet legal obligations. Consent: creating an account and using booking/payment features is your consent to this processing for those purposes; where a feature asks for separate consent (e.g. optional analytics), it is requested there. Withdrawal: you can withdraw consent for optional processing at any time from account settings, and delete your account entirely (see "Your data and your account" above) — Verse then deletes what the law allows it to delete and keeps only what tax and company law requires.',
       ],
       grievanceOfficerItem(policy.legal),
     ];

@@ -20,9 +20,15 @@ type ResultType = SearchResult['type'];
 const icons: Record<string, LucideIcon> = { jobs: Briefcase, talent: Users, acts: Music, samples: PlayCircle };
 const TYPE_LABELS: Record<ResultType, [string, string]> = {
   jobs: ['Opportunities', 'opportunities'],
-  talent: ['Professionals', 'professionals'],
+  talent: ['Musicians', 'musicians'],
   acts: ['Acts', 'acts'],
   samples: ['Work samples', 'work samples'],
+};
+const TYPE_SINGULAR: Record<ResultType, string> = {
+  jobs: 'Opportunity',
+  talent: 'Musician',
+  acts: 'Act',
+  samples: 'Work sample',
 };
 const TYPES = Object.keys(TYPE_LABELS) as ResultType[];
 const suggestions = ['Playback singer', 'FOH engineer', 'Session guitarist', 'Wedding band', 'Music producer'];
@@ -36,7 +42,7 @@ export default function GlobalSearch() {
   const selectedType = isType(rawType) ? rawType : 'all';
   usePageMeta(
     query.trim() ? `Search: ${query.trim().slice(0, 60)}` : 'Search Verse',
-    'Search music jobs, professionals, bookable acts and work samples across the Verse network.',
+    'Search opportunities, musicians, bookable acts and work samples across the Verse network.',
     { noindex: true },
   );
   const [q, setQ] = useState(query);
@@ -100,7 +106,7 @@ export default function GlobalSearch() {
             Find the people and work that <span className="verse-gradient-text">move music forward.</span>
           </h1>
           <p className="mt-3 text-lg text-slate-300">
-            Explore opportunities, professionals, bookable acts and real work samples.
+            Explore opportunities, musicians, bookable acts and real work samples.
           </p>
         </div>
         <form
@@ -224,7 +230,7 @@ export default function GlobalSearch() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.14em] text-slate-400">
-                            {r.type}
+                            {TYPE_SINGULAR[r.type]}
                             <DemoBadge show={r.demo} />
                           </div>
                           <h2 className="mt-1 text-lg font-bold group-hover:text-violet-200">{r.title}</h2>

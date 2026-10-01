@@ -1,3 +1,4 @@
+import { formatDate } from '../lib/format';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import type { VerificationSummary, VerificationTier } from '../lib/apiTypes';
@@ -21,9 +22,7 @@ export function verifiedBadgeCopy(verification?: VerificationSummary | null, tie
 function baseCopy(verification?: VerificationSummary | null): string {
   if (!verification) return 'Verified by Verse';
   const checks = (verification.checks || []).map((c) => CHECK_LABELS[c] || c).join(', ');
-  const when = verification.verifiedAt
-    ? new Date(verification.verifiedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    : null;
+  const when = verification.verifiedAt ? formatDate(verification.verifiedAt).replace(/^\d+ /, '') : null;
   const parts = [checks, when].filter(Boolean);
   return parts.length ? `Verified by Verse: ${parts.join(' · ')}` : 'Verified by Verse';
 }

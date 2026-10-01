@@ -1,6 +1,7 @@
 import { cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { cn } from '../ui/utils';
 import { FieldHelp } from '../help/FieldHelp';
+import { formatNumber } from '../../lib/format';
 
 /** The attributes Field puts on its control so the label, hint and error are announced with it. */
 export interface FieldControlProps {
@@ -124,7 +125,7 @@ export function Field({
           {hint ? <p id={hintId}>{hint}</p> : <span />}
           {maxLength !== undefined && count !== undefined && (
             <span className={cn('shrink-0 tabular-nums', over && 'text-rose-300')} data-testid={`${id}-count`}>
-              {count.toLocaleString()} / {maxLength.toLocaleString()}
+              {formatNumber(count)} / {formatNumber(maxLength)}
             </span>
           )}
         </div>

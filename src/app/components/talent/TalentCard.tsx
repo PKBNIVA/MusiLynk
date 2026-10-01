@@ -7,7 +7,7 @@ import { UserAvatar } from '../kit/UserAvatar';
 import { Card, CardContent } from '../ui/card';
 import { FirstSample } from './FirstSample';
 import { formatFromRate, formatReplyTime } from '../../lib/format';
-import { personLines } from '../../lib/personLine';
+import { mentionsPlace, personLines } from '../../lib/personLine';
 import type { Professional } from '../../lib/apiTypes';
 
 type Props = {
@@ -90,11 +90,11 @@ export function TalentCard({ person: c, index, to, aside, footer }: Props) {
                 <Zap size={16} className="shrink-0 text-amber-300" aria-label="Fast responder this week" />
               )}
             </div>
-            <p className="mt-0.5 truncate text-sm text-slate-300">{line.primary || 'Music professional'}</p>
+            <p className="mt-0.5 truncate text-sm text-slate-300">{line.primary || 'Musician'}</p>
             {line.secondary.length > 0 && (
               <p className="mt-0.5 truncate text-sm text-slate-400">{line.secondary.slice(0, 3).join(' · ')}</p>
             )}
-            {c.location && (
+            {c.location && !mentionsPlace(`${line.primary} ${line.secondary.join(' ')}`, c.location) && (
               <p className="mt-0.5 flex items-center gap-1 truncate text-sm text-slate-400">
                 <MapPin size={13} aria-hidden="true" className="shrink-0" />
                 <span className="truncate">{c.location}</span>

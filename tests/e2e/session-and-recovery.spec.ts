@@ -208,7 +208,7 @@ test('legacy job-alert links open the job inside the signed-in workspace', async
   );
 
   await page.goto('/jobseeker/notifications');
-  await expect(page.getByRole('link', { name: 'Open' })).toHaveAttribute('href', '/jobseeker/jobs/job-1');
+  await expect(page.getByRole('link', { name: 'See details' })).toHaveAttribute('href', '/jobseeker/jobs/job-1');
 });
 
 test('signing in from a public opportunity returns to that job', async ({ page }) => {
@@ -222,6 +222,18 @@ test('signing in from a public opportunity returns to that job', async ({ page }
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/jobseeker\/jobs\/job-1$/);
+});
+
+test('a signed-out deep link to a Stage post survives sign-in', async ({ page }) => {
+  await page.route('**/api/**', apiMock());
+  await page.goto('/stage/posts/post-1');
+  await expect(page).toHaveURL(/\/auth\/jobseeker$/);
+
+  await page.getByLabel('Email').fill('qa@example.invalid');
+  await page.getByRole('button', { name: 'Use password instead' }).click();
+  await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page).toHaveURL(/\/stage\/posts\/post-1$/);
 });
 
 test('password reset request is a labelled form that cannot be submitted twice', async ({ page }) => {

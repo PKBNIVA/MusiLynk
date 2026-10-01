@@ -44,7 +44,7 @@ export default function HirePage() {
         if (alive) setData(body);
       })
       .catch((err) => {
-        if (alive) setError(errorMessage(err, 'This page could not be found.'));
+        if (alive) setError(errorMessage(err, 'This page could not be found. Check the link or pick another city.'));
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -74,7 +74,7 @@ export default function HirePage() {
           '@type': 'BreadcrumbList',
           itemListElement: [
             { '@type': 'ListItem', position: 1, name: 'Verse', item: '/' },
-            { '@type': 'ListItem', position: 2, name: 'Music professionals', item: '/music-professionals' },
+            { '@type': 'ListItem', position: 2, name: 'Musicians', item: '/music-professionals' },
             {
               '@type': 'ListItem',
               position: 3,
@@ -104,9 +104,11 @@ export default function HirePage() {
           </p>
         ) : error || !data ? (
           <div className="text-center py-16" role="alert">
-            <p className="text-rose-300">{error || 'This page could not be found.'}</p>
+            <p className="text-rose-300">
+              {error || 'This page could not be found. Check the link or pick another city.'}
+            </p>
             <Button variant="outline" className="mt-4" asChild>
-              <Link to="/music-professionals">Browse all professionals</Link>
+              <Link to="/music-professionals">Browse all musicians</Link>
             </Button>
           </div>
         ) : (
@@ -126,7 +128,7 @@ function HirePageContent({ data }: { data: HirePageData }) {
     <>
       <PhotoHeader
         photo={ROLE_PHOTOS[role.slug] ?? 'rehearsal-room'}
-        eyebrow="Music professional directory"
+        eyebrow="Musician directory"
         title={hireHeading(role.label, city.name)}
       >
         <p className="max-w-2xl">
@@ -136,7 +138,7 @@ function HirePageContent({ data }: { data: HirePageData }) {
       </PhotoHeader>
 
       <dl className="grid grid-cols-3 gap-3 mt-6 max-w-xl" data-testid="hire-stats">
-        <StatTile label="Professionals" value={counts.professionals} />
+        <StatTile label="Musicians" value={counts.professionals} />
         <StatTile label="Verified" value={counts.verified} />
         <StatTile label="Available this week" value={counts.availableThisWeek} />
       </dl>
@@ -257,7 +259,7 @@ function PersonCard({ professional }: { professional: Featured }) {
         />
         <span className="min-w-0">
           <span className="block truncate text-lg font-semibold">{professional.name}</span>
-          <span className="block truncate text-sm text-violet-300">{line.primary || 'Music professional'}</span>
+          <span className="block truncate text-sm text-violet-300">{line.primary || 'Musician'}</span>
         </span>
       </span>
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-300">

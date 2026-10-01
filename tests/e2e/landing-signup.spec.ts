@@ -206,7 +206,7 @@ test.describe('musician sign-up', () => {
     );
     await expect(cards.nth(1)).toContainText('Blue Frog live set');
     await link.fill(SPOTIFY);
-    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.getByRole('button', { name: 'Add link', exact: true }).click();
     await expect(cards.nth(2)).toContainText('Spotify track');
     await link.fill('https://www.youtube.com/watch?v=private-one');
     await link.press('Enter');

@@ -10,7 +10,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet, apiPost } from '../../lib/api';
 import { trackProfileView } from '../../lib/analytics';
-import { personLines } from '../../lib/personLine';
+import { mentionsPlace, personLines } from '../../lib/personLine';
 import { MapPin, MessageSquare, Pencil, ShieldCheck, Star, Flag, Zap } from 'lucide-react';
 import { MediaTile } from '../../components/showcase/MediaTile';
 import { PlayChip } from '../../components/kit/PlayChip';
@@ -85,7 +85,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
         error={error || (!loading && !p ? { message: 'Not found', status: 404 } : null)}
         noun="profile"
         backTo="/music-professionals"
-        backLabel="Browse professionals"
+        backLabel="Browse musicians"
         onRetry={() => void load()}
       />
     );
@@ -201,7 +201,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
                   {heroLine.secondary.filter((x) => x !== c.location).length > 0 && (
                     <span>{heroLine.secondary.filter((x) => x !== c.location).join(' · ')}</span>
                   )}
-                  {c.location && (
+                  {c.location && !mentionsPlace(`${heroLine.primary} ${heroLine.secondary.join(' ')}`, c.location) && (
                     <span className="inline-flex items-center">
                       <MapPin size={15} aria-hidden="true" className="mr-1" />
                       {c.location}
@@ -324,7 +324,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
               )}
             </section>
             <div className="mt-8">
-              {user ? (
+              {own ? null : user ? (
                 <Button variant="ghost" size="sm" onClick={() => setReporting(true)}>
                   <Flag size={15} aria-hidden="true" className="mr-2" />
                   Report profile

@@ -7,6 +7,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { UserAvatar } from '../components/kit/UserAvatar';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
@@ -189,14 +190,14 @@ export default function UrgentRequests() {
   }
   const acceptResponder = (r: UrgentRequest, response: UrgentRequestResponse) =>
     ask({
-      title: `Book ${response.name}?`,
+      title: `Choose ${response.name}?`,
       description: `This marks the request filled by ${response.name}. They are told they were chosen and you can message them to confirm the details. Nothing is posted publicly.`,
-      confirmLabel: `Book ${response.name}`,
+      confirmLabel: `Choose ${response.name}`,
       action: async () => {
         const d = await apiPost<{ conversationId?: string | null }>(`/urgent-requests/${r.id}/accept`, {
           userId: response.user_id,
         });
-        toast.success(`${response.name} is booked`, {
+        toast.success(`Request filled by ${response.name}`, {
           action: d?.conversationId
             ? { label: 'Message them', onClick: () => openThread(d.conversationId) }
             : undefined,
@@ -308,54 +309,57 @@ export default function UrgentRequests() {
               <Card key={r.id} className="bg-white/[.055] border-white/10">
                 <CardContent className="p-5">
                   <div className="flex flex-col sm:flex-row justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap gap-2">
-                        <Badge
-                          data-testid="urgent-status-chip"
-                          className={
-                            r.status === 'open'
-                              ? 'bg-orange-500/15 text-orange-200'
-                              : r.status === 'filled'
-                                ? 'bg-emerald-500/15 text-emerald-200'
-                                : r.status === 'expired'
-                                  ? 'bg-rose-500/15 text-rose-200'
-                                  : 'bg-white/10 text-slate-300'
-                          }
-                        >
-                          {r.status === 'open' ? 'Urgent' : statusLabel(r.status)}
-                        </Badge>
-                        {r.requesterVerified && <Badge variant="secondary">Verified requester</Badge>}
-                      </div>
-                      <h2 className="text-xl font-semibold mt-3 break-words">{r.title}</h2>
-                      <p className="text-violet-300">
-                        {r.role_name}
-                        {r.instrument ? ` · ${r.instrument}` : ''}
-                      </p>
-                      <p className="text-sm text-slate-400 mt-2">
-                        {r.city} · <Clock3 size={14} className="inline mr-1" />
-                        {formatWhen(r.start_at)}
-                      </p>
-                      {Boolean(r.budget_min || r.budget_max) && (
-                        <p className="text-sm text-emerald-300 mt-1">
-                          Budget{' '}
-                          {formatPay(
-                            { currency: r.currency, compensation_min: r.budget_min, compensation_max: r.budget_max },
-                            '',
-                          )}
+                    <div className="flex min-w-0 gap-3">
+                      <UserAvatar id={r.requester_id} name={r.requesterName || 'Requester'} size="md" />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap gap-2">
+                          <Badge
+                            data-testid="urgent-status-chip"
+                            className={
+                              r.status === 'open'
+                                ? 'bg-orange-500/15 text-orange-200'
+                                : r.status === 'filled'
+                                  ? 'bg-emerald-500/15 text-emerald-200'
+                                  : r.status === 'expired'
+                                    ? 'bg-rose-500/15 text-rose-200'
+                                    : 'bg-white/10 text-slate-300'
+                            }
+                          >
+                            {r.status === 'open' ? 'Urgent' : statusLabel(r.status)}
+                          </Badge>
+                          {r.requesterVerified && <Badge variant="secondary">Verified requester</Badge>}
+                        </div>
+                        <h2 className="text-xl font-semibold mt-3 break-words">{r.title}</h2>
+                        <p className="text-violet-300">
+                          {r.role_name}
+                          {r.instrument ? ` · ${r.instrument}` : ''}
                         </p>
-                      )}
-                      {r.requirements && <p className="text-sm text-slate-300 mt-2 break-words">{r.requirements}</p>}
-                      {Boolean(r.myMatchReasons?.length) && (
-                        <p className="text-xs text-slate-500 mt-2">Why you: {r.myMatchReasons!.join(' · ')}</p>
-                      )}
-                      {r.status === 'filled' &&
-                        (r.filled_by_id === user?.id ? (
-                          <p className="text-sm text-emerald-300 mt-2">
-                            You were chosen. Message them to confirm the details.
+                        <p className="text-sm text-slate-400 mt-2">
+                          {r.city} · <Clock3 size={14} className="inline mr-1" />
+                          {formatWhen(r.start_at)}
+                        </p>
+                        {Boolean(r.budget_min || r.budget_max) && (
+                          <p className="text-sm text-emerald-300 mt-1">
+                            Budget{' '}
+                            {formatPay(
+                              { currency: r.currency, compensation_min: r.budget_min, compensation_max: r.budget_max },
+                              '',
+                            )}
                           </p>
-                        ) : r.myResponse ? (
-                          <p className="text-sm text-slate-400 mt-2">Filled — thanks for responding</p>
-                        ) : null)}
+                        )}
+                        {r.requirements && <p className="text-sm text-slate-300 mt-2 break-words">{r.requirements}</p>}
+                        {Boolean(r.myMatchReasons?.length) && (
+                          <p className="text-xs text-slate-500 mt-2">Why you: {r.myMatchReasons!.join(' · ')}</p>
+                        )}
+                        {r.status === 'filled' &&
+                          (r.filled_by_id === user?.id ? (
+                            <p className="text-sm text-emerald-300 mt-2">
+                              You were chosen. Message them to confirm the details.
+                            </p>
+                          ) : r.myResponse ? (
+                            <p className="text-sm text-slate-400 mt-2">Filled — thanks for responding</p>
+                          ) : null)}
+                      </div>
                     </div>
                     {r.requester_id === user?.id ? (
                       <div className="flex flex-wrap sm:justify-end gap-2 items-start">
@@ -411,8 +415,20 @@ export default function UrgentRequests() {
                       <div className="mt-3 space-y-2">
                         {(responses[r.id] || []).map((response) => (
                           <div key={response.user_id} className="rounded-xl border border-white/10 bg-black/15 p-3">
-                            <div className="font-medium">{response.name}</div>
-                            <div className="text-sm text-violet-300">{response.headline || 'Music professional'}</div>
+                            <div className="flex items-center gap-3">
+                              <UserAvatar
+                                id={response.user_id}
+                                name={response.name}
+                                size="md"
+                                photoUrl={response.photoUrl}
+                              />
+                              <div className="min-w-0">
+                                <div className="font-medium">{response.name}</div>
+                                <div className="text-sm text-violet-300">
+                                  {response.headline || 'Music professional'}
+                                </div>
+                              </div>
+                            </div>
                             {response.message && (
                               <p className="mt-2 text-sm text-slate-300 break-words">{response.message}</p>
                             )}
@@ -431,7 +447,7 @@ export default function UrgentRequests() {
                                 </Button>
                               )}
                               {r.status === 'filled' && r.filled_by_id === response.user_id && (
-                                <Badge className="bg-emerald-500/15 text-emerald-200">Booked</Badge>
+                                <Badge className="bg-emerald-500/15 text-emerald-200">Chosen</Badge>
                               )}
                             </div>
                           </div>
@@ -508,7 +524,7 @@ export default function UrgentRequests() {
           open={Boolean(pickResponder)}
           onOpenChange={(open) => !open && setPickResponder(null)}
           title="Mark this request filled"
-          description="Optionally choose who you booked — they'll see they were chosen; other responders see it's filled."
+          description="Optionally choose who you picked — they'll see they were chosen; other responders see it's filled."
           submitLabel="Mark filled"
           busyLabel="Marking filled…"
           busy={Boolean(pickResponder && pending === pickResponder.id)}

@@ -852,6 +852,7 @@ export interface UrgentRequestResponse {
   updated_at?: string;
   name: string;
   headline?: string | null;
+  photoUrl?: string | null;
 }
 
 /** VouchesController: a vouches row (Vouch#api_json), token omitted. */

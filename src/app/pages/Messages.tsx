@@ -9,6 +9,7 @@ import { HelpCallout } from '../components/help/HelpCallout';
 import { HELP } from '../components/help/helpContent';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { UserAvatar } from '../components/kit/UserAvatar';
 import { ReportDialog } from '../components/ReportDialog';
 import { useConfirm } from '../components/booking/BookingDialogs';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
@@ -492,8 +493,11 @@ export default function Messages() {
                           className={`w-full text-left p-4 border-b border-white/10 ${isActive ? 'bg-violet-500/10' : 'hover:bg-white/5'}`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <span className="font-semibold truncate" data-testid="conversation-name">
-                              {nameOf(c)}
+                            <span className="flex min-w-0 items-center gap-2.5">
+                              <UserAvatar id={c.counterpartId || c.id} name={nameOf(c)} size="sm" />
+                              <span className="font-semibold truncate" data-testid="conversation-name">
+                                {nameOf(c)}
+                              </span>
                             </span>
                             {unread > 0 && (
                               <span
@@ -545,6 +549,7 @@ export default function Messages() {
                   >
                     <ArrowLeft size={18} />
                   </Button>
+                  {active && <UserAvatar id={active.counterpartId || active.id} name={nameOf(active)} size="md" />}
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold truncate" data-testid="thread-name">
                       {active ? nameOf(active) : threadState === 'missing' ? 'Conversation' : ' '}

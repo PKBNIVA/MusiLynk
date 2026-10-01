@@ -281,7 +281,9 @@ test.describe('urgent requests', () => {
     responseCount: 1,
   };
 
-  test('the hirer messages a responder or books them, and the open requests sit on their own tab', async ({ page }) => {
+  test('the hirer messages a responder or chooses them, and the open requests sit on their own tab', async ({
+    page,
+  }) => {
     const scopes: string[] = [];
     const calls = await mock(page, (path, method, _body, route) => {
       if (path === '/urgent-requests' && method === 'GET') {
@@ -319,8 +321,8 @@ test.describe('urgent requests', () => {
     await page.getByRole('button', { name: /Responses/ }).click();
     await expect(page.getByText('Rate: ₹8,000')).toBeVisible();
     await page.getByRole('button', { name: 'Accept' }).click();
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Book Dev Drummer' }).click();
-    await expect(page.getByText('Dev Drummer is booked')).toBeVisible();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Choose Dev Drummer' }).click();
+    await expect(page.getByText('Request filled by Dev Drummer', { exact: true })).toBeVisible();
     expect(calls.find((c) => c.path === '/urgent-requests/urg1/accept')?.body).toEqual({ userId: 'm1' });
     await page.getByRole('tab', { name: 'Browse open requests' }).click();
     await expect.poll(() => scopes).toContain('browse');
@@ -509,6 +511,19 @@ test.describe('applicants and comparing', () => {
     await expect(page.getByRole('heading', { name: 'No applicants yet' })).toBeVisible();
     await expect(page.getByText('Most listings get their first applicant within 48 hours')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Share this opportunity' })).toBeVisible();
+  });
+
+  test('when the only listing is still in review the empty state says so', async ({ page }) => {
+    await mock(page, (path, _method, _body, route) => {
+      if (path === '/employer/applications') return (json(route, { applications: [] }), true);
+      if (path === '/employer/jobs')
+        return (json(route, { jobs: [{ id: 'job1', title: 'Tour drummer', status: 'pending' }] }), true);
+      return false;
+    });
+    await page.goto('/employer/applications');
+    await expect(page.getByText('Your listing is in review')).toBeVisible();
+    await expect(page.getByText('within 48 hours')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Back to dashboard' })).toBeVisible();
   });
 
   test('an applicant links to the public profile', async ({ page }) => {

@@ -92,7 +92,7 @@ class UrgentRequestsController < ApplicationController
   end
 
   def responses
-    item = UrgentRequest.where(requester: current_user).find(params[:id]); render json: { responses: item.urgent_request_responses.includes(user: :profile).order(created_at: :desc).limit(LIST_LIMIT).map { _1.attributes.merge(name: _1.user.name, headline: _1.user.profile&.headline) } }
+    item = UrgentRequest.where(requester: current_user).find(params[:id]); render json: { responses: item.urgent_request_responses.includes(user: :profile).order(created_at: :desc).limit(LIST_LIMIT).map { _1.attributes.merge(name: _1.user.name, headline: _1.user.profile&.headline, photoUrl: _1.user.profile&.photo_url) } }
   end
 
   # The hirer picks one of the people who said they are available: the request is filled by them, both
@@ -112,7 +112,7 @@ class UrgentRequestsController < ApplicationController
     conversation = open_thread(current_user, chosen)
     link = conversation ? Notifier.message_link(conversation) : "/urgent-requests"
     Notification.create!(user: chosen, kind: "urgent_accepted", title: "You were chosen", body: "#{current_user.name} chose you for #{item.title}. Message them to confirm the details.", link:)
-    Notification.create!(user: current_user, kind: "urgent_accepted", title: "Request filled", body: "#{chosen.name} is booked for #{item.title}.", link:)
+    Notification.create!(user: current_user, kind: "urgent_accepted", title: "Request filled", body: "Request filled by #{chosen.name}: #{item.title}.", link:)
     Notifier.milestone_5th_filled_request(current_user)
     audit!("urgent_request.accept", item)
     render json: { ok: true, request: serialize(item.reload, Set.new), conversationId: conversation&.id }

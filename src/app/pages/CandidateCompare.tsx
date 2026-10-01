@@ -5,6 +5,7 @@ import { PageHeader } from '../components/PageHeader';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { UserAvatar } from '../components/kit/UserAvatar';
 import { Button } from '../components/ui/button';
 import { WorkSamplePlayer } from '../components/WorkSamplePlayer';
 import { ShieldCheck, MapPin, ArrowLeft, BookmarkCheck, BookmarkPlus, MessageSquare, X } from 'lucide-react';
@@ -105,11 +106,24 @@ export default function CandidateCompare() {
           {people.map((p) => (
             <Card key={p.id} className="bg-white/[.055] border-white/10" data-testid="compare-card">
               <CardContent className="p-5">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-semibold">{p.name}</h2>
-                  {p.verified && <ShieldCheck size={16} className="text-emerald-300" />}
+                <div className="flex items-center gap-3">
+                  <UserAvatar
+                    id={p.id}
+                    name={p.name}
+                    size="lg"
+                    photoUrl={p.photoUrl}
+                    demo={p.demo}
+                    genres={p.genres}
+                    eager
+                  />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-semibold">{p.name}</h2>
+                      {p.verified && <ShieldCheck size={16} className="text-emerald-300" />}
+                    </div>
+                    <div className="text-violet-300 text-sm mt-1">{p.headline || 'Music professional'}</div>
+                  </div>
                 </div>
-                <div className="text-violet-300 text-sm mt-1">{p.headline || 'Music professional'}</div>
                 {p.location && (
                   <div className="text-sm text-slate-400 mt-2">
                     <MapPin size={14} className="inline mr-1" />

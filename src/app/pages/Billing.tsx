@@ -53,6 +53,7 @@ import {
 } from '../lib/promo';
 import { loadAiUsage, type AiUsage } from '../lib/ai';
 import { formatDate, formatMoney } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
 
 type Summary = {
   status: 'pending' | 'trialing' | 'active' | 'cancelling' | 'past_due' | 'cancelled' | 'early_access';
@@ -594,9 +595,7 @@ export default function Billing() {
                       <tr key={h.paymentId} className="border-t border-white/10">
                         <td className="py-2 pr-4">{day(h.at)}</td>
                         <td className="py-2 pr-4">{money(h.currency, h.amount)}</td>
-                        <td className="py-2 pr-4">
-                          {h.status === 'captured' ? 'Paid' : h.status === 'failed' ? 'Failed' : h.status}
-                        </td>
+                        <td className="py-2 pr-4">{h.status === 'captured' ? 'Paid' : optionLabel(h.status)}</td>
                         <td className="py-2 font-mono text-xs text-slate-400">{h.invoiceId || h.paymentId}</td>
                       </tr>
                     ))}

@@ -15,6 +15,7 @@ import { MapPin, Calendar, BriefcaseBusiness } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { Application } from '../lib/apiTypes';
 import { formatDate, formatDateTime } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
 const ordered = ['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Offer', 'Hired'];
 export default function ApplicationTracking() {
   const [apps, setApps] = useState<Application[]>([]),
@@ -98,7 +99,7 @@ export default function ApplicationTracking() {
                         </span>
                         <span className="flex items-center">
                           <BriefcaseBusiness size={15} className="mr-1" />
-                          {a.workplace}
+                          {optionLabel(a.workplace)}
                         </span>
                         <span>Applied {formatDate(a.createdAt)}</span>
                         {a.interviewDate && (

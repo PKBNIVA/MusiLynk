@@ -15,6 +15,7 @@ import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { AppSelect } from '../components/ui/app-select';
 import { formatDateTime, formatInputEcho } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
 
 type SlotField = 'startAt' | 'endAt' | 'city' | 'status';
 const SLOT_IDS: Record<SlotField, string> = {
@@ -199,7 +200,7 @@ export default function Availability() {
                 className="flex items-center justify-between gap-3 p-4 rounded-xl bg-white/5 border border-white/10"
               >
                 <div>
-                  <b className="capitalize">{item.status}</b>
+                  <b>{optionLabel(item.status)}</b>
                   <div className="text-sm text-slate-400">
                     {formatDateTime(item.startAt)} → {formatDateTime(item.endAt)} {item.city ? `· ${item.city}` : ''}
                   </div>

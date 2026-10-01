@@ -11,6 +11,7 @@ import { BookmarkX } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
 import type { Job } from '../lib/apiTypes';
+import { optionLabel } from '../components/ui/option-labels';
 export default function SavedJobs() {
   const [jobs, setJobs] = useState<Job[]>([]),
     [loading, setLoading] = useState(true),
@@ -68,7 +69,7 @@ export default function SavedJobs() {
                     <h2 className="font-semibold text-xl mt-2">{j.title}</h2>
                     <p className="text-violet-300">{j.company}</p>
                     <p className="text-sm text-slate-400 mt-2">
-                      {j.location} · {j.workplace}
+                      {j.location} · {optionLabel(j.workplace)}
                     </p>
                   </Link>
                   <Button

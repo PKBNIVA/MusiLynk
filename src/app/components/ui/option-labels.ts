@@ -59,7 +59,8 @@ export const OPTION_COPY: Record<string, OptionCopy> = {
 };
 
 /** "wedding-band" -> "Wedding band"; known values use OPTION_COPY. */
-export function optionLabel(value: string): string {
+export function optionLabel(value: string | null | undefined): string {
+  if (!value) return '';
   const known = OPTION_COPY[value];
   if (known) return known.label;
   const spaced = value.replace(/[-_]+/g, ' ').trim();

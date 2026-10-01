@@ -24,6 +24,7 @@ import type { Portfolio, Resume } from '../lib/showcase';
 import { ShareToStageButton } from '../components/stage/ShareToStageButton';
 import { FEATURE_STAGE } from '../lib/features';
 import { OwnerJobPanel } from '../components/OwnerJobPanel';
+import { optionLabel } from '../components/ui/option-labels';
 
 const COVER_MAX = 5_000;
 const answerId = (i: number) => `screening-${i}`;
@@ -183,7 +184,7 @@ export default function JobDetails() {
                 <div className="grid sm:grid-cols-2 gap-5 mt-8 pt-6 border-t border-white/10 text-sm">
                   <div>
                     <div className="text-slate-500 mb-1">Engagement</div>
-                    <div>{job.type}</div>
+                    <div>{optionLabel(job.type)}</div>
                   </div>
                   <div>
                     <div className="text-slate-500 mb-1">Experience level</div>

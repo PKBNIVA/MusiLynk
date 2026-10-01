@@ -20,6 +20,7 @@ import { errorMessage } from '../lib/errors';
 import type { Act, ActMember, Taxonomy } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
 import { formatMoney, periodLabel } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
 
 const FALLBACK_ACT_TYPES = ['solo', 'duo', 'trio', 'band', 'ensemble', 'dj'];
 // Inputs hand back strings, so the lineup size holds whatever was typed until it is submitted.
@@ -320,8 +321,8 @@ export default function ActsManager() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-xl font-semibold break-words">{a.name}</h3>
-                          <Badge variant="secondary">{a.act_type}</Badge>
-                          <Badge className="capitalize">{a.status}</Badge>
+                          <Badge variant="secondary">{optionLabel(a.act_type)}</Badge>
+                          <Badge>{optionLabel(a.status)}</Badge>
                         </div>
                         <p className="text-slate-400 text-sm mt-2">
                           {a.city || 'Location not set'} · lineup {a.lineup_size}

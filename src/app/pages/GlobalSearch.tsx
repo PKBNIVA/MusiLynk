@@ -24,6 +24,12 @@ const TYPE_LABELS: Record<ResultType, [string, string]> = {
   acts: ['Acts', 'acts'],
   samples: ['Work samples', 'work samples'],
 };
+const TYPE_SINGULAR: Record<ResultType, string> = {
+  jobs: 'Opportunity',
+  talent: 'Musician',
+  acts: 'Act',
+  samples: 'Work sample',
+};
 const TYPES = Object.keys(TYPE_LABELS) as ResultType[];
 const suggestions = ['Playback singer', 'FOH engineer', 'Session guitarist', 'Wedding band', 'Music producer'];
 const pickResults = (page: SearchResponse) => page.results;
@@ -224,7 +230,7 @@ export default function GlobalSearch() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.14em] text-slate-400">
-                            {r.type}
+                            {TYPE_SINGULAR[r.type]}
                             <DemoBadge show={r.demo} />
                           </div>
                           <h2 className="mt-1 text-lg font-bold group-hover:text-violet-200">{r.title}</h2>

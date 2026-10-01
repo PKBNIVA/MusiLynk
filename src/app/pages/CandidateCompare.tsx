@@ -14,6 +14,7 @@ import { errorMessage } from '../lib/errors';
 import { formatDate, formatMoney } from '../lib/format';
 import { useAuth } from '../lib/authContext';
 import type { ComparedProfessional } from '../lib/apiTypes';
+import { optionLabel } from '../components/ui/option-labels';
 export default function CandidateCompare() {
   const [sp, setSp] = useSearchParams(),
     nav = useNavigate(),
@@ -157,7 +158,7 @@ export default function CandidateCompare() {
                   {p.availability?.length ? (
                     p.availability.slice(0, 3).map((a) => (
                       <div key={a.startAt} className="text-xs text-slate-300 py-1">
-                        {formatDate(a.startAt)} · {a.status}
+                        {formatDate(a.startAt)} · {optionLabel(a.status)}
                         {a.city ? ` · ${a.city}` : ''}
                       </div>
                     ))

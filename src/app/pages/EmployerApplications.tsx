@@ -32,6 +32,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
+import { optionLabel } from '../components/ui/option-labels';
+import { jobStatusLabel } from '../components/OpportunityPipeline';
 
 // The application's snapshot of the portfolio/resume chosen at apply time (materialsSnapshot —
 // see backend/docs/api-pages-portfolios-resumes.md §8). Not in apiTypes yet, so kept local here.
@@ -381,7 +383,10 @@ export default function EmployerApplications() {
                 className="mt-2"
                 options={[
                   { value: '', label: 'All opportunities' },
-                  ...jobs.map((j) => ({ value: j.id, label: `${j.title} (${j.status})` })),
+                  ...jobs.map((j) => ({
+                    value: j.id,
+                    label: `${j.title} (${jobStatusLabel[j.status] || optionLabel(j.status)})`,
+                  })),
                 ]}
               />
             </div>

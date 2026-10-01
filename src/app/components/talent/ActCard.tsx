@@ -7,6 +7,7 @@ import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
 import { formatMoney } from '../../lib/format';
 import type { Act } from '../../lib/apiTypes';
+import { optionLabel } from '../ui/option-labels';
 
 type Props = {
   act: Act;
@@ -67,7 +68,7 @@ export function ActCard({ act: a, index, to, nameSuffix, footer }: Props) {
           )}
         </div>
         <p className="mt-1 flex min-w-0 items-center gap-1 text-sm text-slate-400">
-          <span className="truncate text-violet-300">{a.act_type}</span>
+          <span className="truncate text-violet-300">{optionLabel(a.act_type)}</span>
           {a.city && (
             <>
               <span aria-hidden="true">·</span>

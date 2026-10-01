@@ -17,6 +17,7 @@ import type { CrewPlan } from '../lib/apiTypes';
 import { FormSection, MoreDetails } from '../components/help/MoreDetails';
 import { AppSelect } from '../components/ui/app-select';
 import { formatInputEcho } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
 const needOptions = ['music', 'sound', 'lighting', 'video', 'production'];
 export default function BuildMyCrew() {
   const [plans, setPlans] = useState<CrewPlan[]>([]),
@@ -262,7 +263,7 @@ export default function BuildMyCrew() {
                     <div>
                       <h2 className="text-xl font-semibold">{p.title}</h2>
                       <div className="text-sm text-slate-400 mt-1">
-                        {p.event_type} · {p.city}
+                        {optionLabel(p.event_type)} · {p.city}
                         {p.audience_size ? ` · ${p.audience_size} people` : ''}
                       </div>
                     </div>

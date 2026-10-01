@@ -15,6 +15,8 @@ export interface StageAuthor {
   verified?: boolean;
   /** True for the platform's own "Verse" author (StageSystemPostsJob, FastResponderWeekJob). */
   system?: boolean;
+  /** Demo/showcase account: drawn as generated art rather than initials. */
+  demo?: boolean;
 }
 
 export type PostKind =
@@ -33,6 +35,8 @@ export interface StageMedia {
   uploadId: string;
   type: 'image' | 'audio' | 'video';
   caption?: string;
+  /** Public URL of the stored file, supplied by the API for every viewer. */
+  url?: string | null;
 }
 
 export type SharedEntity =
@@ -86,6 +90,10 @@ const base = '/stage';
 
 export function fetchFeed(cursor?: string | null) {
   return apiGet<FeedPage>(`${base}/feed${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`);
+}
+
+export function fetchAuthor(type: StageAuthorType, id: string) {
+  return apiGet<{ author: StageAuthor }>(`${base}/authors/${type}/${encodeURIComponent(id)}`);
 }
 
 export function fetchAuthorPosts(type: StageAuthorType, id: string, cursor?: string | null) {
@@ -285,7 +293,9 @@ export function isOwnedByActor(author: StageAuthor, selfUserId: string | undefin
 
 // ---- text helpers --------------------------------------------------------
 
-const HASHTAG_PATTERN = /#(\w+)/g;
+// Letters, combining marks (Devanagari vowel signs and the like), digits and underscores, 2-50
+// characters: identical to Post::HASHTAG_PATTERN in backend/app/models/post.rb.
+const HASHTAG_PATTERN = /#([\p{L}\p{M}\p{N}_]{2,50})/gu;
 
 /**
  * Splits a post body into plain text and hashtag segments (hashtags become `/stage/tags/:tag`
@@ -371,17 +381,14 @@ export function embedPreviewFor(url: string | null | undefined): EmbedPreview {
   return null;
 }
 
-// Media rendered from a post keeps its image/audio URL only for uploads made in this browser
-// session (the API never returns a URL alongside a stored post's media — only `uploadId`,
-// `type` and `caption`, see backend/docs/api-stage-feed.md). This small session cache lets a
-// person's own freshly-posted media render immediately; older or other people's media shows as
-// a labelled attachment instead of a broken image.
+// The API returns each media item's public `url`. This small session cache only bridges the moment
+// between an upload finishing in the Composer and the saved post coming back with its own url.
 const mediaUrlCache = new Map<string, string>();
 export function rememberMediaUrl(uploadId: string, url: string) {
   mediaUrlCache.set(uploadId, url);
 }
-export function mediaUrlFor(uploadId: string): string | undefined {
-  return mediaUrlCache.get(uploadId);
+export function mediaUrlFor(media: Pick<StageMedia, 'uploadId' | 'url'>): string | undefined {
+  return media.url || mediaUrlCache.get(media.uploadId);
 }
 
 export function authorPath(author: StageAuthor) {

@@ -84,7 +84,9 @@ export default function AuthPage() {
 
   const go = (r: string, complete = true) => {
     const requested = (location.state as { from?: unknown } | null)?.from ?? consumeReturnTo();
-    const allowed = typeof requested === 'string' && requested.startsWith(`/${r}`);
+    // Role-neutral pages (the Stage) are open to either role, so a deep link to one survives sign-in.
+    const allowed =
+      typeof requested === 'string' && (requested.startsWith(`/${r}`) || /^\/stage(?:[/?#]|$)/.test(requested));
     navigate(
       allowed
         ? requested

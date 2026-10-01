@@ -60,6 +60,14 @@ describe('splitHashtags', () => {
     ]);
   });
 
+  it('links tags in any script and leaves single-character tags as text', () => {
+    expect(splitHashtags('आज #मुंबई में #a gig')).toEqual([
+      { kind: 'text', value: 'आज ' },
+      { kind: 'hashtag', value: 'मुंबई' },
+      { kind: 'text', value: ' में #a gig' },
+    ]);
+  });
+
   it('handles a body that is only a hashtag', () => {
     expect(splitHashtags('#jazz')).toEqual([{ kind: 'hashtag', value: 'jazz' }]);
   });
@@ -141,9 +149,16 @@ describe('isOwnedByActor', () => {
 
 describe('mediaUrlFor / rememberMediaUrl', () => {
   it('returns undefined until a url is remembered, then returns it', () => {
-    expect(mediaUrlFor('upld_never_seen')).toBeUndefined();
+    expect(mediaUrlFor({ uploadId: 'upld_never_seen' })).toBeUndefined();
     rememberMediaUrl('upld_1', 'https://cdn.example.com/upld_1.jpg');
-    expect(mediaUrlFor('upld_1')).toBe('https://cdn.example.com/upld_1.jpg');
+    expect(mediaUrlFor({ uploadId: 'upld_1' })).toBe('https://cdn.example.com/upld_1.jpg');
+  });
+
+  it('prefers the url the API supplies with the post', () => {
+    rememberMediaUrl('upld_2', 'https://cdn.example.com/cached.jpg');
+    expect(mediaUrlFor({ uploadId: 'upld_2', url: 'https://cdn.example.com/api.jpg' })).toBe(
+      'https://cdn.example.com/api.jpg',
+    );
   });
 });
 

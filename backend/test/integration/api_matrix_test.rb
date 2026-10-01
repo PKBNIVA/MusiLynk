@@ -343,6 +343,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:patch, "/api/stage/posts/{stage_post}", :any, { params: { body: "Matrix edited stage post" }, missing: :stage_post, bad: { body: "x" * 3001 }, bad_status: [422], keys: %w[post] }],
     [:put, "/api/stage/posts/{stage_post}", :any, { params: { body: "Matrix edited stage post (put)" }, missing: :stage_post, keys: %w[post] }],
     [:delete, "/api/stage/posts/{stage_post}", :any, { missing: :stage_post }],
+    [:get, "/api/stage/authors/user/{self}", :public, { keys: %w[author] }],
     [:get, "/api/stage/authors/user/{self}/posts", :public, { keys: %w[posts nextCursor] }],
     [:post, "/api/stage/posts/{stage_post}/applause", :any, { ok: [201], missing: :stage_post, keys: %w[ok applauseCount] }],
     [:delete, "/api/stage/posts/{stage_post}/applause", :any, { missing: :stage_post, keys: %w[ok applauseCount] }],

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { API_BASE, apiDelete, apiGet, apiPatch, apiPost } from './api';
 import { useAuth } from './authContext';
 import type { Act, Job, Organization, PortfolioItem } from './apiTypes';
+import { formatDate } from './format';
 
 export type StageAuthorType = 'user' | 'organization' | 'act' | 'system';
 
@@ -358,7 +359,7 @@ export function relativeTime(iso: string): string {
   if (hours < 24) return `${Math.floor(hours)}h`;
   const days = hours / 24;
   if (days < 7) return `${Math.floor(days)}d`;
-  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return formatDate(date).replace(/ \d{4}$/, '');
 }
 
 export const POST_KIND_LABEL: Record<PostKind, string> = {

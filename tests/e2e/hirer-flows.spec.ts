@@ -204,14 +204,16 @@ test.describe('payments are off', () => {
     await page.goto('/employer/bookings');
     await page.getByRole('button', { name: /Resume deposit payment/ }).click();
     const note = page.getByTestId('deposit-unavailable');
-    await expect(note).toContainText('Deposit payment is not open yet');
+    await expect(note).toContainText('Payments open soon — we’ll email you');
     await expect(note).toContainText('message The Night Owls');
     await expect(page.getByText('Live payments are not configured')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Resume deposit payment/ })).toHaveCount(0);
     await expect(note.getByRole('button', { name: 'Check again' })).toBeVisible();
   });
 
-  test('paid plans are disabled with an explanation under the payments-unavailable banner', async ({ page }) => {
+  test('paid plans hide their start button and explain Early Access Pro under the payments-open-soon banner', async ({
+    page,
+  }) => {
     await mock(page, (path, _method, _body, route) => {
       if (path === '/billing/plans')
         return (
@@ -257,9 +259,10 @@ test.describe('payments are off', () => {
       return false;
     });
     await page.goto('/employer/billing');
-    await expect(page.getByText('Payments unavailable.')).toBeVisible();
-    await expect(page.getByTestId('plan-pro').getByRole('button', { name: 'Start free trial' })).toBeDisabled();
-    await expect(page.getByTestId('plan-pro-unavailable')).toContainText('Paid plans open once billing is set up');
+    await expect(page.getByText('Payments open soon — we’ll email you.')).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Early Access Pro' })).toBeVisible();
+    await expect(page.getByTestId('plan-pro').getByRole('button', { name: 'Start free trial' })).toHaveCount(0);
+    await expect(page.getByTestId('plan-pro-unavailable')).toContainText('Available when payments open');
   });
 });
 

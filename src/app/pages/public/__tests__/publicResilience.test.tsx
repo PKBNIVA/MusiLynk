@@ -106,7 +106,7 @@ describe('public catalogs', () => {
       name: 'professionals',
       url: '/music-professionals',
       page: <PublicTalent />,
-      loading: 'Loading professionals',
+      loading: 'Loading musicians',
       guest: /^\/(auth|join)\//,
     },
     { name: 'acts', url: '/book-music', page: <PublicActs />, loading: 'Loading acts', guest: /^\/(auth|join)\// },

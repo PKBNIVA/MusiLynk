@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router';
+import { Navigate, useLocation, useSearchParams } from 'react-router';
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -8,7 +8,7 @@ import { Label } from '../../components/ui/label';
 import { PageLoading } from '../../components/ExperienceStates';
 import { usePageMeta } from '../../components/PageMeta';
 import { CodeStep, FormError, focusField, useResendCooldown } from '../../components/auth/CodeStep';
-import { consumeReturnTo } from '../../lib/api';
+import { consumeReturnTo, SESSION_EXPIRED_MESSAGE } from '../../lib/api';
 import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User } from '../../lib/authContext';
 import { errorCode, errorMessage } from '../../lib/errors';
 
@@ -24,6 +24,7 @@ function returnDestination(requested: unknown) {
 export default function AdminSignIn() {
   usePageMeta('Sign in', 'Sign in to the Verse admin console.');
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, loading: restoring, login, completeSecondFactor, logout } = useAuth();
   const [destination] = useState(() =>
     returnDestination((location.state as { from?: unknown } | null)?.from ?? consumeReturnTo()),
@@ -163,6 +164,11 @@ export default function AdminSignIn() {
           </div>
           <p className="mt-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Verse Admin</p>
           <h1 className="mt-1 text-2xl font-black">{challenge ? 'Check your email' : 'Sign in'}</h1>
+          {searchParams.get('reason') === 'expired' && (
+            <p role="status" data-testid="session-expired" className="mt-2 text-sm text-amber-200">
+              {SESSION_EXPIRED_MESSAGE}
+            </p>
+          )}
         </div>
         {challenge ? (
           <CodeStep

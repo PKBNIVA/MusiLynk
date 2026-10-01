@@ -163,6 +163,9 @@ export function onBeforeSignInRedirect(listener: () => void) {
 // session there signs in again as the same kind of account. Set by AuthProvider.
 // Kept in localStorage too, so a cold load whose token already expired (nothing has resolved /me)
 // still signs in as the right kind of account.
+/** Added to the sign-in address after an expired session, so that page can say why it is showing. */
+export const SESSION_EXPIRED_QUERY = 'reason=expired';
+export const SESSION_EXPIRED_MESSAGE = 'Your session expired. Sign in to continue.';
 const ROLE_HINT_KEY = 'verse_session_role';
 let sessionRoleHint: string | null = null;
 export function rememberSessionRole(role?: string | null) {
@@ -196,7 +199,7 @@ function redirectAfterUnauthorized(path: string, rejectedToken: string | null, s
   authRedirectStarted = true;
   beforeSignInRedirect.forEach((listener) => listener());
   writeStored('session', RETURN_TO_KEY, currentPath);
-  window.location.replace(signInPath(signInRole(window.location.pathname)));
+  window.location.replace(`${signInPath(signInRole(window.location.pathname))}?${SESSION_EXPIRED_QUERY}`);
 }
 
 function retryDelay(response?: Response) {

@@ -275,9 +275,9 @@ export default function Pricing() {
         </div>
         <Card className="mt-8 bg-amber-500/[.05] border-amber-400/15">
           <CardContent className="p-6 text-sm text-slate-300">
-            <b>How billing works:</b> recurring plans are billed through Razorpay Subscriptions with server-side
-            credentials and signed webhooks. Trials are enforced by the server. Booking deposits for live acts are a
-            separate payment flow with their own quote, cancellation and refund rules—see{' '}
+            <b>How billing works:</b> paid plans are billed through Razorpay, renew on the date shown on your Billing
+            page, and can be cancelled at any time. A free trial charges nothing until it ends. Booking deposits for
+            live acts are a separate payment flow with their own quote, cancellation and refund rules—see{' '}
             <Link className="text-violet-300 underline underline-offset-4" to="/refund-policy">
               payments &amp; refunds
             </Link>

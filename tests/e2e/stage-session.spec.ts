@@ -68,6 +68,7 @@ test('an expired session on the Stage signs out, redirects to sign-in and keeps 
   await page.getByRole('button', { name: 'Post', exact: true }).click();
 
   await expect(page).toHaveURL(/\/auth\/jobseeker/);
+  await expect(page.getByTestId('session-expired')).toHaveText('Your session expired. Sign in to continue.');
   expect(await page.evaluate(() => localStorage.getItem('verse_access_token'))).toBeNull();
   expect(await page.evaluate(() => sessionStorage.getItem('verse_return_to'))).toBe('/stage');
 

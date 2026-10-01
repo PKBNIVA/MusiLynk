@@ -327,7 +327,7 @@ function EmailCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }
             </div>
             {challenge?.debugCode && (
               <p className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
-                Local testing: your code is{' '}
+                Email is switched off here, so your code is{' '}
                 <span className="font-mono font-bold" data-testid="debug-code">
                   {challenge.debugCode}
                 </span>

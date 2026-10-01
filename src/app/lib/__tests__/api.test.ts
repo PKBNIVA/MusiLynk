@@ -546,7 +546,7 @@ describe('401 handling', () => {
 
       await expect(apiGet('/employer/jobs')).rejects.toMatchObject({ status: 401 });
       expect(hasAccessToken()).toBe(false);
-      expect(location.replace).toHaveBeenCalledWith('/auth/employer');
+      expect(location.replace).toHaveBeenCalledWith('/auth/employer?reason=expired');
 
       // Signing in again re-arms the redirect for the next expired session.
       setAccessToken('expired-again');
@@ -572,7 +572,7 @@ describe('401 handling', () => {
 
       await expect(apiPost('/stage/posts', { body: 'x' })).rejects.toMatchObject({ status: 401 });
       expect(hasAccessToken()).toBe(false);
-      expect(location.replace).toHaveBeenCalledWith('/auth/employer');
+      expect(location.replace).toHaveBeenCalledWith('/auth/employer?reason=expired');
       expect(consumeReturnTo()).toBe('/stage');
       expect(takeUnsentDraft('stage-composer')).toBe('Playing Blue Frog on Friday');
     } finally {
@@ -589,7 +589,7 @@ describe('401 handling', () => {
       setAccessToken('expired');
       fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
       await expect(apiGet('/stage/posts/p1')).rejects.toMatchObject({ status: 401 });
-      expect(location.replace).toHaveBeenCalledWith('/auth/jobseeker');
+      expect(location.replace).toHaveBeenCalledWith('/auth/jobseeker?reason=expired');
     } finally {
       restore();
     }
@@ -605,7 +605,7 @@ describe('401 handling', () => {
       setAccessToken('expired');
       fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
       await expect(apiGet('/stage/feed')).rejects.toMatchObject({ status: 401 });
-      expect(location.replace).toHaveBeenCalledWith('/auth/employer');
+      expect(location.replace).toHaveBeenCalledWith('/auth/employer?reason=expired');
     } finally {
       restore();
     }
@@ -619,7 +619,7 @@ describe('401 handling', () => {
       setAccessToken('expired');
       fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
       await expect(apiGet('/admin/account')).rejects.toMatchObject({ status: 401 });
-      expect(location.replace).toHaveBeenCalledWith('/');
+      expect(location.replace).toHaveBeenCalledWith('/?reason=expired');
       expect(consumeReturnTo()).toBe('/account');
     } finally {
       restore();

@@ -14,6 +14,9 @@ export interface FormatOptions {
   fallback?: string;
 }
 
+/** en-IN spells September "Sept"; every other month is three letters, so keep them all alike. */
+const shortMonth = (text: string) => text.replace(/\bSept\b/, 'Sep');
+
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
@@ -35,26 +38,30 @@ export function toDate(value: DateInput): Date | null {
 export function formatDate(value: DateInput, options: FormatOptions = {}): string {
   const d = toDate(value);
   if (!d) return options.fallback ?? '';
-  return new Intl.DateTimeFormat(LOCALE, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: options.timeZone,
-  }).format(d);
+  return shortMonth(
+    new Intl.DateTimeFormat(LOCALE, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: options.timeZone,
+    }).format(d),
+  );
 }
 
 /** "11 Nov 2026, 4:18 pm" */
 export function formatDateTime(value: DateInput, options: FormatOptions = {}): string {
   const d = toDate(value);
   if (!d) return options.fallback ?? '';
-  return new Intl.DateTimeFormat(LOCALE, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: options.timeZone,
-  }).format(d);
+  return shortMonth(
+    new Intl.DateTimeFormat(LOCALE, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: options.timeZone,
+    }).format(d),
+  );
 }
 
 /** The calendar day of `d` in `timeZone`, as a UTC timestamp at midnight, for day arithmetic. */
@@ -98,6 +105,20 @@ type Amount = number | string | null | undefined;
 export function formatNumber(value: Amount): string {
   const n = toAmount(value);
   return n === null ? '' : new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 2 }).format(n);
+}
+
+/**
+ * The text with its indefinite article: "a drummer", "an instrument", "an FOH engineer", "a DJ",
+ * "a ukulele player". For sentences built from role or instrument names.
+ */
+export function withArticle(text: string): string {
+  const t = text.trim();
+  if (!t) return t;
+  const word = t.split(/\s+/)[0];
+  const spelled = /^[A-Z]{2,}$/.test(word)
+    ? /^[AEFHILMNORSX]/.test(word)
+    : /^[aeiou]/i.test(word) && !/^(uni|use|usu|uk|eu|one)/i.test(word);
+  return `${spelled ? 'an' : 'a'} ${t}`;
 }
 
 /**
@@ -197,9 +218,11 @@ export function formatWhen(value: DateInput, options: FormatOptions & { now?: Da
     .replace(/\s?([ap])m/i, (_m, x: string) => ` ${x.toLowerCase()}m`);
   if (days === 0) return `Today ${time}`;
   if (days === 1) return `Tomorrow ${time}`;
-  const day = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz })
-    .format(d)
-    .replace(',', '');
+  const day = shortMonth(
+    new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz })
+      .format(d)
+      .replace(',', ''),
+  );
   return `${day} ${time}`;
 }
 

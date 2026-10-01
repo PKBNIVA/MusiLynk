@@ -154,7 +154,7 @@ export function DebugLinkDialog({ link, onClose }: { link: string | null; onClos
         <DialogHeader>
           <DialogTitle>Development verification link</DialogTitle>
           <DialogDescription className="text-slate-400">
-            Email delivery is off in this environment, so open the link directly.
+            Email is switched off here, so open the link directly.
           </DialogDescription>
         </DialogHeader>
         <a href={link || undefined} className="break-all text-violet-300 underline">

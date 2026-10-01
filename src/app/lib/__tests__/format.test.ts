@@ -15,6 +15,7 @@ import {
   fromRate,
   rateRows,
   toDate,
+  withArticle,
 } from '../format';
 
 const UTC = { timeZone: 'UTC' };
@@ -247,5 +248,27 @@ describe('formatInputEcho', () => {
     expect(formatInputEcho('2026-11-14T18:30', true)).toBe('14 Nov 2026, 6:30 pm');
     expect(formatInputEcho('')).toBe('');
     expect(formatInputEcho(null)).toBe('');
+  });
+});
+
+describe('withArticle', () => {
+  it('picks a or an by sound', () => {
+    expect(withArticle('drummer')).toBe('a drummer');
+    expect(withArticle('instrument teacher')).toBe('an instrument teacher');
+    expect(withArticle('Arranger and composer')).toBe('an Arranger and composer');
+    expect(withArticle('FOH engineer')).toBe('an FOH engineer');
+    expect(withArticle('DJ')).toBe('a DJ');
+    expect(withArticle('ukulele player')).toBe('a ukulele player');
+    expect(withArticle('  ')).toBe('');
+  });
+});
+
+describe('September', () => {
+  it('is "Sep" like every other three-letter month, never "Sept"', () => {
+    expect(formatDate('2026-09-05')).toBe('5 Sep 2026');
+    expect(formatDateTime('2026-09-05T18:30:00Z', UTC)).toBe('5 Sep 2026, 6:30 pm');
+    expect(formatWhen('2026-09-30T18:00:00Z', { timeZone: 'UTC', now: new Date('2026-09-01T00:00:00Z') })).toBe(
+      'Wed 30 Sep 6 pm',
+    );
   });
 });

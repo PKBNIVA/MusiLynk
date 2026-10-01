@@ -12,6 +12,8 @@ describe('option labels', () => {
     expect(optionLabel('wedding-band')).toBe('Wedding band');
     expect(optionLabel('Music Production')).toBe('Music Production');
     expect(optionLabel('')).toBe('');
+    expect(optionLabel(null)).toBe('');
+    expect(optionLabel('per_event')).toBe('Per event');
   });
 
   it('describes known values only', () => {

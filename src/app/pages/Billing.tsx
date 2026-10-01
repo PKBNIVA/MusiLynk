@@ -84,17 +84,11 @@ type PaymentMode = 'live' | 'test' | 'mock' | 'disabled';
 
 // Banner copy per payment mode; live payments need no banner.
 const PAYMENT_MODE_NOTICE: Partial<Record<PaymentMode, [string, string]>> = {
-  test: [
-    'Test mode.',
-    'Payments on this environment use Razorpay test mode. No real money moves and no real cards are charged.',
-  ],
-  mock: [
-    'Demo billing.',
-    'Razorpay is not configured on this environment, so upgrades start without any payment step.',
-  ],
+  test: ['Test mode.', 'Payments here use test cards. No real money moves and no real cards are charged.'],
+  mock: ['Trial only.', 'Paid plans start without a payment step for now, so nothing is charged.'],
   disabled: [
-    'Payments unavailable.',
-    'Paid upgrades are paused while billing is being set up. Your current plan is not affected.',
+    'Payments open soon — we’ll email you.',
+    'Your current plan is not affected. Early Access Pro, which needs no card, is going to our first hirers.',
   ],
 };
 
@@ -310,7 +304,7 @@ export default function Billing() {
         return;
       }
       if (d.checkout?.mode === 'mock') {
-        toast.success('Trial activated in development mode. Configure Razorpay environment keys for live billing.');
+        toast.success('Trial started. Nothing was charged.');
         await load();
         return;
       }
@@ -328,7 +322,7 @@ export default function Billing() {
           const activated = await waitForActivation();
           if (!activated)
             toast.info(
-              'Razorpay is still confirming your mandate. This page updates once the confirmation arrives; refresh in a minute.',
+              'Your bank is still confirming the payment setup. This page updates once it arrives; refresh in a minute.',
             );
         } else if (result.lastError) {
           toast.error(`Payment not completed: ${result.lastError}`);
@@ -343,9 +337,7 @@ export default function Billing() {
       if (status !== 0 && status !== 502) delete intentKeys.current[intent];
       // A 503 is billing being switched off, not something to retry: say so in plain words.
       toast.error(
-        status === 503
-          ? 'Paid plans are not open yet. Your current plan is not affected; try again later.'
-          : errorMessage(e),
+        status === 503 ? 'Payments open soon — we’ll email you. Your current plan is not affected.' : errorMessage(e),
       );
     } finally {
       inFlight.current = false;
@@ -530,16 +522,11 @@ export default function Billing() {
                     </div>
                   ))}
                 </div>
-                {p.code !== 'free' && (
+                {p.code !== 'free' && !(paymentsOff && p.code !== 'enterprise' && currentCode !== p.code) && (
                   <Button
                     className="w-full mt-6"
                     variant={currentCode === p.code ? 'secondary' : 'default'}
-                    disabled={
-                      pendingPlan !== null ||
-                      (currentCode === p.code && summary?.status !== 'pending') ||
-                      (paymentsOff && p.code !== 'enterprise')
-                    }
-                    aria-describedby={paymentsOff && p.code !== 'enterprise' ? 'payments-notice' : undefined}
+                    disabled={pendingPlan !== null || (currentCode === p.code && summary?.status !== 'pending')}
                     aria-busy={pendingPlan === p.code}
                     onClick={() => choose(p.code)}
                   >
@@ -558,7 +545,7 @@ export default function Billing() {
                 )}
                 {paymentsOff && p.code !== 'free' && p.code !== 'enterprise' && currentCode !== p.code && (
                   <p className="mt-2 text-xs text-slate-400" data-testid={`plan-${p.code}-unavailable`}>
-                    Paid plans open once billing is set up. Your current plan is not affected.
+                    Available when payments open.
                   </p>
                 )}
               </CardContent>

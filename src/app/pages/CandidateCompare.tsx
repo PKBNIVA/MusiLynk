@@ -103,7 +103,7 @@ export default function CandidateCompare() {
         )}
         <div className="grid lg:grid-cols-2 xl:grid-cols-4 gap-4 mt-7">
           {people.map((p) => (
-            <Card key={p.id} className="bg-white/[.055] border-white/10">
+            <Card key={p.id} className="bg-white/[.055] border-white/10" data-testid="compare-card">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-semibold">{p.name}</h2>

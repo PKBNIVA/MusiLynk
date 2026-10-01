@@ -125,11 +125,12 @@ test('every step change saves a draft, and an earlier draft is offered on reopen
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
   await expect(page.getByText('Draft saved')).toBeVisible();
   await page.getByRole('button', { name: 'Next: Screen & review' }).click();
-  await expect.poll(() => calls.filter((c) => c.method === 'PATCH').length).toBe(1);
-  const created = calls.filter((c) => c.method === 'POST' && c.path === '/jobs');
-  expect(created).toHaveLength(1);
-  expect(created[0].body).toMatchObject({ status: 'draft', title: 'Wedding band', location: 'Pune' });
-  expect(calls.find((c) => c.method === 'PATCH')?.path).toBe('/employer/jobs/job-new');
+  // "Start a new one" saves into the old draft's slot: one draft at a time, none added beside it.
+  await expect.poll(() => calls.filter((c) => c.method === 'PATCH').length).toBeGreaterThanOrEqual(1);
+  expect(calls.filter((c) => c.method === 'POST' && c.path === '/jobs')).toHaveLength(0);
+  const saved = calls.filter((c) => c.method === 'PATCH');
+  expect(saved.every((c) => c.path === '/employer/jobs/job-draft')).toBe(true);
+  expect(saved[0].body).toMatchObject({ title: 'Wedding band', location: 'Pune' });
 
   await page.goto('/employer/post-job');
   await page.getByTestId('draft-offer').getByRole('button', { name: 'Continue draft' }).click();

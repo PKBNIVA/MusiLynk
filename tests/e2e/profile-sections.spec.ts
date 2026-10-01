@@ -42,11 +42,20 @@ const json = (route: Route, body: unknown, status = 200) =>
 async function mock(page: Page, options: { putDelayMs?: number } = {}) {
   const puts: Record<string, unknown>[] = [];
   const posts: { path: string; body: unknown }[] = [];
+  // GET /me says whether a verification request is waiting, so the state survives a reload (and a new device).
+  let verificationPending = false;
   await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace(/^\/api/, '');
-    if (path === '/me') return json(route, { user: musician });
+    if (path === '/me')
+      return json(route, {
+        user: {
+          ...musician,
+          verificationPending,
+          verificationRequestedAt: verificationPending ? '2026-10-01T09:00:00Z' : null,
+        },
+      });
     if (path === '/notifications/unread') return json(route, { unread: 0 });
     if (path === '/ai/status') return json(route, { enabled: false, tasks: [] });
     if (path === '/profile' && request.method() === 'PUT') {
@@ -56,6 +65,7 @@ async function mock(page: Page, options: { putDelayMs?: number } = {}) {
       return json(route, { user: { ...musician, ...body } });
     }
     if (request.method() === 'POST') posts.push({ path, body: request.postDataJSON() });
+    if (request.method() === 'POST' && path === '/verification-requests') verificationPending = true;
     return json(route, {});
   });
   return { puts, posts };

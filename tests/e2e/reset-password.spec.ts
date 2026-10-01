@@ -112,3 +112,37 @@ test('a weak-password rejection from the server is shown inline', async ({ page 
   await page.getByRole('button', { name: 'Update password' }).click();
   await expect(page.getByRole('alert')).toHaveText('Password is too common. Choose something more unusual.');
 });
+
+test('a reset that needs a fresh sign-in (no token) shows success and a sign-in link instead of crashing', async ({
+  page,
+}) => {
+  await page.route('**/api/auth/reset-password/check*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ valid: true, role: 'employer' }),
+    }),
+  );
+  await page.route('**/api/auth/reset-password', (route) => {
+    if (route.request().method() !== 'POST')
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, signInRequired: true }),
+    });
+  });
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Authentication required' }),
+    }),
+  );
+  await page.goto('/reset-password?token=good-token');
+  await page.getByLabel('New password').fill('BrandNewPass456!');
+  await page.getByRole('button', { name: 'Update password' }).click();
+  await expect(page.getByRole('status')).toContainText('Password updated. Sign in with your new password.');
+  await expect(page.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/auth/employer');
+  await expect(page).toHaveURL(/\/reset-password/);
+});

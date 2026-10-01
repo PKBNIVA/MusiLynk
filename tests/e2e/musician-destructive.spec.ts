@@ -54,6 +54,7 @@ test('removing availability asks first and only deletes on confirm', async ({ pa
   await page.getByRole('button', { name: 'Remove availability' }).click();
   const dialog = page.getByRole('alertdialog');
   await expect(dialog).toContainText('Hirers will no longer see this window');
+  if (process.env.UX_SHOT_DIR) await page.screenshot({ path: `${process.env.UX_SHOT_DIR}/availability-remove-confirm-${page.viewportSize()!.width}.png` });
   await dialog.getByRole('button', { name: 'Keep as is' }).click();
   expect(deletes).toEqual([]);
   await expect(page.getByRole('button', { name: 'Remove availability' })).toBeVisible();
@@ -240,4 +241,28 @@ test('find talent with every filter group open fits a phone', async ({ page }) =
     width,
   );
   expect(overflow, 'find talent overflows horizontally').toBeLessThanOrEqual(1);
+});
+
+test('hirers get the same confirm on /employer/availability', async ({ page }) => {
+  const deletes: string[] = [];
+  await signIn(page, (request, path) => {
+    if (path.endsWith('/me')) return { body: { user: { ...me, role: 'employer' } } };
+    if (path === '/api/availability' && request.method() === 'GET')
+      return {
+        body: {
+          windows: [{ id: 'w9', status: 'hold', startAt: '2030-02-10T10:00:00Z', endAt: '2030-02-10T12:00:00Z' }],
+        },
+      };
+    if (request.method() === 'DELETE') {
+      deletes.push(path);
+      return { body: { ok: true } };
+    }
+    return undefined;
+  });
+  await page.goto('/employer/availability');
+  await page.getByRole('button', { name: 'Remove availability' }).click();
+  await expect(page.getByRole('alertdialog')).toBeVisible();
+  expect(deletes).toEqual([]);
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Remove availability' }).click();
+  await expect.poll(() => deletes).toEqual(['/api/availability/w9']);
 });

@@ -52,7 +52,6 @@ export default function Availability() {
   const [form, setForm] = useState<AvailabilityForm>({ status: 'available' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [removeError, setRemoveError] = useState('');
   const { ask, element: confirmDialog } = useConfirm();
   const errors = useFormErrors<SlotField>({ ids: SLOT_IDS });
   const submit = useSubmitOnce();
@@ -103,14 +102,17 @@ export default function Availability() {
     });
   }
   const remove = (item: AvailabilityWindow) => {
-    setRemoveError('');
     ask({
       title: 'Remove this availability?',
       description: `${optionLabel(item.status)}, ${formatDateTime(item.startAt)} to ${formatDateTime(item.endAt)}${item.city ? ` in ${item.city}` : ''}. Hirers will no longer see this window. You can add it again later.`,
       confirmLabel: 'Remove availability',
       destructive: true,
       action: async () => {
-        await apiDelete(`/availability/${item.id}`);
+        try {
+          await apiDelete(`/availability/${item.id}`);
+        } catch (e: unknown) {
+          throw new Error(errorMessage(e, 'Unable to remove availability.'));
+        }
         setItems((current) => current.filter((i) => i.id !== item.id));
         toast.success('Availability removed.');
       },
@@ -186,7 +188,6 @@ export default function Availability() {
             </form>
           </CardContent>
         </Card>
-        <FormError message={removeError} className="mt-4" />
         {loading ? (
           <p className="text-slate-400 text-center py-14" role="status">
             Loading availability…

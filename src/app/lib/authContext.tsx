@@ -51,6 +51,8 @@ export interface User {
   openTo?: string[];
   /** The photo the person uploaded (or their Google picture); UserAvatar falls back to initials. */
   photoUrl?: string | null;
+  /** False for an account that signs in with an emailed code or Google and has no password yet. */
+  passwordSet?: boolean;
   phoneE164?: string | null;
   whatsappConsentedAt?: string | null;
 }

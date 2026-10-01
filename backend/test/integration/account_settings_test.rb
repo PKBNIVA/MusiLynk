@@ -13,7 +13,7 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
   setup do
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
-    @user = User.create!(name: "Maya Session", email: "maya@example.com", password: PASSWORD, role: "jobseeker", status: "active")
+    @user = User.create!(name: "Maya Session", email: "maya@example.com", password: PASSWORD, role: "jobseeker", status: "active", password_set_at: Time.current)
     @other_user = User.create!(name: "Other Member", email: "other@example.com", password: PASSWORD, role: "employer", status: "active")
     @token = session_for(@user)
     @other_browser = session_for(@user)
@@ -168,6 +168,40 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     assert_response :success
     get "/api/me", headers: bearer(@other_browser)
     assert_response :unauthorized
+  end
+
+  test "an account with no password of its own sets a first one without a current password" do
+    codeonly = User.create!(name: "Code Only", email: "codeonly@example.com", password: SecureRandom.base58(32), role: "jobseeker", status: "active", email_verified: true)
+    assert_not codeonly.password_set?
+    token = session_for(codeonly)
+
+    get "/api/me", headers: bearer(token)
+    assert_equal false, response.parsed_body.dig("user", "passwordSet")
+
+    post "/api/account/password", params: { newPassword: "short" }, headers: bearer(token), as: :json
+    assert_response :unprocessable_content
+
+    post "/api/account/password", params: { newPassword: "BrandNewPass456!" }, headers: bearer(token), as: :json
+    assert_response :success
+    assert codeonly.reload.password_set?
+    assert AuditLog.exists?(actor: codeonly, action: "account.password_set")
+
+    post "/api/auth/login", params: { email: codeonly.email, password: "BrandNewPass456!" }, as: :json
+    assert_response :success
+
+    change_password("WrongPass123!x", "AnotherNewPass789!", token:)
+    assert_response :forbidden, "once a password exists the current one is required"
+  end
+
+  test "signing in with a password to a code-only account says it uses email codes" do
+    codeonly = User.create!(name: "Code Only", email: "codeonly2@example.com", password: SecureRandom.base58(32), role: "jobseeker", status: "active", email_verified: true)
+    post "/api/auth/login", params: { email: codeonly.email, password: "GuessedPass123!" }, as: :json
+    assert_response :unauthorized
+    assert_equal "USE_EMAIL_CODE", response.parsed_body["code"]
+    assert_match(/email codes/, response.parsed_body["error"])
+
+    post "/api/auth/login", params: { email: @user.email, password: "wrong-password" }, as: :json
+    assert_equal "Incorrect email or password.", response.parsed_body["error"]
   end
 
   test "wrong current passwords are limited per account" do

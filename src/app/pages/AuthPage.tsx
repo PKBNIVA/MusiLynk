@@ -170,7 +170,12 @@ export default function AuthPage() {
     } catch (e: unknown) {
       /* The API refuses admin passwords from this site once the admin site is live. */
       if (errorCode(e) === 'ADMIN_USE_ADMIN_SITE') setError(errorMessage(e, ADMIN_SITE_MESSAGE));
-      else {
+      else if (errorCode(e) === 'USE_EMAIL_CODE') {
+        /* This account has no password: say so, and put the code step in front of them. */
+        const message = errorMessage(e, 'This account uses email codes — send me a code.');
+        switchMethod('code');
+        setError(message);
+      } else {
         /* Inline, announced, next to the fields; focus goes to the field to fix (FORM-08). */
         setError(errorMessage(e, 'Unable to continue'));
         focusField('auth-password');

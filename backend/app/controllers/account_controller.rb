@@ -95,10 +95,14 @@ class AccountController < ApplicationController
   end
 
   # POST /api/account/password {currentPassword, newPassword} -> {ok}
+  # An account that has never had a password of its own (it signs in with an emailed code or
+  # Google) sets its first one here without a current password: the signed-in session is the proof.
   def change_password
+    # Admins (seeded with a password but no password_set_at) always prove the current one.
+    first_password = !current_user.password_set? && !current_user.admin?
     scopes = { user: [current_user.id, PASSWORD_FAILURES_PER_USER] }
     return if failure_budget_exhausted?("account-password-failure", scopes, period: FAILURE_PERIOD)
-    unless current_user.authenticate(params[:currentPassword].to_s)
+    unless first_password || current_user.authenticate(params[:currentPassword].to_s)
       record_failure!("account-password-failure", scopes, period: FAILURE_PERIOD)
       return render_error("Your current password is incorrect.", :forbidden, "PASSWORD_INCORRECT")
     end
@@ -107,11 +111,11 @@ class AccountController < ApplicationController
     return render_error("Password #{violation}", :unprocessable_content, "PASSWORD_WEAK") if violation
     return render_error("Choose a password you have not used before.", :unprocessable_content, "PASSWORD_UNCHANGED") if current_user.authenticate(new_password)
 
-    current_user.update!(password: new_password)
+    current_user.update!(password: new_password, password_set_at: Time.current)
     current_user.email_tokens.usable("reset_password").update_all(used_at: Time.current)
     revoke_other_sessions!
-    audit!("account.password_changed", current_user, { ip: request.remote_ip })
-    render json: { ok: true }
+    audit!(first_password ? "account.password_set" : "account.password_changed", current_user, { ip: request.remote_ip })
+    render json: { ok: true, passwordSet: true }
   end
 
   # DELETE /api/account {confirmEmail}

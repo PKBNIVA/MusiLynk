@@ -40,6 +40,8 @@ async function mockStage(page: Page, state: State) {
     if (key === 'GET /api/ai/status') return reply({ enabled: false, tasks: [] });
     if (key === 'GET /api/acts/me') return reply({ acts: [] });
     if (key === 'GET /api/organizations') return reply({ organizations: [] });
+    if (key === 'GET /api/stage/authors/user/user_2')
+      return reply({ author: { type: 'user', id: 'user_2', name: 'Asha Rao', verified: true } });
     if (key === 'GET /api/stage/authors/user/user_2/posts') return reply({ posts: [], nextCursor: null });
     if (key === 'GET /api/stage/authors/user/user_2/followers')
       return reply({ followersCount: state.followers, following: state.following });

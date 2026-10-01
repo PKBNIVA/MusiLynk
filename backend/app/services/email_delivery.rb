@@ -63,6 +63,16 @@ class EmailDelivery
       notice: true,
       footer: "If you made this change, nothing else is needed. If you did not, sign in right away and change your password, or contact support."
     },
+    # data: { detail: the account email }. Sent when a code-only or Google account sets its first
+    # password (AccountController#change_password).
+    "account_password_set" => {
+      subject: "A password was added to your Verse account",
+      heading: "Password added",
+      copy: "A password was just added to your Verse account, so you can now also sign in with it. The account is:",
+      action: nil,
+      notice: true,
+      footer: "If you made this change, nothing else is needed. If you did not, sign in right away with an emailed code and change your password, or contact support."
+    },
     # data: { link:, name: }. Sent to the invitee's address; they may not have a Verse account yet.
     "vouch_invite" => {
       subject: "You were vouched for on Verse",

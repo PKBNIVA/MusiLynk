@@ -13,6 +13,35 @@
 class UrgentMatcher
   Candidate = Struct.new(:user, :score, :reasons, keyword_init: true)
 
+  # Roles and instruments are compared by meaning, never as substrings, so a Dholak player is not
+  # a "Dhol" player. Names are resolved through the shared search vocabulary (Search::Synonyms,
+  # config/search_synonyms.yml): "Gayak", "Vocalist" and "Playback Singer" are one role, as are
+  # "Tabla Vadak" and "Tablist", "Bansuri Player" and "Flautist", "Keys Player" and "Keyboardist".
+  # Words that only say "someone who plays" are dropped from names the vocabulary does not know.
+  FILLER_WORDS = %w[player players artist artiste musician musicians the and of kit].freeze
+
+  # The comparable parts of a role or instrument name: the vocabulary's canonical term when the
+  # whole name is known ("Lead Vocalist" => {"singer"}), otherwise its words, each resolved
+  # the same way ("Electric Guitarist" => {"electric", "guitarist"}).
+  def self.role_tokens(text)
+    phrase = text.to_s.downcase.split(/[^[:alnum:]]+/).reject(&:empty?).join(" ")
+    return Set.new if phrase.empty?
+    whole = Search::Synonyms.canonical(phrase)
+    return Set[whole] if whole
+    words = phrase.split.reject { FILLER_WORDS.include?(_1) }
+    stripped = Search::Synonyms.canonical(words.join(" "))
+    return Set[stripped] if stripped
+    words.map { Search::Synonyms.canonical(_1) || _1 }.to_set
+  end
+
+  # Whether two names mean the same thing: all the words of the shorter one appear in the other.
+  def self.same_role?(a, b)
+    left = role_tokens(a)
+    right = role_tokens(b)
+    return false if left.empty? || right.empty?
+    left.subset?(right) || right.subset?(left)
+  end
+
   def self.call(request) = new(request).ranked_candidates
 
   # actor_admin: the admin user who clicked "Notify" (nil for the automatic post-create pass).
@@ -62,10 +91,10 @@ class UrgentMatcher
     return nil if blocked_by_availability?(user)
 
     profile = user.profile
-    roles = Array(profile&.roles).map { _1.to_s.downcase }
-    instruments = Array(profile&.instruments).map { _1.to_s.downcase }
-    role_match = role.present? && (roles.any? { _1.include?(role) || role.include?(_1) } || profile&.headline.to_s.downcase.include?(role))
-    instrument_match = instrument.present? && instruments.any? { _1.include?(instrument) || instrument.include?(_1) }
+    roles = Array(profile&.roles)
+    instruments = Array(profile&.instruments)
+    role_match = role.present? && ((roles + instruments).any? { self.class.same_role?(_1, role) } || headline_mentions?(profile, role))
+    instrument_match = instrument.present? && instruments.any? { self.class.same_role?(_1, instrument) }
     return nil unless role_match || instrument_match || (role.blank? && instrument.blank?)
 
     reasons = []
@@ -98,6 +127,12 @@ class UrgentMatcher
       reasons << "Available on #{@request.start_at.to_date.strftime('%d %b')}"
     end
     Candidate.new(user:, score: points, reasons: reasons.first(3))
+  end
+
+  # The headline names the role in whole words ("Dholak player" does not name "Dhol").
+  def headline_mentions?(profile, role)
+    wanted = self.class.role_tokens(role)
+    wanted.any? && wanted.subset?(self.class.role_tokens(profile&.headline))
   end
 
   # An AvailabilityWindow the candidate explicitly marked "available" that covers the

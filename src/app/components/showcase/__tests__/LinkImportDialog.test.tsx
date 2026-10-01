@@ -93,6 +93,58 @@ describe('LinkImportDialog', () => {
     expect(document.querySelector('#join-link')).toBeTruthy();
   });
 
+  async function pasteLink() {
+    vi.mocked(fetchLinkPreview).mockResolvedValue({
+      provider: 'youtube',
+      kind: 'video',
+      label: 'YouTube',
+      url: 'https://youtube.com/watch?v=1',
+      title: 'A video',
+      author: null,
+      thumbnail: null,
+    });
+    const input = document.querySelector('#join-link') as HTMLInputElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    act(() => {
+      setter.call(input, 'https://youtube.com/watch?v=1');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+    await flush();
+  }
+
+  it('keeps a pasted link when the dialog is closed and reopened', async () => {
+    act(() => root.render(<LinkImportDialog open onOpenChange={() => {}} onImported={() => {}} />));
+    await pasteLink();
+    expect(document.querySelectorAll('[data-testid="work-link"]')).toHaveLength(1);
+
+    act(() => root.render(<LinkImportDialog open={false} onOpenChange={() => {}} onImported={() => {}} />));
+    act(() => root.render(<LinkImportDialog open onOpenChange={() => {}} onImported={() => {}} />));
+    expect(document.querySelectorAll('[data-testid="work-link"]')).toHaveLength(1);
+  });
+
+  it('adds the pasted links straight to the library, then clears them', async () => {
+    vi.mocked(importDraftToLibrary).mockResolvedValue({
+      portfolioItems: [{ id: 'item-1' }] as never,
+      suggestedReview: null,
+    });
+    const onImported = vi.fn();
+    act(() => root.render(<LinkImportDialog open onOpenChange={() => {}} onImported={onImported} />));
+    await pasteLink();
+
+    const add = Array.from(document.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Add to my work'),
+    ) as HTMLButtonElement;
+    act(() => add.click());
+    await flush();
+
+    expect(importDraftToLibrary).toHaveBeenCalledWith(
+      expect.objectContaining({ items: [{ url: 'https://youtube.com/watch?v=1', title: 'A video', caption: null }] }),
+    );
+    expect(onImported).toHaveBeenCalledWith([{ id: 'item-1' }], false);
+    expect(document.querySelectorAll('[data-testid="work-link"]')).toHaveLength(0);
+  });
+
   it('drafting then "Add to my work" imports and reports what was added', async () => {
     vi.mocked(fetchLinkPreview).mockResolvedValue({
       provider: 'youtube',

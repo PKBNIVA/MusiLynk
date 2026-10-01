@@ -60,12 +60,7 @@ import {
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
 import { buildBio, buildHeadline, type ProfileFacts } from '../lib/profileTemplates';
-import {
-  forgetPendingVerification,
-  normalizeWebAddress,
-  pendingVerificationSince,
-  rememberPendingVerification,
-} from '../lib/profileForm';
+import { normalizeWebAddress } from '../lib/profileForm';
 
 // List fields arrive as arrays and are edited as text: comma-separated, credits one per line.
 type ListField =
@@ -290,7 +285,8 @@ export default function ProfileSetup() {
       .then(({ user }) => {
         setF(toForm(user));
         setBase(toForm(user));
-        setPendingSince(pendingVerificationSince(user.id));
+        // Whether a request is waiting comes from the server, so it is right on every device.
+        setPendingSince(user.verificationPending ? (user.verificationRequestedAt ?? new Date().toISOString()) : null);
         setLoaded(true);
       })
       .catch((e: unknown) => setLoadError(errorMessage(e, 'Your profile could not be loaded.')));
@@ -457,7 +453,6 @@ export default function ProfileSetup() {
       ...(note ? { note } : {}),
     });
     toast.success('Verification request submitted for review');
-    if (f.id) rememberPendingVerification(f.id);
     setPendingSince(new Date().toISOString());
   }
   async function verifyEmail() {
@@ -476,11 +471,6 @@ export default function ProfileSetup() {
       setEmailError(errorMessage(e, 'The verification email could not be sent. Try again.'));
     }
   }
-  // An approved profile no longer needs the pending note.
-  useEffect(() => {
-    if (f.verified && f.id) forgetPendingVerification(f.id);
-  }, [f.verified, f.id]);
-
   const goToSection = useCallback((id: SectionId) => {
     const el = document.getElementById(`profile-section-${id}`);
     el?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });

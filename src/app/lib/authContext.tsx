@@ -53,12 +53,18 @@ export interface User {
   verified?: boolean;
   skills?: string[];
   genres?: string[];
+  /** The roles on the musician's profile ("Tabla Player", …). */
+  roles?: string[];
   credits?: string[];
   openTo?: string[];
   /** The photo the person uploaded (or their Google picture); UserAvatar falls back to initials. */
   photoUrl?: string | null;
+  /** False for an account that signs in with an emailed code or Google and has no password yet. */
+  passwordSet?: boolean;
   phoneE164?: string | null;
   whatsappConsentedAt?: string | null;
+  verificationPending?: boolean;
+  verificationRequestedAt?: string | null;
 }
 /* Admin password sign-in answers with this instead of a session; the code emailed to the admin completes it. */
 export interface SecondFactorChallenge {

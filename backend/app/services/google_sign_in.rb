@@ -83,6 +83,7 @@ class GoogleSignIn
   end
 
   def apply_claims!(connection)
+    newly_connected = connection.new_record?
     connection.email = email
     connection.email_verified = true
     connection.display_name = name
@@ -90,7 +91,9 @@ class GoogleSignIn
     connection.raw = @claims.except("sub")
     connection.last_synced_at = Time.current
     connection.save!
-    copy_avatar_to_profile!(connection.owner)
+    # Only when Google is first connected (or the account is created from it): later sign-ins
+    # must not put back a photo the person has since removed.
+    copy_avatar_to_profile!(connection.owner) if newly_connected
   end
 
   # Gives the person a photo from their Google account, but never replaces one they chose

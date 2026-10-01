@@ -68,7 +68,7 @@ const pagesThatLoadOnMount: Array<[Role, string, string]> = [
   ['jobseeker', '/jobseeker/applications', '/api/applications'],
   ['jobseeker', '/jobseeker/bookings', '/api/bookings'],
   ['jobseeker', '/jobseeker/jobs/job-1', '/api/jobs/job-1'],
-  ['jobseeker', '/jobseeker/portfolio', '/api/portfolio'],
+  ['jobseeker', '/jobseeker/library', '/api/portfolio'],
   ['jobseeker', '/jobseeker/saved', '/api/saved-jobs'],
   ['employer', '/employer', '/api/dashboard'],
   ['employer', '/employer/applications', '/api/employer/applications'],

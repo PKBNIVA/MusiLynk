@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { errorMessage } from '../../lib/errors';
 import { Panel, Empty } from './shared';
 import { AdminPageHeader, HowToCallout } from './ui';
+import { formatDate } from '../../lib/format';
 
 // GET /api/admin/funnel (Admin::FunnelController#show, backed by FunnelQueries) — see
 // backend/docs/analytics.md. Self-hosted: every number here comes from product_events and the
@@ -130,7 +131,7 @@ export default function FunnelTab() {
               <CardContent className="space-y-2">
                 {data.weekly.map((w) => (
                   <div key={w.weekStart} className="flex justify-between text-sm border-b border-white/10 pb-2">
-                    <span className="text-slate-400">{new Date(w.weekStart).toLocaleDateString()}</span>
+                    <span className="text-slate-400">{formatDate(w.weekStart)}</span>
                     <span>
                       {w.bookings} bookings · {w.hires} hires
                     </span>

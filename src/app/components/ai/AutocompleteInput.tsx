@@ -18,6 +18,8 @@ export interface AutocompleteInputProps {
   id?: string;
   className?: string;
   debounceMs?: number;
+  /** Longest value a person can type or commit (the server refuses longer ones). */
+  maxLength?: number;
 }
 
 const DEFAULT_DEBOUNCE_MS = 200;
@@ -41,6 +43,7 @@ export function AutocompleteInput({
   id,
   className,
   debounceMs = DEFAULT_DEBOUNCE_MS,
+  maxLength,
 }: AutocompleteInputProps) {
   const generatedId = useId();
   const inputId = id || generatedId;
@@ -102,7 +105,7 @@ export function AutocompleteInput({
   }
 
   function selectValue(next: string, refocus = true) {
-    const trimmed = next.trim();
+    const trimmed = (maxLength ? next.trim().slice(0, maxLength) : next.trim()).trim();
     if (!trimmed) return;
     if (multiple) {
       if (!values.includes(trimmed)) onChange([...values, trimmed]);
@@ -207,6 +210,7 @@ export function AutocompleteInput({
           aria-autocomplete="list"
           aria-required={required || undefined}
           placeholder={placeholder}
+          maxLength={maxLength}
           value={query}
           onChange={(event) => {
             const text = event.target.value;

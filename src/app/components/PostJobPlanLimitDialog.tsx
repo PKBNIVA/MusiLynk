@@ -42,7 +42,7 @@ export function PostJobPlanLimitDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onKeepAsDraft}>Keep as draft</AlertDialogCancel>
-          <AlertDialogAction onClick={() => onNavigate(closeListingsPath)}>Close another listing</AlertDialogAction>
+          <AlertDialogAction onClick={() => onNavigate(closeListingsPath)}>Close another opportunity</AlertDialogAction>
           <AlertDialogAction onClick={() => onNavigate(billingPath)}>See plans</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

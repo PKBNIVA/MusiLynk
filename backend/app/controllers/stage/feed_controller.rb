@@ -28,12 +28,12 @@ module Stage
       scored = candidates.map { |post| [score(post, followed_keys, own_keys, city, genres), post] }
       scored.sort_by! { |score, post| [-score, -post.created_at.to_f, post.id] }
 
-      after = decode_cursor(params[:cursor])
-      start_index = after ? (scored.index { |score, post| [score, post.created_at.to_f, post.id] == after }&.+(1) || 0) : 0
+      start_index = start_index_for(scored, decode_cursor(params[:cursor]))
       page = scored[start_index, PAGE_SIZE] || []
 
+      Post.preload_media_urls(page.map(&:last))
       applauded = applauded_post_ids(page.map(&:last))
-      next_cursor = page.length == PAGE_SIZE && scored[start_index + PAGE_SIZE] ? encode_cursor(page.last) : nil
+      next_cursor = page.length == PAGE_SIZE && scored[start_index + PAGE_SIZE] ? encode_cursor(page.last, start_index + page.length) : nil
 
       render json: { posts: page.map { |_score, post| post.api_json(applauded_post_ids: applauded) }, nextCursor: next_cursor }
     end
@@ -56,17 +56,28 @@ module Stage
       total
     end
 
-    def encode_cursor(entry)
-      score, post = entry
-      Base64.urlsafe_encode64({ s: score, t: post.created_at.to_f, i: post.id }.to_json)
+    # The ranking is time-decayed, so a score recorded on one request never equals the score of
+    # the same post on the next. The cursor therefore remembers the last post's id (continue right
+    # after it wherever it now ranks) and the offset it was served at (used when that post has
+    # dropped out of the candidate pool), never the score itself.
+    def encode_cursor(entry, offset)
+      _score, post = entry
+      Base64.urlsafe_encode64({ i: post.id, o: offset }.to_json)
     end
 
     def decode_cursor(raw)
       return nil if raw.blank?
       data = JSON.parse(Base64.urlsafe_decode64(raw))
-      [data["s"].to_f, data["t"].to_f, data["i"]]
+      return nil unless data.is_a?(Hash)
+      { id: data["i"].to_s, offset: data["o"].to_i }
     rescue ArgumentError, JSON::ParserError, TypeError
       nil
+    end
+
+    def start_index_for(scored, cursor)
+      return 0 unless cursor
+      found = scored.index { |_score, post| post.id == cursor[:id] }
+      found ? found + 1 : [[cursor[:offset], 0].max, scored.length].min
     end
   end
 end

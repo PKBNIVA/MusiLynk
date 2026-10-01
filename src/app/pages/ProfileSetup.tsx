@@ -31,7 +31,7 @@ import { MoreDetails } from '../components/help/MoreDetails';
 import { Checkbox } from '../components/ui/checkbox';
 import { DebugLinkDialog, VerificationRequestDialog } from '../components/VerificationDialogs';
 import { errorMessage } from '../lib/errors';
-import { formatWhen } from '../lib/format';
+import { formatWhen, formatNumber } from '../lib/format';
 import type { AccountUser } from '../lib/apiTypes';
 import { Field, FormError } from '../components/form/Field';
 import {
@@ -60,12 +60,7 @@ import {
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
 import { buildBio, buildHeadline, type ProfileFacts } from '../lib/profileTemplates';
-import {
-  forgetPendingVerification,
-  normalizeWebAddress,
-  pendingVerificationSince,
-  rememberPendingVerification,
-} from '../lib/profileForm';
+import { normalizeWebAddress } from '../lib/profileForm';
 
 // List fields arrive as arrays and are edited as text: comma-separated, credits one per line.
 type ListField =
@@ -195,7 +190,7 @@ function validateProfile(f: ProfileForm) {
   const errors: Partial<Record<ProfileField, string>> = {};
   const text = (k: TextField) => String(f[k] ?? '').trim();
   (Object.keys(LIMITS) as TextField[]).forEach((k) => {
-    if (text(k).length > LIMITS[k]) errors[k] = `Keep this under ${LIMITS[k].toLocaleString()} characters.`;
+    if (text(k).length > LIMITS[k]) errors[k] = `Keep this under ${formatNumber(LIMITS[k])} characters.`;
   });
   (['website', 'portfolioUrl'] as const).forEach((k) => {
     if (!errors[k] && text(k) && !isHttpUrl(text(k))) errors[k] = URL_MESSAGE;
@@ -290,7 +285,8 @@ export default function ProfileSetup() {
       .then(({ user }) => {
         setF(toForm(user));
         setBase(toForm(user));
-        setPendingSince(pendingVerificationSince(user.id));
+        // Whether a request is waiting comes from the server, so it is right on every device.
+        setPendingSince(user.verificationPending ? (user.verificationRequestedAt ?? new Date().toISOString()) : null);
         setLoaded(true);
       })
       .catch((e: unknown) => setLoadError(errorMessage(e, 'Your profile could not be loaded.')));
@@ -457,7 +453,6 @@ export default function ProfileSetup() {
       ...(note ? { note } : {}),
     });
     toast.success('Verification request submitted for review');
-    if (f.id) rememberPendingVerification(f.id);
     setPendingSince(new Date().toISOString());
   }
   async function verifyEmail() {
@@ -476,11 +471,6 @@ export default function ProfileSetup() {
       setEmailError(errorMessage(e, 'The verification email could not be sent. Try again.'));
     }
   }
-  // An approved profile no longer needs the pending note.
-  useEffect(() => {
-    if (f.verified && f.id) forgetPendingVerification(f.id);
-  }, [f.verified, f.id]);
-
   const goToSection = useCallback((id: SectionId) => {
     const el = document.getElementById(`profile-section-${id}`);
     el?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
@@ -741,7 +731,7 @@ export default function ProfileSetup() {
               <div className="grid md:grid-cols-2 gap-5">
                 <Field
                   id={fieldId('headline')}
-                  label="Professional headline"
+                  label="Headline"
                   labelExtra={
                     <>
                       {templateButton('headline')}
@@ -853,7 +843,7 @@ export default function ProfileSetup() {
                   <AutocompleteInput
                     id={fieldId('roles')}
                     field="roles"
-                    label="Professional roles"
+                    label="Roles"
                     values={listOf(f.roles)}
                     onChange={(vs) => set('roles', vs.join(', '))}
                     placeholder="Session Bassist, Musical Director, FOH Engineer"
@@ -1012,7 +1002,7 @@ export default function ProfileSetup() {
                 <FormError message={emailError} />
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-4">
                   <div>
-                    <p className="font-medium">Professional verification</p>
+                    <p className="font-medium">Verification</p>
                     <p className="text-sm text-slate-400">
                       {f.verified
                         ? 'Your work has been checked. The badge shows on your profile and in search.'

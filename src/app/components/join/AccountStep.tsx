@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 import { toast } from 'sonner';
+import { SIGN_IN_CODE_TOAST } from '../../lib/authToasts';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Field, FormError } from '../form/Field';
@@ -180,7 +181,7 @@ export function AccountStep({
       setCode('');
       setCodeStep(true);
       startCooldown();
-      toast.success('Check your email for a 6-digit code');
+      toast.success('Check your email for a 6-digit code', { id: SIGN_IN_CODE_TOAST });
     } catch (caught: unknown) {
       if (errorCode(caught) === 'OTP_UNAVAILABLE') {
         setCodesAvailable(false);

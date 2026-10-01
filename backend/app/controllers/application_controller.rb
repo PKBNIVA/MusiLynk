@@ -183,7 +183,7 @@ class ApplicationController < ActionController::API
 
   def public_user(user)
     user.attributes.slice(*ACCOUNT_KEYS)
-      .merge("profileComplete" => user.profileComplete, "emailVerified" => user.emailVerified)
+      .merge("profileComplete" => user.profileComplete, "emailVerified" => user.emailVerified, "passwordSet" => user.password_set?)
       .merge(user.profile&.api_json || {})
   end
 

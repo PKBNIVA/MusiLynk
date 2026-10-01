@@ -151,6 +151,100 @@ test.describe('admin console', () => {
     expect(errors).toEqual([]);
   });
 
+  test('tab badges show the server totals, not the rows on the loaded page', async ({ page }) => {
+    await mockApi(
+      page,
+      {
+        ...adminFixtures(),
+        '/api/admin/stats': {
+          body: { stats: { users: 2, pendingJobs: 621, verificationQueue: 303, pendingReviews: 17, openReports: 9 } },
+        },
+      },
+      admin,
+    );
+    await page.goto('/admin');
+    await expect(page.getByRole('tab', { name: 'Opportunity queue (621)' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Verification (303)' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Reviews (17)' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Reports (9)' })).toBeVisible();
+  });
+
+  test('the active tab lives in the URL and survives a reload', async ({ page }) => {
+    await mockApi(page, adminFixtures(), admin);
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: /Reports/ }).click();
+    await expect(page).toHaveURL(/\/admin\?tab=reports$/);
+    await page.reload();
+    await expect(page.getByRole('tab', { name: /Reports/ })).toHaveAttribute('aria-selected', 'true');
+    await page.getByRole('tab', { name: /Opportunity queue/ }).click();
+    await expect(page).toHaveURL(/\/admin$/);
+    await page.goto('/admin?tab=users');
+    await expect(page.getByRole('tab', { name: 'Users' })).toHaveAttribute('aria-selected', 'true');
+    await page.goto('/admin?tab=nonsense');
+    await expect(page.getByRole('tab', { name: /Opportunity queue/ })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('the opportunity queue asks the server for one status and pages what it filters', async ({ page }) => {
+    const urls: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/api/admin/jobs?')) urls.push(new URL(request.url()).search);
+    });
+    await mockApi(
+      page,
+      {
+        ...adminFixtures(),
+        '/api/admin/jobs': {
+          body: {
+            jobs: [
+              { id: 'job-1', title: 'Session Bassist', company: 'QA Studio', status: 'pending', description: 'x' },
+            ],
+            page: 1,
+            perPage: 1,
+            total: 3,
+          },
+        },
+      },
+      admin,
+    );
+    await page.goto('/admin');
+    await expect(page.getByText('Showing 1–1 of 3')).toBeVisible();
+    expect(urls[0]).toContain('status=pending');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect.poll(() => urls.some((u) => u.includes('page=2') && u.includes('status=pending'))).toBe(true);
+    await page.getByLabel('Status').click();
+    await page.getByRole('option', { name: 'Published' }).click();
+    await expect.poll(() => urls.some((u) => u.includes('page=1') && u.includes('status=published'))).toBe(true);
+  });
+
+  test('one long unbroken report text wraps instead of widening the console', async ({ page }, testInfo) => {
+    const fixtures = adminFixtures();
+    fixtures['/api/admin/reports'] = {
+      body: {
+        reports: [
+          {
+            id: 'rep-long',
+            status: 'open',
+            entity_type: 'Job',
+            entity_id: 'job-1',
+            reason: 'Scam',
+            details: 'A'.repeat(40_000),
+            created_at: '2026-09-01T00:00:00Z',
+          },
+        ],
+        page: 1,
+        perPage: 100,
+        total: 1,
+      },
+    } as never;
+    await mockApi(page, fixtures, admin);
+    await page.goto('/admin?tab=reports');
+    const review = page.getByRole('button', { name: 'Review report: Scam' });
+    await expect(review).toBeVisible();
+    const box = await review.boundingBox();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(1440);
+    await assertNoHorizontalOverflow(page, testInfo);
+  });
+
   test('a report links to the listing on the public site, absolutely, since the admin build has no public routes', async ({
     page,
   }) => {
@@ -372,7 +466,7 @@ test.describe('admin console', () => {
     await expect(buttons).toHaveCount(2);
     await expect(buttons.nth(1)).toBeDisabled();
     await expect(page.getByRole('region', { name: 'Billing events' })).toContainText('payment.captured');
-    await expect(page.getByRole('region', { name: 'Billing events' })).toContainText('INR 2,500');
+    await expect(page.getByRole('region', { name: 'Billing events' })).toContainText('₹2,500');
     await buttons.first().click();
     await expect(page.getByText('Live billing is not configured.')).toBeVisible();
     expect(

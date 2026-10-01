@@ -79,7 +79,9 @@ export function RouteErrorPage() {
       : 'This screen missed a beat.';
   const body = chunkError
     ? 'A new version of Verse was released while this page was open. Reload to continue with the latest version.'
-    : 'Your data is safe. Reload the page to try again, or head back home.';
+    : notFound
+      ? 'Check the address, or head back home.'
+      : 'Your data is safe. Reload the page to try again, or head back home.';
 
   const reload = () => {
     // A deliberate reload may retry the automatic chunk recovery once more.

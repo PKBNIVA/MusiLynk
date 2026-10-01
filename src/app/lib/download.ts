@@ -1,4 +1,4 @@
-import { API_BASE, ApiError, fetchWithTimeout, readToken, type ApiErrorBody } from './api';
+import { API_BASE, ApiError, requestFailedMessage, fetchWithTimeout, readToken, type ApiErrorBody } from './api';
 
 /** GET a file (a CSV export) with the signed-in token; a failure is an ApiError with the API's message. */
 export async function apiDownload(path: string): Promise<Blob> {
@@ -13,5 +13,5 @@ export async function apiDownload(path: string): Promise<Blob> {
   });
   if (response.ok) return response.blob();
   const body = (await response.json().catch(() => ({}))) as ApiErrorBody;
-  throw new ApiError(body.error || `Download failed (${response.status})`, response.status, body.code);
+  throw new ApiError(body.error || requestFailedMessage(response.status), response.status, body.code);
 }

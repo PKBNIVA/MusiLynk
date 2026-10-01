@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { Bookmark, BookmarkCheck, Flag, MessageSquare, Send, FileText, ListChecks } from 'lucide-react';
 import { errorMessage } from '../lib/errors';
 import type { ConversationCreated, Job } from '../lib/apiTypes';
-import { formatDate } from '../lib/format';
+import { formatDate, formatNumber } from '../lib/format';
 import { MoreDetails } from '../components/help/MoreDetails';
 import { Field, FormError } from '../components/form/Field';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
@@ -23,6 +23,8 @@ import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import type { Portfolio, Resume } from '../lib/showcase';
 import { ShareToStageButton } from '../components/stage/ShareToStageButton';
 import { FEATURE_STAGE } from '../lib/features';
+import { OwnerJobPanel } from '../components/OwnerJobPanel';
+import { optionLabel } from '../components/ui/option-labels';
 
 const COVER_MAX = 5_000;
 const answerId = (i: number) => `screening-${i}`;
@@ -79,8 +81,7 @@ export default function JobDetails() {
       questions.forEach((q, i) => {
         if (!answers[i]?.trim()) missing[answerId(i)] = 'Answer this question to apply.';
       });
-      if (cover.length > COVER_MAX)
-        missing.coverLetter = `Keep the note under ${COVER_MAX.toLocaleString()} characters.`;
+      if (cover.length > COVER_MAX) missing.coverLetter = `Keep the note under ${formatNumber(COVER_MAX)} characters.`;
       applyForm.setFormError('');
       if (applyForm.setErrors(missing)) {
         applyForm.focusFirst();
@@ -125,7 +126,7 @@ export default function JobDetails() {
                 : 'This opportunity could not be loaded'}
             </h1>
             <p className="text-slate-400 mt-3">
-              {/not found/i.test(loadError) ? 'It may have been filled, closed or removed by the employer.' : loadError}
+              {/not found/i.test(loadError) ? 'It may have been filled, closed or removed by the hirer.' : loadError}
             </p>
             <div className="flex justify-center gap-2 mt-6">
               {!/not found/i.test(loadError) && (
@@ -143,7 +144,10 @@ export default function JobDetails() {
         )}
       </div>
     );
-  const canApply = user?.role === 'jobseeker' && job.status !== 'closed' && !job.applied;
+  // The poster sees their own listing's status and actions, not the apply panel (J-12).
+  const isOwner = Boolean(user && job.employer_id === user.id);
+  const asSeeker = user?.role === 'jobseeker' && !isOwner;
+  const canApply = asSeeker && job.status !== 'closed' && !job.applied;
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navigation />
@@ -180,7 +184,7 @@ export default function JobDetails() {
                 <div className="grid sm:grid-cols-2 gap-5 mt-8 pt-6 border-t border-white/10 text-sm">
                   <div>
                     <div className="text-slate-500 mb-1">Engagement</div>
-                    <div>{job.type}</div>
+                    <div>{optionLabel(job.type)}</div>
                   </div>
                   <div>
                     <div className="text-slate-500 mb-1">Experience level</div>
@@ -221,12 +225,19 @@ export default function JobDetails() {
                 )}
               </CardContent>
             </Card>
-            {user?.role === 'jobseeker' && <SimilarJobs job={job} basePath="/jobseeker/jobs" />}
+            {asSeeker && <SimilarJobs job={job} basePath="/jobseeker/jobs" />}
           </div>
           <aside className="space-y-4">
             <Card id="apply-panel" className="bg-white/[.06] border-white/10 lg:sticky lg:top-24">
               <CardContent className="p-5">
-                {user?.role === 'jobseeker' && (
+                {isOwner && (
+                  <OwnerJobPanel
+                    job={job}
+                    base={user?.role === 'jobseeker' ? '/jobseeker' : '/employer'}
+                    onChanged={load}
+                  />
+                )}
+                {asSeeker && (
                   <div className="flex gap-2 mb-5">
                     <Button variant="outline" className="flex-1" onClick={save}>
                       {job.saved ? (
@@ -236,17 +247,22 @@ export default function JobDetails() {
                       )}
                       {job.saved ? 'Saved' : 'Save'}
                     </Button>
-                    <Button variant="ghost" size="icon" aria-label="Report listing" onClick={() => setReporting(true)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Report opportunity"
+                      onClick={() => setReporting(true)}
+                    >
                       <Flag size={17} />
                     </Button>
                   </div>
                 )}
-                {job.status === 'closed' && (
+                {job.status === 'closed' && !isOwner && (
                   <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-slate-300">
-                    This listing has closed.
+                    This opportunity has closed.
                   </div>
                 )}
-                {user?.role === 'jobseeker' && job.status !== 'closed' && (
+                {asSeeker && job.status !== 'closed' && (
                   <>
                     {job.applied ? (
                       <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/20 p-4 text-emerald-200">
@@ -265,7 +281,7 @@ export default function JobDetails() {
                           <fieldset className="space-y-3 mb-4">
                             <legend className="text-sm font-medium mb-1">Screening questions</legend>
                             <p className="text-xs text-slate-400">
-                              The employer asks everyone these. Short, honest answers are best.
+                              The hirer asks everyone these. Short, honest answers are best.
                             </p>
                             {job.screeningQuestions.map((q: string, i: number) => (
                               <Field
@@ -290,12 +306,12 @@ export default function JobDetails() {
                           </fieldset>
                         )}
                         <MoreDetails
-                          label="Add a note to the employer (optional)"
+                          label="Add a note to the hirer (optional)"
                           forceOpen={!!applyForm.errors.coverLetter}
                         >
                           <Field
                             id="cover-note"
-                            label="Short note to the employer"
+                            label="Short note to the hirer"
                             optional
                             help="Two or three lines on why you fit, plus the one sample they should hear first. Your profile is sent automatically."
                             error={applyForm.errors.coverLetter}
@@ -338,7 +354,7 @@ export default function JobDetails() {
                         {job.portfolioRequired && (
                           <p className="text-xs text-amber-200/90 mt-2">
                             This opportunity requires at least one portfolio item.{' '}
-                            <Link to="/jobseeker/portfolio" className="underline">
+                            <Link to="/jobseeker/library" className="underline">
                               Add work samples
                             </Link>
                           </p>
@@ -352,14 +368,14 @@ export default function JobDetails() {
                       data-testid="message-employer"
                     >
                       <MessageSquare size={16} className="mr-2" />
-                      Message employer
+                      Message hirer
                     </Button>
                   </>
                 )}
                 <div className="text-xs text-slate-500 mt-5 pt-4 border-t border-white/10">
                   <b className="text-slate-400">Trust note:</b>{' '}
-                  {user?.role === 'jobseeker'
-                    ? 'Never pay an application/audition fee through private channels. Use Report if listing terms change materially or feel unsafe.'
+                  {asSeeker
+                    ? 'Never pay an application/audition fee through private channels. Use Report if the terms change materially or feel unsafe.'
                     : 'Only publish terms your organization is prepared to honor, and keep applicant communication on Verse.'}
                 </div>
               </CardContent>
@@ -380,7 +396,7 @@ export default function JobDetails() {
       <ReportDialog
         open={reporting}
         onOpenChange={setReporting}
-        title="Report this listing"
+        title="Report this opportunity"
         description="Tell our moderators what is wrong with this opportunity."
         onSubmit={report}
       />

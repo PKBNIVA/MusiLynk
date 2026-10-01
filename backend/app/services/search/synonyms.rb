@@ -18,6 +18,10 @@ module Search
       [phrase, *group, *broader].uniq
     end
 
+    # The one term a two-way group is known by (its first entry), or nil when the phrase is in
+    # no group. Two phrases with the same canonical term are synonyms.
+    def canonical(phrase) = data[:groups][normalize(phrase)]&.first
+
     # The city group for a place name or alias, or nil.
     def city(phrase) = data[:cities][normalize(phrase)]
 

@@ -21,6 +21,27 @@ class EmailPreferencesTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
   end
 
+  test "paymentsNotify defaults to off, is saved by the preferences endpoint and is readable by the owner" do
+    user = create_user
+    get "/api/notifications/preferences", headers: auth(user)
+    assert_equal false, response.parsed_body["paymentsNotify"]
+
+    put "/api/me/email-preferences", params: { emailPreferences: { paymentsNotify: true } }, headers: auth(user), as: :json
+    assert_response :success
+    assert_equal true, response.parsed_body["paymentsNotify"]
+    assert user.profile.reload.payments_notify?
+    assert_equal 1, Profile.where("email_preferences ->> 'paymentsNotify' = 'true'").count
+    assert user.profile.email_category_enabled?("digest"), "it is not a category and never narrows other emails"
+
+    get "/api/notifications/preferences", headers: auth(user)
+    assert_equal true, response.parsed_body["paymentsNotify"]
+
+    put "/api/me/email-preferences", params: { emailPreferences: { paymentsNotify: "yes" } }, headers: auth(user), as: :json
+    assert_response :bad_request
+    put "/api/me/email-preferences", params: { emailPreferences: { paymentsNotify: false } }, headers: auth(user), as: :json
+    assert_equal false, response.parsed_body["paymentsNotify"]
+  end
+
   test "PUT /api/me/email-preferences requires sign-in" do
     put "/api/me/email-preferences", params: { emailPreferences: { digest: false } }, as: :json
     assert_response :unauthorized

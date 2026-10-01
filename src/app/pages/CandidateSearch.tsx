@@ -31,7 +31,7 @@ type CandidatePage = PageMeta & { candidates?: Professional[] };
 const pickCandidates = (page: CandidatePage) => page.candidates;
 // URL keys are the API's filter names, so the URL is the search.
 const FILTERS = ['q', 'location', 'role', 'instrument', 'verified', 'remoteRecording', ...FACET_KEYS] as const;
-const NOUN = ['professional', 'professionals'] as const;
+const NOUN = ['musician', 'musicians'] as const;
 
 function FilterChip({ pressed, onClick, children }: { pressed: boolean; onClick: () => void; children: string }) {
   return (
@@ -335,7 +335,7 @@ export default function CandidateSearch() {
                     <li key={id}>
                       <UserAvatar
                         id={id}
-                        name={c?.name || 'Selected professional'}
+                        name={c?.name || 'Selected musician'}
                         size="sm"
                         photoUrl={c?.photoUrl}
                         demo={c?.demo}

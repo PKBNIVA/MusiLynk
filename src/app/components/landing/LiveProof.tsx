@@ -12,7 +12,7 @@ const PROMISES: readonly (readonly [LucideIcon, string])[] = [
 
 /**
  * The promise strip, plus real numbers from GET /api/public/stats once they mean something (see
- * PROOF_THRESHOLDS; demo accounts are never counted). Nothing here is invented: with no counts, or
+ * PROOF_THRESHOLDS; demo accounts are left out). Nothing here is invented: with no counts, or
  * if the API can't be reached, only the promises show.
  */
 export function LiveProof() {

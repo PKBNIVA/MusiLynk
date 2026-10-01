@@ -165,7 +165,7 @@ export default function PublicOpportunity() {
           </div>
         )}
         <p className="text-xs text-slate-500 mt-5">
-          Never pay private application or audition fees. Verse listings can be reported after sign-in.
+          Never pay private application or audition fees. Verse opportunities can be reported after sign-in.
         </p>
       </main>
     </div>

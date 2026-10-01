@@ -45,8 +45,8 @@ class ActsController < ApplicationController
     if params[:userId].present?
       # Only active professionals can be linked to a lineup; anything else is indistinguishable from unknown.
       linked_user = User.jobseeker.active.find_by(id: params[:userId].to_s)
-      return render_error("Professional not found.", :not_found) unless linked_user
-      return render_error("That professional is already in this lineup.", :conflict) if act.act_members.exists?(user_id: linked_user.id)
+      return render_error("Musician not found.", :not_found) unless linked_user
+      return render_error("That musician is already in this lineup.", :conflict) if act.act_members.exists?(user_id: linked_user.id)
     end
     member = act.act_members.create!(display_name: params[:displayName], role_name: params[:roleName], instrument: params[:instrument], member_status: status, is_leader: false, user: linked_user)
     render json: { id: member.id }, status: :created

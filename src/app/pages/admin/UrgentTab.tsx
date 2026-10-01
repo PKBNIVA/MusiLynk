@@ -9,6 +9,7 @@ import { errorMessage } from '../../lib/errors';
 import { Panel, Empty } from './shared';
 import { AdminPageHeader, AdminSelect, HowToCallout } from './ui';
 import type { AdminUrgentRequest, UrgentCandidate, UrgentFunnel } from '../../lib/apiTypes';
+import { formatDate } from '../../lib/format';
 
 // GET /api/admin/urgent-requests (Admin::UrgentRequestsController) — the founder's hand-matching
 // screen for "need someone by tomorrow" (Mumbai first). Self-contained: it loads its own data
@@ -139,6 +140,13 @@ export default function UrgentTab() {
     setBusy(`notes:${requestId}`);
     try {
       await apiPatch(`/admin/urgent-requests/${requestId}`, { founderNotes });
+      // Keep the saved text on the row itself: the textarea is unmounted when the row is collapsed,
+      // and must show the saved note (not the stale server copy) when it is opened again.
+      setRequests((list) => list.map((r) => (r.id === requestId ? { ...r, founder_notes: founderNotes } : r)));
+      setNotes((n) => {
+        const { [requestId]: _saved, ...rest } = n;
+        return rest;
+      });
       toast.success('Note saved');
     } catch (e: unknown) {
       toast.error(errorMessage(e, 'Could not save this note.'));
@@ -198,7 +206,7 @@ export default function UrgentTab() {
                           <span className="text-xs text-amber-400">{expiryCountdown(r.expires_at)}</span>
                         )}
                       </div>
-                      <h3 className="font-semibold mt-1.5">{r.title}</h3>
+                      <h3 className="font-semibold mt-1.5 break-words [overflow-wrap:anywhere]">{r.title}</h3>
                       <p className="text-sm text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
                         <MapPin size={13} /> {r.city} · {r.role_name} · by {r.requesterName} · {r.responseCount}{' '}
                         response
@@ -254,7 +262,7 @@ export default function UrgentTab() {
                                   )}
                                   <div className="text-xs text-slate-500">
                                     {c.city || 'No city'} · score {c.score} · {c.reasons.join(', ') || 'no signal'}
-                                    {c.lastActiveAt ? ` · active ${new Date(c.lastActiveAt).toLocaleDateString()}` : ''}
+                                    {c.lastActiveAt ? ` · active ${formatDate(c.lastActiveAt)}` : ''}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
@@ -292,7 +300,7 @@ export default function UrgentTab() {
                           <textarea
                             id={`urgent-notes-${r.id}`}
                             className="flex-1 min-h-16 rounded-lg bg-slate-900 border border-white/10 p-2 text-sm"
-                            defaultValue={r.founder_notes || ''}
+                            value={notes[r.id] ?? r.founder_notes ?? ''}
                             onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value }))}
                           />
                           <Button

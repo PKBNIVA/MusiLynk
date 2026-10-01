@@ -62,7 +62,7 @@ describe('PostJobPlanLimitDialog', () => {
     );
     expect(document.body.textContent).toContain('We saved this opportunity as a draft.');
     expect(buttonNamed('See plans')).toBeTruthy();
-    expect(buttonNamed('Close another listing')).toBeTruthy();
+    expect(buttonNamed('Close another opportunity')).toBeTruthy();
     expect(buttonNamed('Keep as draft')).toBeTruthy();
     expect(onNavigate).not.toHaveBeenCalled();
     expect(onKeepAsDraft).not.toHaveBeenCalled();
@@ -85,7 +85,7 @@ describe('PostJobPlanLimitDialog', () => {
     expect(onNavigate).toHaveBeenCalledWith('/employer/billing');
   });
 
-  it('"Close another listing" navigates to where active listings are managed', () => {
+  it('"Close another opportunity" navigates to where active opportunities are managed', () => {
     const onNavigate = vi.fn();
     act(() =>
       root.render(
@@ -98,11 +98,11 @@ describe('PostJobPlanLimitDialog', () => {
         />,
       ),
     );
-    act(() => buttonNamed('Close another listing')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    act(() => buttonNamed('Close another opportunity')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     expect(onNavigate).toHaveBeenCalledWith('/employer');
   });
 
-  it('"Keep as draft" closes the dialog without visiting billing or the listings page', () => {
+  it('"Keep as draft" closes the dialog without visiting billing or the opportunities page', () => {
     const onNavigate = vi.fn();
     const onKeepAsDraft = vi.fn();
     act(() =>

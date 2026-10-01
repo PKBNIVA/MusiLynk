@@ -54,6 +54,18 @@ class LinkPreview
 
   def self.label_for(provider) = LABELS.fetch(provider, "Link")
 
+  SPOTIFY_NOUN = %r{/(artist|track|album|playlist|show|episode)/}
+
+  # What a link with no readable title is called: "Spotify artist" for an artist page rather than
+  # "Spotify track" (or "Spotify work sample") for everything on Spotify. `plain` is used for a
+  # provider whose links are not told apart further (and by Starter as "… to my work").
+  def self.default_title(url, provider, plain: "work sample")
+    noun = URI.parse(url).path.to_s[SPOTIFY_NOUN, 1] if provider == "spotify"
+    "#{label_for(provider)} #{noun || plain}"
+  rescue URI::InvalidURIError
+    "#{label_for(provider)} #{plain}"
+  end
+
   # { provider:, kind:, url:, title:, author:, thumbnail: } for a URL; raises InvalidUrl.
   def self.call(raw)
     url = normalize(raw)

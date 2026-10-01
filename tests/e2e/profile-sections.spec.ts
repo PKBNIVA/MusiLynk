@@ -42,11 +42,20 @@ const json = (route: Route, body: unknown, status = 200) =>
 async function mock(page: Page, options: { putDelayMs?: number } = {}) {
   const puts: Record<string, unknown>[] = [];
   const posts: { path: string; body: unknown }[] = [];
+  // GET /me says whether a verification request is waiting, so the state survives a reload (and a new device).
+  let verificationPending = false;
   await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace(/^\/api/, '');
-    if (path === '/me') return json(route, { user: musician });
+    if (path === '/me')
+      return json(route, {
+        user: {
+          ...musician,
+          verificationPending,
+          verificationRequestedAt: verificationPending ? '2026-10-01T09:00:00Z' : null,
+        },
+      });
     if (path === '/notifications/unread') return json(route, { unread: 0 });
     if (path === '/ai/status') return json(route, { enabled: false, tasks: [] });
     if (path === '/profile' && request.method() === 'PUT') {
@@ -56,6 +65,7 @@ async function mock(page: Page, options: { putDelayMs?: number } = {}) {
       return json(route, { user: { ...musician, ...body } });
     }
     if (request.method() === 'POST') posts.push({ path, body: request.postDataJSON() });
+    if (request.method() === 'POST' && path === '/verification-requests') verificationPending = true;
     return json(route, {});
   });
   return { puts, posts };
@@ -64,10 +74,10 @@ async function mock(page: Page, options: { putDelayMs?: number } = {}) {
 test('a section saves itself after a pause, on its own, and says so', async ({ page }) => {
   const { puts } = await mock(page);
   await page.goto('/jobseeker/profile');
-  await expect(page.getByLabel('Professional headline')).toHaveValue('Session guitarist');
+  await expect(page.getByLabel('Headline')).toHaveValue('Session guitarist');
   await expect(page.getByTestId('section-status-about')).toHaveText('');
 
-  await page.getByLabel('Professional headline').fill('Session guitarist, Hindi and English rock');
+  await page.getByLabel('Headline').fill('Session guitarist, Hindi and English rock');
   await expect(page.getByTestId('section-status-about')).toHaveText('Unsaved changes');
   await expect(page.getByTestId('section-status-about')).toHaveText('Saved', { timeout: 5_000 });
   expect(puts).toHaveLength(1);
@@ -134,7 +144,7 @@ test('leaving with unsaved changes asks first', async ({ page }) => {
 test('leaving while a save is on its way waits for it instead of asking', async ({ page }) => {
   await mock(page, { putDelayMs: 1_500 });
   await page.goto('/jobseeker/profile');
-  await page.getByLabel('Professional headline').fill('Session guitarist and arranger');
+  await page.getByLabel('Headline').fill('Session guitarist and arranger');
   await page.getByLabel('Website').focus(); // leaving About starts its (slow) save
   await page.getByRole('link', { name: 'Verse dashboard' }).click();
   await expect(page.getByTestId('unsaved-dialog')).toHaveCount(0);
@@ -145,7 +155,7 @@ test('asking for verification leaves a Pending review state, also after a reload
   const { posts } = await mock(page);
   await page.goto('/jobseeker/profile');
   await page.getByRole('button', { name: 'Request verification' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Request professional verification' });
+  const dialog = page.getByRole('dialog', { name: 'Request verification' });
   await dialog.getByLabel('Proof URL').fill('https://label.example/credits/asha');
   await dialog.getByRole('button', { name: 'Submit for review' }).click();
   await expect(page.getByTestId('verification-pending')).toHaveText(/Pending review/);

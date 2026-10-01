@@ -19,6 +19,8 @@ import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { errorMessage } from '../lib/errors';
 import type { Act, ActMember, Taxonomy } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
+import { formatMoney, periodLabel } from '../lib/format';
+import { optionLabel } from '../components/ui/option-labels';
 
 const FALLBACK_ACT_TYPES = ['solo', 'duo', 'trio', 'band', 'ensemble', 'dj'];
 // Inputs hand back strings, so the lineup size holds whatever was typed until it is submitted.
@@ -319,8 +321,8 @@ export default function ActsManager() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-xl font-semibold break-words">{a.name}</h3>
-                          <Badge variant="secondary">{a.act_type}</Badge>
-                          <Badge className="capitalize">{a.status}</Badge>
+                          <Badge variant="secondary">{optionLabel(a.act_type)}</Badge>
+                          <Badge>{optionLabel(a.status)}</Badge>
                         </div>
                         <p className="text-slate-400 text-sm mt-2">
                           {a.city || 'Location not set'} · lineup {a.lineup_size}
@@ -333,8 +335,9 @@ export default function ActsManager() {
                     </div>
                     {Boolean(a.min_fee || a.max_fee) && (
                       <div className="mt-4 text-sm text-emerald-300">
-                        Indicative ₹{Number(a.min_fee || 0).toLocaleString('en-IN')} – ₹
-                        {Number(a.max_fee || a.min_fee || 0).toLocaleString('en-IN')} / {a.fee_basis}
+                        Indicative {formatMoney(a.min_fee || 0, a.currency || undefined)} –{' '}
+                        {formatMoney(a.max_fee || a.min_fee || 0, a.currency || undefined)} /{' '}
+                        {periodLabel(a.fee_basis) || 'event'}
                       </div>
                     )}
                     <div className="mt-5 border-t border-white/10 pt-4">

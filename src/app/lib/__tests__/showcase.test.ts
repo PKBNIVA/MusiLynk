@@ -161,7 +161,7 @@ describe('portfolio helpers', () => {
     expect(formatRates({})).toBe('');
     expect(formatRates({ min: 5000, max: 8000, basis: 'session' })).toBe('₹5,000–8,000 per session');
     expect(formatRates({ min: 5000, max: 5000, currency: 'INR', basis: 'show' })).toBe('₹5,000 per show');
-    expect(formatRates({ min: 5000, currency: 'USD', basis: 'gig' })).toBe('From USD 5,000 per gig');
+    expect(formatRates({ min: 5000, currency: 'USD', basis: 'gig' })).toBe('From $5,000 per gig');
     expect(formatRates({ max: 900 })).toBe('Up to ₹900');
   });
 

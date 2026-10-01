@@ -27,7 +27,7 @@ async function signIn(page: Page, role: Role) {
 }
 
 const pages: Array<[Role, string]> = [
-  ['jobseeker', '/jobseeker/portfolio'],
+  ['jobseeker', '/jobseeker/library'],
   ['jobseeker', '/jobseeker/profile'],
   ['jobseeker', '/jobseeker/alerts'],
   ['jobseeker', '/jobseeker/availability'],

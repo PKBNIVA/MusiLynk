@@ -18,6 +18,15 @@ class LibraryImportsTest < ActionDispatch::IntegrationTest
     assert_equal 2, user.portfolio_items.count
   end
 
+  test "names an untitled Spotify link after what it is, not as a track" do
+    user = make_user("Spotify User")
+    post "/api/library/import", params: { items: [{ url: "https://open.spotify.com/artist/abc123" },
+                                                  { url: "https://open.spotify.com/intl-in/album/def456" },
+                                                  { url: "https://open.spotify.com/track/ghi789" }] }, headers: auth(user), as: :json
+    assert_response :success
+    assert_equal ["Spotify album", "Spotify artist", "Spotify track"], user.portfolio_items.pluck(:title).sort
+  end
+
   test "merges roles, genres, instruments and credits into the profile without deleting existing values" do
     user = make_user("Merge User", profile: { roles: ["Vocalist"], genres: ["Rock"] })
 

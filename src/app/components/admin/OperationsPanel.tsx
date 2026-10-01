@@ -4,6 +4,7 @@ import { apiGet } from '../../lib/api';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { errorMessage } from '../../lib/errors';
+import { formatNumber, formatDateTime } from '../../lib/format';
 
 type Window = {
   requests: number;
@@ -122,7 +123,7 @@ function Traffic({ label, w, id }: { label: string; w: Window; id: string }) {
     <div>
       <div className="text-sm font-medium mb-2">{label}</div>
       <div className="grid grid-cols-3 gap-2">
-        <Figure testId={`${id}-requests`} label="Requests" value={w.requests.toLocaleString()} />
+        <Figure testId={`${id}-requests`} label="Requests" value={formatNumber(w.requests)} />
         <Figure
           testId={`${id}-p95`}
           label="p95 latency"
@@ -167,7 +168,7 @@ export default function OperationsPanel() {
     <div data-testid="operations-panel" className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-400">
-          {data ? `Updated ${new Date(data.generatedAt).toLocaleTimeString()}. Refreshes every minute.` : 'Loading…'}
+          {data ? `Updated ${formatDateTime(data.generatedAt)}. Refreshes every minute.` : 'Loading…'}
         </p>
         <Button size="sm" variant="outline" onClick={() => void load()} disabled={loading}>
           <RefreshCw aria-hidden="true" size={14} className={loading ? 'animate-spin' : ''} />
@@ -201,7 +202,7 @@ export default function OperationsPanel() {
             <Traffic id="day" label="Last 24 hours" w={data.requests.last24Hours} />
             <p className="text-xs text-slate-500">
               {data.requests.collectingSince
-                ? `Collected since ${new Date(data.requests.collectingSince).toLocaleString()}. `
+                ? `Collected since ${formatDateTime(data.requests.collectingSince)}. `
                 : 'No requests recorded yet. '}
               Health probes are excluded; p95 is the upper edge of its latency bucket.
             </p>

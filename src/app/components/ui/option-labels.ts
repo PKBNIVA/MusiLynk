@@ -48,10 +48,10 @@ export const OPTION_COPY: Record<string, OptionCopy> = {
   public: { label: 'Public', description: 'Anyone on Verse can see it' },
   private: { label: 'Private', description: 'Only you can see it' },
   // Currencies
-  INR: { label: 'INR · Indian rupee (₹)' },
-  USD: { label: 'USD · US dollar ($)' },
-  EUR: { label: 'EUR · Euro (€)' },
-  GBP: { label: 'GBP · British pound (£)' },
+  INR: { label: '₹ · Indian rupee' },
+  USD: { label: '$ · US dollar' },
+  EUR: { label: '€ · Euro' },
+  GBP: { label: '£ · British pound' },
   AED: { label: 'AED · UAE dirham' },
   SGD: { label: 'SGD · Singapore dollar' },
   AUD: { label: 'AUD · Australian dollar' },
@@ -59,7 +59,8 @@ export const OPTION_COPY: Record<string, OptionCopy> = {
 };
 
 /** "wedding-band" -> "Wedding band"; known values use OPTION_COPY. */
-export function optionLabel(value: string): string {
+export function optionLabel(value: string | null | undefined): string {
+  if (!value) return '';
   const known = OPTION_COPY[value];
   if (known) return known.label;
   const spaced = value.replace(/[-_]+/g, ' ').trim();

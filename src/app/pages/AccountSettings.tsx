@@ -65,7 +65,7 @@ export default function AccountSettings() {
         {user && <PhotoCard user={user} onSaved={setUser} />}
         {user && <EmailCard user={user} onSaved={setUser} />}
         {user?.role === 'jobseeker' && <WhatsAppCard user={user} />}
-        {user && <PasswordCard user={user} />}
+        {user && <PasswordCard user={user} onSaved={setUser} />}
         {user && <SignInMethodsCard />}
       </main>
     </div>
@@ -264,7 +264,7 @@ function EmailCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }
         setChallenge(null);
         return;
       }
-      setError(errorMessage(err, 'Invalid or expired code.'));
+      setError(errorMessage(err, 'That code is wrong or has expired. Request a new one.'));
       setCode('');
     } finally {
       setBusy(false);
@@ -327,7 +327,7 @@ function EmailCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }
             </div>
             {challenge?.debugCode && (
               <p className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
-                Local testing: your code is{' '}
+                Email is switched off here, so your code is{' '}
                 <span className="font-mono font-bold" data-testid="debug-code">
                   {challenge.debugCode}
                 </span>
@@ -425,7 +425,9 @@ function WhatsAppCard({ user }: { user: User }) {
   );
 }
 
-function PasswordCard({ user }: { user: User }) {
+function PasswordCard({ user, onSaved }: { user: User; onSaved: (u: User) => void }) {
+  // A code-only (or Google-only) account has no password yet: it sets its first one without a current password.
+  const firstPassword = user.passwordSet === false;
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -438,8 +440,13 @@ function PasswordCard({ user }: { user: User }) {
     setBusy(true);
     setError('');
     try {
-      await apiPost('/account/password', { currentPassword, newPassword });
-      toast.success('Password updated. Other sessions were signed out.');
+      await apiPost('/account/password', firstPassword ? { newPassword } : { currentPassword, newPassword });
+      toast.success(
+        firstPassword
+          ? 'Password set. You can now sign in with it as well.'
+          : 'Password updated. Other sessions were signed out.',
+      );
+      if (firstPassword) onSaved({ ...user, passwordSet: true });
       setCurrentPassword('');
       setNewPassword('');
     } catch (err: unknown) {
@@ -454,23 +461,29 @@ function PasswordCard({ user }: { user: User }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <KeyRound size={18} className="text-violet-300" />
-          Password
+          {firstPassword ? 'Set a password' : 'Password'}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={save} className="space-y-3" aria-busy={busy}>
-          <div>
-            <Label htmlFor="settings-current-password">Current password</Label>
-            <Input
-              id="settings-current-password"
-              type="password"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-              className="mt-2 bg-black/20 border-white/15"
-            />
-          </div>
+          {firstPassword ? (
+            <p className="text-sm text-slate-300">
+              You have no password yet. Add one if you would like to sign in with a password too.
+            </p>
+          ) : (
+            <div>
+              <Label htmlFor="settings-current-password">Current password</Label>
+              <Input
+                id="settings-current-password"
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                className="mt-2 bg-black/20 border-white/15"
+              />
+            </div>
+          )}
           <div>
             <Label htmlFor="settings-new-password">New password</Label>
             <Input
@@ -492,12 +505,14 @@ function PasswordCard({ user }: { user: User }) {
               {error}
             </p>
           )}
-          <div className="flex items-center gap-3">
-            <ShieldCheck size={15} className="text-slate-500 shrink-0" aria-hidden="true" />
-            <p className="text-xs text-slate-400">Changing your password signs out every other device.</p>
-          </div>
-          <Button type="submit" disabled={busy || !currentPassword || !strong} aria-busy={busy}>
-            {busy ? 'Updating…' : 'Update password'}
+          {!firstPassword && (
+            <div className="flex items-center gap-3">
+              <ShieldCheck size={15} className="text-slate-500 shrink-0" aria-hidden="true" />
+              <p className="text-xs text-slate-400">Changing your password signs out every other device.</p>
+            </div>
+          )}
+          <Button type="submit" disabled={busy || (!firstPassword && !currentPassword) || !strong} aria-busy={busy}>
+            {busy ? (firstPassword ? 'Saving…' : 'Updating…') : firstPassword ? 'Set password' : 'Update password'}
           </Button>
         </form>
       </CardContent>

@@ -558,7 +558,7 @@ function MediaGrid({ media }: { media: StagePost['media'] }) {
   return (
     <ul className={`mt-3 grid gap-1.5 ${media.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`} aria-label="Attached media">
       {media.map((m, i) => {
-        const url = mediaUrlFor(m.uploadId);
+        const url = mediaUrlFor(m);
         return (
           <li key={`${m.uploadId}-${i}`} className="overflow-hidden rounded-xl border border-white/10 bg-black/20">
             {m.type === 'image' && url && (

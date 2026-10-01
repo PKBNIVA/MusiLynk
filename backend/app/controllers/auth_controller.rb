@@ -20,6 +20,7 @@ class AuthController < ApplicationController
   OTP_REQUEST_MESSAGE = "If this email can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.".freeze
   OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
   EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so Verse can no longer send to it. Use a different email address, or sign in with your password.".freeze
+  CODE_ONLY_LOGIN_MESSAGE = "This account uses email codes — send me a code.".freeze
   PASSWORDLESS_LOGIN_MESSAGE = "Use Google to sign in, or set a password from your email.".freeze
   PHONE_OTP_UNAVAILABLE_MESSAGE = "WhatsApp sign-in codes are temporarily unavailable.".freeze
   PHONE_OTP_REQUEST_MESSAGE = "If this number can be used on Verse, a 6-digit code is on its way on WhatsApp. It expires in 10 minutes.".freeze
@@ -75,7 +76,7 @@ class AuthController < ApplicationController
     # Shared campus, office and mobile-carrier IPs sign up many real users; keep bulk abuse bounded.
     return unless throttle!("register", limit: 60, period: 1.hour)
     role = params[:role].to_s
-    return render_error("Choose either a jobseeker or employer account.", :unprocessable_content, "INVALID_ROLE") unless %w[jobseeker employer].include?(role)
+    return render_error("Choose either a musician or hirer account.", :unprocessable_content, "INVALID_ROLE") unless %w[jobseeker employer].include?(role)
 
     return unless consent_acceptable?
     # The two-minute sign-up sends its answers with the account; the old payload has none.
@@ -114,8 +115,9 @@ class AuthController < ApplicationController
     user = User.find_by(email:)
     unless user&.authenticate(params[:password])
       record_failure!("login-failure", scopes, period: LOGIN_FAILURE_PERIOD)
-      if user && !user.password_set? && user.auth_connections.any?
-        return render_error(PASSWORDLESS_LOGIN_MESSAGE, :unauthorized, "USE_CONNECTED_SIGN_IN")
+      if user && !user.password_set? && !user.admin? && user.synthetic_batch.nil?
+        return render_error(PASSWORDLESS_LOGIN_MESSAGE, :unauthorized, "USE_CONNECTED_SIGN_IN") if user.auth_connections.any?
+        return render_error(CODE_ONLY_LOGIN_MESSAGE, :unauthorized, "USE_EMAIL_CODE")
       end
       return render_error("Incorrect email or password.", :unauthorized)
     end
@@ -347,7 +349,7 @@ class AuthController < ApplicationController
 
   def me
     return unless authenticate!
-    render json: { user: public_user(current_user) }
+    render json: { user: public_user(current_user).merge(verification_state(current_user)) }
   end
 
   def request_verification
@@ -415,6 +417,13 @@ class AuthController < ApplicationController
 
   private
 
+  # Whether a verification request is waiting for review, and since when (the profile page's
+  # "Pending review" state). Unverified accounts only: an approved account has nothing pending.
+  def verification_state(user)
+    pending = user.profile&.verified? ? nil : user.verification_requests.where(status: "pending").order(created_at: :desc).first
+    { "verificationPending" => pending.present?, "verificationRequestedAt" => pending&.created_at }
+  end
+
   def find_usable_reset_token(raw)
     return nil unless raw.is_a?(String) && raw.present?
     EmailToken.usable("reset_password").find_by(token_digest: digest(raw))
@@ -466,7 +475,7 @@ class AuthController < ApplicationController
     name = params[:name].to_s.strip
     return nil if role.blank? && name.blank?
     unless SignInCode::SIGN_UP_ROLES.include?(role)
-      render_error("Choose either a jobseeker or employer account.", :unprocessable_content, "INVALID_ROLE")
+      render_error("Choose either a musician or hirer account.", :unprocessable_content, "INVALID_ROLE")
       return nil
     end
     unless name.length.between?(2, 120)

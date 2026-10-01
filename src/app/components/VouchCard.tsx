@@ -8,6 +8,7 @@ import { errorMessage } from '../lib/errors';
 import { toast } from 'sonner';
 import { HeartHandshake } from 'lucide-react';
 import type { Vouch } from '../lib/apiTypes';
+import { optionLabel } from './ui/option-labels';
 
 const MAX_VOUCHES = 3;
 
@@ -80,7 +81,7 @@ export function VouchCard() {
               <div key={v.id} className="flex items-center justify-between text-sm">
                 <span className="text-slate-300 truncate">{v.vouchee_email}</span>
                 <Badge variant="secondary" className="capitalize">
-                  {v.status}
+                  {optionLabel(v.status)}
                 </Badge>
               </div>
             ))}

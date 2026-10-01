@@ -12,7 +12,7 @@ const NotFoundPublic =
 export default function NotFound() {
   usePageMeta(
     'Page not found',
-    'This Verse page does not exist. Search music jobs, professionals and bookable acts instead.',
+    'This Verse page does not exist. Search opportunities, musicians and bookable acts instead.',
     { noindex: true },
   );
   if (NotFoundPublic) {

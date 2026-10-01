@@ -4,7 +4,8 @@ import { AutocompleteInput } from '../ai/AutocompleteInput';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
-import { sourceLabel, type DraftResult, type DraftSource, type ProfileDraft } from '../../lib/linkImport';
+import { ROLE_MAX_LENGTH } from '../../lib/onboarding';
+import { foundInLink, sourceLabel, type DraftResult, type DraftSource, type ProfileDraft } from '../../lib/linkImport';
 
 function thumbnailFor(url: string, sources: DraftSource[]): string | null {
   return sources.find((source) => source.url === url)?.thumbnail ?? null;
@@ -56,6 +57,8 @@ export function ProfileDraftReview({ result, onUse, onSkip, useLabel = 'Use this
         </p>
       </div>
 
+      <LinkFindings result={result} />
+
       <div>
         <label htmlFor="draft-headline" className="text-sm font-medium text-slate-200">
           Headline
@@ -89,6 +92,7 @@ export function ProfileDraftReview({ result, onUse, onSkip, useLabel = 'Use this
         id="draft-roles"
         field="roles"
         label="Roles"
+        maxLength={ROLE_MAX_LENGTH}
         values={state.roles}
         onChange={(roles) => setState({ ...state, roles })}
       />
@@ -186,6 +190,39 @@ export function ProfileDraftReview({ result, onUse, onSkip, useLabel = 'Use this
           {useLabel}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** One line per pasted link: what we read from it, or why we could not. */
+function LinkFindings({ result }: { result: DraftResult }) {
+  const { sources, provenance } = result;
+  const failures = result.failures ?? [];
+  if (sources.length === 0 && failures.length === 0) return null;
+  return (
+    <div>
+      <p className="text-sm font-medium text-slate-200">What we found in each link</p>
+      <ul className="mt-2 space-y-1.5" data-testid="draft-link-findings">
+        {sources.map((source) => {
+          const found = foundInLink(source.url, provenance);
+          return (
+            <li key={source.url} className="text-xs text-slate-300">
+              <span className="font-medium text-white">{source.title || source.label || source.url}</span>
+              {' · '}
+              {found.length > 0
+                ? `found ${found.slice(0, 4).join(', ')}`
+                : 'added as a work link; nothing else to read from it'}
+            </li>
+          );
+        })}
+        {failures.map((failure) => (
+          <li key={failure.url} role="alert" className="text-xs text-rose-300">
+            <span className="break-all font-medium">{failure.url}</span>
+            {' · '}
+            {failure.message}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

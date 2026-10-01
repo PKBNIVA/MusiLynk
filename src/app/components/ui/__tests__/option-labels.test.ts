@@ -5,13 +5,15 @@ describe('option labels', () => {
   it('maps stored values to human labels', () => {
     expect(optionLabel('onsite')).toBe('On-site');
     expect(optionLabel('session')).toBe('Studio session');
-    expect(optionLabel('INR')).toBe('INR · Indian rupee (₹)');
+    expect(optionLabel('INR')).toBe('₹ · Indian rupee');
   });
 
   it('falls back to a readable version of unknown values', () => {
     expect(optionLabel('wedding-band')).toBe('Wedding band');
     expect(optionLabel('Music Production')).toBe('Music Production');
     expect(optionLabel('')).toBe('');
+    expect(optionLabel(null)).toBe('');
+    expect(optionLabel('per_event')).toBe('Per event');
   });
 
   it('describes known values only', () => {

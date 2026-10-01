@@ -198,7 +198,7 @@ describe('uploadMedia', () => {
 
     const result = uploadMedia(fileOf('a.webp', 'image/webp')).catch((e) => e);
     (await nextXhr()).respond(500);
-    expect(await result).toMatchObject({ status: 500, message: 'Upload failed (500). Please retry.' });
+    expect(await result).toMatchObject({ status: 500, message: 'The upload failed. Try again.' });
   });
 
   it('streams proxied uploads to the API with the token and a safe filename', async () => {
@@ -248,7 +248,7 @@ describe('uploadMedia', () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ mode: 'proxy', uploadUrl: '/api/uploads/local/x' }));
     const result = uploadMedia(fileOf('a.mp3', 'audio/mpeg')).catch((e) => e);
     (await nextXhr()).respond(500, '{broken');
-    expect(await result).toMatchObject({ status: 500, message: 'Upload failed (500)' });
+    expect(await result).toMatchObject({ status: 500, message: 'The upload failed. Try again.' });
   });
 
   it('signs out when the proxied upload is rejected as unauthorised', async () => {

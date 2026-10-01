@@ -9,7 +9,7 @@ const groups: [title: string, links: [label: string, path: string][]][] = [
     'Explore',
     [
       ['Music jobs', '/music-jobs'],
-      ['Music professionals', '/music-professionals'],
+      ['Musicians', '/music-professionals'],
       ['Book music', '/book-music'],
       ['Search everything', '/search'],
     ],
@@ -49,7 +49,7 @@ const groups: [title: string, links: [label: string, path: string][]][] = [
 export default function SiteMapPage() {
   usePageMeta(
     'Site map',
-    'Every public area of Verse: music jobs, professionals, bookable acts, guides, pricing, trust and legal pages.',
+    'Every public area of Verse: music opportunities, musicians, bookable acts, guides, pricing, trust and legal pages.',
     { canonicalPath: '/sitemap' },
   );
   return (

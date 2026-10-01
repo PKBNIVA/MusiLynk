@@ -10,6 +10,7 @@ import { consumeReturnTo, GOOGLE_AUTH_ERROR_MESSAGES, getSignInMethods, requestS
 import { GoogleButton } from '../components/auth/GoogleButton';
 import { submitUrgentDraft } from '../lib/urgentDraft';
 import { toast } from 'sonner';
+import { SIGN_IN_CODE_TOAST } from '../lib/authToasts';
 import { BrandMark } from '../components/BrandMark';
 import { errorCode, errorMessage } from '../lib/errors';
 import { useSubmitOnce } from '../lib/formErrors';
@@ -84,7 +85,9 @@ export default function AuthPage() {
 
   const go = (r: string, complete = true) => {
     const requested = (location.state as { from?: unknown } | null)?.from ?? consumeReturnTo();
-    const allowed = typeof requested === 'string' && requested.startsWith(`/${r}`);
+    // Role-neutral pages (the Stage) are open to either role, so a deep link to one survives sign-in.
+    const allowed =
+      typeof requested === 'string' && (requested.startsWith(`/${r}`) || /^\/stage(?:[/?#]|$)/.test(requested));
     navigate(
       allowed
         ? requested
@@ -146,7 +149,7 @@ export default function AuthPage() {
     setError('');
     setCodeStep('code');
     startCooldown();
-    toast.success('Check your email for a 6-digit code');
+    toast.success('Check your email for a 6-digit code', { id: SIGN_IN_CODE_TOAST });
   };
 
   /* Ref-based guard: rapid clicks on Sign in / Create account send one request (FORM-22). */
@@ -168,7 +171,12 @@ export default function AuthPage() {
     } catch (e: unknown) {
       /* The API refuses admin passwords from this site once the admin site is live. */
       if (errorCode(e) === 'ADMIN_USE_ADMIN_SITE') setError(errorMessage(e, ADMIN_SITE_MESSAGE));
-      else {
+      else if (errorCode(e) === 'USE_EMAIL_CODE') {
+        /* This account has no password: say so, and put the code step in front of them. */
+        const message = errorMessage(e, 'This account uses email codes — send me a code.');
+        switchMethod('code');
+        setError(message);
+      } else {
         /* Inline, announced, next to the fields; focus goes to the field to fix (FORM-08). */
         setError(errorMessage(e, 'Unable to continue'));
         focusField('auth-password');
@@ -205,7 +213,7 @@ export default function AuthPage() {
       setCode('');
       setCodeStep('code');
       startCooldown();
-      toast.success('Check your email for a 6-digit code');
+      toast.success('Check your email for a 6-digit code', { id: SIGN_IN_CODE_TOAST });
     } catch (e: unknown) {
       if (errorCode(e) === 'OTP_UNAVAILABLE') {
         setCodesAvailable(false);
@@ -240,7 +248,7 @@ export default function AuthPage() {
       }
       setCode('');
       focusCode();
-      fail(e, 'Invalid or expired code.');
+      fail(e, 'That code is wrong or has expired. Request a new one.');
     } finally {
       verifying.current = false;
       setLoading(false);
@@ -389,7 +397,7 @@ export default function AuthPage() {
               One login. Your whole <span className="verse-gradient-text">music world.</span>
             </h1>
             <p className="mt-5 max-w-lg text-lg leading-8 text-slate-300">
-              Discover work, prove your craft, build teams and manage every conversation in one professional home.
+              Discover work, prove your craft, build teams and manage every conversation in one place.
             </p>
           </div>
           {/* A CSS fade-in (the global reduced-motion rule shortens it); the motion library cost ~42 kB gzip for this alone. */}
@@ -402,9 +410,14 @@ export default function AuthPage() {
                 <CardTitle level={2} className="mt-2 text-2xl font-black text-white">
                   {(method === 'code' || challenge) && codeStep === 'code' ? 'Check your email' : 'Welcome back'}
                 </CardTitle>
+                {searchParams.get('reason') === 'expired' && (
+                  <p role="status" data-testid="session-expired" className="mt-1 text-sm text-amber-200">
+                    Your session expired. Sign in to continue.
+                  </p>
+                )}
                 <CardDescription className="text-slate-300">
                   {role === 'employer'
-                    ? 'Hire music talent and manage every candidate'
+                    ? 'Hire music talent and manage every applicant'
                     : 'Find work and build a career people can hear'}
                 </CardDescription>
               </CardHeader>
@@ -416,14 +429,14 @@ export default function AuthPage() {
                       className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role === 'jobseeker' ? 'bg-white/10 text-white' : 'text-slate-400'}`}
                     >
                       <Users size={15} />
-                      Professional
+                      Musician
                     </Link>
                     <Link
                       to="/auth/employer"
                       className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${role === 'employer' ? 'bg-white/10 text-white' : 'text-slate-400'}`}
                     >
                       <Briefcase size={15} />
-                      Employer
+                      Hirer
                     </Link>
                   </div>
                 )}

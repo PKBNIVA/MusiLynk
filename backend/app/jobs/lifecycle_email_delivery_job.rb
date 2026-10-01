@@ -18,7 +18,11 @@ class LifecycleEmailDeliveryJob < ApplicationJob
     result = EmailDelivery.deliver_rendered(to: user.email, template: key, **content, raise_errors: true)
     raise EmailDeliveryJob::ProviderUnavailable, "email provider returned #{result[:status]}" if result[:status].to_i >= 500
 
-    log_skip(result[:reason] || "rejected_#{result[:status]}", key, user_id) unless result[:delivered]
+    if result[:delivered]
+      LifecycleEmail.mark_delivered!(user_id, key)
+    else
+      log_skip(result[:reason] || "rejected_#{result[:status]}", key, user_id)
+    end
   rescue KeyError
     log_skip("unknown_template", key, user_id)
   end

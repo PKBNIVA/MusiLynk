@@ -257,8 +257,8 @@ export async function openSession(
 }
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-/** The only writes a sweep may send: sign-in (wrong-password state) and link previews (read-only). */
-const ALLOWED_WRITES = /\/api\/(auth\/login|link-previews)(\?|$)/;
+/** The only writes a sweep may send: sign-in attempts with an address that is not an account (wrong password, wrong code) and link previews (read-only). */
+const ALLOWED_WRITES = /\/api\/(auth\/(login|otp\/request|otp\/verify)|link-previews)(\?|$)/;
 
 /**
  * The sweep must never change data: buttons such as "Remove" or "Hide from booking" act at once, so every
@@ -283,7 +283,11 @@ function attachListeners(session: Session, page: Page) {
     session.crashed = true;
     session.part.notes.push(`the page crashed at ${page.url()}`);
   });
-  page.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
+  // A "leave this page?" prompt (unsaved profile edits) must be accepted, or the next navigation is cancelled.
+  page.on(
+    'dialog',
+    (dialog) => void (dialog.type() === 'beforeunload' ? dialog.accept() : dialog.dismiss()).catch(() => undefined),
+  );
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
     const url = message.location().url;
@@ -646,6 +650,37 @@ export function writeIndex(extra: Record<string, unknown>) {
       notes.push(...part.notes.map((n) => `${name.replace('.json', '')}: ${n}`));
     } catch {
       /* a part being written by another worker; the next merge picks it up */
+    }
+  }
+  // Failures the sweep causes on purpose are marked expected: ids that do not exist, wrong sign-in attempts.
+  for (const entry of entries) {
+    const intended = /does-not-exist/.test(entry.url) || /wrong-(password|code)/.test(entry.state);
+    const expired = entry.state === 'expired-session';
+    for (const failure of entry.failedRequests ?? []) {
+      if ((intended || expired) && (failure.status === 404 || failure.status === 401)) failure.expected = true;
+      // The seeded thread, portfolio and invoice belong to the populated accounts; anyone else gets a 404.
+      const owners = /\/conversations\/conv_/.test(failure.url)
+        ? ['musician', 'hirer']
+        : /\/portfolios\/port_/.test(failure.url)
+          ? ['musician']
+          : /\/invoices\/invo_/.test(failure.url)
+            ? ['hirer']
+            : undefined;
+      if (owners && failure.status === 404 && !owners.includes(entry.role)) failure.expected = true;
+    }
+    for (const error of entry.consoleErrors ?? []) {
+      if ((intended || expired) && /status of (404|401)/.test(error.text)) error.expected = true;
+      if (
+        /status of 404/.test(error.text) &&
+        /\/(conversations\/conv_|portfolios\/port_|invoices\/invo_)/.test(error.url ?? '')
+      ) {
+        const owners = /conv_/.test(error.url ?? '')
+          ? ['musician', 'hirer']
+          : /port_/.test(error.url ?? '')
+            ? ['musician']
+            : ['hirer'];
+        if (!owners.includes(entry.role)) error.expected = true;
+      }
     }
   }
   entries.sort((a, b) => a.file.localeCompare(b.file));

@@ -14,13 +14,12 @@ import {
   type Session,
   type ViewportName,
 } from './support/ux-sweep/capture';
+import { indexExtra, plan } from './support/ux-sweep/index-extra';
 import {
   MISSING_ID_URLS,
   ROLES,
   TOKEN_PAGES,
   canReach,
-  enumerateAdminRoutes,
-  enumeratePublicRoutes,
   expand,
   loadIds,
   roleKind,
@@ -38,7 +37,7 @@ import {
 // build on :4600, the admin build on :4610, and the seeded accounts and ids (tests/e2e/support/ux-sweep/*.rb).
 // Output: $UX_OUT (default /home/user/ux-shots)/<role>/<route-slug>__<state>__<viewport>[__full].png and
 // index.json with one entry per shot. Optional filters: UX_ROLES, UX_VPS (desktop,mobile,small),
-// UX_ROUTE (regex on the URL), UX_KINDS (routes,special), UX_INTERACTIVE=0 (no clicking), UX_AXE=0, UX_PARTIAL=1
+// UX_ROUTE (regex on the URL), UX_KINDS (routes,special,sessions), UX_INTERACTIVE=0 (no clicking), UX_AXE=0, UX_PARTIAL=1
 // (merge into the existing results instead of replacing a role/viewport's results).
 // It never submits anything destructive: dialogs are opened and closed, never confirmed.
 test.skip(process.env.UX_SWEEP !== '1', 'UX sweep on demand only (UX_SWEEP=1).');
@@ -58,13 +57,6 @@ const INTERACTIVE = process.env.UX_INTERACTIVE !== '0';
 const SWEEP_VPS: ViewportName[] = ['desktop', 'mobile', 'small'];
 
 // ---- the plan -------------------------------------------------------------------------------------
-
-function plan() {
-  const ids = loadIds();
-  const publicRoutes = enumeratePublicRoutes();
-  const admin = enumerateAdminRoutes();
-  return { ids, publicRoutes, admin };
-}
 
 function targetsFor(role: RoleName, vp: ViewportName): ConcreteTarget[] {
   const { ids, publicRoutes, admin } = plan();
@@ -94,45 +86,6 @@ function targetsFor(role: RoleName, vp: ViewportName): ConcreteTarget[] {
   if (ROUTE_FILTER) targets = targets.filter((target) => ROUTE_FILTER.test(target.url));
   return targets;
 }
-
-/** Routes this run cannot photograph, and why (written into the index). */
-function skippedRoutes() {
-  const { publicRoutes } = plan();
-  const skipped = publicRoutes
-    .filter((route) => route.skipReason)
-    .map((route) => ({ route: route.pattern, reason: route.skipReason }));
-  const redirects = publicRoutes
-    .filter((route) => route.redirect)
-    .map((route) => ({
-      route: route.pattern,
-      reason: 'Redirect only: probed for every role (see "redirects"), not photographed.',
-    }));
-  const tokenPages = TOKEN_PAGES.map((route) => ({
-    route,
-    reason: 'Needs a one-time token from an email link; photographed without one (its invalid-link state).',
-  }));
-  return { skipped: [...skipped, ...redirects], tokenPages };
-}
-
-const indexExtra = () => {
-  const { ids, publicRoutes, admin } = plan();
-  const { skipped, tokenPages } = skippedRoutes();
-  return {
-    accounts: ids.accounts,
-    routes: {
-      public: publicRoutes.map((r) => ({
-        pattern: r.pattern,
-        audience: r.audience,
-        redirect: r.redirect ?? false,
-        skipReason: r.skipReason ?? null,
-      })),
-      admin: admin.routes.map((r) => r.pattern),
-      adminTabs: admin.tabs,
-    },
-    skippedRoutes: skipped,
-    tokenOnlyRoutes: tokenPages,
-  };
-};
 
 // ---- interactive states ---------------------------------------------------------------------------
 
@@ -296,7 +249,16 @@ async function tryCandidate(s: Session, target: ConcreteTarget, c: Candidate, op
 
 /** Tabs, disclosures, selects, and every dialog opener on the page (opened, photographed, closed). */
 async function interact(s: Session, target: ConcreteTarget) {
-  const list = await candidates(s.page).catch(() => []);
+  const all = await candidates(s.page).catch(() => []);
+  // Repeated rows (one "Reshare" per post, one "Report review by <name>" per review): the first two are enough.
+  const perKind = new Map<string, number>();
+  const list = all.filter((c) => {
+    if (s.role === 'admin' && c.kind === 'tab') return false; // every console tab is its own target already
+    const key = `${c.kind}|${c.label.toLowerCase().replace(/\d+/g, '#').split(' ').slice(0, 3).join(' ')}`;
+    const seen = perKind.get(key) ?? 0;
+    perKind.set(key, seen + 1);
+    return seen < 2;
+  });
   let first = true;
   for (const c of list) {
     // The page is already loaded for the first one; reload before each later one so no state leaks.
@@ -356,22 +318,23 @@ async function autofill(page: Page) {
         )
         .catch(() => '')) || ''
     ).toLowerCase();
+    const isTextarea = await field.evaluate((el) => el.tagName === 'TEXTAREA').catch(() => false);
+    const type = (await field.getAttribute('type').catch(() => '')) || '';
     let value = 'Ux sweep sample text';
-    if (/email/.test(hint)) value = 'ux.sweep.wizard@verse.local';
-    else if (/password/.test(hint)) value = 'UxSweepPass123!';
-    else if (/phone|mobile|whatsapp/.test(hint)) value = '9876543210';
-    else if (/datetime/.test(hint)) value = '2026-12-12T19:30';
-    else if (/date/.test(hint)) value = '2026-12-12';
-    else if (/time/.test(hint)) value = '19:30';
-    else if (/url|link|website|http/.test(hint)) value = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-    else if (/number|rate|fee|budget|pay|amount|salary|years|slots|experience/.test(hint)) value = '15000';
-    else if (/name/.test(hint)) value = 'Ux Sweep';
-    else if (
-      /description|about|bio|note|message|requirements|details|textarea/.test(hint) ||
-      (await field.evaluate((el) => el.tagName === 'TEXTAREA').catch(() => false))
-    )
+    if (isTextarea) {
       value =
         'Ux sweep sample text that is long enough to satisfy a minimum length check on the form, with detail about the work.';
+    } else if (type === 'datetime-local') value = '2026-12-12T19:30';
+    else if (type === 'date') value = '2026-12-12';
+    else if (type === 'time') value = '19:30';
+    else if (type === 'email' || /email/.test(hint)) value = 'ux.sweep.wizard@verse.local';
+    else if (type === 'password' || /password/.test(hint)) value = 'UxSweepPass123!';
+    else if (type === 'tel' || /phone|mobile|whatsapp/.test(hint)) value = '9876543210';
+    else if (type === 'url' || /url|link|website|http/.test(hint))
+      value = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    else if (type === 'number' || /rate|fee|budget|pay|amount|salary|years|slots|experience/.test(hint))
+      value = '15000';
+    else if (/name/.test(hint)) value = 'Ux Sweep';
     await field.fill(value, { timeout: 1500 }).catch(() => undefined);
   }
   // Searchable pickers (city, location, genres): type and take the first suggestion.
@@ -381,8 +344,36 @@ async function autofill(page: Page) {
     const picker = pickers.nth(i);
     if (!(await picker.isVisible().catch(() => false))) continue;
     if ((await picker.inputValue().catch(() => 'x')) !== '') continue;
-    await picker.fill('Mumbai', { timeout: 1500 }).catch(() => undefined);
+    const label = (
+      (await picker
+        .evaluate(
+          (el) => `${el.getAttribute('aria-label') || ''} ${(el as HTMLInputElement).labels?.[0]?.textContent || ''}`,
+        )
+        .catch(() => '')) || ''
+    ).toLowerCase();
+    const wanted = /role|instrument/.test(label) ? 'Drummer' : /genre/.test(label) ? 'Rock' : 'Mumbai';
+    await picker.fill(wanted, { timeout: 1500 }).catch(() => undefined);
     await picker.press('Enter').catch(() => undefined);
+  }
+  // Dropdowns still showing their placeholder: take the first option.
+  const dropdowns = page.locator('main button[role=combobox]');
+  const dc = Math.min(await dropdowns.count().catch(() => 0), 4);
+  for (let i = 0; i < dc; i += 1) {
+    const text =
+      (await dropdowns
+        .nth(i)
+        .textContent()
+        .catch(() => '')) || '';
+    if (!/choose|select|pick/i.test(text)) continue;
+    await dropdowns
+      .nth(i)
+      .click({ timeout: 1500 })
+      .catch(() => undefined);
+    await page
+      .getByRole('option')
+      .first()
+      .click({ timeout: 1500 })
+      .catch(() => undefined);
   }
   // Required unchecked consent boxes.
   const boxes = page.locator('main input[type=checkbox]');
@@ -453,8 +444,13 @@ async function stepWalk(s: Session, route: string, url: string, prefix: string, 
   }
   for (let step = 1; step <= maxSteps; step += 1) {
     await capture(s, { route, url, state: `${prefix}-step${step}` });
-    const next = s.page.locator('main button, main a[role=button]').filter({ hasText: NEXT }).first();
-    if (!(await next.isVisible().catch(() => false)) || !(await next.isEnabled().catch(() => false))) return;
+    const next = s.page.locator('main button:visible, main a[role=button]:visible').filter({ hasText: NEXT }).first();
+    const visibleNext = await next.isVisible().catch(() => false);
+    if (!visibleNext || !(await next.isEnabled().catch(() => false))) {
+      // No Next on the last step is the normal end; a Next that is there but disabled is worth a note.
+      if (visibleNext) s.part.notes.push(`${url}: wizard stopped at step ${step} (Next is disabled)`);
+      return;
+    }
     const before = await stepSignature(s.page);
     // First press it empty: validation messages are a state worth seeing.
     await next.click({ timeout: 2500 }).catch(() => undefined);
@@ -567,19 +563,47 @@ async function wizards(s: Session) {
     await stepWalk(s, '/join/:audience', '/join/musician', 'join-musician');
     await stepWalk(s, '/join/:audience', '/join/hiring', 'join-hiring');
     await stepWalk(s, '/urgent', '/urgent', 'urgent');
-    // The sign-in form's wrong-password answer, with an address that is not an account.
+    // Sign-in with an address that is not an account: the emailed-code step and its wrong-code error ...
     await visit(s, '/auth/jobseeker');
+    const codeEmail = s.page.getByLabel(/email/i).first();
+    if (await codeEmail.isVisible().catch(() => false)) {
+      await codeEmail.fill('nobody.here@verse.local');
+      await s.page
+        .getByRole('button', { name: /email me.*code/i })
+        .first()
+        .click({ timeout: 2500 })
+        .catch(() => undefined);
+      await s.page.waitForTimeout(1000);
+      await capture(s, { route: '/auth/:userType', url: '/auth/jobseeker', state: 'code-step' });
+      const code = s.page.getByLabel(/code/i).first();
+      if (await code.isVisible().catch(() => false)) {
+        await code.fill('000000');
+        await s.page
+          .getByRole('button', { name: /verify and sign in/i })
+          .click({ timeout: 2500 })
+          .catch(() => undefined);
+        await s.page.waitForTimeout(1000);
+        await capture(s, { route: '/auth/:userType', url: '/auth/jobseeker', state: 'wrong-code' });
+      }
+    }
+    // ... and the password form with a wrong password.
+    await visit(s, '/auth/jobseeker');
+    await s.page
+      .getByRole('button', { name: /use password instead/i })
+      .click({ timeout: 2000 })
+      .catch(() => undefined);
+    await capture(s, { route: '/auth/:userType', url: '/auth/jobseeker', state: 'password-form' });
     const email = s.page.getByLabel(/email/i).first();
     const password = s.page.getByLabel(/password/i).first();
     if ((await email.isVisible().catch(() => false)) && (await password.isVisible().catch(() => false))) {
       await email.fill('nobody.here@verse.local');
       await password.fill('Wrong-password-1');
       await s.page
-        .getByRole('button', { name: /sign in|log in|continue/i })
+        .getByRole('button', { name: /^sign in/i })
         .first()
         .click({ timeout: 2500 })
         .catch(() => undefined);
-      await s.page.waitForTimeout(900);
+      await s.page.waitForTimeout(1000);
       await capture(s, { route: '/auth/:userType', url: '/auth/jobseeker', state: 'wrong-password' });
     }
   }
@@ -678,7 +702,7 @@ for (const role of roles) {
 
 // Sessions that fail on purpose, and the first visit to a dashboard (product tour not yet seen).
 for (const vp of vps.filter((v) => v !== 'small')) {
-  if (!wanted('special')) break;
+  if (!wanted('sessions') && !wanted('special')) break;
   test(`signed-out and expired sessions @ ${vpLabel(vp)}`, async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium-desktop', 'The sweep sets its own viewports; run one project.');
     test.setTimeout(60 * 60 * 1000);

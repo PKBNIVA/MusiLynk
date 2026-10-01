@@ -105,6 +105,7 @@ class AccountErasure
     OrganizationMember.where(user_id: id).delete_all
     UrgentRequestResponse.where(user_id: id).delete_all
     erase_third_party_contact_details
+    redact_audit_trail
     @user.band_projects.destroy_all
     @user.crew_plans.destroy_all
     UserBlock.where(blocker_id: id).or(UserBlock.where(blocked_id: id)).delete_all
@@ -115,11 +116,27 @@ class AccountErasure
   # vouch invitations they sent are removed, invitations sent to their own address are
   # anonymised, and the tax id and billing address of workspaces they own are cleared.
   def erase_third_party_contact_details
-    Vouch.where(voucher_id: @user.id).delete_all
+    # Accepted vouches (joined, verified) are evidence for the other person's verification: they stay,
+    # pointing at this anonymised account. Unanswered invitations hold a stranger's address and go.
+    Vouch.where(voucher_id: @user.id, status: "invited").delete_all
     Vouch.where(vouchee_id: @user.id).or(Vouch.where(vouchee_email: @user.email)).find_each do |vouch|
       vouch.update_columns(vouchee_email: "deleted-#{vouch.id.to_s.downcase.gsub(/[^a-z0-9]/, "")}@deleted.invalid", vouchee_id: nil)
     end
     Organization.where(owner_id: @user.id).update_all(tax_id: nil, billing_email: nil, updated_at: Time.current)
+  end
+
+  AUDIT_PII_KEYS = %w[email ip remoteIp origin from to].freeze
+
+  # The audit trail itself is kept (accountability), but the addresses in it are not: emails and
+  # network addresses in entries this person made or that are about them are replaced.
+  def redact_audit_trail
+    logs = AuditLog.where(actor_id: @user.id).or(AuditLog.where(entity_type: "User", entity_id: @user.id))
+    logs.find_each do |log|
+      next unless log.metadata.is_a?(Hash)
+
+      cleaned = log.metadata.to_h { |key, value| [key, AUDIT_PII_KEYS.include?(key.to_s) && !log.action.to_s.start_with?("application.") ? "[erased]" : value] }
+      log.update_columns(metadata: cleaned) if cleaned != log.metadata
+    end
   end
 
   # --- Showcase: portfolios, career record, resumes and suggestions -------------------------

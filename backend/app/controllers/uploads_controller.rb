@@ -21,7 +21,8 @@ class UploadsController < ApplicationController
   before_action -> { authenticate! }
 
   def presign
-    return unless within_user_rate_limit?("upload", limit: UPLOADS_PER_HOUR, period: 1.hour)
+    # One file is one hit: a direct upload is counted here, a proxied one when its bytes arrive (#local).
+    return if UploadStorage.direct? && !within_user_rate_limit?("upload", limit: UPLOADS_PER_HOUR, period: 1.hour)
     content_type = MediaTypeSniffer.canonical(params[:contentType])
     return render_error("Unsupported file type. Upload MP3, WAV, MP4, JPEG, PNG, WebP or PDF.", :unprocessable_content, "UNSUPPORTED_TYPE") unless ALLOWED_TYPES.include?(content_type)
     return render_error("File is too large. The limit is #{MAX_SIZE / 1.megabyte} MB.", :unprocessable_content, "FILE_TOO_LARGE") unless params[:size].to_i.between?(1, MAX_SIZE)

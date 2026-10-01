@@ -9,6 +9,8 @@ class ApiFrontendContractTest < ActionDispatch::IntegrationTest
 
   JOB_CARD = %w[id title company location opportunity_kind function_area workplace salary compensation_min compensation_max currency
                 type genre skills employerVerified applicationsCount featured saved].freeze
+  # candidateEmail is deliberately no longer in the hirer applicants payload (security audit 2026-10, DEC-4d).
+  # src/app/pages/EmployerApplications.tsx still reads it behind `a.candidateEmail &&`: UI sweep follow-up.
   CONTRACTS = [
     # [page, actor, path, top-level keys, { list => item keys }]
     ["Navigation", :js, "/api/notifications/unread", %w[unread unreadMessages], {}],
@@ -22,7 +24,7 @@ class ApiFrontendContractTest < ActionDispatch::IntegrationTest
     ["JobAlerts", :js, "/api/job-alerts", %w[alerts], { "alerts" => %w[id name query location opportunity_kind function_area remote_only frequency active] }],
     ["JobSeekerDashboard", :js, "/api/dashboard", %w[applications interviews saved profileScore recommendedJobs], { "recommendedJobs" => %w[id title company location opportunity_kind workplace fitScore] }],
     ["EmployerDashboard", :emp, "/api/dashboard", %w[jobs published activeJobs applications shortlisted recentJobs], { "recentJobs" => %w[id title status location opportunity_kind workplace moderation_note applications] }],
-    ["EmployerApplications", :emp, "/api/employer/applications", %w[applications], { "applications" => %w[id status jobId jobTitle candidateId candidateName candidateEmail candidateLocation experience skills coverLetter screeningAnswers recruiterNote recruiterRating allowedNextStatuses] }],
+    ["EmployerApplications", :emp, "/api/employer/applications", %w[applications], { "applications" => %w[id status jobId jobTitle candidateId candidateName candidateLocation experience skills coverLetter screeningAnswers recruiterNote recruiterRating allowedNextStatuses] }],
     ["Portfolio", :js, "/api/portfolio", %w[items], { "items" => %w[id type title url description creditedAs year featured thumbnailUrl waveformUrl visibility tags genres roles instruments mediaMetadata] }],
     ["Notifications", :js, "/api/notifications", %w[notifications unread], { "notifications" => %w[id title body link readAt createdAt type] }],
     ["Messages", :js, "/api/conversations", %w[conversations], { "conversations" => %w[id candidateName employerName jobTitle lastMessage counterpartName unreadCount lastMessageAt lastMessageFromMe counterpartId counterpartActive blockedByMe blockedMe] }],

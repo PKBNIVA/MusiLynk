@@ -78,7 +78,8 @@ class OrganizationsController < ApplicationController
 
   def organization_json(org)
     membership = org.organization_members.find { _1.user_id == current_user.id }
-    org.attributes.merge(memberCount: org.organization_members.size, memberRole: membership&.role)
+    attributes = MANAGER_ROLES.include?(membership&.role) ? org.attributes : org.attributes.except("tax_id", "billing_email")
+    attributes.merge(memberCount: org.organization_members.size, memberRole: membership&.role)
   end
 
   def seat_limit(owner)

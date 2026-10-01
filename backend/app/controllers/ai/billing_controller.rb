@@ -17,12 +17,14 @@ module Ai
 
       idempotency_key = request.headers["Idempotency-Key"].to_s.strip.presence
       if idempotency_key.present?
-        existing = AiTopupPayment.find_by(user: current_user, pack:, status: "created", provider: "razorpay")
+        existing = AiTopupPayment.where(user: current_user, pack:, status: "created", provider: "razorpay")
           .where.not(provider_order_id: nil).order(created_at: :desc).first
         return render json: { payment: existing, checkout: topup_checkout(existing.provider_order_id, existing.amount * 100, existing.currency) } if existing
       end
 
       return render_error("Live billing is not configured.", :service_unavailable) if RazorpayConfig.key_present? && !RazorpayConfig.usable?
+      # Without keys, production must never fall through to the mock path that credits for free.
+      return render_error("Live billing is not configured.", :service_unavailable) if !RazorpayConfig.key_present? && Rails.env.production?
 
       payment = AiTopupPayment.create!(user: current_user, pack:, amount: spec.fetch(:price_inr), currency: "INR",
         credits: spec.fetch(:credits), provider: RazorpayConfig.key_present? ? "razorpay" : "internal", status: "created")
@@ -48,7 +50,10 @@ module Ai
       return render_error("Payment order mismatch.", :unprocessable_content) unless payment.provider_order_id.present? &&
         ActiveSupport::SecurityUtils.secure_compare(payment.provider_order_id, params[:orderId].to_s)
 
-      expected = OpenSSL::HMAC.hexdigest("SHA256", ENV.fetch("RAZORPAY_KEY_SECRET", ""), "#{payment.provider_order_id}|#{params[:paymentId]}")
+      secret = ENV["RAZORPAY_KEY_SECRET"].to_s
+      return render_error("Online payment is not switched on yet.", :service_unavailable, "PAYMENTS_UNAVAILABLE") if secret.empty?
+
+      expected = OpenSSL::HMAC.hexdigest("SHA256", secret, "#{payment.provider_order_id}|#{params[:paymentId]}")
       return render_error("Invalid payment signature.", :unauthorized) unless ActiveSupport::SecurityUtils.secure_compare(expected, params[:signature].to_s)
 
       payment.update!(provider_payment_id: params[:paymentId])

@@ -54,12 +54,16 @@ class User < ApplicationRecord
   # Google's verified email) but the address was never verified: whoever registered it first
   # may be a stranger who chose the password. Drop that password, its sessions and any pending
   # links so only the proven mailbox owner can get in (they sign in with a code, Google or a reset).
+  # Returns true when a password the person had chosen was dropped (so they should be told).
   def reclaim_unverified_credentials!
-    return if email_verified? || admin?
+    return false if email_verified? || admin?
 
-    update!(password: SecureRandom.base58(32), password_set_at: nil)
+    had_password = password_set?
+    update!(password: SecureRandom.base58(32), password_set_at: nil, phone: nil, phone_verified_at: nil)
     sessions.delete_all
+    auth_connections.destroy_all
     email_tokens.where(used_at: nil).update_all(used_at: Time.current)
+    had_password
   end
 
   def profileComplete = profile_complete

@@ -94,7 +94,7 @@ class SecurityAudit202610Test < ActionDispatch::IntegrationTest
 
   # ---- AUTH-1: password reset has no per-account cap, so a victim's inbox can be flooded ------
 
-  test "AUTH-1 password reset emails to one account are capped regardless of the requesting network" do
+  test "AUTH-1 password reset emails to one account are rate bounded regardless of the requesting network" do
     victim = create_user("Victim Audit", "jobseeker")
     12.times do |index|
       post "/api/auth/forgot-password", params: { email: victim.email }, headers: { "REMOTE_ADDR" => "198.51.100.#{index + 1}" }, as: :json
@@ -162,9 +162,9 @@ class SecurityAudit202610Test < ActionDispatch::IntegrationTest
 
   # ---- UPL-1: uploads have no per-account rate limit ------------------------------------------
 
-  test "UPL-1 presigning uploads is rate limited per account" do
+  test "UPL-1 uploading is rate limited per account" do
     statuses = Array.new(130) do
-      post "/api/uploads/presign", params: { contentType: "image/png", size: 1000, filename: "a.png" }, headers: auth(@alice), as: :json
+      put "/api/uploads/local", params: "x", headers: auth(@alice).merge("Content-Type" => "image/png")
       response.status
     end
     assert_includes statuses, 429
@@ -301,11 +301,16 @@ class SecurityAudit202610Test < ActionDispatch::IntegrationTest
       purpose: :google_oauth_state, expires_in: 10.minutes
     )
     with_env(GOOGLE_ENV) do
-      get "/auth/google/callback?code=fake-code&state=#{state}"
+      get "/auth/google/callback?code=fake-code&state=#{state}", headers: { "Cookie" => oauth_cookie("x") }
       yield
     end
   ensure
     GoogleOauth.define_singleton_method(:exchange_code, original) if original
+  end
+
+  def oauth_cookie(nonce)
+    value = Rails.application.message_verifier("google-oauth-state-cookie").generate(nonce, purpose: :google_oauth_state_cookie, expires_in: 10.minutes)
+    "#{GoogleAuthController::STATE_COOKIE}=#{CGI.escape(value)}"
   end
 
   def with_env(values)

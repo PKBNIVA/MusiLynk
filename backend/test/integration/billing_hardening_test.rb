@@ -271,11 +271,12 @@ class BillingHardeningTest < ActionDispatch::IntegrationTest
     assert_equal "paid", payment.reload.status
     assert_equal "partial_refund", BillingEvent.find_by!(provider_event_id: "evt_partial_refund").processing_result
 
-    post_webhook(refund_event(payment, 300, amount: payment.amount * 100), "evt_full_refund")
+    full_refund = refund_event(payment, 300, amount: payment.amount * 100)
+    post_webhook(full_refund, "evt_full_refund")
     assert_equal "refunded", payment.reload.status
     assert_equal requester.id, BillingEvent.find_by!(provider_event_id: "evt_full_refund").user_id
 
-    post_webhook(refund_event(payment, 300, amount: payment.amount * 100), "evt_full_refund")
+    post_webhook(full_refund, "evt_full_refund")
     assert_equal true, response.parsed_body["duplicate"]
   end
 

@@ -44,6 +44,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/auth/logout", :public, { keys: %w[ok] }],
     [:post, "/api/auth/request-email-verification", :any, { keys: %w[ok] }],
     [:post, "/api/auth/verify-email", :public, { ok: [400], params: { token: "not-a-token" } }],
+    [:post, "/api/auth/resend-verification", :public, { ok: [200], params: { email: "nobody@example.com" } }],
     [:post, "/api/auth/forgot-password", :public, { params: { email: "nobody@example.com" }, keys: %w[ok] }],
     [:post, "/api/auth/reset-password", :public, { ok: [400], params: { token: "not-a-token", password: "LongEnough123!" } }],
     [:get, "/api/auth/reset-password/check", :public, { params: { token: "not-a-token" }, keys: %w[valid] }],

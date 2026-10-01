@@ -11,7 +11,7 @@ class SessionLifetimeTest < ActionDispatch::IntegrationTest
   setup do
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
-    @user = User.create!(name: "Idle User", email: "idle@example.com", password: PASSWORD, role: "jobseeker", status: "active")
+    @user = User.create!(name: "Idle User", email: "idle@example.com", password: PASSWORD, role: "jobseeker", status: "active", email_verified: true)
     @admin = User.create!(name: "Idle Admin", email: "idle-admin@example.com", password: PASSWORD, role: "admin", status: "active")
   end
 

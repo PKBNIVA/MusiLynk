@@ -192,12 +192,25 @@ class Post < ApplicationRecord
     return reshared_post_preview if reshared_post_id.present?
 
     case kind
-    when "portfolio_share" then shared_portfolio_item ? { type: "portfolio_item", item: shared_portfolio_item.api_json } : unavailable("portfolio_item")
-    when "job_share" then shared_job ? { type: "job", job: shared_job.api_json, applyOpen: shared_job.listed? } : unavailable("job")
+    when "portfolio_share" then shared_item_public? ? { type: "portfolio_item", item: public_item_json(shared_portfolio_item) } : unavailable("portfolio_item")
+    when "job_share" then shared_job&.published? && !shared_job.employer.deleted? ? { type: "job", job: shared_job.api_json, applyOpen: true } : unavailable("job")
     end
   end
 
   private
+
+  # Only a work sample that is public right now, by an account that is still active.
+  def shared_item_public?
+    item = shared_portfolio_item
+    item.present? && item.visibility == "public" && item.user.active?
+  end
+
+  # The public view of a work sample: what its own profile page shows, not internal columns.
+  PUBLIC_ITEM_FIELDS = %w[id user_id kind title url credited_as thumbnail_url waveform_url description tags genres roles instruments year featured].freeze
+
+  def public_item_json(item)
+    item.attributes.slice(*PUBLIC_ITEM_FIELDS).transform_keys { _1.camelize(:lower) }.merge("type" => item.kind)
+  end
 
   def reshared_post_preview
     # Only a public, live original is embedded: a reshare is itself public, so a followers-only,
@@ -249,7 +262,7 @@ class Post < ApplicationRecord
     errors.add(:shared_job_id, "is required") and return if shared_job_id.blank?
     job = shared_job
     return errors.add(:shared_job_id, "was not found") unless job
-    errors.add(:shared_job_id, "is not open") unless job.listed?
+    errors.add(:shared_job_id, "must be one of your own published opportunities") unless job.published? && job.employer_id == created_by_user_id
   end
 
   def reshared_post_is_visible

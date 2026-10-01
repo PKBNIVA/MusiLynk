@@ -48,7 +48,7 @@ module Stage
       post = Post.find(params[:id])
       return unless authorize_owner!(post)
 
-      post.update!(post_params.slice(:body, :link_url, :city, :genres, :visibility))
+      post.update!(update_params)
       render json: { post: post.api_json }
     end
 
@@ -113,6 +113,18 @@ module Stage
         shared_job_id: permitted[:sharedJobId],
         reshared_post_id: permitted[:resharedPostId]
       }.compact
+    end
+
+    # Only what the request names: an edit that leaves out visibility or genres must not reset them.
+    def update_params
+      permitted = params.permit(:body, :linkUrl, :city, :visibility, genres: [])
+      changes = {}
+      changes[:body] = permitted[:body] if permitted.key?(:body)
+      changes[:link_url] = permitted[:linkUrl] if permitted.key?(:linkUrl)
+      changes[:city] = permitted[:city] if permitted.key?(:city)
+      changes[:visibility] = permitted[:visibility] if permitted.key?(:visibility)
+      changes[:genres] = Array(permitted[:genres]) if params.key?(:genres)
+      changes
     end
 
     def paginate(sorted)

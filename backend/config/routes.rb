@@ -26,6 +26,7 @@ Rails.application.routes.draw do
     post "auth/logout", to: "auth#logout"
     post "auth/request-email-verification", to: "auth#request_verification"
     post "auth/verify-email", to: "auth#verify_email"
+    post "auth/resend-verification", to: "auth#resend_verification"
     post "auth/forgot-password", to: "auth#forgot_password"
     get "auth/reset-password/check", to: "auth#check_reset_password_token"
     post "auth/reset-password", to: "auth#reset_password"

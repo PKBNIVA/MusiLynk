@@ -107,7 +107,7 @@ export const REPORT_REASONS = [
   'Asks for payment',
   'Spam or scam',
   'Unsafe contact request',
-  'Misleading opportunity',
+  'Misleading listing',
   'Other',
 ] as const;
 export const reportsQuery = (filters: ReportFilters, page: number, perPage = 100) => {

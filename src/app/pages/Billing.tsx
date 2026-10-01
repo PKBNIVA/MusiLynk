@@ -54,6 +54,7 @@ import {
 import { loadAiUsage, type AiUsage } from '../lib/ai';
 import { formatDate, formatMoney } from '../lib/format';
 import { optionLabel } from '../components/ui/option-labels';
+import { PaymentsNotify } from '../components/PaymentsNotify';
 
 type Summary = {
   status: 'pending' | 'trialing' | 'active' | 'cancelling' | 'past_due' | 'cancelled' | 'early_access';
@@ -87,8 +88,8 @@ const PAYMENT_MODE_NOTICE: Partial<Record<PaymentMode, [string, string]>> = {
   test: ['Test mode.', 'Payments here use test cards. No real money moves and no real cards are charged.'],
   mock: ['Trial only.', 'Paid plans start without a payment step for now, so nothing is charged.'],
   disabled: [
-    'Payments open soon — we’ll email you.',
-    'Your current plan is not affected. Early Access Pro, which needs no card, is going to our first hirers.',
+    'Payments open soon.',
+    'Turn on the email option below and we’ll tell you when they do. Your current plan is not affected. Early Access Pro, which needs no card, is going to our first hirers.',
   ],
 };
 
@@ -337,7 +338,9 @@ export default function Billing() {
       if (status !== 0 && status !== 502) delete intentKeys.current[intent];
       // A 503 is billing being switched off, not something to retry: say so in plain words.
       toast.error(
-        status === 503 ? 'Payments open soon — we’ll email you. Your current plan is not affected.' : errorMessage(e),
+        status === 503
+          ? 'Payments open soon. Your current plan is not affected; turn on the email option on this page to hear when they do.'
+          : errorMessage(e),
       );
     } finally {
       inFlight.current = false;
@@ -398,6 +401,7 @@ export default function Billing() {
             <FlaskConical className="shrink-0 text-amber-300" size={18} />
             <span>
               <b>{notice[0]}</b> {notice[1]}
+              {paymentsOff && <PaymentsNotify />}
             </span>
           </div>
         )}

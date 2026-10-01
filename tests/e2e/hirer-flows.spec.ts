@@ -204,7 +204,7 @@ test.describe('payments are off', () => {
     await page.goto('/employer/bookings');
     await page.getByRole('button', { name: /Resume deposit payment/ }).click();
     const note = page.getByTestId('deposit-unavailable');
-    await expect(note).toContainText('Payments open soon — we’ll email you');
+    await expect(note).toContainText('Payments open soon');
     await expect(note).toContainText('message The Night Owls');
     await expect(page.getByText('Live payments are not configured')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Resume deposit payment/ })).toHaveCount(0);
@@ -256,13 +256,22 @@ test.describe('payments are off', () => {
           }),
           true
         );
+      if (path === '/notifications/preferences')
+        return (json(route, { emailNotifications: true, paymentsNotify: false }), true);
+      if (path === '/me/email-preferences') return (json(route, { emailPreferences: {}, paymentsNotify: true }), true);
       return false;
     });
     await page.goto('/employer/billing');
-    await expect(page.getByText('Payments open soon — we’ll email you.')).toBeVisible();
+    await expect(page.getByText('Payments open soon.')).toBeVisible();
     await expect(page.getByRole('status').filter({ hasText: 'Early Access Pro' })).toBeVisible();
     await expect(page.getByTestId('plan-pro').getByRole('button', { name: 'Start free trial' })).toHaveCount(0);
     await expect(page.getByTestId('plan-pro-unavailable')).toContainText('Available when payments open');
+    const notify = page.getByLabel('Email me when payments open');
+    await expect(notify).not.toBeChecked();
+    const saved = page.waitForRequest((r) => r.url().includes('/me/email-preferences') && r.method() === 'PUT');
+    await notify.check();
+    expect((await saved).postDataJSON()).toEqual({ emailPreferences: { paymentsNotify: true } });
+    await expect(notify).toBeChecked();
   });
 });
 

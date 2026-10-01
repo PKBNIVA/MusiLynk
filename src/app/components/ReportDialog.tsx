@@ -14,9 +14,12 @@ export const REPORT_REASONS = [
   'Asks for payment',
   'Spam or scam',
   'Unsafe contact request',
-  'Misleading opportunity',
+  'Misleading listing',
   'Other',
 ] as const;
+
+/** The wire value stays the one the server validates (and old reports hold); only the label differs. */
+const REASON_LABEL: Record<string, string> = { 'Misleading listing': 'Misleading opportunity' };
 
 export const REPORT_DETAILS_MAX = 4000;
 
@@ -103,7 +106,7 @@ export function ReportDialog({
               }}
               className="accent-violet-500"
             />
-            {option}
+            {REASON_LABEL[option] ?? option}
           </label>
         ))}
         <p id={`${id}-hint`} className="text-xs text-slate-400">

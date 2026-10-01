@@ -118,7 +118,7 @@ test.describe('in-app dialogs', () => {
       .click();
     await expect(page.getByRole('dialog')).toBeHidden();
     expect(state.reports).toEqual([
-      { entityType: 'job', entityId: REPORT_JOB_ID, reason: 'Misleading opportunity' },
+      { entityType: 'job', entityId: REPORT_JOB_ID, reason: 'Misleading listing' },
       { entityType: 'job', entityId: REPORT_JOB_ID, reason: 'Spam or scam', details: 'Same post under five names.' },
     ]);
     expect(state.nativeDialogs).toEqual([]);

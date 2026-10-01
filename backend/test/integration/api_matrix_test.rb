@@ -49,7 +49,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/auth/reset-password/check", :public, { params: { token: "not-a-token" }, keys: %w[valid] }],
     [:get, "/api/me", :any, { keys: %w[user] }],
     [:get, "/api/me/identities", :talent, { keys: %w[identities] }],
-    [:put, "/api/me/email-preferences", :any, { params: { emailPreferences: { digest: false } }, bad: { emailPreferences: { spam: false } }, bad_status: [400], keys: %w[emailPreferences] }],
+    [:put, "/api/me/email-preferences", :any, { params: { emailPreferences: { digest: false } }, bad: { emailPreferences: { spam: false } }, bad_status: [400], keys: %w[emailPreferences paymentsNotify] }],
     [:get, "/api/account/export", :any, { keys: %w[format version account profile conversations] }],
     # Without the typed email the request is refused, so the matrix never erases its own users.
     [:delete, "/api/account", :any, { ok: [422], params: { confirmEmail: "someone-else@example.com" } }],
@@ -180,7 +180,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/pages/act/{inactive_act}/jobs", :public, { ok: [404], anon: [404], note: "only active Pages have a public job list" }],
     [:get, "/api/notifications/unread", :any, { keys: %w[unread] }],
     [:post, "/api/notifications/read-all", :any, { keys: %w[ok updated] }],
-    [:get, "/api/notifications/preferences", :any, { keys: %w[emailNotifications] }],
+    [:get, "/api/notifications/preferences", :any, { keys: %w[emailNotifications paymentsNotify] }],
     [:patch, "/api/notifications/preferences", :any, { params: { emailNotifications: false }, bad: { emailNotifications: "no" }, bad_status: [400], keys: %w[emailNotifications] }],
     [:get, "/api/notifications/unsubscribe", :public, { ok: [400], params: { token: "not-a-token" }, note: "valid tokens are covered in messaging_notifications_test" }],
     [:post, "/api/notifications/unsubscribe", :public, { ok: [400], params: { token: "not-a-token" } }],

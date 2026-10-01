@@ -59,7 +59,7 @@ class ShowcaseModerationTest < ActionDispatch::IntegrationTest
     Application.create!(job: published_job(@reporter), candidate: @owner, portfolio: @portfolio, resume: @resume)
     %w[portfolio resume].each do |type|
       id = type == "portfolio" ? @portfolio.id : @resume.id
-      post "/api/reports", params: { entityType: type, entityId: id, reason: "Misleading opportunity" }, headers: auth(@reporter), as: :json
+      post "/api/reports", params: { entityType: type, entityId: id, reason: "Misleading listing" }, headers: auth(@reporter), as: :json
       assert_response :created, type
     end
     resume_report = Report.find_by!(entity_type: "resume")

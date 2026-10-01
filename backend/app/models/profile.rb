@@ -26,6 +26,13 @@ class Profile < ApplicationRecord
   # always wins; these only ever narrow what it already allows through.
   EMAIL_PREFERENCE_CATEGORIES = %w[digest lifecycle requests product].freeze
 
+  # "Email me when payments open": kept beside the category toggles in email_preferences, but it is
+  # not a category (it defaults to off, and no digest or lifecycle rule reads it). The owner can
+  # query it: Profile.where("email_preferences ->> 'paymentsNotify' = 'true'").
+  PAYMENTS_NOTIFY_KEY = "paymentsNotify".freeze
+
+  def payments_notify? = email_preferences.to_h[PAYMENTS_NOTIFY_KEY] == true
+
   def api_json
     attributes.except("user_id", "created_at", "updated_at", "email_notifications").transform_keys { _1.camelize(:lower) }
   end

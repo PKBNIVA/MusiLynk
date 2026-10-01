@@ -53,6 +53,11 @@ class ReportsTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a stale client sending the old reason value is still accepted" do
+    post "/api/reports", params: { entityType: "job", entityId: @job.id, reason: "Misleading listing" }, headers: auth(@reporter), as: :json
+    assert_response :created
+  end
+
   test "a user cannot report their own account" do
     post "/api/reports", params: { entityType: "user", entityId: @reporter.id, reason: "Spam or scam" }, headers: auth(@reporter), as: :json
     assert_response :unprocessable_content
@@ -65,7 +70,7 @@ class ReportsTest < ActionDispatch::IntegrationTest
     post "/api/reports", params: { entityType: "job", entityId: @job.id, reason: "Spam or scam" }, headers: auth(@reporter), as: :json
     assert_response :created
 
-    post "/api/reports", params: { entityType: "job", entityId: @job.id, reason: "Misleading opportunity" }, headers: auth(@reporter), as: :json
+    post "/api/reports", params: { entityType: "job", entityId: @job.id, reason: "Misleading listing" }, headers: auth(@reporter), as: :json
     assert_response :conflict
     assert_equal "ALREADY_REPORTED", response.parsed_body["code"]
     assert_match(/already have an open report/i, response.parsed_body["error"])
@@ -74,7 +79,7 @@ class ReportsTest < ActionDispatch::IntegrationTest
 
   test "a new report is allowed once the earlier one on the same entity is closed" do
     first = Report.create!(reporter: @reporter, entity_type: "job", entity_id: @job.id, reason: "Spam or scam", status: "resolved")
-    post "/api/reports", params: { entityType: "job", entityId: @job.id, reason: "Misleading opportunity" }, headers: auth(@reporter), as: :json
+    post "/api/reports", params: { entityType: "job", entityId: @job.id, reason: "Misleading listing" }, headers: auth(@reporter), as: :json
     assert_response :created
     assert_not_equal first.id, response.parsed_body["id"]
   end
@@ -84,7 +89,7 @@ class ReportsTest < ActionDispatch::IntegrationTest
     assert_response :created
 
     other = create_user("Reporter Two", "jobseeker")
-    post "/api/reports", params: { entityType: "job", entityId: @job.id, reason: "Misleading opportunity" }, headers: auth(other), as: :json
+    post "/api/reports", params: { entityType: "job", entityId: @job.id, reason: "Misleading listing" }, headers: auth(other), as: :json
     assert_response :created
   end
 

@@ -83,7 +83,7 @@ export default function ApplicationTracking() {
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary">{a.opportunityKind || 'job'}</Badge>
+                        <Badge variant="secondary">{optionLabel(a.opportunityKind || 'job')}</Badge>
                         <h2 className="text-xl font-semibold">
                           <Link to={`/jobseeker/jobs/${a.jobId || a.job_id}`} className="hover:text-violet-200">
                             {a.title}

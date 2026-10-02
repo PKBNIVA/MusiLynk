@@ -47,6 +47,17 @@ import { formatDate, formatMoney } from '../lib/format';
 import { optionLabel } from '../components/ui/option-labels';
 import { ShareMenu } from '../components/ShareMenu';
 import { PaymentsNotify } from '../components/PaymentsNotify';
+import { BillingDetailsCard } from '../components/billing/BillingDetailsCard';
+import { CheckoutBusinessDetails } from '../components/billing/CheckoutBusinessDetails';
+import { InvoiceList } from '../components/billing/InvoiceList';
+import { useBillingProfile } from '../lib/billingProfile';
+import {
+  draftFrom,
+  emptyDraft,
+  hasBusinessInput,
+  type BillingProfileDraft,
+  type BillingProfileErrors,
+} from '../lib/billingProfile';
 
 type Summary = {
   status: 'pending' | 'trialing' | 'active' | 'cancelling' | 'past_due' | 'cancelled' | 'early_access';
@@ -218,6 +229,35 @@ export default function Billing() {
   // One Idempotency-Key per checkout intent. It is kept after a network/gateway failure so a retry replays the same intent instead of creating a second subscription.
   const intentKeys = useRef<Record<string, string>>({});
   const inFlight = useRef(false);
+  // "Buying for a business?": folded away until asked for; saved with the account just before checkout starts.
+  const profileApi = useBillingProfile();
+  const [businessOpen, setBusinessOpen] = useState(false);
+  const [businessDraft, setBusinessDraft] = useState<BillingProfileDraft>(() => emptyDraft(undefined, 'business'));
+  const [businessErrors, setBusinessErrors] = useState<BillingProfileErrors>({});
+  const savedProfile = profileApi.data?.profile ?? null;
+  const toggleBusiness = () => {
+    if (!businessOpen) {
+      setBusinessDraft(
+        savedProfile?.buyerType === 'business'
+          ? draftFrom(savedProfile)
+          : { ...emptyDraft(undefined, 'business'), billingEmail: profileApi.data?.defaults.billingEmail ?? '' },
+      );
+      setBusinessErrors({});
+    }
+    setBusinessOpen(!businessOpen);
+  };
+  // Saves the open business section; false (with the problems shown) means checkout must not start yet.
+  async function commitBusinessDetails() {
+    if (!businessOpen || !hasBusinessInput(businessDraft)) return true;
+    const result = await profileApi.save({ ...businessDraft, buyerType: 'business' });
+    if (result.ok) {
+      setBusinessErrors({});
+      return true;
+    }
+    setBusinessErrors(result.errors);
+    toast.error(result.message);
+    return false;
+  }
 
   const load = () =>
     Promise.all([apiGet<Partial<BillingPlans>>('/billing/plans'), apiGet<BillingState>('/billing/subscription')]).then(
@@ -275,6 +315,11 @@ export default function Billing() {
     if (inFlight.current) return;
     inFlight.current = true;
     setPendingPlan(code);
+    if (!(await commitBusinessDetails())) {
+      inFlight.current = false;
+      setPendingPlan(null);
+      return;
+    }
     const intent = `${code}:${shownInterval}:${promoCode}`;
     const key = intentKeys.current[intent] || (intentKeys.current[intent] = newIdempotencyKey());
     try {
@@ -474,6 +519,21 @@ export default function Billing() {
           </div>
         )}
 
+        {profileApi.data && plans.some((p) => p.code !== 'free') && (
+          <CheckoutBusinessDetails
+            open={businessOpen}
+            onToggle={toggleBusiness}
+            draft={businessDraft}
+            errors={businessErrors}
+            states={profileApi.data.states}
+            savedName={savedProfile?.buyerType === 'business' && !businessOpen ? savedProfile.legalName : undefined}
+            onChange={(key, value) => {
+              setBusinessDraft({ ...businessDraft, [key]: value });
+              if (businessErrors[key]) setBusinessErrors({ ...businessErrors, [key]: undefined });
+            }}
+          />
+        )}
+
         <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mt-7">
           {plans.map((p) => (
             <Card
@@ -586,6 +646,10 @@ export default function Billing() {
             </CardContent>
           </Card>
         )}
+
+        <BillingDetailsCard api={profileApi} />
+
+        <InvoiceList />
 
         <div className="mt-8 text-xs text-slate-500 max-w-4xl">
           To change plans, cancel your current plan first, then subscribe to another once it has ended. Closing or

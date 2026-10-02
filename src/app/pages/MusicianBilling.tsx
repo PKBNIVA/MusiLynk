@@ -20,6 +20,9 @@ import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
 import { Button } from '../components/ui/button';
 import { usePageMeta } from '../components/PageMeta';
+import { BillingDetailsCard } from '../components/billing/BillingDetailsCard';
+import { InvoiceList } from '../components/billing/InvoiceList';
+import { useBillingProfile } from '../lib/billingProfile';
 
 /**
  * Billing for a musician. Verse is free for musicians during the beta, so there is nothing to
@@ -27,6 +30,7 @@ import { usePageMeta } from '../components/PageMeta';
  */
 export default function MusicianBilling() {
   const { user } = useAuth();
+  const profileApi = useBillingProfile();
   usePageMeta('Plan & billing', 'Verse is free for musicians during the beta.');
   const [searchParams, setSearchParams] = useSearchParams();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -102,6 +106,8 @@ export default function MusicianBilling() {
             </Button>
           </div>
         </section>
+        <BillingDetailsCard api={profileApi} />
+        <InvoiceList />
       </main>
       <AlertDialog
         open={confirmOpen}

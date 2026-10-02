@@ -17,7 +17,7 @@ class InvoicesController < ApplicationController
       depositAmount: invoice.deposit_amount, feeAmount: invoice.fee_amount, gstAmount: invoice.gst_amount,
       totalAmount: invoice.total_amount, policyVersion: invoice.policy_version,
       actName: booking.act.name, payerName: payment.payer.name, bookingId: booking.id,
-      seller: LegalConfig.public_json
+      seller: LegalConfig.public_json, amountInWords: AmountInWords.paise((invoice.total_amount.to_d * 100).round)
     }
   end
 end

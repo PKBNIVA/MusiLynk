@@ -284,6 +284,15 @@ class Notifier
       email(subscription.user, "early_access_granted", until: until_date)
     end
 
+    # TaxInvoiceGenerator issued the invoice for a paid subscription charge. Email only: the
+    # invoice is listed on the billing page, which is where the link goes.
+    def invoice_issued(invoice)
+      rupees, paise = invoice.total_paise.divmod(100)
+      amount = "₹#{IndianFormat.number(rupees)}#{format('.%02d', paise) if paise.positive?}"
+      email(invoice.user, "invoice_issued", number: invoice.invoice_number, amount:, path: "/invoices/#{invoice.id}/print",
+        kind: invoice.tax_invoice? ? "tax invoice" : "bill of supply")
+    end
+
     # Verification::Evaluate scored a request below the summary threshold: one nudge, listing what
     # would help (only the components still missing).
     def verification_needs_more_proof(user, missing)

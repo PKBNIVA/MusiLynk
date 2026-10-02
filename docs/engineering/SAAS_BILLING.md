@@ -65,3 +65,6 @@ The exact Railway ← Razorpay dashboard mapping, webhook events, capture settin
 
 ## Production requirements still needed
 GST/invoicing, dunning emails, annual plans, proration, partial refunds in the ledger, settlement/KYC, finance exports, chargebacks, immutable accounting ledger and a support tool for safe subscription recovery. Payment attribution for subscription `payment.failed` events without a local order (recorded with no user).
+
+## Invoices and billing details
+See `docs/ops/billing-invoices.md` (GST invoices per charge, billing profiles, the `config/legal.yml` fields the owner fills in).

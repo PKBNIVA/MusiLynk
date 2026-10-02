@@ -41,6 +41,8 @@ class AccountExport
       organizations: rows(@user.organizations.order(:created_at)),
       subscriptions: rows(@user.subscriptions.order(:created_at)),
       payments: rows(@user.billing_attempts.order(:created_at)),
+      billingProfiles: rows(BillingProfile.where(user_id: @user.id).order(:version)),
+      invoices: TaxInvoice.where(user_id: @user.id).order(:issued_at).map { _1.document_json.stringify_keys },
       stagePosts: rows(Post.where(created_by_user_id: @user.id).order(:created_at)),
       stageComments: rows(PostComment.where(created_by_user_id: @user.id).order(:created_at)),
       stageFollows: rows(Follow.where(follower_user_id: @user.id).order(:created_at)),

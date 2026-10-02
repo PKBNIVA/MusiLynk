@@ -217,7 +217,7 @@ Every `q` (global search, jobs, talent, candidates, acts) goes through `Search::
 | POST | `/organizations/:id/members` | owner/admin member | `email, role: admin\|recruiter\|booker\|finance\|member` | 201; 400 `INVALID_ROLE`; 402 seats; 403 |
 | DELETE | `/organizations/:id/members/:userId` | owner/admin member | — | `{ok}`; 409 owner |
 | GET | `/urgent-requests` | talent | `city, role, scope: mine\|matches\|browse` (default `matches` for musicians, `mine` for hirers), `page` (20 per page) | `{requests: [… requesterName, requesterVerified, myResponse, responseCount, conversationId, myMatchReasons], scope, page, perPage, total, hasMore}` |
-| POST | `/urgent-requests` | talent | `title, roleName, city, startAt, endAt, budgetMin/Max, …` | 201 `{id}` |
+| POST | `/urgent-requests` | talent | `title, roleName, city, startAt, endAt, budgetMin/Max, …` | 201 `{id, notifiedCount: 0, matchStatus: "pending", responseTimePromise}`; matching and alerts run afterwards in `UrgentMatchJob`, and `GET /urgent-requests/:id` (requester) shows `match_status` (`pending`/`matching`/`done`/`skipped`) and `notified_count` |
 | PATCH/PUT | `/urgent-requests/:id` | requester | `status: filled\|cancelled` | `{ok}`; 400 |
 | POST | `/urgent-requests/:id/respond` | talent (not requester) | `message, rate` | 201 `{ok, conversationId}` (upsert; opens the thread with the note as first message) |
 | POST | `/urgent-requests/:id/accept` | requester | `userId` (a responder) | `{ok, request, conversationId}`; marks the request filled, notifies both, posts nothing public; 422 not a responder / already filled |

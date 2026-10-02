@@ -18,7 +18,7 @@ const hirer = {
   profileComplete: false,
 };
 
-async function mockCommon(page: Page, state: { registered: boolean; urgentRequests: unknown[] }) {
+async function mockCommon(page: Page, state: { registered: boolean; urgentRequests: unknown[]; statusPolls: number }) {
   await page.route('**/api/**', (route) => {
     const request = route.request();
     const { pathname } = new URL(request.url());
@@ -32,15 +32,23 @@ async function mockCommon(page: Page, state: { registered: boolean; urgentReques
     if (pathname === '/api/urgent-requests' && request.method() === 'POST') {
       const body = request.postDataJSON();
       state.urgentRequests.push(body);
-      return json(route, { id: 'urg_1', notifiedCount: 6, responseTimePromise: 'within 2 hours, 9am–11pm IST' }, 201);
+      // Matching runs in a background job, so the POST answers before anyone is notified.
+      return json(
+        route,
+        { id: 'urg_1', notifiedCount: 0, matchStatus: 'pending', responseTimePromise: 'within 2 hours, 9am–11pm IST' },
+        201,
+      );
     }
     if (pathname === '/api/urgent-requests/urg_1') {
+      // The first status poll still sees matching in progress; the next one sees the finished count.
+      const pending = state.statusPolls++ === 0;
       return json(route, {
         request: {
           id: 'urg_1',
           title: 'Drummer needed in Mumbai',
           status: 'open',
-          notified_count: 6,
+          notified_count: pending ? 0 : 6,
+          match_status: pending ? 'pending' : 'done',
           responseCount: 0,
           city: 'Mumbai',
           role_name: 'Drummer',
@@ -55,7 +63,7 @@ async function mockCommon(page: Page, state: { registered: boolean; urgentReques
 test('signed-out hirer fills the urgent form, signs up, and lands on the confirmation status card', async ({
   page,
 }) => {
-  const state = { registered: false, urgentRequests: [] as unknown[] };
+  const state = { registered: false, urgentRequests: [] as unknown[], statusPolls: 0 };
   await mockCommon(page, state);
 
   await page.goto('/urgent');
@@ -87,7 +95,9 @@ test('signed-out hirer fills the urgent form, signs up, and lands on the confirm
   await expect(page).toHaveURL(/\/urgent$/);
   await expect(page.getByText("We're on it")).toBeVisible();
   await expect(page.getByText('within 2 hours, 9am–11pm IST')).toBeVisible();
-  await expect(page.getByText('6', { exact: true })).toBeVisible();
+  await expect(page.getByText('Finding musicians for you')).toBeVisible();
+  await expect(page.getByTestId('urgent-notified-count')).toHaveText('6', { timeout: 15_000 });
+  await expect(page.getByText('Musicians notified')).toBeVisible();
 
   expect(state.urgentRequests).toHaveLength(1);
   expect(state.urgentRequests[0]).toMatchObject({
@@ -100,7 +110,7 @@ test('signed-out hirer fills the urgent form, signs up, and lands on the confirm
 });
 
 test('the urgent form names every missing answer instead of posting half a request', async ({ page }) => {
-  const state = { registered: false, urgentRequests: [] as unknown[] };
+  const state = { registered: false, urgentRequests: [] as unknown[], statusPolls: 0 };
   await mockCommon(page, state);
   await page.goto('/urgent');
   await page.getByRole('button', { name: 'Continue to sign up' }).click();

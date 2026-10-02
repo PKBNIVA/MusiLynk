@@ -210,7 +210,10 @@ export default function UrgentTab() {
                       <p className="text-sm text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
                         <MapPin size={13} /> {r.city} · {r.role_name} · by {r.requesterName} · {r.responseCount}{' '}
                         response
-                        {r.responseCount === 1 ? '' : 's'} · {r.notified_count || 0} notified
+                        {r.responseCount === 1 ? '' : 's'} ·{' '}
+                        {r.match_status === 'pending' || r.match_status === 'matching'
+                          ? 'matching…'
+                          : `${r.notified_count || 0} notified`}
                         {r.filledByName ? ` · filled by ${r.filledByName}` : ''}
                       </p>
                     </div>

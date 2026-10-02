@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { Check, CheckCheck, Inbox, Sparkles, Tags, X } from 'lucide-react';
 import { Button } from '../../components/ui/button';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { LoadState, ShowcaseShell, useWorkspaceBase } from '../../components/showcase/parts';
 import { SHOWCASE_HELP } from '../../components/showcase/help';
 import { apiGet, apiPost } from '../../lib/api';

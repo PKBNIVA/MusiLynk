@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { Check, ShieldCheck, Sparkles, Users, CalendarDays, BriefcaseBusiness } from 'lucide-react';
+import { Check, Sparkles, Users, CalendarDays, BriefcaseBusiness } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { PublicNav } from '../components/PublicNav';
+import { PhotoHeader } from '../components/landing/PhotoHeader';
 import { usePageMeta } from '../components/PageMeta';
 import { IntervalToggle } from '../components/IntervalToggle';
 import { PromoCodeField } from '../components/PromoCodeField';
@@ -132,7 +133,7 @@ function billingReturnPath(plan: string, interval: BillingInterval, code: string
 export default function Pricing() {
   usePageMeta(
     'Pricing',
-    'Verse plans for music hiring and booking teams. Professionals build profiles and apply free; paid plans add capacity, seats and trials.',
+    'Verse plans for music hiring and booking teams. Musicians build profiles and apply free; paid plans add capacity, seats and trials.',
     { canonicalPath: '/pricing' },
   );
   const [plans, setPlans] = useState<ApiPlan[]>(FALLBACK_PLANS);
@@ -170,17 +171,12 @@ export default function Pricing() {
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
       <main className="max-w-7xl mx-auto px-5 md:px-6 py-16">
-        <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-400/20 px-3 py-1.5 text-sm text-emerald-200">
-            <ShieldCheck size={15} aria-hidden="true" />
-            SaaS plans with server-enforced trials
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold mt-5">Pay for operating capacity, not the right to apply</h1>
-          <p className="text-lg text-slate-400 mt-4">
-            Music professionals can build a profile and apply without a subscription. Paid plans are for teams using
-            Verse to recruit, source, book and manage talent at higher volume.
+        <PhotoHeader photo="college-fest" title="Pay for operating capacity, not the right to apply">
+          <p className="text-lg">
+            Musicians can build a profile and apply without a subscription. Paid plans are for teams using Verse to
+            recruit, source, book and manage talent at higher volume.
           </p>
-        </div>
+        </PhotoHeader>
         {live === false && (
           <p className="text-center text-xs text-slate-500 mt-6" role="status">
             Showing standard plan limits. Your workspace billing page always shows the current terms.
@@ -279,9 +275,9 @@ export default function Pricing() {
         </div>
         <Card className="mt-8 bg-amber-500/[.05] border-amber-400/15">
           <CardContent className="p-6 text-sm text-slate-300">
-            <b>How billing works:</b> recurring plans are billed through Razorpay Subscriptions with server-side
-            credentials and signed webhooks. Trials are enforced by the server. Booking deposits for live acts are a
-            separate payment flow with their own quote, cancellation and refund rules—see{' '}
+            <b>How billing works:</b> paid plans are billed through Razorpay, renew on the date shown on your Billing
+            page, and can be cancelled at any time. A free trial charges nothing until it ends. Booking deposits for
+            live acts are a separate payment flow with their own quote, cancellation and refund rules—see{' '}
             <Link className="text-violet-300 underline underline-offset-4" to="/refund-policy">
               payments &amp; refunds
             </Link>

@@ -50,6 +50,23 @@ Resolved contradictions from the old plans (the code is the truth):
 | #124 | Two time-of-day flaky tests pinned | 2026-09-30 |
 | #125, #126, #127 | UX Wave 1: shared kit (UserAvatar, FormatGlyph, PlayChip, EmptyState + 8 scenes, StatChips), dashboards around "needs you now", row job cards + filter chips, profile/job heroes with sticky CTA, talent/applicant cards, directory chips, landing avatar row | 2026-09-30 |
 | #128 | The three superseded planning docs | 2026-09-30 |
+| #129 | This plan (`docs/VERSE_PLAN.md`) | 2026-09-30 |
+| #130 | B9 quality infrastructure (into `claude/launch-2`) | 2026-09-30 |
+| #131 | B0 foundations and hygiene (into `claude/launch-2`) | 2026-09-30 |
+| #132 | B1 photo, art and media kit (into `claude/launch-2`) | 2026-09-30 |
+| #133 | B5 showcase demo data (into `claude/launch-2`) | 2026-09-30 |
+| #134 | B4 forms (into `claude/launch-2`) | 2026-09-30 |
+| #135 | Claude Code permission rules for `scripts/ops` (into `production`) | 2026-09-30 |
+| #136 | B2 cards, profile, ranking and filters (into `claude/launch-2`) | 2026-09-30 |
+| #137 | B3 landing, public pages and OG images (into `claude/launch-2`) | 2026-09-30 |
+| #138 | Launch-2 → `production`: foundations, media kit, forms, showcase data, cards and public pages | 2026-09-30 |
+| #139 | Hotfix: stop deploying the OG edge function that failed Vercel's deploy validation (`edge/og.ts`; `/api/og/*` rewrites to `og-default.png`) | 2026-09-30 |
+| #141 | B7 hirer flows (into `claude/launch-3`) | 2026-10-01 |
+| #140 | B8 musician flows (into `claude/launch-3`) | 2026-10-01 |
+| #143 | B10 admin console and integration one-liners (into `claude/launch-3`) | 2026-10-01 |
+| #145 | B6 copy and formatting sweep (into `claude/launch-3`) | 2026-10-01 |
+| #142 | A-16 server-side duplicate-submit guard on `POST /api/jobs` (B4's file; routed to launch-3 by the orchestrator; client guard in #141) (into `claude/launch-3`) | 2026-10-01 |
+| _(this PR)_ | Launch-3 → `production`: hirer and musician flows, admin fixes, copy sweep | on merge |
 
 ---
 
@@ -160,7 +177,56 @@ Findings from the visual, copy, forms/bugs, mobile, visitor/SEO, admin, trust-pr
 
 ### 4.6 Additional confirmed findings (appended)
 
-_(none yet)_
+From the ten-lens crawl of a production-mode copy (311 unique findings; 41 P0–P2 bugs went to two verifiers each; both confirmed 38, one confirmed A-29, two were never verified). IDs A-01…A-39. `Sev (v: Pn)` means both verifiers rated it lower. Owner is the brief that fixes it; **fixed in launch-2** means the fix merged and must be re-checked at acceptance.
+
+| ID | Sev | Screen/route | Defect | Owner |
+|---|---|---|---|---|
+| A-18 | P0 (v: P1) | /jobseeker/urgent and /employer/urgent | One long unbroken string in an urgent request stretches layout to 1560px and hides the respond dialog. | B2 |
+| A-31 | P0 (v: P1) | /stage | Stage home feed cursor never advances; infinite scroll repeats the same 20 posts, 'all caught up' never appears. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-32 | P0 | /stage | Photos attached to Stage posts render as grey boxes for everyone but the uploader's session. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-01 | P1 | /jobseeker/library | Add-from-link dialog says 'Added' but Close or Escape discards the link; it saves only via Draft then 'Add to my work'. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-02 | P1 | /professionals/:id | Public profile never shows the day rate that the profile form says will be public. | B2 |
+| A-03 | P1 | /join (via /signup) | /signup redirects to /join, which has no route and renders a 404. | **fixed in launch-2, verify at acceptance** (B0) |
+| A-08 | P1 | /employer/post-job -> /opportunities/:id | Wedding template placeholders like [date] can be submitted, approved and published unchanged. | **fixed in launch-2, verify at acceptance** (B4) |
+| A-09 | P1 | /professionals/:id | 'Request a quote' on a musician profile opens the unfiltered book-talent list and drops the musician. | **fixed in launch-3, verify at acceptance** (B7) |
+| A-10 | P1 (v: P2) | /employer/bookings | 'Resume deposit payment' dead-ends with raw 'Live payments are not configured.' toast. | **fixed in launch-3, verify at acceptance** (B7) |
+| A-12 | P1 (v: P2) | /jobseeker/profile, /employer/profile | No field or flow to upload a profile photo or company logo; every user is an initials circle. | **fixed in launch-2, verify at acceptance** (B1) |
+| A-14 | P1 | email: musician_day1_first_link, day3, day5, day10, day21; hirer_day1, day3, day7, day14; milestone_* (LifecycleMailer) | Lifecycle email buttons double the workspace prefix (/jobseeker/jobseeker/...) and land on 404. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-15 | P1 | /employer/post-job (Start from a template) → admin Opportunity queue | Duplicate of A-08: template brackets published verbatim; a live listing in the admin queue already has them. | **fixed in launch-2, verify at acceptance** (B4) |
+| A-19 | P1 | /music-jobs | Job cards force 603px width on phones; 'Sign in to apply' is off-screen. | **fixed in launch-2, verify at acceptance** (B9) |
+| A-20 | P1 | /jobseeker (all signed-in routes header) | At 360px the workspace hamburger sits fully off-screen; header needs 395px. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-21 | P1 | /urgent | Anonymous /urgent shows the signed-in header, bell, avatar and bottom tabs; tabs bounce to login. | B3 |
+| A-22 | P1 | /admin (tab strip + Opportunity queue / Verification / Reviews) | Admin tab badges count the current page only: Verification shows 100 versus 303 real. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-23 | P1 | /admin Opportunity queue (page 2+) | Admin queue pager counts all 621 jobs but shows only pending; page 2 is empty; status filter is ignored. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-24 | P1 (v: P2) | /admin Reports | One long report text makes the admin console 40,000px wide; Review button is off-screen. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-25 | P1 (v: P2) | /admin Demo data | Admin cannot create demo data (cap 300, 1000 exist, no smaller size) or delete a single batch. | **fixed in launch-2, verify at acceptance** (B5) |
+| A-28 | P1 | /stage | Expired session on /stage: token wiped, no redirect to sign-in, composer stays usable. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-33 | P1 (v: P2) | /stage | Resharing your post creates no notification and no email for the original author. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-34 | P1 | /stage/posts/:id | Replying to a comment never notifies the commenter; only the post owner is notified. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-35 | P1 | /stage/authors/user/:id | Author page for a member with no posts shows 'Loading...' and a '?' avatar; identity comes from posts[0]. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-36 | P1 | /jobseeker/reviews | Review-prompt notification links to /reviews, which maps nowhere; 'Open' lands on the bare dashboard. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-37 | P1 | /stage/posts/:id | Signed-out deep link to a Stage post is lost: login redirect has no return path. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-04 | P2 | /join/musician | 'Draft my profile from these links' returns a fully blank draft despite roles, city and links already entered. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-05 | P2 | /join/musician | Spotify artist URLs are labelled 'Spotify track' and later saved as 'Spotify work sample'. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-06 | P2 | /jobseeker/urgent | Urgent matcher uses substring match, so a Dholak player is shown 'Plays Dhol'. | B2 |
+| A-07 | P2 | /jobseeker/review | Review suggestions cite 'title mentions Tabla' when title and description contain no such text. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-11 | P2 | /employer/billing | 'Start free trial' stays enabled under a 'Payments unavailable' banner and fails with raw 503 toast. | **fixed in launch-3, verify at acceptance** (B7) |
+| A-13 | P2 | /signup | Duplicate of A-03: /signup redirects to nonexistent /join and shows 404. | **fixed in launch-2, verify at acceptance** (B0) |
+| A-16 | P2 | /employer/post-job | Rapid double-click on Submit for review posts twice and creates two listings. | **fixed in launch-2, verify at acceptance** (B4 (queued draft save; re-check)) |
+| A-17 | P2 | /employer/post-job | Absurd pay and slot values pass client checks; server 422 surfaces only as raw model-text toasts. | **fixed in launch-2, verify at acceptance** (B4 (partial; re-check absurd pay)) |
+| A-26 | P2 | /admin Urgent matching → Candidates → Founder notes | Saved founder note disappears when the candidate row is collapsed and reopened until reload. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-27 | P2 | /admin (active tab) | Active admin tab is not in the URL; reload always returns to the queue. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-30 | P2 | /stage/authors/user/:id | Nonexistent Stage author page shows 'Loading...' forever with a live Follow button. | **fixed in launch-3, verify at acceptance** (B8) |
+| A-38 | P2 | /stage/authors/user/:id | Follower count stays '0 followers' after clicking Follow until reload. | **fixed in launch-3, verify at acceptance** (B10) |
+| A-39 | P2 | /stage/tags/:tag | Hindi hashtags are not linked, and single-letter tags link to empty pages; frontend and backend patterns differ. | **fixed in launch-3, verify at acceptance** (B8) |
+
+Duplicates, fix once: A-03 = A-13 (`/signup`); A-08 = A-15 (template placeholders); A-30 and A-35 (Stage author identity comes from `posts[0]`; one API change). A-31 (cursor) and A-32 (photo URL) are independent.
+
+**Disputed.** A-29 (signed-in UI persists after the token is gone; the expired-session handling in B10 closes the residual, fixed in launch-3): one verifier reproduced it only by deleting the token from localStorage, the other found no real path; both rate it P3. Residual gap, expired-token drafts are not preserved → B10 with A-28.
+
+**Unverified** (all four verifier runs failed): #15 is the same defect as A-21 (`UrgentHire` mounted the signed-in `Navigation`; B3); #16 "Other role" accepts 3,000 characters and sends them to `/auth/register` (B8; the server already capped roles at 60, the client now does too, fixed in launch-3).
+
+**Not bugs but notable** (P3, unverified; B6 or owner; the US dates, INR, raw enums, applicant email, system-post run, hirer CTAs, self-report and expired-session items are fixed in launch-3 by B6; the two urgent forms, Apply-now confirmation, single support address and legal placeholders remain): two urgent forms ([51]); Apply now has no confirmation ([145]); five identical system posts on an empty Stage ([127]); every support path points to one personal-looking address ([123]); the legal policy API returns a placeholder entity name and GSTIN ([228]); a user can report their own account ([230]); applicant raw email on the hirer list ([91]); US dates with seconds ([49]); expired session gives no explanation ([241]); empty hirer dashboard repeats its CTAs ([50]). A further 137 P2 and 37 P1 unverified items (mostly copy, visual and UX) sit in the crawl output; B6 takes the US dates, "INR" versus ₹ and raw enum strings first.
 
 ---
 
@@ -170,7 +236,7 @@ _(none yet)_
 
 1. **Dark stays, and becomes "stage dark".** Every benchmarked site is light, but the cost of a light mode across 95 pages is high and dark suits music. The fix is not the theme; it is that nothing in the theme has anything to look at. Rule: **no content screen without at least one photograph, cover art, waveform or avatar in the first fold.** Light mode is deferred (§9).
 2. **Three image layers, each honest about what it is:**
-   - **Photography (editorial surfaces only).** A curated set of 20–30 real photographs of musicians at work — Indian contexts first (tabla, sitar, wedding band, studio vocalist, DJ, live sound desk, rehearsal room) — from Wikimedia Commons under CC BY / CC0 (CC BY-SA only when nothing else fits), each converted to WebP at 1600 and 800 widths, ≤ 160 KB, committed under `public/img/`, with a `/credits` page and `docs/IMAGE_CREDITS.md` listing file, author, licence and source URL. Used on: landing hero and sections, `/join/*`, `/hire/:role/:city` headers (per role), `/rates/:city`, `/pricing`, `/about`, `/guide`, empty-state backdrops on public pages. **Never attached to a person's profile** — a real face on a fake or someone else's profile is a lie.
+   - **Photography (editorial surfaces only).** A curated set of 20–30 real photographs (23 shipped in launch-2) of musicians at work — Indian contexts first (tabla, sitar, wedding band, studio vocalist, DJ, live sound desk, rehearsal room) — from Wikimedia Commons under CC BY / CC0 (CC BY-SA only when nothing else fits), each converted to WebP at 1600 and 800 widths, ≤ 160 KB, committed under `public/img/`, with a `/credits` page and `docs/IMAGE_CREDITS.md` listing file, author, licence and source URL. Used on: landing hero and sections, `/join/*`, `/hire/:role/:city` headers (per role), `/rates/:city`, `/pricing`, `/about`, `/guide`, empty-state backdrops on public pages. **Never attached to a person's profile** — a real face on a fake or someone else's profile is a lie.
    - **Cover art (generated, deterministic).** `CoverArt` — an SVG component keyed by `opportunity_kind` + genre (jobs) or by genres + roles (profiles, acts): gradient field + waveform ribbon + glyph, unique per entity via a hash. Used on job rows, job hero, act cards, portfolio tiles without a thumbnail, Stage posts without media, and as the **avatar for demo profiles** (`ArtAvatar`), so demo people look designed rather than faceless without impersonating anyone.
    - **Real user media.** New `profiles.photo_url` and `acts.photo_url` (uploaded through the existing R2/Active Storage upload path, jpeg/png/webp only, square-cropped client-side to 512 px; Google's `auth_connections.avatar_url` is copied in on connect if the user has no photo). `UserAvatar` renders the photo when present, else initials. Work samples show YouTube/SoundCloud oEmbed thumbnails when they exist and a `WaveformStrip` (peaks from `media_metadata.waveform`, 64 ints) for audio.
 3. **Price and trust on every card**, because every competitor does it and the data exists: "from ₹X" (the lowest of session/show/day rate, formatted `₹5,000`), review count with average when > 0, "N bookings" when > 0, "Replies in ~N min" when measured, Verified / Verified Pro badges, Demo chip when synthetic. Public profile hero gets the same plus a rate table.
@@ -204,10 +270,10 @@ _(none yet)_
 - Cities: Mumbai 60 %, then Pune, Navi Mumbai/Thane, Delhi, Bengaluru, Goa, Kolkata, Chennai, Hyderabad, Jaipur.
 - Roles/genres drawn from `backend/config/search_taxonomy.yml` and `seo_pages.yml` so every hire page (12 roles × Mumbai) has ≥ 5 profiles and the directory chips all return results; languages and event types filled.
 - Bios: 110 unique, 2–3 sentences, written in the person's voice (an agent writes them into `backend/config/demo/showcase_bios.yml` following a style card: concrete credits, instruments, years, a quirk; no superlatives, no "passionate"). Rates: realistic Mumbai bands per role (session ₹3,000–15,000, show ₹8,000–60,000, day ₹5,000–25,000), rounded to hundreds.
-- **Work samples: only CC-BY audio from ccMixter** (`https://ccmixter.org/api/query?f=json&lic=by&tags=…` — verified reachable and streamable), 40 tracks curated by genre into `backend/config/demo/showcase_tracks.yml` with title, artist, licence URL, MP3 URL, duration and 64 waveform peaks (computed once offline with ffmpeg). Each musician gets 1–3 samples titled honestly, e.g. *"Studio playthrough — demo sample: 'Give it up' by Carosone (CC BY 3.0)"* with the credit in `credited_as`. YouTube links only where a genuine CC-BY performance video is curated (none required). Never real artists' commercial recordings.
-- Verification: 30 % of demo musicians `verified: true` with an approved verification request whose note reads "Demo profile — illustrative"; 5 % Verified Pro. The Demo chip sits next to the badge everywhere.
+- **Work samples: only CC-BY audio from ccMixter** (`https://ccmixter.org/api/query?f=json&lic=by&tags=…` — verified reachable and streamable), 40 tracks curated by genre into `backend/config/demo/showcase_tracks.yml` with title, artist, licence URL, MP3 URL, duration and 64 waveform peaks (computed once offline with ffmpeg). Each musician gets 1–3 samples titled honestly, e.g. *"Studio playthrough — demo sample: 'Give it up' by Carosone (CC BY 3.0)"* with the credit in `credited_as`. YouTube links only where a genuine CC-BY performance video is curated (none required). Never real artists' commercial recordings. The 40 MP3s are mirrored once into the app's own bucket under `demo/showcase/` (ccMixter refuses hot-linking without a Referer) and `tracks.yml` keeps the attribution; a later purge leaves those objects in place.
+- Verification: 30 % of demo musicians `verified: true` with an approved verification request whose note reads "Demo profile — illustrative"; 5 Verified Pro (4.5 %). The Demo chip sits next to the badge everywhere.
 - Hirers: 40 organisations (studios, wedding planners, event agencies, indie labels, colleges, corporate event teams, restaurants/venues, film/OTT production houses) with logos as `CoverArt` and company descriptions; Free plan only — **no subscriptions, no payments, no reports, no pending verification requests, no pending reviews**.
-- Activity: 45 opportunities across kinds (unique titles and 60+-char descriptions from `showcase_jobs.yml`), 8 urgent requests (3 filled, with responses), 60 applications with varied cover notes, 25 conversations with 3–6 distinct messages, 12 acts with members and photos as art, 6 completed bookings with reviews (unique text), 40 Stage posts spread over the past 30 days with reactions and comments, availability windows, saved jobs, folders.
+- Activity: 45 opportunities across kinds (unique titles and 60+-char descriptions from `showcase_jobs.yml`), 8 urgent requests (3 filled, with responses), 60 applications with varied cover notes, 25 conversations with 3–6 distinct messages, 12 acts with members and photos as art, 12 completed bookings and 18 reviews (unique text), 40 Stage posts spread over the past 30 days with reactions and comments, availability windows, saved jobs, folders.
 - **Visibility rule (one rule, applied everywhere):** demo accounts appear wherever a human browses (directory, search, hire and rates pages, book-music, Stage, popular searches) and **never** in SEO or metrics: excluded from the sitemap and share pages, from `/public/stats`, from the funnel, from lifecycle/digest emails, badges, system posts and review prompts. Hire/rates pages stay `noindex` until organic thresholds are met.
 - **Purge:** `BatchCleanup` deletes every table that references a user (incl. the ten it misses today) plus system posts that name a demo user; the admin gets a per-batch "Delete" button and a "Showcase (150)" preset; the seed job is idempotent by batch name.
 - **Seeding production:** Fable sets Railway's web `preDeployCommand` to `bin/rails db:prepare && bin/rails demo:showcase` (idempotent, no-op if the batch exists), merges, verifies the public directory, then resets the command to `bin/rails db:prepare`. Removal later: Admin → Demo data → Delete `demo-showcase`.
@@ -221,6 +287,8 @@ _(none yet)_
 ### 7.1 B0 — Foundations and hygiene (first; small; one PR)
 
 *Owns:* `backend/app/controllers/application_controller.rb` (public payload), `talent_controller.rb` (show visibility only), `sitemaps_controller.rb`, `share_pages_controller.rb` (filters only), `lifecycle_sequences.rb`, `notifier.rb`, `lifecycle_email_delivery_job.rb`, `events_controller.rb` + a migration adding an index, `backend/config/legal.yml` guards (`legal/policy` controller), `src/app/routes.tsx` (redirect rows only), `src/app/lib/analytics.ts` call sites in `Join.tsx`, `AuthPage.tsx`, `LandingHero.tsx`, `showcase/Library.tsx`, `.gitignore`, `vercel.json` (cache header for `/img/*` and `/`-level assets), `README.md` / `DEPLOYMENT.md` release-gate sections, code comments citing `VISION.md`.
+
+*Owns amendments (granted during launch-2):* `src/app/pages/public/LegalPage.tsx` (the `grievanceOfficerItem` hunk only; B3 kept it), `backend/app/services/legal_config.rb`, `backend/app/services/operations_snapshot.rb`, `src/app/components/admin/OperationsPanel.tsx`, and the extra tests `authorization_integrity_test.rb`, `api_matrix_test.rb` and the lifecycle tests. Route-outs from its review: `Join.tsx` (B4) and `Library.tsx` (B8) carry B0's analytics hunks, so those briefs merge `claude/launch-2` first; the `lifecycle_emails.delivered_at` column and the `InvoicePrint.tsx` empty heading until `legal.yml` is filled are follow-ups (§9 and §8).
 
 1. T-01: `public_user`/`public_profile` build an explicit allow-list (id, name, headline, location, roles, genres, instruments, languages, skills, credits, rates, availability, verified, verifiedPro, responseTime, reviews summary, demo, createdAt) — nothing from `user.as_json`. Add a test asserting the seven leaked keys are absent on `/api/public/talent`, `/api/public/talent/:id`, `/api/candidates`, `/api/search`.
 2. T-03: `public_show`, `candidates#show`, sitemap and share pages apply `SyntheticQa::Demo.publicly_listed` (hidden batches 404); sitemap and share pages additionally exclude **all** synthetic users (demo included) — §6 visibility rule.
@@ -237,6 +305,8 @@ _(none yet)_
 
 *Owns:* `src/app/components/kit/**` (new files + `UserAvatar.tsx`), new `src/app/components/media/{CoverArt,ArtAvatar,WaveformStrip,Photo}.tsx`, `public/img/**`, `docs/IMAGE_CREDITS.md`, `src/app/pages/public/CreditsPage.tsx` + its route row, backend migration + `profiles.photo_url`, `acts.photo_url`, `profiles.event_types`, upload wiring in `profile_controller.rb`/`acts_controller.rb`, `auth_connections` avatar copy in `google_sign_in.rb`, `post.rb#author_avatar`, `Navigation.tsx` avatar only, `AccountSettings.tsx` (photo section), `stage/PostCard.tsx` (avatar only).
 
+*Owns amendments (granted during launch-2):* `application_controller.rb` (allow-list adds `photoUrl` and `eventTypes`), the `upload`, `act` and `profile` models, `authContext.tsx` (`photoUrl`), `lib/` avatar, cover-art and photo helpers, `media/cropSquare`, the `EmptyState` import switches at the 18 call sites, and `LandingHeader` (footer link, later struck: item 4's "Photo credits" footer link belongs to B3). The upload route is `PUT`, not `PATCH`. 17 photographs were accepted at first review; the set shipped is 23 (46 files, 1600 and 800 widths). Nits routed on: `StageAuthor` avatar → B8; `GoogleSignIn` avatar copy only on connect → B8/B6.
+
 1. `CoverArt({ seed, kind?, genres?, size, rounded })`: deterministic SVG (gradient pair from a 12-palette keyed by genre family, 3 layered blurred blobs, a waveform ribbon of 48 bars from the seed, an optional `FormatGlyph`), renders crisp at 48–640 px. `ArtAvatar({ id, name, size })`: circular CoverArt with a two-letter monogram at 30 % opacity. `UserAvatar` gains `photoUrl?` and `art?` props: photo → art (when `art` or the user is a demo account) → initials.
 2. `WaveformStrip({ peaks: number[], playing?, progress? })` 64 bars; `PlayChip` shows it inline (height 16) when `media_metadata.waveform` exists.
 3. `Photo({ src, alt, width, height, sizes, priority? })`: `<img>` with `loading="lazy"` (eager when `priority`), `decoding="async"`, explicit dimensions (no layout shift), `srcset` from the 800/1600 variants.
@@ -247,6 +317,8 @@ _(none yet)_
 ### 7.3 B2 — Cards, profile, ranking, filters (after B1)
 
 *Owns:* `JobCard.tsx`, `components/talent/**`, `CandidateSearch.tsx`, `pages/public/PublicTalent.tsx`, `pages/public/PublicProfile.tsx`, `pages/public/PublicAct.tsx`, `pages/public/PublicActs.tsx`, `BookTalent.tsx` (quote entry only), `backend/app/controllers/talent_controller.rb` (ordering + filters), `search_controller.rb` (filters), `acts_controller.rb` (city filter), `src/app/lib/format.ts` (rate helpers), `src/app/lib/apiTypes.ts`.
+
+*Owns amendments (granted during launch-2):* `kit/PlayChip.tsx` (waveform width), `JobHero.tsx`, `JobDetails.tsx`, `PublicOpportunity.tsx` and the new `SimilarJobs.tsx` (item 6), `BookTalent.tsx` (city default, chips, `?member=` notice, empty state), `acts_controller.rb` (`member=` filter), `talent_controller.rb` (`compare` and `shortlist` read `listing_scope`, so hidden synthetic profiles are not readable by id). Left open: `docs/API.md` for the new params and `bookingsCount`; a musician-level quote needs B7's booking endpoints (`booking_requests.act_id` is NOT NULL); `last_login_at` stands in for `last_active_at`; raw periods in `formatPay` → B6. Routed in from the audit: A-02, A-06, A-18 (§4.6).
 
 1. `fromRate(profile)` = min of session/show/day/hourly rates; cards and hero show "from ₹5,000"; profile shows a rates table (Session · Show · Day · Tour day · Hourly, only filled rows).
 2. Talent and directory cards: avatar (photo/art/initials), name, Verified/Verified Pro/Demo, role · genres (via `personLines`), city, **from ₹**, review avg + count when > 0, "N bookings" when > 0, "Replies in ~N min" when known, one `PlayChip` with waveform, ≤ 3 chips; act cards: `CoverArt`/photo, name, "from ₹", members, genres.
@@ -259,6 +331,8 @@ _(none yet)_
 
 *Owns:* `LandingPage.tsx`, `components/landing/**`, `src/app/lib/landing.ts`, `pages/public/{HirePage,RatesPage,LegalPage,SiteMapPage}.tsx`, `pages/{Pricing,Guide,NotFound,UrgentHire}.tsx`, `scripts/prerender-heads.mjs`, `index.html`, `vercel.json` (rewrites for `/api/og/*` only), new Vercel function `api/og.ts`, `share_pages_controller.rb` (image field only), `public/manifest.webmanifest`, touch icons.
 
+*Owns amendments (granted during launch-2):* `tsconfig.json` (`api` in `include`), `package.json` and lock (`@vercel/og`), `vercel.json` (Googlebot and Google-InspectionTool patterns for `/opportunities/:id` and `/professionals/:id`), `share_pages_controller.rb` (Google UA detection, `Vary: User-Agent`, no meta refresh for Google; without it Google loops between the share page and the SPA), `tests/e2e/qa-helpers.ts` (one a11y route row), `share_pages_test.rb`, the footer credits link and the `/credits` prerender. Routed in from the audit: A-21 (`/urgent` header). `api/og.ts` has not run on the Vercel edge; verify on the first production deploy.
+
 1. Hero: full-bleed photograph (right two-fifths on desktop, background with gradient scrim on mobile), headline unchanged, subline shortened to one sentence, the two role buttons, the urgent link; below it the "Now on Verse in {city}" row becomes six cards (avatar, name, role, from ₹, play chip) — served from `/public/talent?location=…&limit=6` with the new ranking, so it is populated by the showcase.
 2. Proof without invented numbers: replace the threshold-gated counters with a three-item promise strip — "Verified by the Verse team", "Reply within 2 hours, 9 am–11 pm IST", "Free to post · musicians never pay" — and show real counters only when organic thresholds are met (keep `landing.ts` thresholds; demo excluded).
 3. Sections: how it works (three icons, ≤ 8 words each, photo strip beneath), "Find by role" tiles (12 SEO roles with photos → `/hire/:role/mumbai`), "Need someone by tomorrow" band with the urgent form's first two fields inline, city selector (Mumbai + "Delhi, Bengaluru, Pune, Goa coming"), Stage teaser (three recent public-safe system posts), footer with credits link.
@@ -269,6 +343,8 @@ _(none yet)_
 ### 7.5 B4 — Forms (independent of B1–B3)
 
 *Owns:* `PostJob.tsx` and its step components, `components/templates/**`, `UrgentRequests.tsx`, `UrgentHire.tsx` (form body only; nav is B3's), `ProfileSetup.tsx`, `Join.tsx` + `components/join/**`, `CompanyProfile.tsx`, `PlanLimitDialog.tsx`/`PostJobPlanLimitDialog.tsx`, backend `jobs_controller.rb` (draft/limit endpoints), `urgent_requests_controller.rb` (create only).
+
+*Owns amendments (granted during launch-2):* `routes.rb` (jobs/limits line), `employer/jobs_controller.rb`, `models/job.rb` (`{{` refusal), `help/StepForm.tsx`, `help/MoreDetails.tsx`, `ai/AutocompleteInput.tsx` (required prop), `lib/urgentDraft.ts`, `components/urgent/**`, `lib/urgentForm.ts`, `lib/profileForm.ts`. Follow-ups routed: `zz-landing-shots.spec.ts` hirer selectors (B10), `verificationPending` on `GET /me` (B7/B8), `FormDialog` footerNote, "Four short steps" in `helpContent` and native date order (B6), draft accumulation (B7).
 
 1. Post opportunity → **3 steps**: *What & where* (title, kind, function, genre, location, workplace, posting-as), *Pay & dates* (pay min/max + period or "Not disclosed" with a warning that undisclosed pay gets fewer applicants, start date, deadline, duration, slots), *Screen & review* (description with template chips, requirements, screening questions, languages, review). ≤ 5 visible fields per step; optional fields under "More details".
 2. J-01/J-13: `GET /api/jobs/limits` returns `{ activeAllowed, activeUsed, plan }`; the page shows the plan line above step 1 and disables "Publish" (not the whole form) with the upgrade link when the limit is reached; drafts save on every step change (existing draft endpoint) and are offered on reopen; city and posting-as prefilled from the company profile.
@@ -282,6 +358,8 @@ _(none yet)_
 
 *Owns:* `backend/app/services/synthetic_qa/**`, `backend/config/demo/**` (new), `backend/lib/tasks/demo.rake` (new), `backend/app/jobs/demo_data_*_job.rb`, `backend/app/controllers/admin/demo_data_controller.rb`, `src/app/components/admin/DemoDataPanel.tsx`, exclusions in `weekly_digest_job.rb`, `lifecycle_sequences.rb` (scope only), `stage_system_posts_job.rb`, `fast_responder_week_job.rb`, `review_prompt_sweep_job.rb`, `funnel_queries.rb`, `seo/hire_stats.rb`, `seo/rates.rb`, `public_stats_controller.rb`, `hire_pages_controller.rb`.
 
+*Owns amendments (granted during launch-2):* `backend/app/controllers/rates_controller.rb`, the `AWS_BUCKET` check at the start of `demo:showcase` and the `TrackMirror` service (mirrors the 40 MP3s to the app bucket under `demo/showcase/`), and the extra `admin_demo_data_test`. Figures amended: 12 completed bookings, 18 reviews, 5 Verified Pro (4.5 %), see §6. Routed on: `WeeklyDigest` and `ResponseTimeStats` still read demo urgent requests → B10.
+
 1. Content packs (YAML under `backend/config/demo/`): `names.yml` (first/last by region), `bios.yml` (110), `companies.yml` (40 with descriptions), `jobs.yml` (45), `urgent.yml` (8), `messages.yml` (25 threads), `posts.yml` (40), `reviews.yml` (12), `tracks.yml` (40 ccMixter CC-BY tracks: title, artist, licence, MP3 URL, duration, 64 peaks). The agent curates tracks with `lic=by` only, verifies each MP3 streams (HTTP 206 `audio/mpeg`), computes peaks once with the Playwright ffmpeg (`/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux`) and commits the numbers, never the audio.
 2. `SyntheticQa::Showcase` builds the batch per §6 (composition, verification share, art avatars — no photos, rates, languages, event types, availability, activity graph), deterministic from a seed so re-runs are identical; `Demo::SIZES` gains `showcase` (110/40); `MAX_USERS` 300 stays.
 3. Purge completeness (T-08): `BatchCleanup` covers every table with a user FK (list them from `schema.rb`) and deletes system posts whose payload names a batch user; a test seeds a showcase batch, exercises Stage/badges/review prompts, purges, and asserts zero rows remain and no FK error.
@@ -293,14 +371,19 @@ _(none yet)_
 
 *Owns:* every user-facing string in `src/app/**` not owned by an in-flight brief at the time it runs, `src/app/lib/format.ts` `formatWhen`/`formatMoney`, email templates in `backend/app/services/email_delivery.rb`, `notification_email.rb`, `lifecycle_sequences.rb` bodies, `backend/config/copy/**` if introduced.
 
+*Owns amendments (granted during launch-3):* backend one-line copy or guard changes in `reports_controller.rb` (self-report 422), `reviews_controller.rb`, `acts_controller.rb`, `talent_controller.rb`, `auth_controller.rb`, `jobs_controller.rb`, `hire_pages_controller.rb`, `billing_reminders_job.rb`, `notifier.rb`, `urgent_matcher.rb`, `whatsapp_alerts.rb`, `weekly_digest.rb`; new `services/indian_format.rb`; `AuthPage.tsx`/`AdminSignIn` (expired-session notice). The wire value of the report reason "Misleading listing" stays; only its label changed.
+
 1. Apply §5.1.6: nouns, dates (`formatWhen` everywhere a `Date` prints; no `toLocaleString()` defaults), rupees, engineering words removed (T-06), vague buttons renamed, every empty state and error states the next step, "a instrument" class grammar fixed, US timestamps gone (J-19).
 2. Payment-unavailable states (J-06): "Payments open soon — we'll email you" with a notify-me toggle instead of raw errors; Billing hides "Start free trial" when `paymentsAvailable` is false and explains Early Access Pro instead.
 3. Email templates: brand header (mark + name), one primary button, Indian dates, unsubscribe footer; lifecycle bodies proofread.
 4. The copy lens findings (§4.6) are the checklist; each replacement string is applied verbatim unless it conflicts with §5.1.6.
+5. Routed from the audit (§4.6 "Not bugs but notable"): US date format everywhere → Indian order through `formatDate`/`formatWhen`; "INR" versus ₹; raw enum strings; `helpContent` "Four short steps"; native date inputs; applicant raw email on the hirer list ([91]); five identical system posts on an empty Stage ([127]); empty hirer dashboard repeating CTAs ([50]); self-report guard ([230]); expired-session explanation ([241]); raw periods in `formatPay`; "Music professional" wording left by B3.
 
 ### 7.8 B7 — Hirer flows (after B2)
 
 *Owns:* `EmployerDashboard.tsx`, `OpportunityPipeline.tsx`, `EmployerApplications.tsx`, `CandidateCompare.tsx`, `Bookings.tsx` (hirer branch), `BookingDepositPanel.tsx`, `Billing.tsx` (availability messaging shared with B6 — B7 owns the page structure), `JobDetails.tsx` owner view, `Messages.tsx` (thread grouping), backend `urgent_request_responses` accept endpoint, `conversations_controller.rb` (find-or-create per pair), `booking_requests_controller.rb` (change-request message).
+
+*Owns amendments (granted during launch-3):* `UrgentRequests.tsx` (the musician response flow, list scopes and paging, because the brief's items 1 and 2 assign them; B8 item 8 was done here), `Navigation.tsx`, `Billing.tsx` (hirer plan cards only), `ProfileSetup.tsx`, `PostJob.tsx` (J-12 card, draft slot), `BookTalent.tsx` (A-09, J-25), `auth_controller.rb`, `apiTypes.ts`, `authContext.tsx`, `profileForm.ts` (`verificationPending`), `models/conversation.rb` (`open_between!`), `routes.rb`, `talent_controller.rb` (`shortlisted`), `urgent_requests_controller.rb`, `booking_requests_controller.rb`, `BookingDialogs.tsx`, `BookingFeeBreakdown.tsx`, `AccountStep.tsx`, `AuthPage.tsx`, `lib/authToasts.ts`, `OwnerJobPanel.tsx`, `SubmittedListing.tsx`, `lib/shareListing.ts`, `lib/paymentMode.ts`, `docs/API.md`. The A-16 server-side duplicate guard (`jobs_controller.rb`, B4's file) was split out into PR #142 and is not merged; only the client guard (`useSubmitOnce`) shipped.
 
 1. J-03: each urgent response gets "Message" (opens/creates the conversation) and "Accept" (marks the request filled by that musician, notifies both, posts nothing public); the musician who responds sees the conversation immediately.
 2. J-11: urgent lists show only relevant items — hirers see their own requests plus a "Browse open requests" tab; musicians see matches for their roles/city first, paged 20 at a time.
@@ -309,10 +392,13 @@ _(none yet)_
 5. J-19: conversations are one thread per hirer–musician pair, with the job context shown as a chip inside the thread; J-25: enquiry limit shown before the form; "Ask for changes" gets a message field; the policy block renders once.
 6. J-16: hirer nav loses "Book & perform" musician tools (availability, acts as performer); Book talent stays.
 7. J-26: the stale sign-in toast is cleared on route change; the empty dashboard shows the two choice cards once.
+8. Routed from the audit (§4.6): A-09 "Request a quote" drops the musician; A-10 deposit dead-end copy and state; A-11 "Start free trial" enabled under the payments-unavailable banner, plus a friendly error; draft accumulation (from B4); `verificationPending` on `GET /me` (shared with B8); `FormDialog` footerNote.
 
 ### 7.9 B8 — Musician flows (after B2)
 
 *Owns:* `JobSeekerDashboard.tsx`, `ProductTour.tsx` (`TourStrip` state), `JobSearch.tsx` (defaults), `showcase/Library.tsx`, `components/join/WorkLinks.tsx`/`ProfileDraftReview.tsx` (import UX), `Portfolio.tsx` (delete) + its inbound links, `Navigation.tsx` (musician account menu grouping), `Billing.tsx` musician branch, `AccountSettings.tsx` (password section), `Reviews.tsx`, `StageFeed.tsx` (system-post density), `UrgentRequests.tsx` musician branch, backend `link_import` labelling, `urgent_matcher` role matching, `password` set endpoint.
+
+*Owns amendments (granted during launch-3):* `StageAuthor.tsx` (A-30/A-35 and the avatar; B10 keeps A-38), `AuthPage.tsx` (role-neutral `/stage` return path), `Join.tsx`, `routes.tsx` (portfolio redirect, `MusicianBilling`), new `MusicianBilling.tsx` (instead of a branch in `Billing.tsx`), `Notifications.tsx`, `Bookings.tsx`, `JobDetails.tsx`, `WelcomeNextStep.tsx`, `stage/*` (feed, tags, authors and posts controllers, `SystemRoundup.tsx`), `post.rb`, `upload.rb`, `notifier.rb`, `showcase_sync.rb`, `showcase_rules.rb`, `link_preview.rb`, `library_imports_controller.rb`, `onboarding/starter.rb`, `application_controller.rb` (`passwordSet`), `google_sign_in.rb`, `account_controller.rb`, `search/synonyms.rb`, `useUrlFilters.ts`, `authContext.tsx`, `AutocompleteInput.tsx`, `EmailDelivery` templates (`account_password_set`), `portfolio-uploads.spec.ts` (ported to My work). J-20 wording: the first profile role is the query, the others are one tap away; instrument synonyms come from `config/search_synonyms.yml`. A-33/A-34 are in-app notifications only.
 
 1. J-09: `TourStrip` steps are ticked from real state (has sample, has availability, has applied) and the strip disappears when all are done.
 2. J-07: "Add from a link" keeps the pasted link on Close (drafted item) and confirms on Add; profile-draft-from-links shows what was found per link and errors per link; Spotify artist/album/track labelled correctly.
@@ -322,15 +408,33 @@ _(none yet)_
 6. J-22: delete `Portfolio.tsx` and repoint the tour, JobDetails and WelcomeNextStep to `/jobseeker/library`.
 7. J-23: Stage feed collapses consecutive system posts into one "This week on Verse" card; "Employer reviews" page explains it fills after a completed booking; empty bookings CTA for musicians is "Set availability".
 8. J-03 musician side: responding to an urgent request opens the conversation.
+9. Routed from the audit (§4.6): A-31 Stage cursor never advances; A-32 Stage photo URLs (grey boxes for everyone but the uploader); A-33 reshare notification; A-34 comment-reply notification; A-30/A-35 author page identity from `posts[0]` (one author endpoint); A-36 review-prompt link `/reviews`; A-39 hashtag pattern (Hindi, single-letter) with frontend/backend parity; A-01 add-from-link dialog discards on Close; A-07 review suggestion cites text that is not there; A-04 draft-from-links blank; A-05 Spotify artist URL labelled as a track; A-37 signed-out deep link return path; #16 "Other role" 3,000-character server cap; `StageAuthor` avatar and `GoogleSignIn` avatar copy (B1 nits).
 
 ### 7.10 B9 — Quality infrastructure (parallel; small)
 
 *Owns:* `playwright.config.ts`, `tests/e2e/qa-helpers.ts` fixtures, `tests/e2e/zz-*-shots.spec.ts`, `tests/frontend-*-smoke.mjs`, `.github/workflows/qa-agent.yml`.
 
+*Owns amendments (granted during launch-2):* new tests `Navigation.test.tsx`, `appResilience.test.tsx`, `publicResilience.test.tsx`; `docs/qa/TESTER.md`; `JobCard.tsx` root `min-w-0` (populated fixtures exposed the `/music-jobs` mobile overflow); `admin-signin` and `admin-console` specs take ports from `QA_PORT_BASE`. Nits routed: motion marker in the perf smoke, `main.tsx` `initMonitoring` coverage, `live-synthetic` summary comment only when an issue exists. Shared-port runs can silently reuse a stale preview server locally: always use a private `QA_PORT_BASE`.
+
 1. Q-02: ports from `QA_PORT_BASE` (default 4173); document the serial rule and the `flock` convention in `docs/qa/TESTER.md`.
 2. Q-01: populated fixtures (3 talent, 3 jobs, 3 acts with samples and rates) in `qa-helpers.ts` so the mocked axe sweep sees cards; an axe pass over the local seeded stack is part of the launch-2 acceptance.
 3. Q-04: screenshot output dir from `SHOTS_DIR` env with a repo-relative default; smoke scripts assert behaviour via the built bundle or are moved into Vitest.
 4. Q-03: nightly workflow gets a failure notification step (GitHub issue on failure) and the `live-synthetic` job posts a summary comment; document `QA_SMOKE_*` in the owner list.
+
+### 7.10a B10 — Admin console and integration one-liners (after B2 and B3; Sonnet; small)
+
+*Owns:* the admin console components under `src/app/components/admin/**` and `pages/Admin*.tsx`, `lifecycle_mailer.rb` (link paths only; the paths live there, not in `lifecycle_sequences.rb`), `src/app/pages/stage/StageAuthor*`, `WeeklyDigest` and `ResponseTimeStats` scopes, `tests/e2e/zz-landing-shots.spec.ts`, and a migration for `lifecycle_emails.delivered_at`.
+
+*Owns amendments (granted during launch-3):* `Navigation.tsx` (A-20, shared with B1 avatar and B8 menu), `backend/app/services/lifecycle_mailer.rb` and the `/applications` digest link in `weekly_digest.rb` (A-14), `src/app/lib/{api,appTarget,authContext,unsentDraft}` and `components/stage/Composer.tsx` (A-28/A-29), `backend/app/controllers/admin/jobs_controller.rb` (A-23 status filter), `lifecycle_email_delivery_job.rb`, `models/lifecycle_email.rb`, `lib/tasks/lifecycle.rake` (`delivered_at`). The per-share OG function is **not** in B10 (it belongs to B3 and was dropped in review): per-share `og:image` stays the default card until it is rebuilt (§9).
+
+1. A-14: lifecycle email buttons double the workspace prefix (`/jobseeker/jobseeker/…`); build the link once.
+2. A-20: the signed-in header needs 395 px at a 360 px viewport; the hamburger must be on screen.
+3. A-22, A-23: admin tab badges use `/admin/stats` totals; the Opportunity queue pager counts what it filters and honours the status filter.
+4. A-24: admin Reports wrap long text (`break-words`, `min-w-0`).
+5. A-26, A-27: founder note survives collapse; the active admin tab lives in the URL.
+6. A-28 (and the A-29 residual): an expired session on `/stage` redirects to sign-in and keeps the draft.
+7. A-38: the follower count updates on Follow.
+8. `zz-landing-shots.spec.ts` hirer selectors (B4 note); `WeeklyDigest` and `ResponseTimeStats` exclude demo urgent requests (B5 note); `lifecycle_emails.delivered_at` column (B0 note).
 
 ### 7.11 Order, parallelism, review
 
@@ -343,7 +447,7 @@ B5 ──┤                    │
 B9 ──┘────────────────────┘
 ```
 
-B0, B1, B4, B5, B9 start together (disjoint files). B2 and B3 start when B1 merges into `claude/launch-2`; B7 and B8 when B2 merges. B6 last. Every PR is reviewed by an independent reviewer agent against its brief and the §5 rules before Fable merges it into `claude/launch-2`; the integration branch runs the full CI via one PR to `production`. After merge: Vercel auto-deploys both sites; Railway deploys the API and worker; Fable seeds the showcase (§6), re-runs the ten-lens crawl on production data locally (a fresh local stack seeded with `demo:showcase`), fixes regressions, and updates §1.3 and §4.
+B0, B1, B4, B5, B9 start together (disjoint files). B2 and B3 start when B1 merges into `claude/launch-2`; B7 and B8 when B2 merges. B10 runs after B2 and B3 (small, disjoint); B6 last. Every PR is reviewed by an independent reviewer agent against its brief and the §5 rules before Fable merges it into `claude/launch-2`; the integration branch runs the full CI via one PR to `production`. After merge: Vercel auto-deploys both sites; Railway deploys the API and worker; Fable seeds the showcase (§6), re-runs the ten-lens crawl on production data locally (a fresh local stack seeded with `demo:showcase`), fixes regressions, and updates §1.3 and §4.
 
 ---
 
@@ -351,17 +455,20 @@ B0, B1, B4, B5, B9 start together (disjoint files). B2 and B3 start when B1 merg
 
 | # | Where | What | Why |
 |---|---|---|---|
-| 1 | Railway → `verse-music-platform` → Variables | `ADMIN_PASSWORD` ≥ 14 characters (the worker's value is already 24; make them identical) | `/api/readiness` is 503 only because of this |
-| 2 | Railway (both services) | `RAZORPAY_ALLOW_TEST_MODE=true` for the rehearsal **or** live keys `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, plans `RAZORPAY_PLAN_PRO`, `RAZORPAY_PLAN_STUDIO`, `RAZORPAY_PLAN_PRO_ANNUAL`, `RAZORPAY_PLAN_STUDIO_ANNUAL`, `RAZORPAY_REFERRAL_OFFER_ID` | checkout is refused today; annual and referral discounts need their ids |
-| 3 | Railway (both) | `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) | AI assist is off |
-| 4 | Railway (both) | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `_DETERMINISTIC_KEY`, `_KEY_DERIVATION_SALT` (each `${{ secret(32) }}`) | Google sign-in and connected accounts |
-| 5 | Railway (both) | `YOUTUBE_API_KEY`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | richer link import |
+| 1 | ~~Railway → Variables~~ | ~~`ADMIN_PASSWORD` ≥ 14 characters~~ **done** (readiness ok on release `39012f33`) | was the only cause of the 503 |
+| 2 | Railway (both services) | Live keys and the monthly and annual plan ids are **done** (`annualAvailable` is true). Still open: `RAZORPAY_REFERRAL_OFFER_ID` | referral discounts need the offer id |
+| 3 | ~~Railway (both)~~ | ~~`OPENAI_API_KEY`~~ **done** | AI assist |
+| 4 | Railway (**web** service) | The encryption keys are **done**. Still open: real `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` (the placeholder values were removed) | Google sign-in and connected accounts |
+| 5 | ~~Railway (both)~~ | ~~`YOUTUBE_API_KEY`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`~~ **done** (references on the worker) | richer link import |
 | 6 | Railway (both) | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE_URGENT`, `WHATSAPP_ENABLED=true` | urgent alerts on WhatsApp |
 | 7 | Repo `backend/config/legal.yml` (a PR from the owner or values sent privately) | legal name, address, state, GSTIN (blank until real), grievance officer name/email/address | Privacy/Terms placeholders |
 | 8 | GitHub secrets | `QA_SMOKE_EMAIL`, `QA_SMOKE_PASSWORD` for a dedicated musician account | signed-in nightly smoke |
 | 9 | Brevo | paid plan before ~1,000 members (weekly digest volume) | deliverability |
 | 10 | Domain | buy `versemusic.in` (+ `verse.music`, `verse.co` as redirects); set `FRONTEND_URL`, `VITE_PUBLIC_URL`, Vercel domains, Search Console token `VITE_GOOGLE_SITE_VERIFICATION`; submit the sitemap | launch domain and indexing |
 | 11 | Admin → Demo data | when the showcase should go: click Delete on `demo-showcase` | removal |
+| 12 | Railway (both) | `SENTRY_DSN` points at the wrong or a stale project: Sentry rejects the events with `ProjectId` (403). Copy the DSN from the right project | error reports are being dropped |
+| 13 | `backend/config/legal.yml` | fill the legal entity fields; until then the invoice print page has an empty heading | B0 guards hide the unfilled fields, but invoices need them |
+| 14 | Owner, when payments go live | Email the members who ticked "Email me when payments open" (stored as `paymentsNotify` in `profiles.email_preferences`: `Profile.where("email_preferences ->> 'paymentsNotify' = 'true'")`); nothing sends it automatically | B6 promises this on Billing and the deposit panel |
 
 ---
 
@@ -370,6 +477,7 @@ B0, B1, B4, B5, B9 start together (disjoint files). B2 and B3 start when B1 merg
 - **Day-30 rule:** ≥ 20 urgent fills and ≥ 5 deposits paid ⇒ open Delhi and Bengaluru; otherwise stay in Mumbai, fix the funnel, add no features.
 - **Monetisation gates:** ₹499 single post at day 30 if Pro conversion < 5 %; musician Pro (₹149–299) only at ≥ 70 % fill rate; booking fee 5–10 % only on completed live bookings > ₹50k; never sell musician visibility before delivering gigs.
 - **Weekly loop (owner + admin):** Monday pinned Stage thread, Tuesday digest, Friday fastest-responders post, a meetup a fortnight, badge-share nudge on every verification, review ask on every fill. Scorecard: sign-ups by source, % publishing within 24 h, verified count and median time, urgent fills within 24 h (target ≥ 70 %), median first response, digest open rate, active commenters, badge shares, reviews per fill.
+- **Parked from launch-3:** per-share OG image function (a Node serverless function `api/og/[type]/[id].ts` with a statically imported `@vercel/og`; 0.11.1 ran under Node, 1.0.x did not; keep the `/api/og/*` default-card rewrite until it passes deploy validation); musician-level quote; `docs/API.md` for B2's filter params; personal first-fold imagery on Find work.
 - **Deferred, in order:** light mode; Instagram embeds (CSP + Meta review); YouTube channel and Spotify imports; WhatsApp OTP; admin merge tool; resumes/career record; Enterprise plan; native apps (not planned).
 - **Scale triggers:** search index audit at 20,000 members; second verification reviewer past ~150/week; two Puma processes + 2 GB at ~5 lakh members.
 - **Ambition check (kept from the 10-lakh assessment):** 10 lakh *users* in six months is not realistic for a professional marketplace; 25–50k professionals + 3–5k hirers with 10 lakh reach is the honest target, and the loops above are how it is earned.

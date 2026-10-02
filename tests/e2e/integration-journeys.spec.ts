@@ -14,11 +14,20 @@ test.describe('real frontend and Rails journeys', () => {
       const name = role === 'jobseeker' ? 'Integration Artist' : 'Integration Studio';
       const profilePath = `/${role}/profile`;
 
-      // The two-minute sign-up, skipping the questions ("complete my profile later").
+      // The two-minute sign-up. Musicians skip the questions ("complete my profile later"); hirers
+      // fill the one-screen join (what they hire for, organisation) and open "More" for the name
+      // and the password choice.
       await page.goto(`/auth/${role}`);
       await page.getByRole('link', { name: 'New to Verse? Join in two minutes' }).click();
-      await page.getByRole('button', { name: 'Complete my profile later' }).click();
-      await page.getByLabel('Your name').fill(name);
+      if (role === 'jobseeker') {
+        await page.getByRole('button', { name: 'Complete my profile later' }).click();
+        await page.getByLabel('Your name').fill(name);
+      } else {
+        await page.getByLabel('Studio sessions').check();
+        await page.getByLabel('Organisation or team name').fill(name);
+        await page.getByRole('button', { name: /More: your name/ }).click();
+        await page.getByLabel('Your name (optional)').fill(name);
+      }
       await page.getByLabel('Email').fill(email);
       await page.getByRole('button', { name: 'Use a password instead' }).click();
       await page.getByLabel('Password', { exact: true }).fill(password);
@@ -59,11 +68,14 @@ test.describe('real frontend and Rails journeys', () => {
         })
         .toBe(true);
 
-      // The first dashboard visit shows the dismissible three-card strip, never a modal.
+      // The first dashboard visit never opens a modal. A new musician gets the dismissible
+      // three-card strip; a new hirer gets the two choice cards once instead, with no strip repeating them.
       await page.goto(`/${role}`);
       await expect(tour).toBeHidden();
       const strip = page.getByTestId('tour-strip');
-      if ((page.viewportSize()?.width ?? 0) >= 768) {
+      if (role === 'employer') {
+        await expect(page.getByText('Need someone by tomorrow?')).toBeVisible();
+      } else if ((page.viewportSize()?.width ?? 0) >= 768) {
         await expect(strip).toBeVisible();
         await strip.getByRole('button', { name: 'Got it' }).click();
       }

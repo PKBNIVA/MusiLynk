@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatDateTime, formatDeadline, formatMoney, formatPay, toDate, formatWhen } from '../format';
+import {
+  formatDate,
+  formatDateTime,
+  formatDeadline,
+  formatFromRate,
+  currencySymbol,
+  formatInputEcho,
+  formatMoney,
+  formatNumber,
+  formatPay,
+  periodLabel,
+  formatReplyTime,
+  formatWhen,
+  fromRate,
+  rateRows,
+  toDate,
+  withArticle,
+} from '../format';
 
 const UTC = { timeZone: 'UTC' };
 
@@ -135,8 +152,8 @@ describe('formatWhen', () => {
     expect(formatWhen('2026-09-28T18:00:00Z', opts)).toBe('Today 6 pm');
     expect(formatWhen('2026-09-29T18:30:00Z', opts)).toBe('Tomorrow 6:30 pm');
   });
-  it('uses the weekday and date further out', () => {
-    expect(formatWhen('2026-10-03T09:00:00Z', opts)).toBe('Sat 3 Oct 9 am');
+  it('uses the date and time further out', () => {
+    expect(formatWhen('2026-10-03T09:00:00Z', opts)).toBe('3 Oct, 9 am');
   });
   it('falls back for empty values', () => {
     expect(formatWhen(null, { fallback: '-' })).toBe('-');
@@ -149,6 +166,117 @@ describe('formatPay period', () => {
     const { formatPay } = await import('../format');
     expect(formatPay({ compensation_min: 15000, compensation_max: 25000, compensation_period: 'per project' })).toBe(
       '₹15,000–25,000 / project',
+    );
+  });
+});
+
+describe('rates', () => {
+  it('fromRate is the lowest of session, show, day and hourly', () => {
+    expect(fromRate({ sessionRate: 8000, showRate: 30000, dayRate: 15000 })).toBe(8000);
+    expect(fromRate({ showRate: 30000, hourlyRate: 2500, tourDayRate: 500 })).toBe(2500);
+  });
+
+  it('ignores empty, zero and non-numeric rates', () => {
+    expect(fromRate({})).toBeNull();
+    expect(fromRate({ sessionRate: 0, showRate: null, dayRate: '' })).toBeNull();
+    expect(fromRate({ tourDayRate: 9000 })).toBeNull();
+    expect(fromRate({ sessionRate: 0, showRate: '12000' })).toBe(12000);
+  });
+
+  it('formats the from price with Indian grouping and blanks it when unknown', () => {
+    expect(formatFromRate({ sessionRate: 5000 })).toBe('from ₹5,000');
+    expect(formatFromRate({ dayRate: 125000 })).toBe('from ₹1,25,000');
+    expect(formatFromRate({})).toBe('');
+  });
+
+  it('lists only the filled rate rows, in table order', () => {
+    expect(rateRows({ hourlyRate: 1500, sessionRate: 5000, tourDayRate: 20000 })).toEqual([
+      { label: 'Session', amount: '₹5,000' },
+      { label: 'Tour day', amount: '₹20,000' },
+      { label: 'Hourly', amount: '₹1,500' },
+    ]);
+    expect(rateRows({})).toEqual([]);
+  });
+});
+
+describe('formatReplyTime', () => {
+  it('reads minutes, then hours, and is empty when unknown', () => {
+    expect(formatReplyTime(12)).toBe('Replies in ~12 min');
+    expect(formatReplyTime(0)).toBe('Replies in ~1 min');
+    expect(formatReplyTime(120)).toBe('Replies in ~2 h');
+    expect(formatReplyTime(null)).toBe('');
+    expect(formatReplyTime(undefined)).toBe('');
+  });
+});
+
+describe('formatWhen in another year', () => {
+  it('adds the year only when it differs from now', () => {
+    const now = new Date('2026-12-20T10:00:00Z');
+    expect(formatWhen('2027-01-09T13:00:00Z', { timeZone: 'UTC', now })).toBe('9 Jan 2027, 1 pm');
+    expect(formatWhen('2026-12-28T13:00:00Z', { timeZone: 'UTC', now })).toBe('28 Dec, 1 pm');
+  });
+});
+
+describe('formatNumber', () => {
+  it('groups digits the Indian way and tolerates empty values', () => {
+    expect(formatNumber(1234567)).toBe('12,34,567');
+    expect(formatNumber('5000')).toBe('5,000');
+    expect(formatNumber(null)).toBe('');
+    expect(formatNumber('abc')).toBe('');
+  });
+});
+
+describe('periodLabel', () => {
+  it('turns stored periods into words, never raw enum strings', () => {
+    expect(periodLabel('per_event')).toBe('event');
+    expect(periodLabel('per_hour')).toBe('hour');
+    expect(periodLabel('Per Day')).toBe('day');
+    expect(periodLabel('month')).toBe('month');
+    expect(periodLabel('half_day')).toBe('half day');
+    expect(periodLabel(null)).toBe('');
+  });
+  it('feeds formatPay', () => {
+    expect(formatPay({ compensation_min: 5000, compensation_period: 'per_event' })).toBe('From ₹5,000 / event');
+  });
+});
+
+describe('currencySymbol', () => {
+  it('returns the symbol, defaulting to the rupee', () => {
+    expect(currencySymbol('INR')).toBe('₹');
+    expect(currencySymbol(undefined)).toBe('₹');
+    expect(currencySymbol('usd')).toBe('$');
+    expect(currencySymbol('NOPE1')).toBe('NOPE1');
+  });
+});
+
+describe('formatInputEcho', () => {
+  it('echoes a native date input value in Indian order', () => {
+    expect(formatInputEcho('2026-11-14')).toBe('14 Nov 2026');
+    expect(formatInputEcho('2026-11-14T18:00', true)).toBe('14 Nov 2026, 6 pm');
+    expect(formatInputEcho('2026-11-14T18:30', true)).toBe('14 Nov 2026, 6:30 pm');
+    expect(formatInputEcho('')).toBe('');
+    expect(formatInputEcho(null)).toBe('');
+  });
+});
+
+describe('withArticle', () => {
+  it('picks a or an by sound', () => {
+    expect(withArticle('drummer')).toBe('a drummer');
+    expect(withArticle('instrument teacher')).toBe('an instrument teacher');
+    expect(withArticle('Arranger and composer')).toBe('an Arranger and composer');
+    expect(withArticle('FOH engineer')).toBe('an FOH engineer');
+    expect(withArticle('DJ')).toBe('a DJ');
+    expect(withArticle('ukulele player')).toBe('a ukulele player');
+    expect(withArticle('  ')).toBe('');
+  });
+});
+
+describe('September', () => {
+  it('is "Sep" like every other three-letter month, never "Sept"', () => {
+    expect(formatDate('2026-09-05')).toBe('5 Sep 2026');
+    expect(formatDateTime('2026-09-05T18:30:00Z', UTC)).toBe('5 Sep 2026, 6:30 pm');
+    expect(formatWhen('2026-09-30T18:00:00Z', { timeZone: 'UTC', now: new Date('2026-09-01T00:00:00Z') })).toBe(
+      '30 Sep, 6 pm',
     );
   });
 });

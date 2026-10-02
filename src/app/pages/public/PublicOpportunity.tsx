@@ -10,6 +10,7 @@ import { apiGet } from '../../lib/api';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { Job } from '../../lib/apiTypes';
 import { JobHero } from '../../components/JobHero';
+import { SimilarJobs } from '../../components/SimilarJobs';
 import { useAuth } from '../../lib/authContext';
 import { ShareToStageButton } from '../../components/stage/ShareToStageButton';
 import { FEATURE_STAGE } from '../../lib/features';
@@ -155,13 +156,16 @@ export default function PublicOpportunity() {
             <div className="sticky top-24 rounded-2xl border border-white/10 bg-white/[.055] p-5">{applyButton}</div>
           </aside>
         </div>
+        <div className="mt-8">
+          <SimilarJobs job={j} basePath="/opportunities" />
+        </div>
         {applyButton && (
           <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-slate-950/95 p-3 backdrop-blur lg:hidden">
             {applyButton}
           </div>
         )}
         <p className="text-xs text-slate-500 mt-5">
-          Never pay private application or audition fees. Verse listings can be reported after sign-in.
+          Never pay private application or audition fees. Verse opportunities can be reported after sign-in.
         </p>
       </main>
     </div>

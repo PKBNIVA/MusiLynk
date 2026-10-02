@@ -36,14 +36,14 @@ test.describe('WCAG accessibility of in-app dialogs and signed-in forms', () => 
     {
       name: 'Listing report dialog',
       path: `/jobseeker/jobs/${REPORT_JOB_ID}`,
-      open: 'Report listing',
-      dialog: 'Report this listing',
+      open: 'Report opportunity',
+      dialog: 'Report this opportunity',
     },
     {
       name: 'Verification request dialog',
       path: '/jobseeker/profile',
       open: 'Request verification',
-      dialog: 'Request professional verification',
+      dialog: 'Request verification',
     },
   ];
   for (const scenario of scenarios) {
@@ -78,7 +78,7 @@ test.describe('WCAG accessibility of in-app dialogs and signed-in forms', () => 
   }
 
   for (const [name, path, ready] of [
-    ['Profile setup form', '/jobseeker/profile', 'Professional headline'],
+    ['Profile setup form', '/jobseeker/profile', 'Headline'],
     ['Job search', '/jobseeker/jobs', 'Search opportunities'],
   ] as const) {
     test(`${name} controls all have accessible labels`, async ({ page }) => {
@@ -116,7 +116,15 @@ test.describe('Phase 3 UX regressions', () => {
 
   test('a plain footer link with no hover styling of its own still shows hover feedback (P3-05)', async ({ page }) => {
     await openSettledPage(page, '/about');
-    const link = page.getByRole('link', { name: 'Terms', exact: true });
+    // The legal pages' related-page chips now carry their own hover classes, so add a bare link
+    // to check the global fallback rule itself.
+    await page.evaluate(() => {
+      const bare = document.createElement('a');
+      bare.href = '/terms';
+      bare.textContent = 'Plain terms link';
+      document.querySelector('main')!.append(bare);
+    });
+    const link = page.getByRole('link', { name: 'Plain terms link', exact: true });
     const before = await link.evaluate((el) => getComputedStyle(el).opacity);
     await link.hover();
     await expect.poll(() => link.evaluate((el) => getComputedStyle(el).opacity)).not.toBe(before);

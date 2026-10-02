@@ -30,7 +30,7 @@ class BillingRemindersJob < ApplicationJob
     Subscription.where(status: "trialing").where(trial_ends_at: day_range(target)).find_each do |sub|
       remind_once(sub, "trial_ending", today) do
         NotificationEmailJob.perform_later(sub.user_id, "trial_ending_soon",
-          "endsOn" => sub.trial_ends_at.strftime("%d %b %Y"), "path" => cancel_url(sub))
+          "endsOn" => IndianFormat.date(sub.trial_ends_at), "path" => cancel_url(sub))
       end
     end
   end
@@ -44,7 +44,7 @@ class BillingRemindersJob < ApplicationJob
       credit_days = BillingCredit.pending.where(user_id: sub.user_id).sum(:days)
       remind_once(sub, "renewal_ending", today) do
         NotificationEmailJob.perform_later(sub.user_id, "plan_renewing_soon",
-          "planName" => plan ? plan[:name] : sub.plan_code, "renewsOn" => sub.current_period_end.strftime("%d %b %Y"),
+          "planName" => plan ? plan[:name] : sub.plan_code, "renewsOn" => IndianFormat.date(sub.current_period_end),
           "amount" => amount, "interval" => sub.interval, "creditDays" => credit_days, "path" => cancel_url(sub))
       end
     end
@@ -57,7 +57,7 @@ class BillingRemindersJob < ApplicationJob
       Subscription.where(status: "early_access").where(trial_ends_at: day_range(target)).find_each do |sub|
         remind_once(sub, kind, today) do
           NotificationEmailJob.perform_later(sub.user_id, "early_access_ending",
-            "days" => days_out == 1 ? "1 day" : "#{days_out} days", "endsOn" => sub.trial_ends_at.strftime("%d %b %Y"), "path" => cancel_url(sub))
+            "days" => days_out == 1 ? "1 day" : "#{days_out} days", "endsOn" => IndianFormat.date(sub.trial_ends_at), "path" => cancel_url(sub))
         end
       end
     end

@@ -9,6 +9,7 @@ import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import { errorMessage } from '../../lib/errors';
 import type { LucideIcon } from 'lucide-react';
+import { formatDateTime } from '../../lib/format';
 
 type Diagnosis = { level: 'error' | 'warn' | 'info' | 'ok'; code: string; message: string };
 type Lookup = {
@@ -57,8 +58,7 @@ const tone: Record<Diagnosis['level'], { icon: LucideIcon; cls: string; label: s
 };
 const when = (value?: string | null) => {
   if (!value) return 'Never';
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+  return formatDateTime(value, { fallback: '—' });
 };
 
 /** Admin-only: explains why a person cannot sign in, from the account's own records. */

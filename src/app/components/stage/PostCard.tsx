@@ -20,7 +20,7 @@ import {
   Pin,
   CalendarDays,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { UserAvatar } from '../kit/UserAvatar';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
@@ -195,10 +195,7 @@ export function PostCard({ post, onChanged, onDeleted }: PostCardProps) {
       )}
       <header className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <Avatar className="size-10">
-            {post.author.avatar && <AvatarImage src={post.author.avatar} alt="" />}
-            <AvatarFallback className="bg-violet-500/20 text-violet-200">{post.author.name.charAt(0)}</AvatarFallback>
-          </Avatar>
+          <UserAvatar id={post.author.id} name={post.author.name} photoUrl={post.author.avatar} />
           <div className="min-w-0">
             <p
               id={`stage-post-${post.id}-author`}
@@ -561,7 +558,7 @@ function MediaGrid({ media }: { media: StagePost['media'] }) {
   return (
     <ul className={`mt-3 grid gap-1.5 ${media.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`} aria-label="Attached media">
       {media.map((m, i) => {
-        const url = mediaUrlFor(m.uploadId);
+        const url = mediaUrlFor(m);
         return (
           <li key={`${m.uploadId}-${i}`} className="overflow-hidden rounded-xl border border-white/10 bg-black/20">
             {m.type === 'image' && url && (

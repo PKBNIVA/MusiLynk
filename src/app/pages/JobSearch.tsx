@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
 import { HelpCallout } from '../components/help/HelpCallout';
@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
-import { Search, Bookmark, BookmarkCheck, Bell, SlidersHorizontal } from 'lucide-react';
+import { Search, Bookmark, BookmarkCheck, Bell, SlidersHorizontal, X } from 'lucide-react';
 import { Link } from 'react-router';
 import { apiDelete, apiPost } from '../lib/api';
 import { LoadMoreJobs } from '../components/LoadMoreJobs';
@@ -52,9 +52,23 @@ export default function JobSearch() {
     const error = await list.search(query);
     if (error) toast.error(error);
   });
+  // First visit with no search in the URL: start from the musician's own roles and city. They show
+  // as chips below and are removed like any other filter; this runs once per visit, so removing
+  // them (or pressing Back) is never undone. The first fetch waits for them, so it is one request.
+  const profileRoles = (user?.roles ?? []).filter(Boolean).slice(0, 6);
+  const defaultsApplied = useRef(false);
+  const waitingForDefaults =
+    Boolean(user) && !defaultsApplied.current && !query && Boolean(user?.location || profileRoles[0]);
   useEffect(() => {
-    void run();
-  }, [query, run]);
+    if (!waitingForDefaults) void run();
+  }, [query, run, waitingForDefaults]);
+  useEffect(() => {
+    if (defaultsApplied.current || !user) return;
+    defaultsApplied.current = true;
+    if (query) return;
+    update({ location: user.location || '', q: profileRoles[0] || '' }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!update({ q, location })) void run();
@@ -176,12 +190,37 @@ export default function JobSearch() {
                     checked={f.verified === 'true'}
                     onCheckedChange={(v) => update({ verified: v ? 'true' : '' })}
                   />
-                  Verified employers only
+                  Verified hirers only
                 </label>
               </div>
             )}
           </CardContent>
         </Card>
+        {profileRoles.length > 0 && (
+          <div role="group" aria-label="Your roles" className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-400">Your roles</span>
+            {profileRoles.map((role) => {
+              const on = f.q.toLowerCase() === role.toLowerCase();
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => update({ q: on ? '' : role })}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 ${
+                    on
+                      ? 'border-violet-400/50 bg-violet-500/15 text-violet-100'
+                      : 'border-white/10 bg-white/[.04] text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  {role}
+                  {on && <X aria-hidden="true" size={14} />}
+                  {on && <span className="sr-only">(remove)</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <JobFilterChips values={f} profileCity={user?.location} onChange={(c) => update(c)} />
         <div className="flex justify-between items-center mb-4">
           <div className="text-sm text-slate-400" role="status">

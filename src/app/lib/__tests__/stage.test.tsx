@@ -34,11 +34,14 @@ import {
   removeApplause,
   rememberMediaUrl,
   splitHashtags,
+  groupFeed,
+  isSystemPost,
   unfollowActor,
   updatePost,
   useActingAs,
   type ActingAsOption,
   type StageAuthor,
+  type StagePost,
 } from '../stage';
 
 const user: StageAuthor = { type: 'user', id: 'user_1', name: 'Jane Doe' };
@@ -57,6 +60,14 @@ describe('splitHashtags', () => {
       { kind: 'text', value: ' tonight ' },
       { kind: 'hashtag', value: 'jazz' },
       { kind: 'text', value: '!' },
+    ]);
+  });
+
+  it('links tags in any script and leaves single-character tags as text', () => {
+    expect(splitHashtags('आज #मुंबई में #a gig')).toEqual([
+      { kind: 'text', value: 'आज ' },
+      { kind: 'hashtag', value: 'मुंबई' },
+      { kind: 'text', value: ' में #a gig' },
     ]);
   });
 
@@ -141,9 +152,16 @@ describe('isOwnedByActor', () => {
 
 describe('mediaUrlFor / rememberMediaUrl', () => {
   it('returns undefined until a url is remembered, then returns it', () => {
-    expect(mediaUrlFor('upld_never_seen')).toBeUndefined();
+    expect(mediaUrlFor({ uploadId: 'upld_never_seen' })).toBeUndefined();
     rememberMediaUrl('upld_1', 'https://cdn.example.com/upld_1.jpg');
-    expect(mediaUrlFor('upld_1')).toBe('https://cdn.example.com/upld_1.jpg');
+    expect(mediaUrlFor({ uploadId: 'upld_1' })).toBe('https://cdn.example.com/upld_1.jpg');
+  });
+
+  it('prefers the url the API supplies with the post', () => {
+    rememberMediaUrl('upld_2', 'https://cdn.example.com/cached.jpg');
+    expect(mediaUrlFor({ uploadId: 'upld_2', url: 'https://cdn.example.com/api.jpg' })).toBe(
+      'https://cdn.example.com/api.jpg',
+    );
   });
 });
 
@@ -322,5 +340,36 @@ describe('useActingAs', () => {
     await act(async () => Promise.resolve());
     expect(seen?.options.map((o) => o.key)).toEqual(['user:user_1']);
     expect(seen?.loading).toBe(false);
+  });
+});
+
+describe('groupFeed', () => {
+  const make = (id: string, kind: StagePost['kind'], system = false) =>
+    ({ id, kind, author: { type: system ? 'system' : 'user', id: 'a', name: 'A', system } }) as unknown as StagePost;
+
+  it('collapses consecutive system posts into one entry and leaves a lone one alone', () => {
+    const feed = [
+      make('1', 'system', true),
+      make('2', 'system', true),
+      make('3', 'update'),
+      make('4', 'system', true),
+      make('5', 'update'),
+      make('6', 'system', true),
+      make('7', 'system', true),
+      make('8', 'system', true),
+    ];
+    const entries = groupFeed(feed);
+    expect(entries.map((e) => e.kind)).toEqual(['system', 'post', 'post', 'post', 'system']);
+    expect(entries[0].kind === 'system' && entries[0].posts.map((p) => p.id)).toEqual(['1', '2']);
+    expect(entries[4].kind === 'system' && entries[4].posts).toHaveLength(3);
+  });
+
+  it('turns a feed of only system posts into one entry, so an empty Stage is not five identical cards', () => {
+    const feed = ['1', '2', '3', '4', '5'].map((id) => make(id, 'system', true));
+    const entries = groupFeed(feed);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].kind === 'system' && entries[0].posts).toHaveLength(5);
+    expect(feed.every(isSystemPost)).toBe(true);
+    expect(isSystemPost(make('6', 'update'))).toBe(false);
   });
 });

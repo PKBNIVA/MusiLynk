@@ -110,7 +110,7 @@ function MusicianWelcome({ items }: { items: StarterItem[] | null }) {
         <p className="mt-1 font-semibold">Get your Verified badge. Hirers can filter for verified people.</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button asChild className="bg-violet-600 text-white hover:bg-violet-500">
-            <Link to={count ? '/jobseeker/profile?verify=1' : '/jobseeker/portfolio'}>
+            <Link to={count ? '/jobseeker/profile?verify=1' : '/jobseeker/library'}>
               {count ? <BadgeCheck aria-hidden="true" size={16} /> : <PlusCircle aria-hidden="true" size={16} />}
               {count ? 'Request verification' : 'Add your work'}
               <ArrowRight aria-hidden="true" size={16} />

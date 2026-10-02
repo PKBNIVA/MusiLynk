@@ -64,6 +64,36 @@ async function openOperations(page: Page, respond: (route: Route) => Promise<voi
   return { panel, calls };
 }
 
+test('a red row lists the legal fields that are still placeholders, and disappears once they are filled', async ({
+  page,
+}) => {
+  const { panel } = await openOperations(page, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...operations,
+        legal: { unfilled: ['business.legal_name', 'grievance_officer.email'] },
+      }),
+    }),
+  );
+  const row = panel.getByTestId('legal-unfilled');
+  await expect(row).toContainText('Legal details unfilled');
+  await expect(row).toContainText('business.legal_name, grievance_officer.email');
+});
+
+test('no legal row is shown when every legal field is filled', async ({ page }) => {
+  const { panel } = await openOperations(page, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ...operations, legal: { unfilled: [] } }),
+    }),
+  );
+  await expect(panel.getByRole('heading', { level: 2, name: 'API traffic' })).toBeVisible();
+  await expect(panel.getByTestId('legal-unfilled')).toHaveCount(0);
+});
+
 test('admin sees traffic, jobs, payments and email health with problems highlighted', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));

@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import { CalendarDays, Clock, MapPin, ShieldCheck, Wallet } from 'lucide-react';
 import { DemoBadge } from './DemoBadge';
-import { FormatGlyph } from './kit/FormatGlyph';
+import { CoverArt } from './media/CoverArt';
 import { optionLabel } from './ui/option-labels';
 import { PostedBy } from './showcase/PostedBy';
 import { formatDate, formatDeadline, formatPay } from '../lib/format';
 import type { Job } from '../lib/apiTypes';
 
-/** Shared job-details hero: format glyph, title, company and a 2x2 fact grid (Pay, Date, Place, Closes). */
+/** Shared job-details hero: cover art, format glyph, title, company and a 2x2 fact grid (Pay, Date, Place, Closes). */
 export function JobHero({ job, actions }: { job: Job; actions?: ReactNode }) {
   const place = [job.location, job.workplace && optionLabel(job.workplace)].filter(Boolean).join(' · ');
   const facts = [
@@ -22,15 +22,23 @@ export function JobHero({ job, actions }: { job: Job; actions?: ReactNode }) {
   ];
   return (
     <header data-testid="job-hero">
+      <div className="mb-5 h-28 overflow-hidden rounded-xl sm:h-36" data-testid="job-hero-art">
+        <CoverArt
+          seed={job.id}
+          kind={job.opportunity_kind || 'job'}
+          genres={job.genre ? [job.genre] : []}
+          size="fill"
+          className="block size-full"
+        />
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
-          <FormatGlyph kind={job.opportunity_kind || 'job'} size={24} />
           <span className="font-medium">{optionLabel(job.opportunity_kind || 'job')}</span>
           <DemoBadge show={job.demo} />
           {job.employerVerified && (
             <span className="inline-flex items-center gap-1 text-emerald-300">
               <ShieldCheck size={14} aria-hidden="true" />
-              Verified employer
+              Verified hirer
             </span>
           )}
         </div>

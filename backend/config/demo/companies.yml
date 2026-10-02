@@ -1,0 +1,245 @@
+# The 40 demo-showcase hirers (SyntheticQa::Showcase). Fictional organisations; each entry becomes a
+# hirer account, its company profile and an Organization. Descriptions are written in the
+# organisation's own voice and state what it books; none makes a claim that needs verifying.
+# category: studio, wedding, agency, label, college, corporate, venue, production
+companies:
+  - name: Sixth Floor Sound
+    category: studio
+    city: Mumbai
+    size: 1-10
+    headline: Recording studio booking session players for film and ad work
+    description: "We run two rooms on the sixth floor of an Andheri office block and record about 25 projects a month, from ad jingles to web-series cues. We hire session guitarists, keyboard players, drummers and vocalists by the day, and we pay within seven days of the session."
+  - name: Copperwire Studios
+    category: studio
+    city: Mumbai
+    size: 1-10
+    headline: Independent studio for bands, singer-songwriters and podcasts
+    description: "Copperwire is a live room, a vocal booth and a mix suite in Bandra. Most of our bookings are indie bands tracking EPs, and we look for drummers, bassists and engineers who are comfortable working to a click."
+  - name: Tanpura Room Recordings
+    category: studio
+    city: Mumbai
+    size: 1-10
+    headline: Acoustic recording space for classical, ghazal and devotional albums
+    description: "A quiet room with a stone floor and natural reverb, used for Hindustani, ghazal and devotional recordings. We book tabla, sarangi, harmonium and violin players for accompaniment sessions of three to six hours."
+  - name: Lowtide Audio
+    category: studio
+    city: Pune
+    size: 1-10
+    headline: Mixing and mastering house working with independent labels
+    description: "Lowtide mixes and masters around 15 releases a month for independent artists and small labels. We call on mixing engineers, mastering engineers and vocal producers who can turn around a revision in two days."
+  - name: Nine Mile Studio
+    category: studio
+    city: Bengaluru
+    size: 1-10
+    headline: Studio for indie bands and film composers
+    description: "Our studio has a 30-square-metre live room and a programming suite, and it is booked by indie bands and film composers. We hire string players, percussionists and session singers for date-specific recordings."
+  - name: Harmonic Yard
+    category: studio
+    city: Delhi
+    size: 1-10
+    headline: Rehearsal rooms and a recording studio in south Delhi
+    description: "Harmonic Yard has six rehearsal rooms and a small tracking studio used by bands from across the NCR. When artists ask us for players, we suggest drummers, bassists and keyboard players for hourly and day sessions."
+  - name: Marigold & Monsoon Weddings
+    category: wedding
+    city: Mumbai
+    size: 11-50
+    headline: Wedding planners booking bands, DJs and dhol teams
+    description: "We plan about 60 weddings a year, mostly two- and three-day events in Mumbai, Lonavala and Alibaug. Each one needs a sangeet band, a DJ, a dhol team for the baraat and sometimes a ghazal singer for the reception."
+  - name: Saptapadi Celebrations
+    category: wedding
+    city: Mumbai
+    size: 11-50
+    headline: Full-service wedding planning with live music
+    description: "Saptapadi handles weddings from the mehendi to the reception. We book live musicians for entries, cocktail hours and the sangeet, and we send performers a run sheet the week before the event."
+  - name: Ivory Lane Events
+    category: wedding
+    city: Mumbai
+    size: 1-10
+    headline: Boutique planners for small weddings and engagements
+    description: "We plan weddings of 100 to 250 guests and prefer acoustic acts: a singer with a guitarist, a violin duo, a saxophone player at the cocktail hour. Performers get a briefing call and a named contact on the day."
+  - name: Phera Stories
+    category: wedding
+    city: Mumbai
+    size: 1-10
+    headline: Wedding planners looking for singers and instrumentalists
+    description: "Phera Stories runs 30 to 40 weddings a year. We book singers, harmonium players and tabla players for the pheras and the reception, and we like to hear a sample before we confirm."
+  - name: The Baraat Company
+    category: wedding
+    city: Mumbai
+    size: 11-50
+    headline: Baraat entries, dhol teams and horse-and-band coordination
+    description: "We coordinate the baraat for weddings across the city: dhol players, brass bands, dancers and the timing with the venue. Dhol players and DJs who can play outdoors for 45 minutes are always in demand."
+  - name: Lavender Aisle
+    category: wedding
+    city: Goa
+    size: 1-10
+    headline: Beach and villa wedding planners
+    description: "We plan destination weddings in North Goa for guests flying in from Delhi and Mumbai. We hire acoustic bands, saxophone players and DJs who are used to working outdoors with generator power."
+  - name: Sangeet Sutra
+    category: wedding
+    city: Delhi
+    size: 11-50
+    headline: Sangeet choreographers and live-music producers
+    description: "Sangeet Sutra produces the family performance night of a wedding, with choreography, sound and a live band. We hire vocalists, drummers and keyboard players who can rehearse with dancers on weekday evenings."
+  - name: Northbound Live
+    category: agency
+    city: Mumbai
+    size: 11-50
+    headline: Live entertainment agency for corporate and private events
+    description: "Northbound Live supplies bands, singers and DJs to hotels, companies and private hosts across Mumbai and Pune. We keep a list of vetted acts and are always adding singers, guitarists and drummers for weekend bookings."
+  - name: Afterglow Entertainment
+    category: agency
+    city: Mumbai
+    size: 11-50
+    headline: Artist bookings for lounges, clubs and brand nights
+    description: "We book resident DJs and live acts for lounges and clubs, and produce brand nights for consumer companies. We pay performers per set and settle invoices on a monthly cycle."
+  - name: Pulse & Pixel Events
+    category: agency
+    city: Bengaluru
+    size: 11-50
+    headline: Tech-company events and product launches with live music
+    description: "We produce offsites, product launches and town halls for technology companies in Bengaluru. Our shows use small bands, solo acoustic acts and DJs, with sound and lighting handled by our own crew."
+  - name: Redbrick Shows
+    category: agency
+    city: Pune
+    size: 1-10
+    headline: Event agency for college fests and city festivals
+    description: "Redbrick supplies bands, sound and stage for college fests and neighbourhood festivals around Pune. We need rock bands, DJs and live sound engineers, and we book two to three months ahead."
+  - name: Stagecraft Collective
+    category: agency
+    city: Mumbai
+    size: 11-50
+    headline: Production company for concerts and touring shows
+    description: "Stagecraft produces mid-size concerts and club tours, from the stage plot to the tour manager. We hire front-of-house and monitor engineers, backline technicians and session musicians for multi-city runs."
+  - name: Third Bell Artists
+    category: agency
+    city: Delhi
+    size: 1-10
+    headline: Booking agency for classical and fusion artists
+    description: "Third Bell represents 25 classical and fusion artists and books them at festivals and cultural clubs. We look for sitar, sarod, tabla, bansuri and violin players who can present a 90-minute concert."
+  - name: Blue Hour Records
+    category: label
+    city: Mumbai
+    size: 1-10
+    headline: Independent label releasing Hindi and English singles
+    description: "Blue Hour Records releases about 20 singles a year from independent artists, and pays for studio time and mixing. We hire producers, session players and vocalists for individual releases."
+  - name: Kachcha Aam Music
+    category: label
+    city: Mumbai
+    size: 1-10
+    headline: Label and publisher for indie and hip-hop artists
+    description: "We sign hip-hop and indie artists and run a small publishing arm. We commission beat makers, mixers and session musicians, and every job comes with a written brief and a delivery date."
+  - name: Ghungroo Records
+    category: label
+    city: Kolkata
+    size: 1-10
+    headline: Label recording folk and Rabindra sangeet
+    description: "Ghungroo Records records Bengali folk, baul and Rabindra sangeet albums. We book vocalists, dotara and dhol players, and engineers who can record live in one room."
+  - name: Paperboat Sound Label
+    category: label
+    city: Hyderabad
+    size: 1-10
+    headline: Regional pop and film-song label
+    description: "Paperboat releases Telugu and Hindi pop singles and pays for vocal sessions and mixing. We work with vocalists, composers and mix engineers on a per-track basis."
+  - name: Ashoka Vale University Cultural Council
+    category: college
+    city: Mumbai
+    size: 51-200
+    headline: Annual fest, concerts and music society
+    description: "The Cultural Council runs a three-day annual fest with 5,000 visitors and a weekly music society. We book bands, DJs and sound engineers for the fest, and workshop leaders for the society."
+  - name: Lakshya Institute of Media & Music
+    category: college
+    city: Navi Mumbai
+    size: 51-200
+    headline: Institute hiring visiting music teachers
+    description: "Lakshya offers diploma courses in music production and performance to about 300 students. We hire visiting faculty for guitar, drums, tabla, vocals and audio engineering on a semester basis."
+  - name: Kalyani Music Academy
+    category: college
+    city: Thane
+    size: 11-50
+    headline: Music school with weekday and weekend batches
+    description: "The Academy teaches around 180 students across vocal, keyboard, guitar and tabla classes. We hire instructors for evening and Saturday batches, and we pay a monthly fee per batch."
+  - name: Rangmanch Arts College
+    category: college
+    city: Pune
+    size: 51-200
+    headline: Performing arts college with an annual music festival
+    description: "Rangmanch is an arts college with a drama and music wing. Every February we host a two-day festival, and through the year we hire accompanists, sound engineers and workshop leaders."
+  - name: Meridian Group Events Desk
+    category: corporate
+    city: Mumbai
+    size: 51-200
+    headline: In-house events team for a manufacturing group
+    description: "Our events desk organises the annual day, festival celebrations and client evenings for a manufacturing group with 2,000 employees. We book a band or singer for each event and expect a signed contract and a run sheet."
+  - name: Ardent Pharma Employee Engagement
+    category: corporate
+    city: Mumbai
+    size: 51-200
+    headline: Employee engagement team booking live entertainment
+    description: "We plan quarterly celebrations and a yearly cultural night for a pharmaceutical company. Our audiences are 200 to 600 employees, and we book Bollywood bands, acoustic acts and DJs."
+  - name: Kestrel Logistics People Team
+    category: corporate
+    city: Bengaluru
+    size: 51-200
+    headline: People team organising offsites and celebrations
+    description: "Kestrel's people team organises two offsites and monthly celebrations for 900 staff. We book acoustic acts, DJs and games hosts, and we prefer performers who can adjust volume for a working canteen."
+  - name: Solace Bank Cultural Club
+    category: corporate
+    city: Mumbai
+    size: 51-200
+    headline: Employee club running concerts and festival evenings
+    description: "The Cultural Club of a private bank runs Diwali and Christmas evenings and a yearly music competition among branches. We hire singers, keyboard players and sound engineers for these events."
+  - name: The Verandah Lounge
+    category: venue
+    city: Mumbai
+    size: 11-50
+    headline: Lounge with live music on Thursday to Sunday
+    description: "The Verandah Lounge seats 120 and runs live music Thursday to Sunday. We book duos and trios for the early set and DJs after ten, and we pay a fixed fee plus a share of the cover."
+  - name: Copper Kettle Cafe
+    category: venue
+    city: Mumbai
+    size: 1-10
+    headline: Neighbourhood cafe with acoustic evenings
+    description: "Copper Kettle is a 40-seat cafe that hosts acoustic evenings on Wednesday and Friday. We book solo singers and duos for a 90-minute set, and we provide a small PA and a microphone."
+  - name: Tidal House Bar & Kitchen
+    category: venue
+    city: Mumbai
+    size: 11-50
+    headline: Bar and kitchen hosting bands on weekends
+    description: "Tidal House is a bar with a small stage for four-piece bands on Friday and Saturday. We book rock, blues and Bollywood cover bands and pay after every set."
+  - name: Saffron Terrace Hotel
+    category: venue
+    city: Navi Mumbai
+    size: 51-200
+    headline: Hotel with a rooftop terrace and banquet halls
+    description: "Saffron Terrace has a rooftop terrace and two banquet halls used for receptions and corporate dinners. We book resident lounge musicians and hire bands for weddings hosted at the hotel."
+  - name: Monsoon Bay Beach Shack
+    category: venue
+    city: Goa
+    size: 1-10
+    headline: Beach shack with sunset live music
+    description: "We run a beach shack in North Goa with live music at sunset from October to May. We book acoustic acts, saxophone players and percussionists, and provide accommodation for performers who travel."
+  - name: Reel Kite Productions
+    category: production
+    city: Mumbai
+    size: 11-50
+    headline: Production house making web series and ad films
+    description: "Reel Kite produces web series and ad films, and we need composers, session musicians and sound designers on short schedules. Every commission comes with a brief, a cut of the picture and a delivery date."
+  - name: Second Take Films
+    category: production
+    city: Mumbai
+    size: 1-10
+    headline: Independent film company working on short and feature films
+    description: "Second Take is a small production company with two features and eight shorts in development. We work with composers, folk and classical instrumentalists and dialogue mixers on a per-project fee."
+  - name: Lantern Frame Studios
+    category: production
+    city: Mumbai
+    size: 11-50
+    headline: Documentary and branded-content studio
+    description: "Lantern Frame makes documentaries and branded films for cultural and corporate clients. We hire composers, vocalists and field recordists, and we sign a licence agreement for every piece of music."
+  - name: Ocean Reef Originals
+    category: production
+    city: Mumbai
+    size: 11-50
+    headline: OTT production house commissioning background score
+    description: "Ocean Reef develops original series for streaming platforms. We commission composers, string players, percussionists and mix engineers for eight to twelve week scoring schedules."

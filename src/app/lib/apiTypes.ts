@@ -54,6 +54,10 @@ export interface ProfileFields {
   dayRate?: number | null;
   availability?: string | null;
   currency?: string | null;
+  /** The person's uploaded (or Google) picture. Demo accounts never have one: they render generated art. */
+  photoUrl?: string | null;
+  /** Kinds of event they take (wedding, corporate…); the directory's event-type filter reads it. */
+  eventTypes?: string[];
   /** Consent to announce a verification approval on The Stage and generate a share card
    * (Post::SYSTEM_KINDS "verified", ShareCardsController). Defaults true. */
   shareVerificationPublicly?: boolean;
@@ -69,6 +73,9 @@ export interface AccountUser extends ProfileFields {
   profileComplete: boolean;
   emailVerified: boolean;
   last_login_at?: string | null;
+  /** GET /me: a verification request is waiting for review, and when it was sent. */
+  verificationPending?: boolean;
+  verificationRequestedAt?: string | null;
 }
 
 /** ApplicationController#verification_summary: what the Verified badge's tooltip says. */
@@ -96,6 +103,8 @@ export interface Professional extends ProfileFields {
   reviewsAverage?: number | null;
   responseTimeMinutes?: number | null;
   fastResponderBadge?: boolean;
+  /** TalentController: completed bookings across the acts they own (absent from other payloads). */
+  bookingsCount?: number;
 }
 
 /** TalentController#compare: a professional with their public work and upcoming availability. */
@@ -413,6 +422,8 @@ export interface Act {
   tech_rider_url?: string | null;
   hospitality_rider_url?: string | null;
   promo_url?: string | null;
+  /** The act's uploaded picture; demo acts have none and render generated art. */
+  photo_url?: string | null;
   bio?: string | null;
   genres: string[];
   languages: string[];
@@ -797,6 +808,8 @@ export interface UrgentRequest {
   /** Set only for the viewer's own row when they were notified about this request. */
   myMatchReasons?: string[];
   filledByName?: string | null;
+  /** The viewer's conversation with the requester, when there is one. */
+  conversationId?: string | null;
 }
 
 /** Admin::UrgentRequestsController#index row: the above plus founder-facing fields. */
@@ -839,6 +852,7 @@ export interface UrgentRequestResponse {
   updated_at?: string;
   name: string;
   headline?: string | null;
+  photoUrl?: string | null;
 }
 
 /** VouchesController: a vouches row (Vouch#api_json), token omitted. */

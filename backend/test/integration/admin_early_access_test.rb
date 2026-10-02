@@ -23,7 +23,7 @@ class AdminEarlyAccessTest < ActionDispatch::IntegrationTest
     assert_response :created
 
     sub = Subscription.find(response.parsed_body.fetch("id"))
-    assert_enqueued_with(job: NotificationEmailJob, args: [@employer.id, "early_access_granted", { "until" => sub.trial_ends_at.strftime("%d %b %Y") }])
+    assert_enqueued_with(job: NotificationEmailJob, args: [@employer.id, "early_access_granted", { "until" => IndianFormat.date(sub.trial_ends_at) }])
     assert_equal "pro", sub.plan_code
     assert_equal "early_access", sub.status
     assert_equal "internal", sub.provider

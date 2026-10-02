@@ -114,20 +114,18 @@ test('a saved draft can be reopened from the dashboard, edited and submitted for
   await expect(page.getByLabel('Selected skills')).toContainText('Guitar');
   await page.getByRole('combobox', { name: 'Location' }).fill('Mumbai');
   await page.getByRole('combobox', { name: 'Location' }).press('Enter');
-  // Editing opens the wizard with every step reachable; jump straight to Details.
+  // Editing opens the wizard with every step reachable; jump straight to the last one.
   await page
-    .getByRole('button', { name: /Details/ })
+    .getByRole('button', { name: /Screen & review/ })
     .first()
     .click();
   await page.getByLabel(/^Description/).fill(description);
-  await page
-    .getByRole('button', { name: /Screening & review/ })
-    .first()
-    .click();
   await page.getByRole('button', { name: 'Submit for review' }).click();
 
-  await expect(page).toHaveURL(/\/employer$/);
-  const patch = calls.find((c) => c.method === 'PATCH' && c.path === '/employer/jobs/job-draft');
+  // The page says what happens next instead of dropping the poster on the dashboard.
+  await expect(page.getByTestId('submitted-card')).toContainText('What happens next');
+  // Moving between steps saves the draft along the way; the last save is the submission.
+  const patch = calls.filter((c) => c.method === 'PATCH' && c.path === '/employer/jobs/job-draft').at(-1);
   expect(patch?.body).toMatchObject({ status: 'pending', location: 'Mumbai', description, skills: ['Guitar'] });
   expect(errors).toEqual([]);
 });
@@ -144,37 +142,46 @@ test('saving a draft without a title explains why instead of calling the API', a
 test('the post wizard checks only the current step before moving on', async ({ page }) => {
   const { calls } = await signIn(page, 'employer');
   await page.goto('/employer/post-job');
-  await expect(page.getByText('Step 1 of 4')).toBeVisible();
+  await expect(page.getByText('Step 1 of 3')).toBeVisible();
   await page.getByLabel('Title').fill('Tour keyboardist');
-  await page.getByRole('button', { name: 'Next: Details' }).click();
+  await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
   await expect(page.getByRole('combobox', { name: 'Location' })).toBeFocused();
   await page.getByRole('combobox', { name: 'Location' }).fill('Pune');
   await page.getByRole('combobox', { name: 'Location' }).press('Enter');
-  await page.getByRole('button', { name: 'Next: Details' }).click();
-  await expect(page.getByRole('heading', { name: 'Details', level: 2 })).toBeFocused();
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
+  await expect(page.getByRole('heading', { name: 'Pay & dates', level: 2 })).toBeFocused();
+  await page.getByRole('button', { name: 'Next: Screen & review' }).click();
+  await page.getByRole('button', { name: 'Submit for review' }).click();
   await expect(page.getByLabel(/^Description/)).toBeFocused();
   await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Back' }).click();
   await expect(page.getByRole('combobox', { name: 'Location' })).toHaveValue('Pune');
-  expect(calls.filter((c) => c.method === 'POST' && c.path === '/jobs')).toHaveLength(0);
+  // Moving between steps saves the work as a draft, but nothing is ever submitted half-done.
+  expect(
+    calls.filter(
+      (c) => c.method === 'POST' && c.path === '/jobs' && (c.body as { status?: string }).status !== 'draft',
+    ),
+  ).toHaveLength(0);
 });
 
 test('hitting the plan limit keeps the opportunity as a draft and links to plans', async ({ page }) => {
+  // The wizard saves a draft on every step change, so the submission is a PATCH of that draft.
   const { calls } = await signIn(page, 'employer', (request, url) => {
-    if (url.pathname !== '/api/jobs' || request.method() !== 'POST') return undefined;
-    const body = request.postDataJSON();
-    return body.status === 'draft'
-      ? { status: 201, body: { id: 'job-new', status: 'draft', moderationFlags: [] } }
-      : { status: 402, body: { error: 'Your plan allows 1 active opportunity.', code: 'PLAN_LIMIT' } };
+    if (url.pathname === '/api/jobs' && request.method() === 'POST')
+      return { status: 201, body: { id: 'job-new', status: 'draft', moderationFlags: [] } };
+    if (url.pathname === '/api/employer/jobs/job-new' && request.method() === 'PATCH')
+      return request.postDataJSON().status === 'pending'
+        ? { status: 402, body: { error: 'Your plan allows 1 active opportunity.', code: 'PLAN_LIMIT' } }
+        : { body: { ok: true, job: { ...draftJob, id: 'job-new', status: 'draft' } } };
+    return undefined;
   });
   await page.goto('/employer/post-job');
   await page.getByLabel('Title').fill('Tour keyboardist');
   await page.getByRole('combobox', { name: 'Location' }).fill('Pune');
   await page.getByRole('combobox', { name: 'Location' }).press('Enter');
-  await page.getByRole('button', { name: 'Next: Details' }).click();
-  await page.getByLabel(/^Description/).fill(description);
   await page.getByRole('button', { name: 'Next: Pay & dates' }).click();
-  await page.getByRole('button', { name: 'Next: Screening & review' }).click();
+  await page.getByRole('button', { name: 'Next: Screen & review' }).click();
+  await page.getByLabel(/^Description/).fill(description);
   await page.getByRole('button', { name: 'Submit for review' }).click();
   const dialog = page.getByRole('alertdialog');
   await expect(dialog).toContainText('Your plan allows 1 active opportunity.');
@@ -185,7 +192,11 @@ test('hitting the plan limit keeps the opportunity as a draft and links to plans
     calls
       .filter((c) => c.method === 'POST' && c.path === '/jobs')
       .map((c) => (c.body as Record<string, unknown>).status),
-  ).toEqual(['pending', 'draft']);
+  ).toEqual(['draft']);
+  const statuses = calls
+    .filter((c) => c.method === 'PATCH' && c.path === '/employer/jobs/job-new')
+    .map((c) => (c.body as Record<string, unknown>).status);
+  expect(statuses.slice(-2)).toEqual(['pending', 'draft']);
 });
 
 test('interview scheduling and recruiter notes use in-page dialogs, not browser prompts', async ({ page }) => {
@@ -210,7 +221,7 @@ test('interview scheduling and recruiter notes use in-page dialogs, not browser 
   await page.getByRole('button', { name: 'Move to…' }).click();
   await page.getByRole('menuitem', { name: 'Rate / note' }).click();
   const notes = page.getByRole('dialog', { name: 'Rate and note' });
-  await notes.getByLabel('Recruiter note').fill('Great feel');
+  await notes.getByLabel('Private note').fill('Great feel');
   await chooseOption(notes.getByLabel('Internal rating'), '4 / 5');
   await notes.getByRole('button', { name: 'Save notes' }).click();
   await expect(notes).toBeHidden();
@@ -285,8 +296,8 @@ test('organization verification asks for a valid link in a dialog', async ({ pag
 test('compare without a selection guides back to talent search instead of erroring', async ({ page }) => {
   const { calls } = await signIn(page, 'jobseeker');
   await page.goto('/jobseeker/compare');
-  await expect(page.getByText(/(Pick|Select) two to four professionals/)).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Choose professionals' })).toHaveAttribute(
+  await expect(page.getByText(/(Pick|Select) two to four musicians/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Choose musicians' })).toHaveAttribute(
     'href',
     '/jobseeker/hiring/talent',
   );

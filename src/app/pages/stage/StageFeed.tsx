@@ -5,13 +5,14 @@ import { Navigation } from '../../components/Navigation';
 import { PageHeader } from '../../components/PageHeader';
 import { HelpCallout } from '../../components/help/HelpCallout';
 import { HELP } from '../../components/help/helpContent';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Composer } from '../../components/stage/Composer';
 import { EventStrip } from '../../components/stage/EventStrip';
 import { PostCard } from '../../components/stage/PostCard';
+import { SystemRoundup } from '../../components/stage/SystemRoundup';
 import { useFeedList } from '../../components/stage/useFeedList';
-import { fetchFeed, authorPath } from '../../lib/stage';
+import { fetchFeed, authorPath, groupFeed, isSystemPost } from '../../lib/stage';
 import { usePageMeta } from '../../components/PageMeta';
 
 export default function StageFeed() {
@@ -100,12 +101,22 @@ export default function StageFeed() {
 
         {!loading && posts.length > 0 && (
           <ul role="feed" aria-busy={loadingMore} aria-label="The Stage feed" className="space-y-4">
-            {posts.map((post) => (
-              <li key={post.id}>
-                <PostCard post={post} onChanged={update} onDeleted={remove} />
+            {groupFeed(posts).map((entry) => (
+              <li key={entry.kind === 'post' ? entry.post.id : `roundup-${entry.posts[0].id}`}>
+                {entry.kind === 'post' ? (
+                  <PostCard post={entry.post} onChanged={update} onDeleted={remove} />
+                ) : (
+                  <SystemRoundup posts={entry.posts} />
+                )}
               </li>
             ))}
           </ul>
+        )}
+
+        {!loading && posts.length > 0 && posts.every(isSystemPost) && (
+          <p className="mt-4 text-center text-sm text-slate-400">
+            Nothing from musicians yet. Share an update above to start the conversation.
+          </p>
         )}
 
         <div ref={sentinelRef} />

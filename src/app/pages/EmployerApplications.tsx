@@ -15,10 +15,12 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { toast } from 'sonner';
-import { useNavigate, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../lib/authContext';
 import { FormDialog, fieldClass } from '../components/HiringDialog';
 import { errorMessage } from '../lib/errors';
+import { formatWhen, formatInputEcho } from '../lib/format';
+import { shareListing } from '../lib/shareListing';
 import type { ConversationCreated, EmployerApplication, Job } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
 import { isAiPaywallError, suggestAi, useAiTaskEnabled, type AiPaywallError } from '../lib/ai';
@@ -30,6 +32,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
+import { optionLabel } from '../components/ui/option-labels';
+import { jobStatusLabel } from '../components/OpportunityPipeline';
 
 // The application's snapshot of the portfolio/resume chosen at apply time (materialsSnapshot —
 // see backend/docs/api-pages-portfolios-resumes.md §8). Not in apiTypes yet, so kept local here.
@@ -189,7 +193,7 @@ export default function EmployerApplications() {
       }
       setSummaries((s) => ({
         ...s,
-        [a.id]: { loading: false, open: true, error: errorMessage(e, 'Could not summarize this candidate.') },
+        [a.id]: { loading: false, open: true, error: errorMessage(e, 'Could not summarize this applicant.') },
       }));
     }
   }
@@ -298,7 +302,7 @@ export default function EmployerApplications() {
   async function message(candidateId: string, jobId: string) {
     try {
       const d = await apiPost<ConversationCreated>('/conversations', { candidateId, jobId });
-      nav(`${base}/messages?conversation=${d.conversation.id}`);
+      nav(`${base}/messages?c=${d.conversation.id}`);
     } catch (e: unknown) {
       toast.error(errorMessage(e));
     }
@@ -347,7 +351,7 @@ export default function EmployerApplications() {
       await update(
         notes.id,
         { recruiterNote: notes.note, recruiterRating: notes.rating ? Number(notes.rating) : null },
-        'Recruiter notes saved',
+        'Notes saved',
       )
     )
       setNotes(null);
@@ -379,7 +383,10 @@ export default function EmployerApplications() {
                 className="mt-2"
                 options={[
                   { value: '', label: 'All opportunities' },
-                  ...jobs.map((j) => ({ value: j.id, label: `${j.title} (${j.status})` })),
+                  ...jobs.map((j) => ({
+                    value: j.id,
+                    label: `${j.title} (${jobStatusLabel[j.status] || optionLabel(j.status)})`,
+                  })),
                 ]}
               />
             </div>
@@ -435,20 +442,41 @@ export default function EmployerApplications() {
             </CardContent>
           </Card>
         ) : apps.length === 0 ? (
-          jobId ? (
-            <EmptyState
-              scene="applicants"
-              title={`No applications for ${filteredJob?.title || 'this opportunity'} yet`}
-              hint="New applicants usually arrive within a few days"
-              action={{ label: 'Show all opportunities', onClick: () => setJobFilter('') }}
-            />
-          ) : (
-            <EmptyState
-              scene="applicants"
-              title="Post an opportunity to receive applicants"
-              action={{ label: 'Post', to: postPath }}
-            />
-          )
+          (() => {
+            // Share what is live: the filtered opportunity, else the newest live one.
+            const live = filteredJob ?? jobs.find((j) => j.status === 'published');
+            if (!jobs.length)
+              return (
+                <EmptyState
+                  scene="applicants"
+                  title="Post an opportunity to receive applicants"
+                  action={{ label: 'Post an opportunity', to: postPath }}
+                />
+              );
+            // Nothing is live yet: say it is in review rather than promise applicants.
+            const inReview =
+              !live && (filteredJob ? filteredJob.status === 'pending' : jobs.every((j) => j.status === 'pending'));
+            return (
+              <EmptyState
+                scene="applicants"
+                title={filteredJob ? `No applicants for ${filteredJob.title} yet` : 'No applicants yet'}
+                hint={
+                  inReview
+                    ? 'Your opportunity is in review. It goes live within 24 hours, and applicants can find it then.'
+                    : 'Most opportunities get their first applicant within 48 hours. Sharing the link speeds that up.'
+                }
+                action={
+                  live && live.status === 'published'
+                    ? { label: 'Share this opportunity', onClick: () => void shareListing(live) }
+                    : inReview
+                      ? { label: 'Back to dashboard', to: base }
+                      : filteredJob
+                        ? { label: 'Show all opportunities', onClick: () => setJobFilter('') }
+                        : { label: 'Post an opportunity', to: postPath }
+                }
+              />
+            );
+          })()
         ) : (
           <div className="space-y-4">
             {(rank.sortActive
@@ -466,7 +494,14 @@ export default function EmployerApplications() {
                         <UserAvatar id={a.candidateId} name={a.candidateName} size="md" />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-xl font-semibold">{a.candidateName}</h2>
+                            <h2 className="text-xl font-semibold">
+                              <Link
+                                to={`/professionals/${encodeURIComponent(a.candidateId)}`}
+                                className="hover:text-violet-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded"
+                              >
+                                {a.candidateName}
+                              </Link>
+                            </h2>
                             <Badge>{a.status}</Badge>
                             {aiRank && (
                               <Badge
@@ -493,14 +528,14 @@ export default function EmployerApplications() {
                           {EMAIL_VISIBLE_STATUSES.includes(a.status) && a.candidateEmail && (
                             <div className="text-xs text-slate-400 mt-1 break-all">
                               <a href={`mailto:${a.candidateEmail}`} className="underline hover:text-white">
-                                {a.candidateEmail}
+                                Email this applicant
                               </a>
                             </div>
                           )}
                           <div className="text-slate-400 text-xs mt-1">Applied for {a.jobTitle}</div>
                           {a.status === 'Interview Scheduled' && a.interviewDate && (
                             <div className="text-sm text-emerald-300 mt-1">
-                              Interview: {new Date(a.interviewDate).toLocaleString()}
+                              Interview: {formatWhen(a.interviewDate)}
                             </div>
                           )}
                           <FirstSample id={a.candidateId} className="mt-3" />
@@ -743,6 +778,7 @@ export default function EmployerApplications() {
               onChange={(e) => setInterview((x) => x && { ...x, date: e.target.value })}
               className={fieldClass}
             />
+            {interview?.date && <p className="mt-1 text-xs text-slate-400">{formatInputEcho(interview.date, true)}</p>}
           </div>
         </FormDialog>
         <FormDialog
@@ -757,7 +793,7 @@ export default function EmployerApplications() {
           onSubmit={saveNotes}
         >
           <div>
-            <Label htmlFor="recruiter-note">Recruiter note</Label>
+            <Label htmlFor="recruiter-note">Private note</Label>
             <Textarea
               id="recruiter-note"
               maxLength={2000}

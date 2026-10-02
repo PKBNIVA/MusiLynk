@@ -70,6 +70,29 @@ test.describe('public entry points', () => {
     expect(state.reports).toEqual([{ entityType: 'user', entityId: 'user-talent-1', reason: 'Harassment' }]);
   });
 
+  test('a musician looking at their own public profile is not offered a report', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('verse_access_token', 'qa-token');
+      localStorage.setItem('verse-tour-v2-jobseeker', 'done');
+    });
+    await page.route('**/api/me', (route) =>
+      json(route, {
+        user: {
+          id: 'user-talent-1',
+          name: 'Nina Guitarist',
+          role: 'jobseeker',
+          status: 'active',
+          profileComplete: true,
+        },
+      }),
+    );
+    await page.route('**/api/public/talent/user-talent-1', (route) => json(route, { professional, portfolio: [] }));
+    await page.goto('/professionals/user-talent-1');
+    await expect(page.getByRole('heading', { name: 'Nina Guitarist' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Report profile' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Sign in to report this profile' })).toHaveCount(0);
+  });
+
   test('a signed-in employer can report a bookable act', async ({ page }) => {
     const state = await reportState(page);
     await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));

@@ -1,15 +1,12 @@
-import { DemoBadge } from '../../components/DemoBadge';
 import { usePageMeta } from '../../components/PageMeta';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { Search, ShieldCheck, X, Zap } from 'lucide-react';
-import { personLines } from '../../lib/personLine';
-import { UserAvatar } from '../../components/kit/UserAvatar';
-import { FirstSample } from '../../components/talent/FirstSample';
+import { Search, X } from 'lucide-react';
+import { TalentCard } from '../../components/talent/TalentCard';
+import { FACET_KEYS, TalentFacets } from '../../components/talent/TalentFacets';
 import { PublicNav } from '../../components/PublicNav';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { LoadMore } from '../../components/LoadMore';
 import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../../components/SearchFeedback';
@@ -21,8 +18,8 @@ import type { Professional } from '../../lib/apiTypes';
 
 type TalentPage = PageMeta & { talent?: Professional[]; role?: { key: string; label: string } };
 const pickTalent = (page: TalentPage) => page.talent;
-const FILTERS = ['q', 'location', 'role', 'verified'] as const;
-const NOUN = ['professional', 'professionals'] as const;
+const FILTERS = ['q', 'location', 'role', 'verified', ...FACET_KEYS] as const;
+const NOUN = ['musician', 'musicians'] as const;
 
 function Chip({ pressed, onClick, children }: { pressed: boolean; onClick: () => void; children: string }) {
   return (
@@ -43,7 +40,7 @@ function Chip({ pressed, onClick, children }: { pressed: boolean; onClick: () =>
 
 export default function PublicTalent() {
   usePageMeta(
-    'Find musicians & music professionals',
+    'Find musicians',
     'Search singers, instrumentalists, composers, engineers, technical directors, tour crew and managers on Verse.',
     { canonicalPath: '/music-professionals', type: 'website' },
   );
@@ -53,7 +50,7 @@ export default function PublicTalent() {
   const list = usePagedList<Professional, TalentPage>({
     path: '/public/talent',
     pick: pickTalent,
-    noun: 'professionals',
+    noun: 'musicians',
   });
   const { items, loading, error, meta } = list;
   const [q, setQ] = useState(values.q),
@@ -82,7 +79,7 @@ export default function PublicTalent() {
           {!loading && !error && items.length > 0 && (
             <>
               <span data-testid="result-count">
-                {list.total} {list.total === 1 ? 'professional' : 'professionals'}
+                {list.total} {list.total === 1 ? 'musician' : 'musicians'}
               </span>
               {' · '}
             </>
@@ -104,7 +101,7 @@ export default function PublicTalent() {
         )}
         <form onSubmit={submit} className="grid md:grid-cols-[1.3fr_1fr_auto] gap-3 mt-8" role="search">
           <label htmlFor="public-talent-query" className="sr-only">
-            Search professionals
+            Search musicians
           </label>
           <Input
             id="public-talent-query"
@@ -114,7 +111,7 @@ export default function PublicTalent() {
             className="bg-white/5 border-white/15"
           />
           <label htmlFor="public-talent-location" className="sr-only">
-            Professional location
+            Musician location
           </label>
           <Input
             id="public-talent-location"
@@ -155,10 +152,11 @@ export default function PublicTalent() {
             Verified only
           </Chip>
         </div>
+        <TalentFacets values={values} update={update} />
         {!loading && <SearchNotice meta={meta} query={values.q} />}
         {loading ? (
           <p className="text-slate-400 text-center py-16" role="status">
-            Loading professionals…
+            Loading musicians…
           </p>
         ) : error ? (
           <div className="text-center py-16" role="alert">
@@ -171,60 +169,7 @@ export default function PublicTalent() {
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
               {items.map((c, index) => (
-                <Card
-                  key={c.id}
-                  data-list-item={index}
-                  tabIndex={-1}
-                  className="relative h-full bg-white/[.05] border-white/10 hover:bg-white/[.075] focus-within:ring-2 focus-within:ring-violet-400"
-                >
-                  <CardContent className="p-5">
-                    <div className="flex items-start gap-3">
-                      <UserAvatar id={c.id} name={c.name} size="lg" />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h2 className="truncate text-lg font-semibold">
-                            <Link
-                              to={`/professionals/${c.id}`}
-                              className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
-                            >
-                              {c.name}
-                            </Link>
-                          </h2>
-                          <DemoBadge show={c.demo} />
-                          {c.verified && (
-                            <ShieldCheck size={16} aria-label="Verified" className="shrink-0 text-emerald-300" />
-                          )}
-                          {c.fastResponderBadge && (
-                            <Zap size={16} className="text-amber-300" aria-label="Fast responder this week" />
-                          )}
-                        </div>
-                        {(() => {
-                          const line = personLines(c);
-                          return (
-                            <>
-                              <p className="mt-0.5 text-sm text-slate-300">{line.primary || 'Music professional'}</p>
-                              {line.secondary.length > 0 && (
-                                <p className="mt-0.5 text-sm text-slate-400">
-                                  {line.secondary.slice(0, 3).join(' · ')}
-                                </p>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                    <div className="relative z-10 mt-4">
-                      <FirstSample id={c.id} />
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {[...(c.roles || []), ...(c.instruments || [])].slice(0, 3).map((x: string) => (
-                        <Badge variant="secondary" key={x}>
-                          {x}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <TalentCard key={c.id} person={c} index={index} to={`/professionals/${c.id}`} />
               ))}
             </div>
             <LoadMore
@@ -239,7 +184,7 @@ export default function PublicTalent() {
           </>
         ) : (
           <NoResults
-            noun="professionals"
+            noun="musicians"
             query={values.q}
             meta={meta}
             onSearch={(term) => update({ q: term })}

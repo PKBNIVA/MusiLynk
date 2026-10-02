@@ -296,7 +296,11 @@ class AuthorizationIntegrityTest < ActionDispatch::IntegrationTest
     assert_includes response.parsed_body.fetch("results").pluck("id"), synthetic.id
 
     get "/api/public/talent/#{synthetic.id}"
-    assert_response :success, "direct links to synthetic profiles still resolve"
+    assert_response :not_found, "direct links to hidden synthetic profiles 404 for everyone but their own batch"
+    get "/api/candidates/#{synthetic.id}", headers: auth(real_viewer)
+    assert_response :not_found
+    get "/api/public/talent/#{synthetic.id}", headers: auth(synthetic_viewer)
+    assert_response :success
     assert_not response.parsed_body.fetch("professional").key?("synthetic_batch")
   end
 

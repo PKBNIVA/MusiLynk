@@ -15,6 +15,8 @@ import { errorMessage } from '../lib/errors';
 import type { AccountUser } from '../lib/apiTypes';
 import { Field, FormError, RequiredNote } from '../components/form/Field';
 import { PHONE_MESSAGE, URL_MESSAGE, isHttpUrl, isPhone, useFormErrors, useSubmitOnce } from '../lib/formErrors';
+import { normalizeWebAddress } from '../lib/profileForm';
+import { formatNumber } from '../lib/format';
 
 type OrgField = 'companyName' | 'companyWebsite' | 'companySize' | 'phone' | 'location' | 'companyDescription';
 const ORG_IDS: Record<OrgField, string> = {
@@ -34,7 +36,7 @@ function validateOrganization(f: Partial<AccountUser>) {
   if (f.companyWebsite?.trim() && !isHttpUrl(f.companyWebsite)) errors.companyWebsite = URL_MESSAGE;
   if (f.phone?.trim() && !isPhone(f.phone)) errors.phone = PHONE_MESSAGE;
   if ((f.companyDescription?.length ?? 0) > DESCRIPTION_MAX)
-    errors.companyDescription = `Keep the description under ${DESCRIPTION_MAX.toLocaleString()} characters.`;
+    errors.companyDescription = `Keep the description under ${formatNumber(DESCRIPTION_MAX)} characters.`;
   return errors;
 }
 
@@ -68,13 +70,15 @@ export default function CompanyProfile() {
     e.preventDefault();
     void submit.run(async () => {
       form.setFormError('');
-      if (form.setErrors(validateOrganization(f))) {
+      // "your-label.com" is completed to https://your-label.com before it is checked.
+      const checked = { ...f, companyWebsite: normalizeWebAddress(f.companyWebsite ?? '') };
+      if (form.setErrors(validateOrganization(checked))) {
         form.focusFirst();
         return;
       }
       try {
         const d = await apiPut<{ user: AccountUser }>('/profile', {
-          ...f,
+          ...checked,
           companyName: f.companyName?.trim() ?? '',
         });
         setUser(d.user);
@@ -180,7 +184,7 @@ export default function CompanyProfile() {
               <Field
                 id={ORG_IDS.companyWebsite}
                 label="Official website"
-                hint="Include https://"
+                hint="We add https:// for you."
                 help="Your label, studio or venue site. It is the quickest way for us to verify you and for artists to trust you."
                 error={form.errors.companyWebsite}
               >
@@ -188,9 +192,10 @@ export default function CompanyProfile() {
                   type="url"
                   inputMode="url"
                   autoComplete="url"
-                  placeholder="https://your-label.com"
+                  placeholder="your-label.com"
                   value={f.companyWebsite || ''}
                   onChange={(e) => set('companyWebsite', e.target.value)}
+                  onBlur={(e) => set('companyWebsite', normalizeWebAddress(e.target.value))}
                   maxLength={500}
                   className="bg-black/20 border-white/15"
                 />

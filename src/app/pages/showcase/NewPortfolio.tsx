@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { AppSelect } from '../../components/ui/app-select';
 import { Field } from '../../components/form/Field';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { AiSuggestButton } from '../../components/ai/AiSuggestButton';
 import { Panel, ShowcaseShell, useWorkspaceBase } from '../../components/showcase/parts';
 import { RulesSentence } from '../../components/showcase/RulesEditor';
@@ -259,7 +259,7 @@ export default function NewPortfolio() {
           )}
           {draft.items.length === 0 ? (
             <EmptyState icon={Sparkles} title="Your library is empty">
-              Add some work first; new portfolios pick from it.
+              Add work to your library first, then come back. New portfolios pick from it.
             </EmptyState>
           ) : (
             <ul className="divide-y divide-white/10">

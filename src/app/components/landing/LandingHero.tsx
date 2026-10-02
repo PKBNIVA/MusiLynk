@@ -1,36 +1,47 @@
 import { Link } from 'react-router';
+import { ArrowRight, BriefcaseBusiness, MapPin, Mic2, Zap, type LucideIcon } from 'lucide-react';
 import { AppSelect, type AppSelectOption } from '../ui/app-select';
-import { useEffect, useState } from 'react';
-import { ArrowRight, BadgeCheck, BriefcaseBusiness, MapPin, Mic2, Zap, type LucideIcon } from 'lucide-react';
-import { personLines } from '../../lib/personLine';
-import { UserAvatar } from '../kit/UserAvatar';
-import { PlayChipButton } from '../kit/PlayChip';
-import { apiGet } from '../../lib/api';
-import type { PortfolioItem, Professional } from '../../lib/apiTypes';
+import { Photo } from '../media/Photo';
+import { trackPathChosen } from '../../lib/analytics';
+import { HERO_PHOTO, editorialPhoto } from './photos';
 
 export const LAUNCH_CITIES = ['Mumbai'] as const;
 // Live cities, then a disabled row saying more are coming. The shared dark listbox, never the OS one.
 const CITY_OPTIONS: AppSelectOption[] = [
   ...LAUNCH_CITIES.map((name) => ({ value: name, label: name, description: null })),
-  { value: 'more-cities-soon', label: 'More cities soon', description: null, disabled: true },
+  { value: 'more-cities-soon', label: 'Delhi, Bengaluru, Pune, Goa coming', description: null, disabled: true },
 ];
 
 /**
- * Above the fold: the promise in one line, the city, and the two ways in. Sized so that on a
+ * Above the fold: the promise in one line, the city, and the two ways in, over a full-bleed
+ * photograph (the right two-fifths on desktop; behind a scrim on a phone). Sized so that on a
  * 390×844 phone the headline and both path buttons are visible without scrolling.
  */
 export function LandingHero({ city, onCityChange }: { city: string; onCityChange: (city: string) => void }) {
+  const photo = editorialPhoto(HERO_PHOTO);
   return (
     <section
       aria-labelledby="hero-title"
       className="relative overflow-hidden px-4 pb-12 pt-6 sm:px-6 md:pb-20 md:pt-14"
+      data-testid="landing-hero"
     >
+      {/* The photo fades into the page with a mask, so it never shows an edge whatever is behind it. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(48rem_26rem_at_0%_-10%,rgba(217,70,239,.22),transparent_65%),radial-gradient(36rem_22rem_at_100%_0%,rgba(45,212,191,.13),transparent_65%)]"
-      />
-      <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.12fr_.88fr]">
-        <div>
+        className="pointer-events-none absolute inset-y-0 right-0 w-full [mask-image:linear-gradient(to_bottom,#000_0%,#000_20%,transparent_85%)] lg:w-[42%] lg:[mask-composite:intersect] lg:[mask-image:linear-gradient(to_right,transparent_0%,#000_45%),linear-gradient(to_top,transparent_0%,#000_22%)]"
+      >
+        <Photo
+          src={photo.src}
+          alt=""
+          width={photo.width}
+          height={photo.height}
+          sizes="(min-width: 1024px) 42vw, 100vw"
+          priority
+          className="size-full object-cover object-[35%_50%] opacity-35 lg:opacity-100"
+        />
+      </div>
+      <div className="relative mx-auto max-w-6xl">
+        <div className="lg:max-w-[56%]">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.05] py-1 pl-3 pr-1.5 text-sm text-slate-200">
             <MapPin aria-hidden="true" size={15} className="text-teal-300" />
             <span id="landing-city-label">Now booking in</span>
@@ -51,25 +62,26 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
             Hire a verified musician for your session or gig,{' '}
             <span className="verse-gradient-text">within 24 hours.</span>
           </h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
-            Singers, session players, DJs and sound crew in {city}. Hear their work, check the Verified badge, then
-            book.
+          <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
+            Singers, session players, DJs and sound crew in {city}: hear their work, then book.
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2" data-testid="hero-paths">
             <PathLink
               to="/join/hiring"
+              path="hire"
               icon={BriefcaseBusiness}
+              primary
               title="I'm hiring"
               detail="Studios, weddings, events and bands"
             />
             <PathLink
               to="/join/musician"
+              path="musician"
               icon={Mic2}
               title="I'm a musician or crew"
               detail="Get booked for sessions and gigs"
             />
           </div>
-          <VerifiedRow city={city} />
           <div className="mt-5 space-y-1">
             <Link
               to="/urgent"
@@ -84,133 +96,45 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
             </p>
           </div>
         </div>
-        <ExampleProfile />
       </div>
     </section>
   );
 }
 
-function PathLink({ to, icon: Icon, title, detail }: { to: string; icon: LucideIcon; title: string; detail: string }) {
+function PathLink({
+  to,
+  path,
+  icon: Icon,
+  title,
+  detail,
+  primary = false,
+}: {
+  to: string;
+  path: 'hire' | 'musician';
+  icon: LucideIcon;
+  title: string;
+  detail: string;
+  /** The one primary action; the other role link is a quieter outline. */
+  primary?: boolean;
+}) {
   return (
     <Link
       to={to}
-      className="group flex min-h-16 items-center gap-3 rounded-2xl border border-white/15 bg-gradient-to-r from-fuchsia-700 to-violet-700 px-4 py-3 text-white shadow-lg shadow-violet-950/40 transition hover:from-fuchsia-600 hover:to-violet-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200"
+      onClick={() => trackPathChosen(path)}
+      className={`group flex min-h-16 items-center gap-3 rounded-2xl border px-4 py-3 text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200 ${
+        primary
+          ? 'border-white/15 bg-gradient-to-r from-fuchsia-700 to-violet-700 shadow-lg shadow-violet-950/40 hover:from-fuchsia-600 hover:to-violet-600'
+          : 'border-white/25 bg-slate-950/50 hover:bg-white/10'
+      }`}
     >
       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/15">
         <Icon aria-hidden="true" size={20} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-base font-bold leading-6">{title}</span>
-        <span className="block text-[13px] leading-5 text-fuchsia-50">{detail}</span>
+        <span className="block text-[13px] leading-5 text-slate-200">{detail}</span>
       </span>
       <ArrowRight aria-hidden="true" size={18} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
     </Link>
-  );
-}
-
-/** What a verified portfolio looks like to a hirer. Clearly an example; desktop only. */
-function ExampleProfile() {
-  return (
-    <section className="relative mx-auto hidden w-full max-w-md lg:block" aria-label="Example of a verified profile">
-      <div className="verse-surface rounded-3xl p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-violet-600 text-lg font-black"
-            >
-              SD
-            </span>
-            <div>
-              <p className="text-lg font-bold">Session drummer</p>
-              <p className="text-sm text-slate-300">Mumbai · 8 years · Bollywood, indie, live</p>
-            </div>
-          </div>
-          <span className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[.14em] text-slate-300">
-            Example
-          </span>
-        </div>
-        <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-xs font-semibold text-emerald-200">
-          <BadgeCheck aria-hidden="true" size={14} />
-          Verified by the Verse team
-        </p>
-        <div className="mt-5 flex flex-col items-start gap-2" ref={makeStatic}>
-          {DEMO_SAMPLES.map((sample) => (
-            <PlayChipButton key={sample.id} sample={sample} onOpen={() => {}} />
-          ))}
-        </div>
-        <div aria-hidden="true" className="mt-4 flex h-10 items-end gap-2" data-testid="example-waveform">
-          {[40, 75, 55, 100, 65, 85].map((h, i) => (
-            <span
-              key={i}
-              className="w-2 rounded-full bg-gradient-to-t from-fuchsia-500/60 to-violet-400/60"
-              style={{ height: `${h}%` }}
-            />
-          ))}
-        </div>
-        <p className="mt-5 border-t border-white/10 pt-4 text-sm text-slate-300">
-          Hirers hear the work first, then message or book.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-// Static demo samples for the example card. They look like the real play chips but do nothing.
-const DEMO_SAMPLES: PortfolioItem[] = [
-  ['Live at a sangeet, Bandra', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
-  ['Studio session, Marathi single', 'https://soundcloud.com/verse-demo/marathi-single'],
-  ['Drums on a 30-second ad jingle', 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC'],
-].map(([title, url], i) => ({ id: `demo-${i}`, kind: 'link', type: 'link', title, url }));
-
-// The chips are a picture of the real thing, not controls: keep them out of the tab order.
-const makeStatic = (el: HTMLElement | null) => el?.setAttribute('inert', '');
-
-/** Up to six people in the chosen city under the hero buttons. Verified people are preferred and the
- * caption only says "Verified" when every face shown is. Renders nothing on failure or under 3 people. */
-function VerifiedRow({ city }: { city: string }) {
-  const [state, setState] = useState<{ people: Professional[]; verified: boolean }>({ people: [], verified: false });
-  useEffect(() => {
-    let live = true;
-    setState({ people: [], verified: false });
-    apiGet<{ talent?: Professional[]; total?: number }>(
-      `/public/talent?${new URLSearchParams({ location: city, limit: '12' })}`,
-    )
-      .then((d) => {
-        if (!live) return;
-        const all = d.talent || [];
-        const verified = all.filter((p) => p.verified);
-        if (verified.length >= 3) setState({ people: verified.slice(0, 6), verified: true });
-        else if ((d.total ?? all.length) >= 3 && all.length >= 3)
-          setState({ people: all.slice(0, 6), verified: false });
-      })
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [city]);
-  const { people, verified } = state;
-  if (!people.length) return null;
-  return (
-    <div className="mt-5" data-testid="verified-row">
-      <ul className="flex flex-wrap gap-x-4 gap-y-2">
-        {people.map((p) => {
-          const line = personLines(p);
-          return (
-            <li key={p.id} className="flex items-center gap-2">
-              <UserAvatar id={p.id} name={p.name} size="sm" />
-              <span className="text-sm text-slate-200">
-                {p.name.split(' ')[0]}
-                {line.primary && <span className="sr-only">, {line.primary}</span>}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/[.06] px-2.5 py-1 text-xs text-slate-300">
-        <MapPin aria-hidden="true" size={13} className="text-teal-300" />
-        {verified ? `Verified in ${city}` : `Now on Verse in ${city}`}
-      </p>
-    </div>
   );
 }

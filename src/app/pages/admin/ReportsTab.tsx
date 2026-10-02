@@ -127,8 +127,8 @@ export default function ReportsTab({
         return (
           <Card key={r.id} className="bg-white/[.05] border-white/10">
             <CardContent className="p-5 flex flex-col md:flex-row justify-between gap-4">
-              <div className="min-w-0">
-                <h2 className="font-semibold break-all">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-semibold break-words [overflow-wrap:anywhere]">
                   {r.entity_type}
                   {r.entityTitle ? ` · ${r.entityTitle}` : ''} ·{' '}
                   {href ? (
@@ -152,8 +152,12 @@ export default function ReportsTab({
                     r.entity_id
                   )}
                 </h2>
-                <div className="text-sm text-rose-300 mt-1">{r.reason}</div>
-                {r.details && <p className="text-sm text-slate-300 mt-2">{r.details}</p>}
+                <div className="text-sm text-rose-300 mt-1 break-words [overflow-wrap:anywhere]">{r.reason}</div>
+                {r.details && (
+                  <p className="text-sm text-slate-300 mt-2 line-clamp-4 break-words [overflow-wrap:anywhere]">
+                    {r.details}
+                  </p>
+                )}
                 <p className="text-xs text-slate-400 mt-2">
                   Reported by {r.reporterName || 'Unknown'} · {date(r.created_at, true)}
                   {r.status !== 'open' && ` · ${r.status}${r.action_taken ? ` (${r.action_taken})` : ''}`}

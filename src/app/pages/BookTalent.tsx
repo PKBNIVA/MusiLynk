@@ -7,25 +7,27 @@ import { HELP } from '../components/help/helpContent';
 import { apiGet, apiPost } from '../lib/api';
 import { useAuth } from '../lib/authContext';
 import { useLatestCallback } from '../lib/useLatestCallback';
-import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ActSearchForm } from '../components/ActSearchForm';
+import { ActCard } from '../components/talent/ActCard';
+import { useHomeCityDefault } from '../components/talent/useHomeCity';
 import { LoadMore } from '../components/LoadMore';
 import { NoResults, SearchNotice } from '../components/SearchFeedback';
 import { usePagedList, type PageMeta } from '../lib/usePagedList';
 import { useUrlFilters } from '../lib/useUrlFilters';
-import { Badge } from '../components/ui/badge';
 import { Field, FormDialog, textareaClass } from '../components/booking/BookingDialogs';
-import { Calendar, MapPin, ShieldCheck } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage, errorStatus } from '../lib/errors';
 import type { Act } from '../lib/apiTypes';
 import { AppSelect } from '../components/ui/app-select';
+import { formatInputEcho } from '../lib/format';
 
 type ActPage = PageMeta & { acts?: Act[] };
+type BookingLimits = { activeAllowed: number; activeUsed: number; planName?: string };
 const pickActs = (page: ActPage) => page.acts;
-const FILTERS = ['q', 'city', 'type'] as const;
+const FILTERS = ['q', 'city', 'type', 'member'] as const;
 const NOUN = ['act', 'acts'] as const;
 const ACT_SUGGESTIONS = ['wedding band', 'sufi', 'jazz', 'DJ', 'singer'] as const;
 
@@ -47,7 +49,9 @@ const today = () => {
 };
 
 type Enquiry = {
+  /** The act's id, or the musician's own when they front no act (then `direct` is set). */
   id: string;
+  direct?: boolean;
   name: string;
   eventType: string;
   eventDate: string;
@@ -79,15 +83,33 @@ export default function BookTalent() {
   const list = usePagedList<Act, ActPage>({ path: '/acts', pick: pickActs, noun: 'acts' });
   const { items: acts, loading, error: loadError } = list;
   const city = filters.city;
+  const member = filters.member;
+  // Coming from a musician's profile (?member=) or an act page (?act=) the city must not narrow the list.
+  const { city: homeCity, ready } = useHomeCityDefault('city', Boolean(params.get('member') || params.get('act')));
   const [booking, setBooking] = useState<Enquiry | null>(null),
     [formError, setFormError] = useState(''),
     [sending, setSending] = useState(false);
   const preselected = useRef<string | null>(null);
+  // The plan's room for active enquiries, shown before anything is typed (J-25).
+  const [limits, setLimits] = useState<BookingLimits | null>(null);
+  const loadLimits = useCallback(() => {
+    apiGet<Partial<BookingLimits>>('/bookings/limits')
+      .then((d) =>
+        setLimits(
+          typeof d.activeAllowed === 'number' && typeof d.activeUsed === 'number' ? (d as BookingLimits) : null,
+        ),
+      )
+      .catch(() => setLimits(null));
+  }, []);
+  useEffect(loadLimits, [loadLimits]);
+  const atLimit = Boolean(limits && limits.activeUsed >= limits.activeAllowed);
+  // A musician who fronts no act can still be asked for a quote (A-09): their name for the form.
+  const [musician, setMusician] = useState<{ id: string; name: string } | 'missing' | null>(null);
 
   const load = useLatestCallback(() => list.search(query));
   useEffect(() => {
-    void load();
-  }, [query, load]);
+    if (ready) void load();
+  }, [ready, query, load]);
 
   const openEnquiry = useCallback(
     (a: Act) => {
@@ -130,6 +152,43 @@ export default function BookTalent() {
       );
   }, [actParam, userId, openEnquiry]);
 
+  // From a musician's profile (?member=): a single act they front opens its enquiry straight away.
+  const memberOpened = useRef<string | null>(null);
+  useEffect(() => {
+    if (!member || loading || loadError || acts.length !== 1 || memberOpened.current === member) return;
+    memberOpened.current = member;
+    openEnquiry(acts[0]);
+  }, [member, loading, loadError, acts, openEnquiry]);
+
+  const directOpened = useRef<string | null>(null);
+  useEffect(() => {
+    if (!member || loading || loadError || acts.length > 0 || directOpened.current === member) return;
+    directOpened.current = member;
+    apiGet<{ professional?: { id: string; name: string; location?: string | null } }>(
+      `/public/talent/${encodeURIComponent(member)}`,
+    )
+      .then((d) => {
+        const person = d.professional;
+        if (!person) throw new Error('missing');
+        if (userId && person.id === userId) throw new Error('self');
+        setMusician({ id: person.id, name: person.name });
+        setFormError('');
+        setBooking({
+          id: person.id,
+          direct: true,
+          name: person.name,
+          eventType: 'wedding',
+          eventDate: '',
+          eventCity: city || person.location || '',
+          venueName: '',
+          budgetMin: '',
+          budgetMax: '',
+          requirements: '',
+        });
+      })
+      .catch(() => setMusician('missing'));
+  }, [member, loading, loadError, acts.length, userId, city]);
+
   const closeEnquiry = () => {
     setBooking(null);
     if (params.has('act')) {
@@ -146,7 +205,7 @@ export default function BookTalent() {
     setFormError('');
     try {
       await apiPost('/bookings', {
-        actId: booking.id,
+        ...(booking.direct ? { musicianId: booking.id } : { actId: booking.id }),
         eventType: booking.eventType || 'other',
         eventDate: booking.eventDate,
         city: booking.eventCity.trim(),
@@ -159,6 +218,7 @@ export default function BookTalent() {
         action: { label: 'View bookings', onClick: () => navigate(`${base}/bookings`) },
       });
       closeEnquiry();
+      loadLimits();
     } catch (e: unknown) {
       setFormError(errorMessage(e, 'Unable to send the enquiry.'));
     } finally {
@@ -173,6 +233,24 @@ export default function BookTalent() {
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
         <PageHeader title="Book talent" help={<HelpCallout {...HELP.bookTalent} />} />
+        {limits && (
+          <p
+            id="booking-limit"
+            data-testid="booking-limit"
+            className={`mb-4 text-sm ${atLimit ? 'text-amber-200' : 'text-slate-400'}`}
+          >
+            {limits.planName || 'Your'} plan: {limits.activeUsed} of {limits.activeAllowed} active enquiries
+            {atLimit && (
+              <>
+                {' '}
+                — upgrade to send more.{' '}
+                <Link to={`${base}/billing`} className="font-semibold underline underline-offset-4">
+                  See plans
+                </Link>
+              </>
+            )}
+          </p>
+        )}
         <ActSearchForm
           idPrefix="book-acts"
           values={filters}
@@ -182,6 +260,40 @@ export default function BookTalent() {
           }}
           onType={(type) => update({ type })}
         />
+        {homeCity && !member && (
+          <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="City">
+            {[
+              { label: homeCity, pressed: city.toLowerCase() === homeCity.toLowerCase(), city: homeCity },
+              { label: 'All cities', pressed: !city, city: '' },
+            ].map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                aria-pressed={chip.pressed}
+                onClick={() => update({ city: chip.city })}
+                className={`min-h-9 rounded-full border px-3.5 text-sm ${
+                  chip.pressed
+                    ? 'border-violet-400 bg-violet-500/20 text-white'
+                    : 'border-white/15 bg-white/[.04] text-slate-300 hover:bg-white/[.08]'
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {member && (
+          <p className="mt-4 flex flex-wrap items-center gap-x-3 text-sm text-slate-300" data-testid="member-filter">
+            Showing the acts this musician fronts.
+            <button
+              type="button"
+              className="text-violet-300 hover:text-violet-200"
+              onClick={() => update({ member: '' })}
+            >
+              Show all acts
+            </button>
+          </p>
+        )}
         {!loading && !loadError && acts.length > 0 && (
           <p className="text-sm text-slate-400 mt-5" data-testid="result-count">
             {list.total} {list.total === 1 ? 'act' : 'acts'}
@@ -199,6 +311,61 @@ export default function BookTalent() {
               Try again
             </Button>
           </div>
+        ) : acts.length === 0 && member ? (
+          musician && musician !== 'missing' ? (
+            <div
+              className="mt-7 rounded-xl border border-white/10 bg-white/[.04] p-8 text-center"
+              data-testid="direct-quote"
+            >
+              <p className="font-medium">{musician.name} has no act listed yet, but you can still ask for a quote.</p>
+              <p className="mt-1 text-sm text-slate-400">
+                Tell them the date and your budget. They reply with a price.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <Button
+                  disabled={atLimit}
+                  aria-describedby={atLimit ? 'booking-limit' : undefined}
+                  onClick={() => {
+                    setFormError('');
+                    setBooking({
+                      id: musician.id,
+                      direct: true,
+                      name: musician.name,
+                      eventType: 'wedding',
+                      eventDate: '',
+                      eventCity: city || '',
+                      venueName: '',
+                      budgetMin: '',
+                      budgetMax: '',
+                      requirements: '',
+                    });
+                  }}
+                >
+                  Request a quote
+                </Button>
+                <Button asChild variant="outline">
+                  <Link to={`/professionals/${encodeURIComponent(member)}`}>Back to profile</Link>
+                </Button>
+              </div>
+            </div>
+          ) : musician === 'missing' ? (
+            <div className="mt-7 rounded-xl border border-dashed border-white/15 p-8 text-center" role="status">
+              <p className="font-medium">This musician is not taking enquiries right now.</p>
+              <p className="mt-1 text-sm text-slate-400">Browse other acts, or go back to their profile.</p>
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <Button asChild>
+                  <Link to={`/professionals/${encodeURIComponent(member)}`}>Back to profile</Link>
+                </Button>
+                <Button variant="outline" onClick={() => update({ member: '' })}>
+                  Browse all acts
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-slate-400 text-center py-16" role="status">
+              Loading…
+            </p>
+          )
         ) : acts.length === 0 ? (
           <div className="mt-7 rounded-xl border border-dashed border-white/15">
             <NoResults
@@ -222,56 +389,35 @@ export default function BookTalent() {
                 return acts.map((a, index) => {
                   const own = Boolean(user && a.owner_id && a.owner_id === user.id);
                   const ambiguous = (nameCounts.get(a.name) || 0) > 1 && Boolean(a.ownerName);
-                  const memberCount = a.members?.length || 0;
                   return (
-                    <Card key={a.id} className="bg-white/[.055] border-white/10" data-list-item={index} tabIndex={-1}>
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <Badge variant="secondary">{a.act_type}</Badge>
-                            <h2 className="text-xl font-semibold mt-2 break-words" data-testid="act-name">
-                              {a.name}
-                              {ambiguous && <span className="text-slate-400 font-normal"> · {a.ownerName}</span>}
-                            </h2>
+                    <ActCard
+                      key={a.id}
+                      act={a}
+                      index={index}
+                      to={`/acts/${a.id}`}
+                      nameSuffix={ambiguous ? a.ownerName : undefined}
+                      footer={
+                        <>
+                          <div className="flex gap-2">
+                            <Button
+                              className="flex-1 tap-target-44"
+                              disabled={atLimit}
+                              aria-describedby={atLimit ? 'booking-limit' : undefined}
+                              onClick={() => openEnquiry(a)}
+                            >
+                              <Calendar size={16} className="mr-2" />
+                              Request availability
+                            </Button>
+                            <Button asChild variant="outline" className="tap-target-44">
+                              <Link to={`/acts/${a.id}`} aria-label={`View ${a.name}`}>
+                                View
+                              </Link>
+                            </Button>
                           </div>
-                          {(a.verified || a.ownerVerified) && (
-                            <ShieldCheck aria-label="Verified" className="text-emerald-300 shrink-0" size={18} />
-                          )}
-                        </div>
-                        <div className="text-sm text-slate-400 mt-3 flex flex-wrap gap-x-4 gap-y-1 items-center">
-                          <span className="flex gap-2 items-center">
-                            <MapPin size={14} />
-                            {a.city || 'Flexible location'}
-                          </span>
-                          {a.ownerName && <span>By {a.ownerName}</span>}
-                          {memberCount > 0 && (
-                            <span>
-                              {memberCount} member{memberCount === 1 ? '' : 's'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm mt-3">
-                          {(Array.isArray(a.genres) && a.genres.slice(0, 5).join(' · ')) || 'Multi-genre'}
-                        </div>
-                        <div className="text-sm text-emerald-300 mt-4">
-                          {a.min_fee
-                            ? `From ${a.currency || 'INR'} ${Number(a.min_fee).toLocaleString('en-IN')}`
-                            : 'Ask for quote'}
-                        </div>
-                        <div className="flex gap-2 mt-5">
-                          <Button className="flex-1 tap-target-44" onClick={() => openEnquiry(a)}>
-                            <Calendar size={16} className="mr-2" />
-                            Request availability
-                          </Button>
-                          <Button asChild variant="outline" className="tap-target-44">
-                            <Link to={`/acts/${a.id}`} aria-label={`View ${a.name}`}>
-                              View
-                            </Link>
-                          </Button>
-                        </div>
-                        {own && <p className="text-xs text-slate-500 mt-2">This is one of your acts.</p>}
-                      </CardContent>
-                    </Card>
+                          {own && <p className="mt-2 text-xs text-slate-500">This is one of your acts.</p>}
+                        </>
+                      }
+                    />
                   );
                 });
               })()}
@@ -290,9 +436,12 @@ export default function BookTalent() {
         <FormDialog
           open={Boolean(booking)}
           onOpenChange={(open) => !open && closeEnquiry()}
-          title={`Enquire for ${booking?.name || 'this act'}`}
+          title={
+            booking?.direct ? `Request a quote from ${booking.name}` : `Enquire for ${booking?.name || 'this act'}`
+          }
           description="No payment is taken until you accept a quote."
-          submitLabel="Send enquiry"
+          submitLabel={booking?.direct ? 'Request quote' : 'Send enquiry'}
+          canSubmit={!atLimit}
           busyLabel="Sending…"
           busy={sending}
           error={formError}
@@ -310,7 +459,7 @@ export default function BookTalent() {
                 />
               </Field>
               <div className="grid sm:grid-cols-2 gap-3">
-                <Field label="Event date" htmlFor="enquiry-date">
+                <Field label="Event date" htmlFor="enquiry-date" hint={formatInputEcho(booking.eventDate)}>
                   <Input
                     id="enquiry-date"
                     type="date"

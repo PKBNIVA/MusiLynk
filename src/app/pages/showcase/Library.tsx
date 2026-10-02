@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { EmptyState as SceneEmptyState } from '../../components/kit/EmptyState';
 import { Link } from 'react-router';
 import { flushSync } from 'react-dom';
 import { toast } from 'sonner';
@@ -37,7 +36,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { AppSelect } from '../../components/ui/app-select';
-import { EmptyState } from '../../components/help/EmptyState';
+import { EmptyState } from '../../components/kit/EmptyState';
 import { StepForm, focusStepHeading } from '../../components/help/StepForm';
 import { Field } from '../../components/form/Field';
 import { AutocompleteInput } from '../../components/ai/AutocompleteInput';
@@ -48,6 +47,7 @@ import { ChipInput, LoadState, Panel, ShowcaseShell, useWorkspaceBase } from '..
 import { SHOWCASE_HELP } from '../../components/showcase/help';
 import { apiDelete, apiGet, apiPatch, apiPost, uploadContentType, uploadMedia, UPLOAD_ACCEPT } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { trackProfileLinkAdded } from '../../lib/analytics';
 import { useActingAsKey } from '../../lib/actingAs';
 import { announceSuggestionsChanged, syncSummary, type Portfolio, type Suggestion } from '../../lib/showcase';
 import type { MediaMetadata, PortfolioItem } from '../../lib/apiTypes';
@@ -269,6 +269,8 @@ export default function Library() {
         : await apiPost<{ id: string; item: PortfolioItem }>('/portfolio', payload);
       const saved = out.item;
       toast.success(editId ? 'Work updated' : 'Work added');
+      // A new work that is a pasted link (not an uploaded file) counts as a link added to the profile.
+      if (!editId && saved.url && !form.mediaMetadata?.uploadId) trackProfileLinkAdded(saved.kind || saved.type);
       setItems((list) =>
         editId ? (list || []).map((i) => (i.id === saved.id ? saved : i)) : [saved, ...(list || [])],
       );
@@ -534,6 +536,7 @@ export default function Library() {
         open={linkImportOpen}
         onOpenChange={setLinkImportOpen}
         onImported={(imported) => {
+          imported.forEach((item) => trackProfileLinkAdded(item.kind || item.type));
           setItems((list) => [...imported, ...(list || [])]);
           void loadPortfolios();
         }}
@@ -552,7 +555,7 @@ export default function Library() {
             <Button size="sm" variant="outline" asChild>
               <Link to={`${base}/review`}>
                 <Inbox size={14} aria-hidden="true" />
-                Review
+                Review new items
               </Link>
             </Button>
           )}
@@ -646,7 +649,7 @@ export default function Library() {
                 Try another word or kind.
               </EmptyState>
             ) : (
-              <SceneEmptyState
+              <EmptyState
                 scene="portfolio"
                 title="Add your first work sample"
                 hint="Hirers hear a sample before they message."

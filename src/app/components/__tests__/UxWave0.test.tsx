@@ -73,6 +73,21 @@ describe('TourStrip', () => {
     show(strip('employer'));
     expect(host.querySelector('[data-testid="tour-strip"]')).toBeNull();
   });
+  it('ticks the cards a musician has already done and goes away when all are done', () => {
+    const withDone = (done: Record<string, boolean>) => (
+      <MemoryRouter>
+        <TourStrip role="jobseeker" done={done} />
+      </MemoryRouter>
+    );
+    show(withDone({ sample: true, availability: false, applied: false }));
+    const links = Array.from(host.querySelectorAll('a'));
+    expect(links.filter((a) => a.hasAttribute('data-done'))).toHaveLength(1);
+    expect(links[0].textContent).toContain('Add your work');
+    expect(links[0].textContent).toContain('Done');
+    act(() => root.render(<div />));
+    show(withDone({ sample: true, availability: true, applied: true }));
+    expect(host.querySelector('[data-testid="tour-strip"]')).toBeNull();
+  });
   it('renders for musicians', () => {
     show(strip('jobseeker'));
     expect(host.textContent).toContain('Find work');

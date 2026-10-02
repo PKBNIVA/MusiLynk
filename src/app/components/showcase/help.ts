@@ -70,7 +70,7 @@ export const SHOWCASE_HELP: Record<string, { id: string; title: string; steps: H
         title: 'Pin or exclude exceptions',
         text: 'Pin keeps an item in; exclude keeps it out. “Back to automatic” undoes either.',
       },
-      { icon: Eye, title: 'Check the preview', text: 'The preview shows exactly what a visitor or employer will see.' },
+      { icon: Eye, title: 'Check the preview', text: 'The preview shows exactly what a visitor or hirer will see.' },
     ],
   },
   newPortfolio: {
@@ -130,7 +130,7 @@ export const SHOWCASE_HELP: Record<string, { id: string; title: string; steps: H
     title: 'Applying',
     steps: [
       { icon: Layers, title: 'Pick a portfolio and resume', text: 'Your defaults are chosen for you.' },
-      { icon: Send, title: 'Send', text: 'The employer gets a frozen copy of what you picked.' },
+      { icon: Send, title: 'Send', text: 'The hirer gets a frozen copy of what you picked.' },
       { icon: Eye, title: 'Edit freely afterwards', text: 'Later changes never alter what they saw.' },
     ],
   },

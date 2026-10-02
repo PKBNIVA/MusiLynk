@@ -6,7 +6,8 @@ class Act < ApplicationRecord
   attribute :genres, :json, default: -> { [] }
   attribute :languages, :json, default: -> { [] }
   attribute :event_types, :json, default: -> { [] }
-  validates :tech_rider_url, :hospitality_rider_url, :promo_url, safe_http_url: true, allow_blank: true
+  validates :tech_rider_url, :hospitality_rider_url, :promo_url, :photo_url, safe_http_url: true, allow_blank: true
+  validates :photo_url, length: { maximum: 500 }
   validates :name, :act_type, presence: true
   # "hidden" is an admin-only moderation state (see Admin::ReportsController#moderate): it is
   # never set by the owner and is excluded from every public/search/booking query below.

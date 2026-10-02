@@ -146,24 +146,24 @@ test.describe('forms using the shared pattern', () => {
   test('career profile: typed inputs, all errors at once, first invalid focused, long bio wraps', async ({ page }) => {
     const { calls } = await signIn(page, 'jobseeker', undefined, { headline: 'Session bassist' });
     await page.goto('/jobseeker/profile');
-    await expect(page.getByLabel('Professional headline')).toHaveValue('Session bassist');
+    await expect(page.getByLabel('Headline')).toHaveValue('Session bassist');
     await expect(page.getByLabel('Website')).toHaveAttribute('type', 'url');
     await expect(page.getByLabel('Phone')).toHaveAttribute('type', 'tel');
     await expect(page.getByLabel('Phone')).toHaveAttribute('autocomplete', 'tel');
     await expect(page.getByLabel('Bio')).toHaveAttribute('maxlength', '2000');
 
-    await page.getByRole('button', { name: /Rates & links/ }).click();
     await page.getByLabel('Website').fill('not a url');
     await page.getByLabel('Phone').fill('abc-😀');
+    await page.getByRole('button', { name: /More rates/ }).click();
     await page.getByLabel('Hourly rate').fill('-5');
     await page.getByRole('button', { name: 'Save career profile' }).click();
-    await expect(page.getByLabel('Website')).toBeFocused();
+    // Rates come before Links on the page, so the hourly rate is the first invalid field.
+    await expect(page.getByLabel('Hourly rate')).toBeFocused();
     for (const label of ['Website', 'Phone', 'Hourly rate'])
       await expect(page.getByLabel(label)).toHaveAttribute('aria-invalid', 'true');
     await expect(page.locator('#profile-website-error')).toHaveText('Enter a full web address starting with https://');
     expect(calls.filter((c) => c.method === 'PUT')).toEqual([]);
 
-    await page.getByRole('button', { name: /About you/ }).click();
     await page.getByLabel('Bio').fill('https://www.youtube.com/watch?v=' + 'x'.repeat(400));
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);

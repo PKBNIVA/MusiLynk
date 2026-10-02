@@ -17,7 +17,7 @@ export function BrandMark({ compact = false, inverse = true }: BrandMarkProps) {
           Verse
         </span>
         {!compact && (
-          <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">
+          <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">
             music works here
           </span>
         )}

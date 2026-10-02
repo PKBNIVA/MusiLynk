@@ -18,7 +18,10 @@ const hirer = {
   profileComplete: false,
 };
 
-async function mockCommon(page: Page, state: { registered: boolean; urgentRequests: unknown[]; statusPolls: number }) {
+async function mockCommon(
+  page: Page,
+  state: { registered: boolean; urgentRequests: unknown[]; statusPolls: number; stuckStatus?: string },
+) {
   await page.route('**/api/**', (route) => {
     const request = route.request();
     const { pathname } = new URL(request.url());
@@ -41,14 +44,14 @@ async function mockCommon(page: Page, state: { registered: boolean; urgentReques
     }
     if (pathname === '/api/urgent-requests/urg_1') {
       // The first status poll still sees matching in progress; the next one sees the finished count.
-      const pending = state.statusPolls++ === 0;
+      const pending = state.statusPolls++ === 0 || Boolean(state.stuckStatus);
       return json(route, {
         request: {
           id: 'urg_1',
           title: 'Drummer needed in Mumbai',
           status: 'open',
           notified_count: pending ? 0 : 6,
-          match_status: pending ? 'pending' : 'done',
+          match_status: pending ? (state.stuckStatus ?? 'pending') : 'done',
           responseCount: 0,
           city: 'Mumbai',
           role_name: 'Drummer',
@@ -121,6 +124,31 @@ test('the urgent form names every missing answer instead of posting half a reque
   await expect(page.getByLabel('Venue or studio')).toBeHidden();
   await page.getByRole('button', { name: 'More details (optional)' }).click();
   await expect(page.getByLabel('Venue or studio')).toBeVisible();
+});
+
+test('a request still being matched shows in-progress, then calm fallback copy after 90 seconds', async ({ page }) => {
+  const state = { registered: true, urgentRequests: [] as unknown[], statusPolls: 0, stuckStatus: 'matching' };
+  await page.clock.install();
+  await mockCommon(page, state);
+  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-hirer-token'));
+  await page.goto('/urgent');
+  await page.getByRole('combobox', { name: 'Role needed' }).fill('Drummer');
+  await page.getByRole('combobox', { name: 'Role needed' }).press('Enter');
+  await chooseOption(page.getByLabel('Budget'), '₹5,000 – ₹10,000');
+  await page.getByLabel('Short note').fill('Two sets, gear provided.');
+  await page.getByRole('button', { name: 'Post urgent need' }).click();
+
+  await expect(page.getByText("We're on it")).toBeVisible();
+  await expect(page.getByText('within 2 hours, 9am–11pm IST')).toBeVisible();
+  await expect.poll(() => state.statusPolls).toBeGreaterThan(0);
+  // 'matching' is in progress: no "0 notified", and no fallback yet.
+  await expect(page.getByText('Finding musicians for you')).toBeVisible();
+  await expect(page.getByTestId('urgent-notified-count')).toHaveText('…');
+  await expect(page.getByTestId('urgent-matching-fallback')).toBeHidden();
+
+  await page.clock.fastForward(95_000);
+  await expect(page.getByTestId('urgent-matching-fallback')).toContainText("We're still lining up musicians");
+  await expect(page.getByText('within 2 hours, 9am–11pm IST')).toBeVisible();
 });
 
 const musicianRequest = {

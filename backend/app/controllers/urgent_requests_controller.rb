@@ -79,7 +79,13 @@ class UrgentRequestsController < ApplicationController
     item.save!
     # Matching and the alert fan-out are CPU-bound, so they run in UrgentMatchJob, enqueued only now that the
     # row is committed. The status card polls GET /urgent-requests/:id for matchStatus and the notified count.
-    UrgentMatchJob.perform_later(item.id)
+    begin
+      UrgentMatchJob.perform_later(item.id)
+    rescue => e
+      # The row is saved; UrgentMatchSweepJob picks it up. A 500 here would invite a duplicate post.
+      ErrorReporter.capture(e, tags: { source: "urgent_match_enqueue" }, urgent_request_id: item.id)
+      Rails.logger.error("UrgentMatchJob enqueue failed for urgent request #{item.id}: #{e.class}")
+    end
     render json: { id: item.id, notifiedCount: 0, matchStatus: "pending", responseTimePromise: UrgentConfig.response_time_promise }, status: :created
   end
 

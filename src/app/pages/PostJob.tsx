@@ -250,7 +250,7 @@ export default function PostJob() {
   const [limits, setLimits] = useState<JobLimits | null>(null);
   // A draft from an earlier visit, offered when this page opens without ?edit= (J-13).
   const [offeredDraft, setOfferedDraft] = useState<Job | null>(null);
-  // False until the draft lookup answers (or 1.5 s pass). The content under the header stays
+  // False until the draft lookup answers (or 0.8 s pass). The content under the header stays
   // invisible until then, so a banner arriving late does not push a visible form down the page.
   const [draftChecked, setDraftChecked] = useState(!!editId);
   // The draft this visit has been saving on every step change ('' until the first save). The ref
@@ -302,7 +302,7 @@ export default function PostJob() {
         .then((d) => setOfferedDraft((d.jobs || []).find((j) => j.status === 'draft') || null))
         .catch(() => setOfferedDraft(null))
         .finally(() => setDraftChecked(true));
-      const reveal = setTimeout(() => setDraftChecked(true), 1500);
+      const reveal = setTimeout(() => setDraftChecked(true), 800);
       return () => clearTimeout(reveal);
     }
     setOfferedDraft(null);

@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 # Covers the "need someone by tomorrow" additions on top of the existing urgent_requests
 # create/respond flow (see api_matrix_test.rb for the base CRUD contract): matching on
@@ -26,6 +27,17 @@ class UrgentRequestsMatchingTest < ActionDispatch::IntegrationTest
     get "/api/urgent-requests/#{body['id']}", headers: auth(@hirer)
     assert_equal 1, response.parsed_body.dig("request", "notified_count")
     assert_equal "done", response.parsed_body.dig("request", "match_status")
+  end
+
+  test "create still returns 201 when the enqueue raises, leaving the row for the sweep" do
+    boom = ->(*) { raise StandardError, "queue down" }
+    UrgentMatchJob.stub(:perform_later, boom) do
+      assert_difference -> { UrgentRequest.count }, 1 do
+        post_urgent
+      end
+    end
+    assert_response :created
+    assert_equal "pending", UrgentRequest.find(response.parsed_body["id"]).match_status
   end
 
   test "create enqueues exactly one UrgentMatchJob and does no matching or notifying queries itself" do

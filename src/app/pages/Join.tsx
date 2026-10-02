@@ -565,7 +565,7 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
               />
               <span
                 aria-hidden="true"
-                className="size-4 shrink-0 rounded-full border-2 border-slate-400 peer-checked:border-violet-400 peer-checked:bg-violet-400 peer-checked:shadow-[inset_0_0_0_2px_rgb(30_27_75)]"
+                className="size-4 shrink-0 rounded-full border-2 border-slate-400 peer-checked:border-violet-400 peer-checked:bg-violet-400 peer-checked:shadow-[inset_0_0_0_2px_rgb(30_27_75)] forced-colors:border-[CanvasText] forced-colors:peer-checked:bg-[Highlight] forced-colors:peer-checked:shadow-[inset_0_0_0_2px_Canvas]"
               />
               {HIRING_FOR[option.value]}
             </label>

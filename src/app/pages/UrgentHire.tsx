@@ -128,7 +128,15 @@ function StatusCard({ confirmed, onNewRequest }: { confirmed: Confirmed; onNewRe
   const [item, setItem] = useState<UrgentRequest | null>(null);
   const [responses, setResponses] = useState<UrgentRequestResponse[]>([]);
 
-  const matching = (item?.match_status ?? confirmed.matchStatus) === 'pending';
+  const status = item?.match_status ?? confirmed.matchStatus;
+  const matching = status === 'pending' || status === 'matching';
+  // After ~90 s of matching, stop promising an imminent count and fall back to calmer copy.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!matching) return;
+    const timer = setTimeout(() => setSlow(true), 90_000);
+    return () => clearTimeout(timer);
+  }, [matching]);
 
   const refresh = useCallback(async () => {
     try {
@@ -146,9 +154,9 @@ function StatusCard({ confirmed, onNewRequest }: { confirmed: Confirmed; onNewRe
   useEffect(() => {
     void refresh();
     // Matching runs in the background right after posting, so check often until it finishes.
-    const interval = setInterval(() => void refresh(), matching ? 4_000 : 15_000);
+    const interval = setInterval(() => void refresh(), matching && !slow ? 4_000 : 15_000);
     return () => clearInterval(interval);
-  }, [refresh, matching]);
+  }, [refresh, matching, slow]);
 
   async function message(userId: string) {
     try {
@@ -172,13 +180,19 @@ function StatusCard({ confirmed, onNewRequest }: { confirmed: Confirmed; onNewRe
         <p className="text-slate-300 mt-2 flex items-center gap-1.5">
           <Clock3 size={15} /> Expect your first response {confirmed.responseTimePromise}.
         </p>
+        {matching && slow && (
+          <p className="text-slate-300 mt-3 text-sm" data-testid="urgent-matching-fallback">
+            Your request is live. We're still lining up musicians — the count will appear here, and we'll email you when
+            someone responds.
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3 mt-6">
           <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-center">
             <div className="text-2xl font-bold" data-testid="urgent-notified-count">
               {matching ? '…' : notifiedCount}
             </div>
             <div className="text-xs text-slate-400 mt-1">
-              {matching ? 'Finding musicians for you' : 'Musicians notified'}
+              {matching ? (slow ? 'Musicians being notified' : 'Finding musicians for you') : 'Musicians notified'}
             </div>
           </div>
           <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-center">

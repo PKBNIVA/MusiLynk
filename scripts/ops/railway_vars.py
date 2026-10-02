@@ -78,7 +78,8 @@ def apply():
 
 def set_literal(service, pairs):
     values = dict(p.split("=", 1) for p in pairs)
-    if any(k not in ("RAZORPAY_REFERRAL_OFFER_ID", *PLANS, "RAZORPAY_ALLOW_TEST_MODE", "WHATSAPP_TEMPLATE_URGENT", "WHATSAPP_TEMPLATE_OTP", "WHATSAPP_ENABLED", "API_URL") for k in values):
+    if any(k not in ("RAZORPAY_REFERRAL_OFFER_ID", *PLANS, "RAZORPAY_ALLOW_TEST_MODE", "WHATSAPP_TEMPLATE_URGENT", "WHATSAPP_TEMPLATE_OTP", "WHATSAPP_ENABLED", "API_URL",
+                                "ALLOWED_ORIGINS", "ADMIN_ORIGIN", "FRONTEND_URL", "FRONTEND_HOST", "WEB_CONCURRENCY") for k in values):
         raise SystemExit("set: only non-secret identifiers may be passed on the command line")
     upsert(service, values)
 

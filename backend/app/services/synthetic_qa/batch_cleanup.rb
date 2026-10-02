@@ -8,7 +8,7 @@ module SyntheticQa
     # have no delete statement (promo_codes.created_by_id/owner_user_id, users.vouched_by_id) are not
     # purged by this class: schema.rb declares ON DELETE SET NULL for them, which the database applies.
     HANDLED_USER_COLUMNS = {
-      "act_members" => %w[user_id], "acts" => %w[owner_id], "ai_topup_payments" => %w[user_id], "application_events" => %w[actor_id],
+      "act_invites" => %w[inviter_id invitee_user_id], "act_members" => %w[user_id], "acts" => %w[owner_id], "ai_topup_payments" => %w[user_id], "application_events" => %w[actor_id],
       "applications" => %w[candidate_id], "audit_logs" => %w[actor_id entity_id], "auth_connections" => %w[owner_id],
       "availability_windows" => %w[user_id], "badges" => %w[user_id], "band_projects" => %w[owner_id], "billing_attempts" => %w[user_id],
       "billing_credits" => %w[user_id], "billing_events" => %w[user_id], "booking_payments" => %w[payer_id], "booking_quotes" => %w[created_by_id],
@@ -109,6 +109,7 @@ module SyntheticQa
         .or(RefundRecord.where(requested_by_id: user_ids)).or(RefundRecord.where(decided_by_id: user_ids)), "refund_records")
       remove(BookingPayment.where(id: ids[:payments]), "booking_payments")
       remove(BookingQuote.where(id: ids[:quotes]), "booking_quotes")
+      remove(ActInvite.where(act_id: ids[:acts]).or(ActInvite.where(inviter_id: user_ids)).or(ActInvite.where(invitee_user_id: user_ids)), "act_invites")
       remove(ActMember.where(act_id: ids[:acts]).or(ActMember.where(user_id: user_ids)), "act_members")
       remove(OrganizationMember.where(organization_id: ids[:organizations]).or(OrganizationMember.where(user_id: user_ids)), "organization_members")
       remove(UrgentRequestNotification.where(urgent_request_id: ids[:urgent_requests]).or(UrgentRequestNotification.where(user_id: user_ids))

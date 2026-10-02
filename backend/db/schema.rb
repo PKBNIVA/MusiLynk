@@ -17,6 +17,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
   enable_extension "pg_trgm"
   enable_extension "pgcrypto"
 
+  create_table "act_invites", id: :string, force: :cascade do |t|
+    t.string "act_id", null: false
+    t.string "inviter_id", null: false
+    t.string "kind", null: false
+    t.string "invitee_user_id"
+    t.citext "invitee_email"
+    t.string "role_name", null: false
+    t.string "instrument"
+    t.string "token_digest", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "responded_at"
+    t.string "accepted_by_id"
+    t.datetime "last_sent_at"
+    t.integer "send_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["act_id", "status"], name: "index_act_invites_on_act_id_and_status"
+    t.index ["invitee_email", "status"], name: "index_act_invites_on_invitee_email_and_status"
+    t.index ["invitee_user_id", "status"], name: "index_act_invites_on_invitee_user_id_and_status"
+    t.index ["inviter_id"], name: "index_act_invites_on_inviter_id"
+    t.index ["token_digest"], name: "index_act_invites_on_token_digest", unique: true
+    t.check_constraint "kind::text = ANY (ARRAY['user'::character varying, 'email'::character varying, 'link'::character varying]::text[])", name: "act_invites_kind_valid"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'declined'::character varying, 'revoked'::character varying]::text[])", name: "act_invites_status_valid"
+  end
+
   create_table "act_members", id: :string, force: :cascade do |t|
     t.string "act_id", null: false
     t.string "user_id"
@@ -1429,6 +1455,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
     t.check_constraint "status::text = ANY (ARRAY['invited'::character varying, 'joined'::character varying, 'verified'::character varying]::text[])", name: "vouches_status_valid"
   end
 
+  add_foreign_key "act_invites", "acts", on_delete: :cascade
+  add_foreign_key "act_invites", "users", column: "invitee_user_id", on_delete: :cascade
+  add_foreign_key "act_invites", "users", column: "inviter_id", on_delete: :cascade
   add_foreign_key "act_members", "acts"
   add_foreign_key "act_members", "users"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"

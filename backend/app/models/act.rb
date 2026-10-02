@@ -1,6 +1,7 @@
 class Act < ApplicationRecord
   belongs_to :owner, class_name: "User"
   has_many :act_members, dependent: :destroy
+  has_many :act_invites, dependent: :destroy
   has_many :booking_requests, dependent: :destroy
   has_many :portfolios, -> { where(owner_type: "act") }, foreign_key: :owner_id, dependent: :destroy, inverse_of: false
   # Tagline that marks the hidden solo act created for quotes asked of a musician directly.

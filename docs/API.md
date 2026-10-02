@@ -186,8 +186,18 @@ Every `q` (global search, jobs, talent, candidates, acts) goes through `Search::
 | GET | `/acts/me` | talent | — | `{acts}` **unbounded** |
 | POST | `/acts` | talent | `name, actType, tagline, bio, city, lineupSize, minFee, maxFee, currency, feeBasis, …, status, genres[]` | 201 `{id, act}`; `verified` ignored |
 | PATCH/PUT/DELETE | `/acts/:id` | talent (owner) | as create | `{act}` / `{ok}` (DELETE deactivates) |
-| POST | `/acts/:id/members` | talent (owner) | `displayName, roleName, instrument, userId (active jobseeker)` | 201 `{id}`; 400 status; 404 user; 409 duplicate |
+| POST | `/acts/:id/members` | talent (owner) | `displayName, roleName, instrument` adds a named member who is not on Verse; with `userId` (active jobseeker) it sends an invite instead of adding them | 201 `{id}` (with `userId`: `{id, invited: true, invite}`); 400 status; 404 user; 409 already in lineup or invited |
 | DELETE | `/acts/:id/members/:memberId` | talent (owner) | — | `{ok}`; 409 leader |
+| POST | `/acts/:id/leave` | talent (member) | — | `{ok}`; 404 not in the lineup; 409 leader |
+| GET | `/acts/:id/invitees?q=` | talent (owner) | name, role or city (2+ letters) | `{musicians: [{id, name, headline, location, roles, verified}]}` (never an email); 60/hour |
+| GET | `/acts/:id/invites` | talent (owner) | — | `{invites}` (masked email, never the token) |
+| POST | `/acts/:id/invites` | talent (owner) | `kind: user\|email\|link, userId \| email, roleName, instrument` | 201 `{invite, link?}` (`link` only for `kind: link`, shown once); 409 duplicate; 422; 429 (20/act/day, 30/inviter/day, 25 pending/act) |
+| POST | `/acts/:id/invites/:inviteId/resend` | talent (owner) | — | `{invite}` with a new secret and 7 days; 410 closed; 422 link invite; 429 (2 min gap, 5 sends) |
+| DELETE | `/acts/:id/invites/:inviteId` | talent (owner) | — | `{invite}` revoked; 410 already closed |
+| GET | `/act-invites/mine` | jobseeker | — | `{invites}` pending invites sent to the user, or to their verified email |
+| GET | `/act-invites/preview?token=` | public | — | `{invite}` (band, inviter, role; no emails); 404 |
+| POST | `/act-invites/accept`, `/act-invites/:id/accept` | signed in | `token` (or the id in the path) | `{invite, member}`; 403 `INVITE_NOT_FOR_YOU`/`NOT_A_MUSICIAN`; 404; 409 already a member; 410 `INVITE_USED`/`INVITE_EXPIRED`/`INVITE_REVOKED`/`INVITE_DECLINED` |
+| POST | `/act-invites/decline`, `/act-invites/:id/decline` | signed in | `token` (or the id) | `{invite}`; a shared link is left open for others |
 | GET | `/bookings` | talent | — | `{bookings: [… actName, requesterName, isOwner, isRequester, latestQuote, paidAmount, paymentCount]}` **unbounded** |
 | GET | `/bookings/limits` | talent | — | `{activeAllowed, activeUsed, plan, planName}` (enquiry limit, shown before the form) |
 | POST | `/bookings` | talent | `actId` or `musicianId` (a musician who fronts no act gets a hidden direct-enquiry solo act, kept out of My acts and every public listing), `eventType, eventDate, city, budgetMin/Max, …` | 201 `{id}`; 409 own act; 402 plan |

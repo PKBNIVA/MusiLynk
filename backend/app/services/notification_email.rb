@@ -116,6 +116,12 @@ class NotificationEmail
       copy: ->(_) { "You asked us to tell you when payments open. You can now pay and get paid safely through Verse. See the plans and what each one costs." },
       action: "See pricing"
     },
+    "act_invite" => {
+      subject: ->(p) { "#{p['name']} invited you to join #{p['act']}" },
+      heading: ->(_) { "You've been invited to join a band" },
+      copy: ->(p) { "#{p['name']} invited you to join #{p['act']} as #{p['role']}. You are only added if you accept, and you can decline." },
+      action: "See your invites", path: "/acts?tab=invites"
+    },
     "verification_approved" => {
       subject: ->(_) { "You're verified on Verse" },
       heading: ->(_) { "You're verified on Verse" },

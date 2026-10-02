@@ -444,6 +444,56 @@ export interface Act {
   demo: boolean;
 }
 
+/** ActInvite#owner_json: what the act owner sees (never the token or the full email). */
+export interface ActInviteOwner {
+  id: string;
+  actId: string;
+  kind: 'user' | 'email' | 'link';
+  status: 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired';
+  roleName: string;
+  instrument?: string | null;
+  inviteeName?: string | null;
+  inviteeEmail?: string | null;
+  expiresAt: string;
+  createdAt: string;
+  lastSentAt?: string | null;
+  canResend: boolean;
+}
+
+/** ActInvite#invitee_json: what the invited musician sees. `addressed` is false for a shared link. */
+export interface ActInviteForMe {
+  id: string;
+  actId: string;
+  actName: string;
+  actType?: string | null;
+  city?: string | null;
+  inviterName: string;
+  roleName: string;
+  instrument?: string | null;
+  status: 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired';
+  expiresAt: string;
+  createdAt: string;
+  addressed?: boolean;
+}
+
+/** ActInvitesController#search: public profile details only. */
+export interface InvitableMusician {
+  id: string;
+  name: string;
+  headline?: string | null;
+  location?: string | null;
+  roles: string[];
+  verified: boolean;
+}
+
+/** An act the signed-in musician plays in but does not own (GET /acts/me `memberships`). */
+export interface ActMembership {
+  actId: string;
+  actName: string;
+  roleName?: string | null;
+  instrument?: string | null;
+}
+
 /** BookingsController#booking_json's latestQuote. Fees are whole currency units. */
 export interface BookingQuote {
   id: string;

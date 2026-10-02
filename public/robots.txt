@@ -7,6 +7,7 @@ Disallow: /auth/
 Disallow: /reset-password
 Disallow: /verify-email
 Disallow: /unsubscribe
+Disallow: /invites/
 Disallow: /search
 Disallow: /start
 Disallow: /forgot-password

@@ -11,13 +11,14 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { FormDialog, useConfirm } from '../components/booking/BookingDialogs';
-import { Music, Plus, Users, Mic2 } from 'lucide-react';
+import { Mail, Music, Plus, Users, Mic2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Field, FormError, RequiredNote } from '../components/form/Field';
 import { MoreDetails } from '../components/help/MoreDetails';
 import { useFormErrors, useSubmitOnce } from '../lib/formErrors';
 import { errorMessage } from '../lib/errors';
-import type { Act, ActMember, Taxonomy } from '../lib/apiTypes';
+import type { Act, ActMember, ActMembership, Taxonomy } from '../lib/apiTypes';
+import { InviteBandmateDialog, Memberships, MyInvites, PendingInvites } from '../components/acts/ActInvites';
 import { AppSelect } from '../components/ui/app-select';
 import { formatMoney, periodLabel } from '../lib/format';
 import { optionLabel } from '../components/ui/option-labels';
@@ -41,6 +42,9 @@ export default function ActsManager() {
   const [acts, setActs] = useState<Act[]>([]),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
+    [memberships, setMemberships] = useState<ActMembership[]>([]),
+    [inviteFor, setInviteFor] = useState<{ id: string; name: string } | null>(null),
+    [inviteTick, setInviteTick] = useState(0),
     [actTypes, setActTypes] = useState<string[]>(FALLBACK_ACT_TYPES),
     [f, setF] = useState<ActForm>({
       name: '',
@@ -64,6 +68,7 @@ export default function ActsManager() {
     [togglingId, setTogglingId] = useState<string | null>(null),
     [statusError, setStatusError] = useState('');
   const { ask, element: confirmDialog } = useConfirm();
+  const isMusician = base === '/jobseeker';
   type ActField = 'name' | 'city' | 'genres' | 'minFee' | 'maxFee' | 'lineupSize' | 'ownerRole';
   const actErrors = useFormErrors<ActField>({ idFor: (k) => `act-${k}` });
   const createOnce = useSubmitOnce();
@@ -74,8 +79,9 @@ export default function ActsManager() {
   };
   async function load() {
     try {
-      const d = await apiGet<{ acts?: Act[] }>('/acts/me');
+      const d = await apiGet<{ acts?: Act[]; memberships?: ActMembership[] }>('/acts/me');
       setActs(d.acts || []);
+      setMemberships(d.memberships || []);
       setLoadError('');
     } catch (e: unknown) {
       setLoadError(errorMessage(e, 'Unable to load your acts.'));
@@ -197,6 +203,8 @@ export default function ActsManager() {
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-5 pt-28 pb-16">
         <PageHeader title="My acts" help={<HelpCallout {...HELP.acts} />} />
+        {isMusician && <MyInvites onChanged={() => void load()} />}
+        <Memberships memberships={memberships} ask={ask} onChanged={() => void load()} />
         <div className="grid lg:grid-cols-[.9fr_1.1fr] gap-6">
           <Card className="bg-white/[.055] border-white/10">
             <CardContent className="p-6">
@@ -353,19 +361,31 @@ export default function ActsManager() {
                       </div>
                     )}
                     <div className="mt-5 border-t border-white/10 pt-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <h4 className="font-semibold">Lineup</h4>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setMemberError('');
-                            setMember({ actId: a.id, actName: a.name, displayName: '', roleName: '', instrument: '' });
-                          }}
-                        >
-                          <Plus size={14} />
-                          Add member
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setInviteFor({ id: a.id, name: a.name })}>
+                            <Mail size={14} />
+                            Invite bandmate
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setMemberError('');
+                              setMember({
+                                actId: a.id,
+                                actName: a.name,
+                                displayName: '',
+                                roleName: '',
+                                instrument: '',
+                              });
+                            }}
+                          >
+                            <Plus size={14} />
+                            Add member
+                          </Button>
+                        </div>
                       </div>
                       <div className="mt-3 space-y-2">
                         {(a.members || []).map((m) => (
@@ -395,6 +415,7 @@ export default function ActsManager() {
                           </div>
                         ))}
                       </div>
+                      <PendingInvites actId={a.id} refreshKey={inviteTick} ask={ask} />
                       <div className="flex flex-wrap gap-2 mt-4">
                         <Button
                           size="sm"
@@ -425,11 +446,20 @@ export default function ActsManager() {
             )}
           </div>
         </div>
+        <InviteBandmateDialog
+          act={inviteFor}
+          onClose={() => setInviteFor(null)}
+          onInvited={() => setInviteTick((n) => n + 1)}
+        />
         <FormDialog
           open={Boolean(member)}
           onOpenChange={(open) => !open && setMember(null)}
           title="Add a lineup member"
-          description={member ? `Shown on ${member.actName}'s lineup.` : undefined}
+          description={
+            member
+              ? `Shown on ${member.actName}'s lineup. This adds a name only; to bring in a musician who is on Verse, invite them instead.`
+              : undefined
+          }
           submitLabel="Add member"
           busyLabel="Adding…"
           busy={savingMember}

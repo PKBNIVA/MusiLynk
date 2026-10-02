@@ -62,7 +62,8 @@ module MailCatalog
       "account_password_set" => { detail: "asha.catalog@example.com" },
       "account_password_removed" => { detail: "asha.catalog@example.com" },
       "google_connected" => { link: NotificationEmail.settings_link(@musician) },
-      "vouch_invite" => { link: "#{FRONT}/join/musician?vouch=vch_Zm9vYmFy", name: "Asha Rao" }
+      "vouch_invite" => { link: "#{FRONT}/join/musician?vouch=vch_Zm9vYmFy", name: "Asha Rao" },
+      "act_invite" => { link: "#{FRONT}/invites/Zm9vYmFyYmF6cXV4", name: "Asha Rao", act: "The Night Owls", role: "Drummer" }
     }
     EmailDelivery::TEMPLATES.each do |template, content|
       template_data = data.fetch(template) { raise "MailCatalog has no fixture data for email template #{template}" }
@@ -110,6 +111,10 @@ module MailCatalog
     capture("verification_more_proof", @musician) do
       Notifier.verification_needs_more_proof(@musician, ["add a link to your best work", "add a clear photo of yourself"])
     end
+    invite = ActInvite.new(act:, inviter: @musician, kind: "user", invitee_user: @other_musician, role_name: "Tabla", instrument: "Tabla")
+    capture("act_invite", @other_musician) { Notifier.act_invite(invite, @other_musician) }
+    capture("act_invite_accepted", @musician) { Notifier.act_invite_response(invite, @other_musician, accepted: true) }
+    capture("act_invite_declined", @musician) { Notifier.act_invite_response(invite, @other_musician, accepted: false) }
     capture("verification_approved", @musician) { Notifier.verification_approved(@musician) }
     prompt = ReviewPrompt.create!(source_type: "urgent_request", source_id: urgent.id, user: @musician, counterpart: @hirer, counterpart_name: "Meera Kapoor")
     capture("review_prompt", @musician) { Notifier.review_prompt(prompt) }

@@ -50,7 +50,13 @@ class ProblemReportsController < ApplicationController
       page: (ProblemReport.sanitize_page(params[:page]) if include_context),
       context: include_context ? ProblemReportContext.build(params[:context], role: current_user&.role) : {})
     saved = attach_screenshot(report, upload, content_type) if content_type
-    report.save!
+    begin
+      report.save!
+    rescue StandardError
+      # The blob is created before the report; don't leave the file orphaned when the report is not saved.
+      discard_blob(report.screenshot_blob)
+      raise
+    end
     audit!("problem_report.create", report) if current_user
     ProblemReportNotifier.notify(report)
     render json: { id: report.id, screenshotSaved: saved == true }, status: :created
@@ -113,6 +119,15 @@ class ProblemReportsController < ApplicationController
     detected = MediaTypeSniffer.detect(upload.tempfile.read(MediaTypeSniffer::HEADER_BYTES))
     upload.tempfile.rewind
     SCREENSHOT_TYPES.include?(detected) ? [detected, nil] : [nil, "The screenshot must be a PNG, JPEG or WebP image."]
+  end
+
+  def discard_blob(blob)
+    return unless blob
+
+    blob.delete
+    ActiveStorage::Blob.where(id: blob.id).delete_all
+  rescue StandardError => error
+    ErrorReporter.capture(error, tags: { source: "problem_report_blob_cleanup" })
   end
 
   # Stores the image when there is somewhere durable to put it; the report is kept either way.

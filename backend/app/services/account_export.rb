@@ -43,6 +43,11 @@ class AccountExport
       payments: rows(@user.billing_attempts.order(:created_at)),
       billingProfiles: rows(BillingProfile.where(user_id: @user.id).order(:version)),
       invoices: TaxInvoice.where(user_id: @user.id).order(:issued_at).map { _1.document_json.stringify_keys },
+      pushDevices: @user.push_subscriptions.order(:created_at).map { _1.slice(:user_agent_summary, :created_at, :last_success_at) },
+      problemReports: ProblemReport.where(user_id: @user.id).or(ProblemReport.where("lower(email) = ?", @user.email.to_s.downcase)).order(:created_at).map { |report|
+        report.slice(:description, :expected, :page, :status, :created_at).merge("screenshotAttached" => report.screenshot?)
+      },
+      actInvites: act_invites,
       stagePosts: rows(Post.where(created_by_user_id: @user.id).order(:created_at)),
       stageComments: rows(PostComment.where(created_by_user_id: @user.id).order(:created_at)),
       stageFollows: rows(Follow.where(follower_user_id: @user.id).order(:created_at)),
@@ -74,6 +79,22 @@ class AccountExport
         "messages" => conversation.messages.sort_by(&:created_at).map do |message|
           { "from" => message.sender_id == @user.id ? "you" : other.name, "body" => message.body, "sentAt" => message.created_at }
         end
+      }
+    end
+  end
+
+  # Invitations the user sent or received (by id, or to their address). Never the token or its digest,
+  # and other people's addresses only as the masked hint the app itself shows.
+  def act_invites
+    scope = ActInvite.where(inviter_id: @user.id).or(ActInvite.where(invitee_user_id: @user.id))
+    scope = scope.or(ActInvite.where(invitee_email: @user.email)) if @user.email.present?
+    scope.includes(:act).order(:created_at).map do |invite|
+      own_address = invite.invitee_email.present? && invite.invitee_email.casecmp?(@user.email.to_s)
+      {
+        "id" => invite.id, "direction" => invite.inviter_id == @user.id ? "sent" : "received", "actId" => invite.act_id, "actName" => invite.act&.name,
+        "kind" => invite.kind, "roleName" => invite.role_name, "instrument" => invite.instrument, "status" => invite.state,
+        "inviteeEmail" => own_address ? invite.invitee_email : invite.masked_email,
+        "createdAt" => invite.created_at, "expiresAt" => invite.expires_at, "respondedAt" => invite.responded_at
       }
     end
   end

@@ -13,6 +13,8 @@ class ActInvite < ApplicationRecord
   MAX_PER_ACT_PER_DAY = 20
   MAX_PER_INVITER_PER_DAY = 30
   MAX_PENDING_PER_ACT = 25
+  # Per recipient (same email address or same Verse user), across every act and inviter.
+  MAX_PER_RECIPIENT_PER_DAY = 3
   # Resend limits for one invite.
   RESEND_GAP = 2.minutes
   MAX_SENDS = 5

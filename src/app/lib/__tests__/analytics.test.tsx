@@ -297,3 +297,27 @@ describe('useRouteTracking', () => {
     expect(names).toEqual(['route_change', 'landing_view']);
   });
 });
+
+describe('redactTrackedPath', () => {
+  it('replaces the invite token and drops query strings and fragments', async () => {
+    const a = await load();
+    expect(a.redactTrackedPath('/invites/SECRETtoken_123-abc')).toBe('/invites/:token');
+    expect(a.redactTrackedPath('/invites/abc?x=1#y')).toBe('/invites/:token');
+    expect(a.redactTrackedPath('/reset-password?token=abc')).toBe('/reset-password');
+    expect(a.redactTrackedPath('/verify-email?t=abc#frag')).toBe('/verify-email');
+    expect(a.redactTrackedPath('/acts/act_1')).toBe('/acts/act_1');
+    expect(a.redactTrackedPath('/')).toBe('/');
+  });
+
+  it('never queues an invite token as the page or a path prop', async () => {
+    window.history.pushState({}, '', '/invites/TOPSECRET');
+    const a = await load();
+    a.track('route_change', { path: '/invites/TOPSECRET?x=1', other: 'see /invites/TOPSECRET' });
+    a.flush();
+    const event = lastBody().events[0]!;
+    expect(JSON.stringify(event)).not.toContain('TOPSECRET');
+    expect(event.page).toBe('/invites/:token');
+    expect(event.props).toMatchObject({ path: '/invites/:token' });
+    window.history.pushState({}, '', '/');
+  });
+});

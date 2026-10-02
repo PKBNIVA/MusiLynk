@@ -27,6 +27,9 @@ module ActInvites
   # Returns [invite, raw_token]. `invitee` is a User for kind "user"; `email` a String for kind "email".
   def create!(act:, inviter:, kind:, role_name:, instrument: nil, invitee: nil, email: nil)
     raise Refused.new("Choose how to invite: a Verse musician, an email address or a link.", :unprocessable_content, "VALIDATION_FAILED") unless ActInvite::KINDS.include?(kind)
+    if kind == "email" && !inviter.email_verified?
+      raise Refused.new("Verify your email address before inviting people by email.", :forbidden, "EMAIL_NOT_VERIFIED")
+    end
     enforce_creation_limits!(act, inviter)
     invite = ActInvite.new(act:, inviter:, kind:, role_name:, instrument:, status: "pending", expires_at: ActInvite::LIFETIME.from_now)
     case kind
@@ -40,6 +43,7 @@ module ActInvites
       raise Refused.new(invite.errors.full_messages.to_sentence, :unprocessable_content, "VALIDATION_FAILED", fields: invite.errors.to_hash(true).transform_keys { _1 == :role_name ? "roleName" : _1.to_s.camelize(:lower) })
     end
     reject_duplicate!(invite)
+    enforce_recipient_limit!(invite)
     invite.save!
     deliver!(invite, token)
     [invite, token]
@@ -52,6 +56,18 @@ module ActInvites
     raise Refused.new("You've sent a lot of invites today. Try again tomorrow.", :too_many_requests, "RATE_LIMITED") if too_many
     return if ActInvite.live.where(act_id: act.id).count < ActInvite::MAX_PENDING_PER_ACT
     raise Refused.new("This act has too many pending invites. Cancel some before sending more.", :too_many_requests, "RATE_LIMITED")
+  end
+
+  # One person can't be flooded by many acts or inviters: at most MAX_PER_RECIPIENT_PER_DAY invites a day.
+  def enforce_recipient_limit!(invite)
+    scope = case invite.kind
+            when "user" then ActInvite.where(invitee_user_id: invite.invitee_user_id)
+            when "email" then ActInvite.where(invitee_email: invite.invitee_email)
+            end
+    return unless scope
+    return if scope.where(created_at: 24.hours.ago..).count < ActInvite::MAX_PER_RECIPIENT_PER_DAY
+
+    raise Refused.new("That person has already received several invites today. Try again tomorrow.", :too_many_requests, "RATE_LIMITED")
   end
 
   def reject_duplicate!(invite)

@@ -77,7 +77,34 @@ module PushNotifications
       Result.new(status: :rejected)
     rescue WebPush::Error, SocketError, SystemCallError, Timeout::Error, OpenSSL::SSL::SSLError, IOError
       Result.new(status: :failed)
+    rescue StandardError
+      # A malformed key (ArgumentError, OpenSSL::PKey errors, ...) must only fail this device, never the
+      # loop over the user's other devices. Nothing from the subscription is logged.
+      Result.new(status: :failed)
     end
+
+    def decode_key(value)
+      string = value.to_s
+      return nil unless string.match?(/\A[A-Za-z0-9_-]+={0,2}\z/)
+
+      Base64.urlsafe_decode64(string)
+    rescue ArgumentError
+      nil
+    end
+
+    # A browser's p256dh is an uncompressed P-256 point: 65 bytes starting 0x04, on the curve.
+    def valid_p256dh?(value)
+      bytes = decode_key(value)
+      return false unless bytes && bytes.bytesize == 65 && bytes.getbyte(0) == 4
+
+      group = OpenSSL::PKey::EC::Group.new("prime256v1")
+      OpenSSL::PKey::EC::Point.new(group, OpenSSL::BN.new(bytes, 2)).on_curve?
+    rescue OpenSSL::OpenSSLError
+      false
+    end
+
+    # The auth secret is 16 random bytes.
+    def valid_auth?(value) = decode_key(value)&.bytesize == 16
 
     # A short, non-identifying device label from the User-Agent ("Chrome on Android").
     def user_agent_summary(user_agent)

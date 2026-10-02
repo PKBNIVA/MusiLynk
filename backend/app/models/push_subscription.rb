@@ -18,6 +18,7 @@ class PushSubscription < ApplicationRecord
   validates :auth, presence: true, length: { maximum: 100 }
   validates :endpoint_digest, uniqueness: true
   validate :endpoint_is_a_push_service
+  validate :keys_are_well_formed
 
   def self.digest(endpoint) = Digest::SHA256.hexdigest(endpoint.to_s)
 
@@ -45,6 +46,11 @@ class PushSubscription < ApplicationRecord
   end
 
   private
+
+  def keys_are_well_formed
+    errors.add(:p256dh, "is not a valid P-256 public key") if p256dh.present? && !PushNotifications.valid_p256dh?(p256dh)
+    errors.add(:auth, "is not a valid auth secret") if auth.present? && !PushNotifications.valid_auth?(auth)
+  end
 
   def endpoint_is_a_push_service
     errors.add(:endpoint, "is not a supported push service") if endpoint.present? && !PushNotifications.valid_endpoint?(endpoint)

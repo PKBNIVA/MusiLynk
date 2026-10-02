@@ -117,9 +117,27 @@ function scrubProps(props?: EventProps): EventProps {
   const out: EventProps = {};
   for (const [key, value] of Object.entries(props)) {
     if (!key || key.length > 60 || EMAIL_LIKE.test(key)) continue;
-    if (typeof value === 'string') out[key] = value.slice(0, 200);
+    if (typeof value === 'string')
+      out[key] = (key === 'path' ? redactTrackedPath(value) : redactValue(value)).slice(0, 200);
     else if (typeof value === 'number' || typeof value === 'boolean') out[key] = value;
   }
+  return out;
+}
+
+/** Paths that carry a secret in a path segment, mapped to the placeholder that is tracked instead. */
+const SECRET_PATH_PATTERNS: Array<[RegExp, string]> = [[/\/invites\/[^/?#\s]+/gi, '/invites/:token']];
+
+/** The path that is safe to record: no query string or fragment (reset/verify/unsubscribe links
+ * carry their tokens there) and no secret path segment (/invites/<token> becomes /invites/:token). */
+export function redactTrackedPath(path: string): string {
+  let out = String(path ?? '').split(/[?#]/)[0] ?? '';
+  for (const [pattern, replacement] of SECRET_PATH_PATTERNS) out = out.replace(pattern, replacement);
+  return out;
+}
+
+function redactValue(value: string): string {
+  let out = value;
+  for (const [pattern, replacement] of SECRET_PATH_PATTERNS) out = out.replace(pattern, replacement);
   return out;
 }
 
@@ -142,7 +160,7 @@ export function track(name: EventName, props?: EventProps): void {
     name,
     anonId: anonId(),
     props: scrubProps(props),
-    page: window.location?.pathname || '',
+    page: redactTrackedPath(window.location?.pathname || ''),
     referrer: (typeof document !== 'undefined' && document.referrer) || '',
   });
   if (queue.length >= MAX_QUEUE) flush();
@@ -280,7 +298,7 @@ export function initRouteTracking(router: MinimalRouter): void {
     if (path === lastPath) return;
     lastPath = path;
     if (path === '/') trackLandingView();
-    else track('route_change', { path });
+    else track('route_change', { path: redactTrackedPath(path) });
   });
 }
 
@@ -295,6 +313,6 @@ export function useRouteTracking(): void {
     if (path === lastPath.current) return;
     lastPath.current = path;
     if (path === '/') trackLandingView();
-    else track('route_change', { path });
+    else track('route_change', { path: redactTrackedPath(path) });
   }, [location.pathname]);
 }

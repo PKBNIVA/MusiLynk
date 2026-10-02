@@ -37,8 +37,12 @@ export function sanitizePageUrl(href: string): string {
 
 /** "Chrome 130" / "Safari 17" from the user agent. Coarse on purpose. */
 export function describeBrowser(ua: string): string {
+  // Edge, Opera and Samsung Internet also say "Chrome/…" earlier in the string, so look for the
+  // specific names first instead of taking the leftmost token.
   const match =
-    /(Edg|OPR|SamsungBrowser|CriOS|FxiOS|Firefox|Chrome|Version)\/(\d+)/.exec(ua) ?? /(Safari)\/(\d+)/.exec(ua);
+    /(Edg|OPR|SamsungBrowser|CriOS|FxiOS)\/(\d+)/.exec(ua) ??
+    /(Firefox|Chrome|Version)\/(\d+)/.exec(ua) ??
+    /(Safari)\/(\d+)/.exec(ua);
   if (!match) return 'Unknown browser';
   const names: Record<string, string> = {
     Edg: 'Edge',

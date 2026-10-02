@@ -6,6 +6,7 @@ import { usePageMeta } from '../components/PageMeta';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { PushOptIn } from '../components/push/PushOptIn';
 import { UrgentRequestFields } from '../components/urgent/UrgentRequestFields';
 import { URGENT_PROMISE, useUrgentForm } from '../lib/urgentForm';
 import { apiGet, apiPost } from '../lib/api';
@@ -192,6 +193,7 @@ function StatusCard({ confirmed, onNewRequest }: { confirmed: Confirmed; onNewRe
             ))}
           </div>
         )}
+        {user?.role !== 'jobseeker' && <PushOptIn variant="hirer" className="mt-6" />}
         <div className="flex flex-wrap gap-2 mt-7">
           <Button
             variant="outline"

@@ -11,6 +11,8 @@ gem "rack-cors", "~> 3.0"
 gem "aws-sdk-s3", require: false
 gem "faraday", "~> 2.12"
 gem "jwt", "~> 2.9"
+# Web push (VAPID + aes128gcm payload encryption); optional at runtime, see PushNotifications.
+gem "web-push", "~> 3.0"
 gem "redis", "~> 6.0"
 gem "good_job", "~> 4.13"
 gem "solid_cache", "~> 1.0"

@@ -19,6 +19,7 @@ module SyntheticQa
       "portfolio_items" => %w[user_id], "portfolios" => %w[owner_id], "post_comments" => %w[created_by_user_id author_id],
       "post_reactions" => %w[actor_id], "posts" => %w[created_by_user_id author_id], "product_events" => %w[user_id],
       "profiles" => %w[user_id], "promo_codes" => %w[created_by_id owner_user_id], "promo_redemptions" => %w[user_id],
+      "push_subscriptions" => %w[user_id],
       "recent_activities" => %w[user_id entity_id], "refund_records" => %w[requested_by_id decided_by_id], "reports" => %w[reporter_id resolved_by_id entity_id],
       "resumes" => %w[user_id], "review_prompts" => %w[user_id counterpart_user_id], "reviews" => %w[author_id employer_id],
       "saved_jobs" => %w[user_id], "sessions" => %w[user_id], "showcase_suggestions" => %w[owner_id], "subscriptions" => %w[user_id],
@@ -144,6 +145,7 @@ module SyntheticQa
       remove(PostComment.where(post_id: ids[:posts]).or(PostComment.where(created_by_user_id: user_ids)).or(PostComment.where(author_id: ids[:pages])), "post_comments")
       remove(Post.where(id: ids[:posts]), "posts")
       remove(Badge.where(user_id: user_ids), "badges")
+      remove(PushSubscription.where(user_id: user_ids), "push_subscriptions")
     end
 
     # Welcome and verified posts are keyed by user id, urgent-fill posts by request id (including a real

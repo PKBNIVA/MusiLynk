@@ -51,6 +51,12 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/me", :any, { keys: %w[user] }],
     [:get, "/api/me/identities", :talent, { keys: %w[identities] }],
     [:put, "/api/me/email-preferences", :any, { params: { emailPreferences: { digest: false } }, bad: { emailPreferences: { spam: false } }, bad_status: [400], keys: %w[emailPreferences paymentsNotify] }],
+    # Push is off in tests (no VAPID variables): config reports it, subscribing is refused with 404.
+    [:get, "/api/push/config", :public, { keys: %w[enabled publicKey] }],
+    [:post, "/api/push/subscriptions", :any, { ok: [404], params: { endpoint: "https://fcm.googleapis.com/fcm/send/matrix", keys: { p256dh: "a", auth: "b" } } }],
+    [:delete, "/api/push/subscriptions", :any, { params: { endpoint: "https://fcm.googleapis.com/fcm/send/matrix" }, bad: {}, bad_status: [400], keys: %w[ok] }],
+    [:get, "/api/push/preferences", :any, { keys: %w[preferences devices] }],
+    [:put, "/api/push/preferences", :any, { params: { preferences: { urgent: true } }, bad: { preferences: { spam: true } }, bad_status: [400], keys: %w[preferences devices] }],
     [:get, "/api/account/export", :any, { keys: %w[format version account profile conversations] }],
     # Without the typed email the request is refused, so the matrix never erases its own users.
     [:delete, "/api/account", :any, { ok: [422], params: { confirmEmail: "someone-else@example.com" } }],

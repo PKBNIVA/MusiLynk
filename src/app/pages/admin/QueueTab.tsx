@@ -82,6 +82,8 @@ export default function QueueTab({
         ))}
       <div
         aria-busy={refreshing}
+        // The stale list is dimmed and inert while the new one loads; the loading line above speaks for it.
+        aria-hidden={refreshing || undefined}
         {...({ inert: refreshing ? '' : undefined } as object)}
         className={refreshing ? 'pointer-events-none space-y-3 opacity-50 transition-opacity' : 'space-y-3'}
       >

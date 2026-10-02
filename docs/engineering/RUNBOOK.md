@@ -6,8 +6,8 @@ owner's Railway, Vercel, GitHub, Razorpay or Brevo account; nobody else can do t
 
 | Thing | Where |
 | --- | --- |
-| Web app | https://verse-music-platform.vercel.app (Vercel project, branch `production`) |
-| API | https://verse-music-platform-production.up.railway.app/api (Railway service from `backend/Dockerfile`) |
+| Web app | https://musilynk.vercel.app (Vercel project, branch `production`) |
+| API | https://musilynk-api-production.up.railway.app/api (Railway service from `backend/Dockerfile`) |
 | Database | Railway PostgreSQL (`DATABASE_URL` on the API service; `DATABASE_PUBLIC_URL` on the Postgres service for access from outside Railway) |
 | Background jobs | GoodJob inside the API process (`GOOD_JOB_EXECUTION_MODE=async`), cron in `backend/config/initializers/good_job.rb` |
 | Backups | GitHub Actions → **Database backup** (`.github/workflows/db-backup.yml`), artifacts kept 30 days |
@@ -27,9 +27,9 @@ database). Improve the RPO with Railway's paid backups or point-in-time recovery
 Run these from any machine:
 
 ```bash
-curl -sS -o /dev/null -w "web %{http_code}\n" https://verse-music-platform.vercel.app/
-curl -sS -w "\nlive %{http_code}\n"      https://verse-music-platform-production.up.railway.app/api/live
-curl -sS -w "\nreadiness %{http_code}\n" https://verse-music-platform-production.up.railway.app/api/readiness
+curl -sS -o /dev/null -w "web %{http_code}\n" https://musilynk.vercel.app/
+curl -sS -w "\nlive %{http_code}\n"      https://musilynk-api-production.up.railway.app/api/live
+curl -sS -w "\nreadiness %{http_code}\n" https://musilynk-api-production.up.railway.app/api/readiness
 ```
 
 | Result | Meaning | Go to |
@@ -89,7 +89,7 @@ statement timeout plus the configuration checks. Signed in as an admin,
 ### 1.5 Frontend up, API calls failing
 
 - Browser console shows CORS errors: `ALLOWED_ORIGINS` on Railway must list the exact web
-  origin (`https://verse-music-platform.vercel.app`, plus any custom domain).
+  origin (`https://musilynk.vercel.app`, plus any custom domain).
 - The app says the API returned a web page: `VITE_API_URL` on Vercel is missing or wrong, so
   `/api/*` is answered by the SPA. Fix the variable and **redeploy Vercel** (`VITE_*` values
   are read at build time).
@@ -131,7 +131,7 @@ orders; only signed webhooks (`POST /api/billing/webhook/razorpay`) change subsc
    and, with Sentry on, as `verse-api` issues.
 3. **Are webhooks arriving? [owner]** Razorpay Dashboard → Account & Settings → Webhooks →
    the MusiLynk webhook: check it is **Active**, the URL is
-   `https://verse-music-platform-production.up.railway.app/api/billing/webhook/razorpay`, and
+   `https://musilynk-api-production.up.railway.app/api/billing/webhook/razorpay`, and
    look at recent deliveries. A `401` response means `RAZORPAY_WEBHOOK_SECRET` on Railway does
    not match the dashboard secret; a `503` means the secret is not set. Razorpay retries
    failed deliveries for a limited time and can disable a webhook that keeps failing; after

@@ -4,7 +4,7 @@ What protects a MusiLynk session today, and the plan to move it into an HttpOnly
 
 ## Today
 
-The frontend (Vercel, `verse-music-platform.vercel.app`) calls the API on a different site
+The frontend (Vercel, `musilynk.vercel.app`) calls the API on a different site
 (`*.up.railway.app`), so the session is a bearer token that the frontend keeps in
 `localStorage`. Script injected into the page (XSS) could read it. Until the cookie migration
 below ships, the blast radius of a stolen token is limited by:
@@ -31,7 +31,7 @@ origin today it would be a third-party cookie (the frontend is a different site)
 Safari blocks and Chrome is restricting, so the API must first become same-origin:
 
 1. **Vercel rewrite.** In `vercel.json`, add
-   `{ "source": "/api/(.*)", "destination": "https://verse-music-platform-production.up.railway.app/api/$1" }`
+   `{ "source": "/api/(.*)", "destination": "https://musilynk-api-production.up.railway.app/api/$1" }`
    *before* the SPA catch-all, and set `VITE_API_URL=/api` on Vercel. The browser then talks
    only to the Vercel origin and CORS no longer applies.
 2. **Client IP.** Behind the rewrite every request reaches Railway from Vercel's egress IPs, so

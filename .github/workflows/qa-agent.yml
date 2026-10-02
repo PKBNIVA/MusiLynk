@@ -11,11 +11,11 @@ on:
       base_url:
         description: Frontend URL to test
         required: false
-        default: https://verse-music-platform.vercel.app
+        default: https://musilynk.vercel.app
       api_base_url:
         description: Rails API URL including /api
         required: false
-        default: https://verse-music-platform-production.up.railway.app/api
+        default: https://musilynk-api-production.up.railway.app/api
       full_browser_matrix:
         description: Also run Firefox desktop and mobile WebKit
         type: boolean
@@ -61,8 +61,8 @@ jobs:
     outputs:
       summary: ${{ steps.summary.outputs.text }}
     env:
-      QA_BASE_URL: ${{ inputs.base_url || 'https://verse-music-platform.vercel.app' }}
-      QA_API_BASE_URL: ${{ inputs.api_base_url || 'https://verse-music-platform-production.up.railway.app/api' }}
+      QA_BASE_URL: ${{ inputs.base_url || 'https://musilynk.vercel.app' }}
+      QA_API_BASE_URL: ${{ inputs.api_base_url || 'https://musilynk-api-production.up.railway.app/api' }}
       QA_FULL_MATRIX: ${{ inputs.full_browser_matrix && 'true' || 'false' }}
       # Deploy verification: a manual run (dispatched from the branch that was just deployed)
       # waits up to 5 minutes for /api/health and the web app to report this commit.

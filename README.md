@@ -5,11 +5,11 @@ Musicians, engineers and crew build a profile with work samples and find jobs, g
 and tours. Employers, studios, venues and bands post opportunities, search talent, assemble
 line-ups and book acts with a Razorpay deposit. Paid plans unlock more hiring capacity.
 
-- Web: https://verse-music-platform.vercel.app
-- API: https://verse-music-platform-production.up.railway.app/api
-  ([live](https://verse-music-platform-production.up.railway.app/api/live) ·
-  [health](https://verse-music-platform-production.up.railway.app/api/health) ·
-  [readiness](https://verse-music-platform-production.up.railway.app/api/readiness))
+- Web: https://musilynk.vercel.app
+- API: https://musilynk-api-production.up.railway.app/api
+  ([live](https://musilynk-api-production.up.railway.app/api/live) ·
+  [health](https://musilynk-api-production.up.railway.app/api/health) ·
+  [readiness](https://musilynk-api-production.up.railway.app/api/readiness))
 
 ## Architecture in five lines
 

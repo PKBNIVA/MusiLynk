@@ -193,7 +193,7 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
     production = ActiveSupport::EnvironmentInquirer.new("production")
     log = capture_log do
       with_env("FRONTEND_URL" => nil) do
-        Rails.stub(:env, production) { assert_equal "https://verse-music-platform.vercel.app", controller.send(:frontend_url) }
+        Rails.stub(:env, production) { assert_equal "https://musilynk.vercel.app", controller.send(:frontend_url) }
       end
     end
     assert_includes log, "frontend_url_missing"

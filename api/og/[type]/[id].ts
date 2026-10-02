@@ -36,7 +36,7 @@ export default async function handler(
   req: IncomingMessage & { query?: Record<string, string | string[] | undefined> },
   res: ServerResponse,
 ): Promise<void> {
-  const url = new URL(req.url || '/', `https://${req.headers.host || 'verse-music-platform.vercel.app'}`);
+  const url = new URL(req.url || '/', `https://${req.headers.host || 'musilynk.vercel.app'}`);
   const request = new Request(url, { method: 'GET' });
   let response: Response;
   try {

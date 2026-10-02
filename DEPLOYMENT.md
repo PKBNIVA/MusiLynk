@@ -21,8 +21,8 @@ Configure the repository root as a Vite project:
 - Production branch: `production`
 - Build command: `npm run build`
 - Output directory: `dist`
-- `VITE_API_URL=https://verse-music-platform-production.up.railway.app/api`
-- `VITE_PUBLIC_URL=https://verse-music-platform.vercel.app`
+- `VITE_API_URL=https://musilynk-api-production.up.railway.app/api`
+- `VITE_PUBLIC_URL=https://musilynk.vercel.app`
 
 `vercel.json` provides SPA routing, immutable asset caching, and browser security headers.
 
@@ -116,7 +116,7 @@ in production without `AWS_BUCKET` (override: `WORKER_ALLOW_DISK_UPLOADS=true`, 
 upload cleanup jobs delete rows but leave their files on the web volume).
 
 1. **Create the service.** Railway project → New → GitHub Repo → this repository, name it
-   e.g. `verse-worker`. In its Settings: Source branch `production`; Config-as-code →
+   e.g. `musilynk-worker`. In its Settings: Source branch `production`; Config-as-code →
    Railway config file path `railway.worker.toml`. That file builds the same Dockerfile and
    starts `gosu rails bin/worker`, with no healthcheck and no public domain (do not generate
    one). `bin/worker` waits up to `WORKER_MIGRATION_WAIT_SECONDS` (default 600) for the web
@@ -333,7 +333,7 @@ Owner setup, once:
 1. Generate a secret: `openssl rand -hex 32`. Set it in Railway (Rails service) as
    `BREVO_WEBHOOK_SECRET`. Without it the endpoint answers 503 to everything.
 2. Brevo → Transactional → Settings → Webhook → **Add a new webhook**:
-   - URL: `https://verse-music-platform-production.up.railway.app/api/email/webhook/brevo`
+   - URL: `https://musilynk-api-production.up.railway.app/api/email/webhook/brevo`
    - Authentication: choose **Token** (sent as `Authorization: Bearer <secret>`) or **Basic**
      (any username, the secret as the password). If your Brevo screen has no authentication
      option, append `?token=<secret>` to the URL instead (the header is preferred because URLs
@@ -355,7 +355,7 @@ of each controlled test before declaring an integration operational.
 
 | Provider | Railway environment names | Controlled verification |
 | --- | --- | --- |
-| Razorpay | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `RAZORPAY_PLAN_PRO`, `RAZORPAY_PLAN_STUDIO` | Follow the **Payments (Razorpay) go-live checklist** below: dashboard field mapping, webhook URL `https://verse-music-platform-production.up.railway.app/api/billing/webhook/razorpay` and events, automatic capture, test-mode rehearsal, then live switch. Keep test and live credentials separate. |
+| Razorpay | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `RAZORPAY_PLAN_PRO`, `RAZORPAY_PLAN_STUDIO` | Follow the **Payments (Razorpay) go-live checklist** below: dashboard field mapping, webhook URL `https://musilynk-api-production.up.railway.app/api/billing/webhook/razorpay` and events, automatic capture, test-mode rehearsal, then live switch. Keep test and live credentials separate. |
 | Brevo | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `BREVO_WEBHOOK_SECRET` | Verify the sending domain and sender in Brevo, then deliver a verification and reset email to controlled addresses. Check provider acceptance, inbox receipt, bounce status, and the resulting links. |
 | S3-compatible storage | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_BUCKET`, `AWS_ENDPOINT_URL_S3`, `AWS_PUBLIC_BASE_URL`, optional `AWS_UPLOAD_METHOD` (see "Object storage — Cloudflare R2") | Upload, read, and delete a controlled image and audio file through the browser. Verify object durability, access policy, MIME/size rejection, CORS, and cleanup. |
 
@@ -404,7 +404,7 @@ Checklist:
    ```json
    [
      {
-       "AllowedOrigins": ["https://verse-music-platform.vercel.app"],
+       "AllowedOrigins": ["https://musilynk.vercel.app"],
        "AllowedMethods": ["PUT", "POST", "GET", "HEAD"],
        "AllowedHeaders": ["content-type"],
        "ExposeHeaders": ["ETag"],
@@ -470,7 +470,7 @@ webhooks are separate objects in Razorpay: create each in both modes.
 
 Account & Settings → Webhooks → Add New Webhook (in each mode):
 
-- Webhook URL: `https://verse-music-platform-production.up.railway.app/api/billing/webhook/razorpay`
+- Webhook URL: `https://musilynk-api-production.up.railway.app/api/billing/webhook/razorpay`
 - Secret: the value of `RAZORPAY_WEBHOOK_SECRET`
 - Active events: `subscription.authenticated`, `subscription.activated`, `subscription.charged`,
   `subscription.pending`, `subscription.halted`, `subscription.paused`, `subscription.resumed`,
@@ -689,8 +689,8 @@ Use UptimeRobot (free: 50 monitors, 5-minute interval) or Better Stack Uptime (f
 
 | Monitor | URL | Check |
 | --- | --- | --- |
-| MusiLynk API | `https://verse-music-platform-production.up.railway.app/api/health` | HTTP 200, keyword `"ok":true` |
-| MusiLynk web | `https://verse-music-platform.vercel.app` | HTTP 200 |
+| MusiLynk API | `https://musilynk-api-production.up.railway.app/api/health` | HTTP 200, keyword `"ok":true` |
+| MusiLynk web | `https://musilynk.vercel.app` | HTTP 200 |
 
 Interval 5 minutes, alert contact = owner email, alert after 2 consecutive failures to avoid
 noise from a single cold start. (`/api/readiness` answers 503 while a core dependency is down;

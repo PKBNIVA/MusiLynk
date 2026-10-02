@@ -17,7 +17,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE_URL = (process.env.VITE_PUBLIC_URL || 'https://verse-music-platform.vercel.app').replace(/\/+$/, '');
+const BASE_URL = (process.env.VITE_PUBLIC_URL || 'https://musilynk.vercel.app').replace(/\/+$/, '');
 
 // path -> [title, description]. Written to match what each page's usePageMeta call sets.
 export const ROUTES = {

@@ -207,7 +207,9 @@ export function PublicNav() {
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button size="sm" asChild className="border-0 bg-gradient-to-r from-fuchsia-500 to-violet-500">
-                <Link to="/join/musician">Join MusiLynk</Link>
+                <Link to="/join/musician">
+                  Join <span className="hidden min-[400px]:inline">MusiLynk</span>
+                </Link>
               </Button>
             </>
           )}

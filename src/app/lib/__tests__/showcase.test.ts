@@ -166,7 +166,9 @@ describe('portfolio helpers', () => {
   });
 
   it('builds links and labels', () => {
-    expect(publicPortfolioUrl('jazz sessions-x', 'https://musilynk.test')).toBe('https://musilynk.test/p/jazz%20sessions-x');
+    expect(publicPortfolioUrl('jazz sessions-x', 'https://musilynk.test')).toBe(
+      'https://musilynk.test/p/jazz%20sessions-x',
+    );
     expect(publicPortfolioUrl('a')).toBe(`${window.location.origin}/p/a`);
     expect(pageJobsPath({ type: 'act', id: 'a/1' })).toBe('/pages/act/a%2F1');
     expect(identityKind('user')).toBe('You');

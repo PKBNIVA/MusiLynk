@@ -16,6 +16,13 @@ class PromoCodesValidatorTest < ActiveSupport::TestCase
     assert_equal({ percentOff: 20, durationPeriods: 2, trialDays: nil, earlyAccessDays: nil }, result.effect)
   end
 
+  test "a code issued before the MusiLynk rename (VERSE- prefix) still validates" do
+    make_code(code: "VERSE-K7M2QP")
+    result = check(" verse-k7m2qp ")
+    assert result.valid?
+    assert_equal "discount_percent", result.kind
+  end
+
   test "extended trial and early access effects" do
     make_code(kind: "extended_trial", code: "TRIAL90")
     make_code(kind: "early_access", code: "EARLY1")

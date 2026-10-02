@@ -237,7 +237,11 @@ describe('prerender-heads.mjs', () => {
     expect(apiPreconnect('/api')).toBe('');
     const dist = makeDist();
     execFileSync(process.execPath, [scriptPath, dist], {
-      env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example', VITE_API_URL: 'https://api.musilynk.example/api' },
+      env: {
+        ...process.env,
+        VITE_PUBLIC_URL: 'https://musilynk.example',
+        VITE_API_URL: 'https://api.musilynk.example/api',
+      },
     });
     for (const file of ['index.html', 'app-shell.html', 'pricing/index.html', '404.html'])
       expect(readFileSync(join(dist, file), 'utf8')).toContain(

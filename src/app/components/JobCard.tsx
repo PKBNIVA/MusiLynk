@@ -39,7 +39,10 @@ export function JobCard({ job, to, index, aside, compact = false }: Props) {
   const place = [job.location, job.workplace && optionLabel(job.workplace)].filter(Boolean).join(' · ');
   const chips = compact ? [] : [job.genre, job.function_area || job.skills?.[0]].filter((x): x is string => Boolean(x));
   return (
-    <Card className="musilynk-lift min-w-0 bg-white/[.055] border-white/10 hover:bg-white/[.075]" data-testid="job-card">
+    <Card
+      className="musilynk-lift min-w-0 bg-white/[.055] border-white/10 hover:bg-white/[.075]"
+      data-testid="job-card"
+    >
       <CardContent className="p-3.5 md:p-4">
         <div className="flex flex-wrap items-start gap-3 md:flex-nowrap">
           <span className="relative shrink-0" data-testid="job-cover">

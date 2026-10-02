@@ -243,7 +243,7 @@ describe('purchaseAiTopup / subscribeAiPlus', () => {
     vi.mocked(apiPost).mockResolvedValue({ checkout });
     vi.mocked(openRazorpayCheckout).mockResolvedValue({ status: 'success', response: {} });
     await expect(purchaseAiTopup('small')).resolves.toBeUndefined();
-    expect(openRazorpayCheckout).toHaveBeenCalledWith(checkout, { description: 'Verse AI credits top-up' });
+    expect(openRazorpayCheckout).toHaveBeenCalledWith(checkout, { description: 'MusiLynk AI credits top-up' });
   });
 
   it('rejects when the top-up checkout is dismissed', async () => {
@@ -262,7 +262,7 @@ describe('purchaseAiTopup / subscribeAiPlus', () => {
     await expect(purchaseAiTopup('small')).rejects.toThrow('Checkout was closed.');
   });
 
-  it('subscribes to Verse AI Plus via its own endpoint', async () => {
+  it('subscribes to MusiLynk AI Plus via its own endpoint', async () => {
     vi.mocked(apiPost).mockResolvedValue({ checkout: { mode: 'mock' } });
     await expect(subscribeAiPlus()).resolves.toBeUndefined();
     expect(apiPost).toHaveBeenCalledWith('/ai/plus/subscribe', {});
@@ -273,7 +273,7 @@ describe('purchaseAiTopup / subscribeAiPlus', () => {
     vi.mocked(apiPost).mockResolvedValue({ checkout });
     vi.mocked(openRazorpayCheckout).mockResolvedValue({ status: 'success', response: {} });
     await subscribeAiPlus();
-    expect(openRazorpayCheckout).toHaveBeenCalledWith(checkout, { description: 'Verse AI Plus' });
+    expect(openRazorpayCheckout).toHaveBeenCalledWith(checkout, { description: 'MusiLynk AI Plus' });
   });
 });
 

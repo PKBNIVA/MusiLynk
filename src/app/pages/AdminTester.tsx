@@ -12,7 +12,7 @@ import type { PlatformCheckReport } from '../lib/apiTypes';
 import { formatDateTime } from '../lib/format';
 
 export default function AdminTester() {
-  usePageMeta('Admin · Live Tester', 'Non-destructive runtime checks for the Verse platform.');
+  usePageMeta('Admin · Live Tester', 'Non-destructive runtime checks for the MusiLynk platform.');
   const [data, setData] = useState<PlatformCheckReport>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -98,7 +98,7 @@ export default function AdminTester() {
         </Link>
         <div className="flex flex-col sm:flex-row justify-between gap-4 mt-5">
           <div>
-            <h1 className="text-4xl font-bold">Verse Live Tester</h1>
+            <h1 className="text-4xl font-bold">MusiLynk Live Tester</h1>
             <p className="text-slate-400 mt-2">
               Non-destructive runtime checks for database integrity, configuration and critical platform dependencies.
             </p>

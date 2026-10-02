@@ -85,9 +85,9 @@ class MailAuditTest < ActiveSupport::TestCase
         assert_equal email.recipient, NotificationEmail.user_for_unsubscribe_token(token), "#{email.id}: token names the recipient"
         assert_includes email.text, "/unsubscribe?token="
       elsif %w[vouch_invite act_invite].include?(email.id)
-        assert_no_match(/cannot be turned off|your Verse account/, visible_text(email.html), "an invitee has no account yet")
+        assert_no_match(/cannot be turned off|your MusiLynk account/, visible_text(email.html), "an invitee has no account yet")
       elsif email.id == "problem_report"
-        assert_no_match(/cannot be turned off|your Verse account/, visible_text(email.html), "a founder email is not about the reader's account")
+        assert_no_match(/cannot be turned off|your MusiLynk account/, visible_text(email.html), "a founder email is not about the reader's account")
       else
         assert_includes email.html, EmailDelivery::SERVICE_NOTE, "#{email.id}: service note"
       end
@@ -161,7 +161,7 @@ class MailAuditTest < ActiveSupport::TestCase
     quiet.profile.update!(genres: ["Folk"])
     sections = WeeklyDigest.build(quiet, since: 7.days.ago)
     assert_nil LifecycleMailer.render_digest(sections, quiet, subject: WeeklyDigest.subject_for(sections))
-    assert_equal "This week on Verse", WeeklyDigest.subject_for(sections)
+    assert_equal "This week on MusiLynk", WeeklyDigest.subject_for(sections)
     one = [{ items: [{ text: "x" }], noun: "urgent request", where: "near you" }]
     assert_equal "1 urgent request near you this week", WeeklyDigest.subject_for(one)
     assert_equal "1 minute", LifecycleMailer.duration_words(1)
@@ -186,7 +186,7 @@ class MailAuditTest < ActiveSupport::TestCase
   test "a moderation update on an opportunity says what happened in words" do
     notes = @catalog[:notifications].select { _1.kind == "moderation" }
     assert_equal 4, notes.size
-    assert_includes notes.map(&:body).join(" "), "is now live on Verse."
+    assert_includes notes.map(&:body).join(" "), "is now live on MusiLynk."
   end
 
   test "google sign-in link goes to the workspace settings page" do

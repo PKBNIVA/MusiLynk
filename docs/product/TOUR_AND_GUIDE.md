@@ -13,7 +13,7 @@ Users can restart it from the account menu: **Take product tour**.
 `/guide` is a 5-minute plain-language guide. It intentionally explains only four core outcomes and links users into the relevant flow.
 
 ## Goal router
-`/start` asks one question: **What did you come to Verse for?** It routes to work discovery, hiring, booking or urgent staffing.
+`/start` asks one question: **What did you come to MusiLynk for?** It routes to work discovery, hiring, booking or urgent staffing.
 
 ## Search
-`/search` is the escape hatch when the user does not know which module they need. It searches the full network instead of making them understand Verse taxonomy first.
+`/search` is the escape hatch when the user does not know which module they need. It searches the full network instead of making them understand MusiLynk taxonomy first.

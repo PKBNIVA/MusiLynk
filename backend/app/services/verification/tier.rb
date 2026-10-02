@@ -1,6 +1,6 @@
 module Verification
   # Badge tiers: "verified" once a verification request is approved (profiles.verified), and
-  # "verified_pro" when that person also has enough completed work on Verse: urgent requests
+  # "verified_pro" when that person also has enough completed work on MusiLynk: urgent requests
   # they filled or bookings of their acts that were completed, plus published reviews received
   # (thresholds in config/verification.yml `pro`).
   module Tier

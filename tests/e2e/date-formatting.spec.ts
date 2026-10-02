@@ -9,7 +9,7 @@ const job = {
   id: 'job-1',
   employer_id: 'emp-1',
   title: 'Violinist for a destination wedding',
-  company: 'Verse Weddings',
+  company: 'MusiLynk Weddings',
   location: 'Goa',
   workplace: 'hybrid',
   function_area: 'Performance',

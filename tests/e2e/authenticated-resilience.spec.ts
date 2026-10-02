@@ -8,7 +8,7 @@ type Role = 'jobseeker' | 'employer';
 const job = {
   id: 'job-1',
   title: 'Session Guitarist',
-  company: 'Verse Studio',
+  company: 'MusiLynk Studio',
   location: 'Mumbai',
   kind: 'Contract',
   genre: 'Film',
@@ -83,7 +83,7 @@ for (const [role, path, endpoint] of pagesThatLoadOnMount) {
     const pageData = page.waitForResponse((response) => new URL(response.url()).pathname === endpoint);
     await page.goto(path);
     await pageData;
-    await expect(page.getByText('Preparing your Verse workspace')).toBeHidden();
+    await expect(page.getByText('Preparing your MusiLynk workspace')).toBeHidden();
     await page.evaluate((target) => {
       history.pushState({}, '', target);
       dispatchEvent(new PopStateEvent('popstate'));
@@ -103,7 +103,7 @@ test('an outage while restoring the session keeps the user signed in and offers 
   );
 
   await page.goto('/jobseeker/notifications');
-  await expect(page.getByRole('alert')).toContainText("We couldn't reach Verse");
+  await expect(page.getByRole('alert')).toContainText("We couldn't reach MusiLynk");
   expect(await page.evaluate(() => localStorage.getItem('verse_access_token'))).toBe('qa-token');
 
   await page.getByRole('button', { name: 'Try again' }).click();

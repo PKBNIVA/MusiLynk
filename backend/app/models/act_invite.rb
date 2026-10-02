@@ -1,6 +1,6 @@
 # An invitation to join an act's lineup. Nobody becomes a member until they accept (consent).
 #
-# kind "user":  addressed to one Verse musician (invitee_user_id).
+# kind "user":  addressed to one MusiLynk musician (invitee_user_id).
 # kind "email": addressed to an email address; whoever signs in with that verified address may accept.
 # kind "link":  a shareable link for one lineup slot; any signed-in musician may accept it, once.
 #
@@ -13,7 +13,7 @@ class ActInvite < ApplicationRecord
   MAX_PER_ACT_PER_DAY = 20
   MAX_PER_INVITER_PER_DAY = 30
   MAX_PENDING_PER_ACT = 25
-  # Per recipient (same email address or same Verse user), across every act and inviter.
+  # Per recipient (same email address or same MusiLynk user), across every act and inviter.
   MAX_PER_RECIPIENT_PER_DAY = 3
   # Resend limits for one invite.
   RESEND_GAP = 2.minutes

@@ -110,7 +110,7 @@ class FounderReportTest < ActiveJob::TestCase
     assert_equal({ from: "landing_view", to: "path_chosen", fromCount: 10, toCount: 4, lostPercent: 60 }, data[:funnel][:biggestDropOff])
 
     text = FounderReportMail.render(data, now: NOW)[:text]
-    assert_includes text, "Biggest drop-off: of 10 who visited Verse, 4 chose musician or hirer (60% did not)."
+    assert_includes text, "Biggest drop-off: of 10 who visited MusiLynk, 4 chose musician or hirer (60% did not)."
   end
 
   # --- Quiet week ---
@@ -121,12 +121,12 @@ class FounderReportTest < ActiveJob::TestCase
     assert data[:quiet]
 
     mail = FounderReportMail.render(data, now: NOW)
-    assert_equal "Verse week 21–27 Sep 2026: a quiet week", mail[:subject]
+    assert_equal "MusiLynk week 21–27 Sep 2026: a quiet week", mail[:subject]
     assert_includes mail[:text], "A QUIET WEEK"
     assert_includes mail[:text], "Nothing is waiting for you."
     assert_not_includes mail[:text], "New musicians"
     assert_not_includes mail[:html], "New musicians"
-    assert_not_includes mail[:text], "Visited Verse"
+    assert_not_includes mail[:text], "Visited MusiLynk"
     assert_not_includes mail[:text], ": 0"
   end
 
@@ -142,7 +142,7 @@ class FounderReportTest < ActiveJob::TestCase
     populate(batch: nil, times: 1)
     mail = FounderReportMail.render(FounderReport.new(now: NOW).call, now: NOW)
 
-    assert_equal "Verse week 21–27 Sep 2026: 4 sign-ups, 6 things need you", mail[:subject]
+    assert_equal "MusiLynk week 21–27 Sep 2026: 4 sign-ups, 6 things need you", mail[:subject]
     text = mail[:text]
     assert_includes text, "- New musicians: 3 (up 2 on last week; 1 finished their profile)"
     assert_includes text, "- Waiting for review: 2 (oldest has waited 11 days)"
@@ -233,7 +233,7 @@ class FounderReportTest < ActiveJob::TestCase
     task.reenable
 
     output = capture_io { task.invoke("preview") }.first
-    assert_match(/\ASubject: Verse week /, output)
+    assert_match(/\ASubject: MusiLynk week /, output)
     assert_includes output, "NEEDS YOU"
     assert_no_enqueued_jobs
   end

@@ -2,7 +2,7 @@
 #
 # With a provider id the resource is fetched directly. Without one (the create request
 # timed out or returned 5xx, so its response was lost) the resource is looked up by what
-# Verse sent with it: the subscription's `notes.attempt_id`, or the order's receipt.
+# MusiLynk sent with it: the subscription's `notes.attempt_id`, or the order's receipt.
 # ProviderResourceMissing means Razorpay has no such resource (nothing to attach).
 class BillingAttemptReconciler
   class ProviderResourceMissing < StandardError; end

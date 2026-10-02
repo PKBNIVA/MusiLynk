@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { BadgeCheck, Clock3, IndianRupee, type LucideIcon } from 'lucide-react';
 import { loadPublicStats, proofItems, type ProofItem } from '../../lib/landing';
 
-// What Verse promises, in three lines. These are policies, not statistics, so they are always true
+// What MusiLynk promises, in three lines. These are policies, not statistics, so they are always true
 // and always shown. The response promise is the urgent-request one (backend/config/urgent.yml).
 const PROMISES: readonly (readonly [LucideIcon, string])[] = [
-  [BadgeCheck, 'Verified by the Verse team'],
+  [BadgeCheck, 'Verified by the MusiLynk team'],
   [Clock3, 'Reply within 2 hours, 9 am–11 pm IST'],
   [IndianRupee, 'Free to post · musicians never pay'],
 ];
@@ -56,7 +56,7 @@ export function LiveProof() {
 function Stats({ items }: { items: ProofItem[] }) {
   return (
     <div className="mt-8 border-t border-white/10 pt-6">
-      <h3 className="text-lg font-black">On Verse right now</h3>
+      <h3 className="text-lg font-black">On MusiLynk right now</h3>
       <dl className="mt-4 grid gap-6 sm:grid-cols-3">
         {items.map((item) => (
           <div key={item.key} className="flex flex-col-reverse">

@@ -187,12 +187,12 @@ export default function Workspace() {
                     {['owner', 'admin'].includes(selected.memberRole ?? '') && (
                       <div className="grid md:grid-cols-[1fr_150px_auto] gap-2 mt-5">
                         <label htmlFor="member-email" className="sr-only">
-                          Existing Verse user email
+                          Existing MusiLynk user email
                         </label>
                         <Input
                           id="member-email"
                           type="email"
-                          placeholder="Existing Verse user email"
+                          placeholder="Existing MusiLynk user email"
                           value={invite.email}
                           onChange={(e) => setInvite({ ...invite, email: e.target.value })}
                         />

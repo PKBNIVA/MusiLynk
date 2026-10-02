@@ -15,7 +15,7 @@ const paths = [
       'Add multiple samples—not one “everything” reel',
       'Save searches and opportunities',
       'Keep availability current',
-      'Track every application in Verse',
+      'Track every application in MusiLynk',
     ],
     to: '/auth/jobseeker',
     cta: 'Join as a musician',
@@ -27,7 +27,7 @@ const paths = [
     steps: [
       'Describe the actual role and commitment',
       'Disclose pay/range where possible',
-      'Search in everyday language—Verse understands common music-industry synonyms',
+      'Search in everyday language—MusiLynk understands common music-industry synonyms',
       'Compare musicians before messaging',
       'Use folders for recurring talent pools',
     ],
@@ -37,7 +37,7 @@ const paths = [
   {
     icon: Users,
     title: 'I have an event but I do not know the crew titles',
-    text: 'Use Build My Crew. Tell Verse the event type, city, audience size and whether you need music, sound, lights, video or production. Verse recommends a practical starting team.',
+    text: 'Use Build My Crew. Tell MusiLynk the event type, city, audience size and whether you need music, sound, lights, video or production. MusiLynk recommends a practical starting team.',
     steps: [
       'Describe the event, not the job titles',
       'Review required vs recommended roles',
@@ -80,9 +80,13 @@ const paths = [
   },
 ];
 export default function Guide() {
-  usePageMeta('How to use Verse', 'Step-by-step guides for musicians, hirers, bands and event bookers on Verse.', {
-    canonicalPath: '/guide',
-  });
+  usePageMeta(
+    'How to use MusiLynk',
+    'Step-by-step guides for musicians, hirers, bands and event bookers on MusiLynk.',
+    {
+      canonicalPath: '/guide',
+    },
+  );
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
@@ -93,7 +97,7 @@ export default function Guide() {
           title="Get what you came for without learning the whole platform."
         >
           <p className="text-lg leading-8">
-            Verse has many music-industry workflows, but you rarely need all of them. Pick your goal below and follow
+            MusiLynk has many music-industry workflows, but you rarely need all of them. Pick your goal below and follow
             only that path.
           </p>
           <div className="flex gap-2 mt-6">
@@ -136,7 +140,7 @@ export default function Guide() {
           <div className="flex gap-3">
             <ShieldCheck className="text-emerald-300 shrink-0" />
             <div>
-              <h2 className="font-semibold text-xl">A simple rule for using Verse well</h2>
+              <h2 className="font-semibold text-xl">A simple rule for using MusiLynk well</h2>
               <p className="text-slate-400 mt-2 leading-7">
                 Keep proof, availability, scope and money clear. A complete profile gets discovered more accurately; a
                 clear opportunity gets better applicants; a clear booking brief gets better quotes. Avoid moving

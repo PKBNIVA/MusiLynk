@@ -1,6 +1,6 @@
-# Verse testers and release gate
+# MusiLynk testers and release gate
 
-Verse has three layers of automated checking plus a live admin tester. The release gate
+MusiLynk has three layers of automated checking plus a live admin tester. The release gate
 commands are in [DEPLOYMENT.md → Release gate](../../DEPLOYMENT.md#release-gate).
 
 ## 1. Live admin tester (`/admin/tester`)
@@ -42,7 +42,7 @@ messaging, account export and deletion, and rate limits. Job and model tests sit
   `integrated-journeys` CI job.
 - `payments-simulator.spec.ts` needs a local API with `RAZORPAY_SIMULATOR=true`.
 - `api-health.spec.ts` (project `api`) checks the live API; the scheduled
-  **Verse QA Agent** workflow (`.github/workflows/qa-agent.yml`) runs the live checks nightly
+  **MusiLynk QA Agent** workflow (`.github/workflows/qa-agent.yml`) runs the live checks nightly
   and on demand.
 
 `npm run test:all` runs the Node smoke tests in `tests/frontend-*.mjs`: the API client, monitoring

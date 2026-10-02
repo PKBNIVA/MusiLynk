@@ -9,7 +9,7 @@
 # 3. Razorpay booking payments stuck in `created` without an order are failed so the partial
 #    unique index on active deposits no longer blocks a retry.
 #
-# Attempts whose Razorpay resource disagrees with Verse (wrong amount or currency, or the local
+# Attempts whose Razorpay resource disagrees with MusiLynk (wrong amount or currency, or the local
 # resource was already released) are mismatches: they need a person, so each run that finds
 # any reports them to the error tracker under one fixed fingerprint, which alerts once.
 #

@@ -6,7 +6,7 @@ module SyntheticQa
   module Demo
     PREFIX = "demo-".freeze
     MAX_USERS = 300
-    # The hand-written "Verse showcase" (SyntheticQa::Showcase): fixed batch name, so seeding it is idempotent.
+    # The hand-written "MusiLynk showcase" (SyntheticQa::Showcase): fixed batch name, so seeding it is idempotent.
     SHOWCASE_BATCH = "demo-showcase".freeze
     SHOWCASE_SIZE = "showcase".freeze
     SIZES = {

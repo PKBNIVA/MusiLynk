@@ -95,8 +95,8 @@ test('a Stage with only system posts shows one roundup card and says what to do 
   const post = (n: number) => ({
     id: `sys_${n}`,
     kind: 'system',
-    body: `Verse update number ${n}`,
-    author: { type: 'system', id: 'verse', name: 'Verse', system: true },
+    body: `MusiLynk update number ${n}`,
+    author: { type: 'system', id: 'verse', name: 'MusiLynk', system: true },
     createdAt: '2026-09-30T10:00:00Z',
   });
   await page.route('**/api/stage/feed**', (route) =>

@@ -1,4 +1,5 @@
 import { AudioWaveform, Disc3 } from 'lucide-react';
+import { BRAND_NAME } from '../lib/brand';
 
 type BrandMarkProps = {
   compact?: boolean;
@@ -14,7 +15,7 @@ export function BrandMark({ compact = false, inverse = true }: BrandMarkProps) {
       </span>
       <span className="leading-none">
         <span className={`block text-lg font-black tracking-[-0.03em] ${inverse ? 'text-white' : 'text-slate-950'}`}>
-          Verse
+          {BRAND_NAME}
         </span>
         {!compact && (
           <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">

@@ -21,7 +21,7 @@ import { usePageMeta } from '../components/PageMeta';
 const ADMIN_SITE_MESSAGE = 'Admins sign in at the admin site.';
 
 export default function AuthPage() {
-  usePageMeta('Sign in', 'Sign in to your Verse account.', { noindex: true });
+  usePageMeta('Sign in', 'Sign in to your MusiLynk account.', { noindex: true });
   const { userType = 'jobseeker' } = useParams();
   const role = userType === 'employer' ? 'employer' : 'jobseeker';
   const navigate = useNavigate();
@@ -208,7 +208,7 @@ export default function AuthPage() {
     setLoading(true);
     try {
       const r = await apiPost<{ ok?: boolean; message?: string }>('/auth/resend-verification', { email });
-      setLinkNote(r?.message || 'If this email can be used on Verse, a confirmation link is on its way.');
+      setLinkNote(r?.message || 'If this email can be used on MusiLynk, a confirmation link is on its way.');
     } catch (e: unknown) {
       setLinkNote(errorMessage(e, 'Could not send the link. Try again.'));
     } finally {
@@ -333,7 +333,7 @@ export default function AuthPage() {
             </>
           ) : (
             <>
-              If <span className="font-semibold text-white">{email}</span> can be used on Verse, a 6-digit code is on
+              If <span className="font-semibold text-white">{email}</span> can be used on MusiLynk, a 6-digit code is on
               its way. It expires in 10 minutes.
             </>
           )
@@ -429,7 +429,7 @@ export default function AuthPage() {
       <div className="verse-orb absolute -bottom-40 -right-20 h-[34rem] w-[34rem] rounded-full bg-cyan-400/25" />
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col">
         <header className="flex items-center justify-between">
-          <Link to="/" aria-label="Verse home" className="inline-flex min-h-11 items-center">
+          <Link to="/" aria-label="MusiLynk home" className="inline-flex min-h-11 items-center">
             <BrandMark />
           </Link>
           <Link to="/" className="-my-2 inline-flex min-h-11 items-center py-2 text-sm text-slate-300 hover:text-white">
@@ -516,7 +516,7 @@ export default function AuthPage() {
                     state={location.state}
                     className="mt-3 flex min-h-11 w-full items-center justify-center text-sm font-semibold text-violet-200 hover:text-white"
                   >
-                    New to Verse? Join in two minutes
+                    New to MusiLynk? Join in two minutes
                   </Link>
                 )}
               </CardContent>

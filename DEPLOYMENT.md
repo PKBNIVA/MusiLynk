@@ -1,4 +1,4 @@
-# Verse production deployment
+# MusiLynk production deployment
 
 ## Source of truth
 
@@ -42,7 +42,7 @@ code, and the admin build has no public pages. `npm run check:split` builds the 
   `/admin` console, `/admin/tester`, `/account` (the admin's email and password). Every signed-in
   page shows a warning while the admin's address cannot receive email or the second step is not
   enforced (`GET /api/admin/account`), linking to `/account`, where the address is changed by
-  confirming a code sent to the new mailbox. The page title is "Verse Admin" and
+  confirming a code sent to the new mailbox. The page title is "MusiLynk Admin" and
   `<meta name="robots" content="noindex, nofollow">` keeps it out of search results.
 - The admin site's exact origin (for example `https://verse-admin-xxxx.vercel.app`) is the
   API's `ADMIN_ORIGIN` (see "Admin site and `ADMIN_ORIGIN`" below for what that locks). Its URL is
@@ -205,7 +205,7 @@ and `/api/auth/otp/request` answers 503 `OTP_UNAVAILABLE` (identical for every a
 issued). Adding `BREVO_API_KEY` switches the page back to codes on the next deploy.
 
 Current production sender (set 2026-09-27): `BREVO_SENDER_EMAIL=no-reply@notify.alienbrains.in`,
-`BREVO_SENDER_NAME=Verse`. DNS verified the same day: SPF `include:spf.brevo.com`, DKIM
+`BREVO_SENDER_NAME=MusiLynk`. DNS verified the same day: SPF `include:spf.brevo.com`, DKIM
 `brevo1`/`brevo2._domainkey` CNAMEs to Brevo, DMARC `p=none` with Brevo reporting.
 `BREVO_API_KEY` is still to be added (Brevo → SMTP & API → API keys → Generate).
 
@@ -313,7 +313,7 @@ without a code change).
 ### Brevo bounce and complaint webhook
 
 Brevo reports hard bounces, soft bounces, spam complaints, blocks and unsubscribes to
-`POST /api/email/webhook/brevo`. Verse records each address in `email_suppressions`:
+`POST /api/email/webhook/brevo`. MusiLynk records each address in `email_suppressions`:
 
 | Brevo event | Effect |
 | --- | --- |
@@ -568,7 +568,7 @@ Coverage floors: `bin/rails test` measures line and branch coverage with SimpleC
 `npm run test:unit -- --coverage` does the same for `src/app/lib` with the thresholds in
 `vitest.config.ts`. Raise a floor when coverage goes up; never lower it to get a build green.
 
-Signed-in live smoke: the scheduled and manual `Verse QA Agent` live run also signs in as a
+Signed-in live smoke: the scheduled and manual `MusiLynk QA Agent` live run also signs in as a
 dedicated jobseeker test account, saves and deletes a job alert, and signs out
 (`tests/e2e/live-account-smoke.spec.ts`). It skips itself until the `QA_SMOKE_EMAIL` and
 `QA_SMOKE_PASSWORD` repository secrets are set. Use an account created only for this, with
@@ -651,7 +651,7 @@ What is sent, and what is not:
 
 1. **New issue** — "A new issue is created" → email the owner (and the team, if any).
    This also covers billing mismatches: when the half-hourly reconciliation job finds an
-   attempt whose Razorpay order or subscription disagrees with Verse (wrong amount or
+   attempt whose Razorpay order or subscription disagrees with MusiLynk (wrong amount or
    currency, or the local payment was already released), it reports one
    `BillingReconciliationJob::Mismatch` event per run tagged
    `source=billing_reconciliation_mismatch` with the fixed fingerprint
@@ -689,8 +689,8 @@ Use UptimeRobot (free: 50 monitors, 5-minute interval) or Better Stack Uptime (f
 
 | Monitor | URL | Check |
 | --- | --- | --- |
-| Verse API | `https://verse-music-platform-production.up.railway.app/api/health` | HTTP 200, keyword `"ok":true` |
-| Verse web | `https://verse-music-platform.vercel.app` | HTTP 200 |
+| MusiLynk API | `https://verse-music-platform-production.up.railway.app/api/health` | HTTP 200, keyword `"ok":true` |
+| MusiLynk web | `https://verse-music-platform.vercel.app` | HTTP 200 |
 
 Interval 5 minutes, alert contact = owner email, alert after 2 consecutive failures to avoid
 noise from a single cold start. (`/api/readiness` answers 503 while a core dependency is down;
@@ -698,7 +698,7 @@ add it as a third monitor if you want database outages to page separately.)
 
 ### 7. Deploy verification without opening Railway
 
-After merging to `production`, run **Actions → Verse QA Agent → Run workflow** on the
+After merging to `production`, run **Actions → MusiLynk QA Agent → Run workflow** on the
 `production` branch. For manual runs the live job sets `QA_EXPECTED_RELEASE` to the
 workflow's commit, and `tests/e2e/api-health.spec.ts` polls for up to 5 minutes until
 `GET /api/health` reports that commit (first 12 characters) and the web app's

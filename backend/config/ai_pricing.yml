@@ -1,4 +1,4 @@
-# Verse AI Credits: every number that governs pricing, allowances and cost controls.
+# MusiLynk AI Credits: every number that governs pricing, allowances and cost controls.
 # Nothing here is client-configurable; the frontend only ever reads it back through
 # GET /api/ai/pricing and GET /api/ai/usage.
 default: &default
@@ -24,7 +24,7 @@ default: &default
       credits: 700
     expires_after_months: 12
 
-  # Verse AI Plus subscription: available to any account, independent of hiring/talent plan.
+  # MusiLynk AI Plus subscription: available to any account, independent of hiring/talent plan.
   ai_plus:
     plan_code: ai_plus
     price_inr: 199

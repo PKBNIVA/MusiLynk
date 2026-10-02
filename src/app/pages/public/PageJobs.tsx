@@ -35,7 +35,7 @@ export default function PageJobs() {
   const page = data?.page;
   usePageMeta(
     page ? `Opportunities at ${page.name}` : undefined,
-    page ? `Open music jobs and gigs posted by ${page.name} on Verse.` : undefined,
+    page ? `Open music jobs and gigs posted by ${page.name} on MusiLynk.` : undefined,
   );
   if (loading || error || !data || !page)
     return (
@@ -66,7 +66,7 @@ export default function PageJobs() {
         </header>
         {data.jobs.length === 0 ? (
           <EmptyState icon={Briefcase} title={`${page.name} has no open opportunities right now`}>
-            Check back soon, or browse every open opportunity on Verse.
+            Check back soon, or browse every open opportunity on MusiLynk.
           </EmptyState>
         ) : (
           <div className="space-y-4">

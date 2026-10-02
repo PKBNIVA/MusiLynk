@@ -1,6 +1,6 @@
 # Performance
 
-How Verse keeps pages fast, how to see when they are not, and the latest load-test numbers.
+How MusiLynk keeps pages fast, how to see when they are not, and the latest load-test numbers.
 
 ## Guardrails at a glance
 

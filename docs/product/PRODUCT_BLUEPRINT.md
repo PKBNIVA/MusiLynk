@@ -1,7 +1,7 @@
-# Verse — Product Blueprint
+# MusiLynk — Product Blueprint
 
 ## Product thesis
-Verse should not be positioned as another generic job board with a music skin. The defensible product is a **professional operating network for music careers**: identity and credits, opportunity discovery, trust, hiring workflow, communication, reputation, and eventually contracts/payments/rights-aware collaboration.
+MusiLynk should not be positioned as another generic job board with a music skin. The defensible product is a **professional operating network for music careers**: identity and credits, opportunity discovery, trust, hiring workflow, communication, reputation, and eventually contracts/payments/rights-aware collaboration.
 
 ## Core user groups
 1. **Music professionals** — artists, singers, instrumentalists, producers, composers, songwriters, engineers, DJs, live crew, managers, marketers, A&R, publishing/rights, label operations, music-tech.
@@ -85,7 +85,7 @@ Candidate application fees should not be part of the model.
 
 
 ## 2026 SaaS + booking architecture expansion
-Verse now treats four related but distinct workflows as first-class:
+MusiLynk now treats four related but distinct workflows as first-class:
 1. **Career hiring** — permanent, contract, tour, session, internship and collaboration opportunities.
 2. **Band building** — define missing seats/roles in a project and publish those seats into the moderated hiring funnel.
 3. **Act booking** — soloists, duos, trios, bands, ensembles, DJs, choirs and other acts receive date/location/event enquiries, issue quotes, accept bookings and collect deposits.

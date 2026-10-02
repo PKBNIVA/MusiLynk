@@ -1,4 +1,4 @@
-# Verse Music Role Taxonomy
+# MusiLynk Music Role Taxonomy
 
 The runtime taxonomy lives in `CatalogController::ROLE_CATEGORIES`
 (`backend/app/controllers/catalog_controller.rb`) and is served by `GET /api/taxonomy`

@@ -17,7 +17,7 @@ default: &default
 
   # "hirer": the fee (plus GST on it) is added on top of the hirer's deposit.
   # "split": half the fee is added to the hirer's deposit (with GST on that half); the other half
-  # is recorded against the musician's payout, but Verse has no payout/disbursement system yet, so
+  # is recorded against the musician's payout, but MusiLynk has no payout/disbursement system yet, so
   # that half is never actually collected — it is tracked only for the eventual payout ledger. See
   # backend/docs/compliance-checklist.md.
   fee_paid_by: hirer

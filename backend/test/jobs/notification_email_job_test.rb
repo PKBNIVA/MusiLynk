@@ -24,7 +24,7 @@ class NotificationEmailJobTest < ActiveJob::TestCase
     assert_equal "https://email-hook.example.invalid/send", url
     assert_equal ["notified-employer@example.com", "new_message"], body.values_at("to", "template")
     data = body.fetch("data")
-    assert_equal "New message from <b>Mallory</b> on Verse", data["subject"]
+    assert_equal "New message from <b>Mallory</b> on MusiLynk", data["subject"]
     assert_includes data["html"], "&lt;b&gt;Mallory&lt;/b&gt;"
     assert_not_includes data["html"], "<b>Mallory"
     assert_includes data["html"], "https://verse.example/employer/messages?c=abc"
@@ -82,7 +82,7 @@ class NotificationEmailJobTest < ActiveJob::TestCase
     assert_includes body["textContent"], "Turn off these emails: https://verse.example/unsubscribe?token="
 
     sent.clear
-    with_env(api.merge("RESEND_API_KEY" => "r", "EMAIL_FROM" => "Verse <hello@verse.example>")) do
+    with_env(api.merge("RESEND_API_KEY" => "r", "EMAIL_FROM" => "MusiLynk <hello@verse.example>")) do
       Faraday.stub(:post, capture(sent)) { NotificationEmailJob.perform_now(@user.id, "booking_status", { "act" => "A", "status" => "viewed" }) }
     end
     url, body = sent.sole

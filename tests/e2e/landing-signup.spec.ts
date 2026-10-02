@@ -81,8 +81,8 @@ test.describe('landing page', () => {
     });
     await page.goto('/');
     const proof = page.getByTestId('live-proof');
-    await expect(proof.getByTestId('promise-strip')).toContainText('Verified by the Verse team');
-    await expect(proof.getByRole('heading', { name: 'On Verse right now' })).toBeVisible();
+    await expect(proof.getByTestId('promise-strip')).toContainText('Verified by the MusiLynk team');
+    await expect(proof.getByRole('heading', { name: 'On MusiLynk right now' })).toBeVisible();
     await expect(proof).toContainText('142');
     await expect(proof).toContainText('verified musicians and crew');
     await expect(proof).toContainText('34');
@@ -95,11 +95,11 @@ test.describe('landing page', () => {
     const proof = page.getByTestId('live-proof');
     const strip = proof.getByTestId('promise-strip');
     await expect(strip.getByRole('listitem')).toHaveText([
-      'Verified by the Verse team',
+      'Verified by the MusiLynk team',
       'Reply within 2 hours, 9 am–11 pm IST',
       'Free to post · musicians never pay',
     ]);
-    await expect(proof.getByRole('heading', { name: 'On Verse right now' })).toHaveCount(0);
+    await expect(proof.getByRole('heading', { name: 'On MusiLynk right now' })).toHaveCount(0);
     await expect(proof).not.toContainText(/\b3\b/);
   });
 
@@ -248,7 +248,7 @@ test.describe('musician sign-up', () => {
     expect(String(calls.registers[0].bio)).toMatch(/^I'm a drummer and percussionist based in Mumbai, with 8 years/);
 
     const welcome = page.getByTestId('welcome-next-step');
-    await expect(welcome.getByRole('heading', { name: 'You’re on Verse, Riya.' })).toBeVisible();
+    await expect(welcome.getByRole('heading', { name: 'You’re on MusiLynk, Riya.' })).toBeVisible();
     await expect(welcome).toContainText('Your starter portfolio is live with 2 work samples');
     await expect(welcome.getByRole('link', { name: /Request verification/ })).toHaveAttribute(
       'href',

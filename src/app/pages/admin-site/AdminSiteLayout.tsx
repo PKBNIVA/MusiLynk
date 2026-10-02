@@ -67,7 +67,7 @@ export default function AdminSiteLayout() {
         <div className="mx-auto flex h-9 max-w-[1500px] items-center justify-between gap-3">
           <span className="flex items-center gap-1.5 font-semibold uppercase tracking-wider">
             <ShieldCheck aria-hidden="true" size={13} className="text-violet-300" />
-            Verse Admin
+            MusiLynk Admin
           </span>
           <NavLink
             to="/account"

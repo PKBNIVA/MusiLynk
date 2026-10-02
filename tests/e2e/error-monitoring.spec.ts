@@ -16,7 +16,7 @@ const email = 'qa.crash@example.invalid';
 
 const job = {
   id: 'job-1',
-  company: 'Verse Studio',
+  company: 'MusiLynk Studio',
   location: 'Mumbai',
   kind: 'Contract',
   genre: 'Film',

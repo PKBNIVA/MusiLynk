@@ -153,7 +153,7 @@ describe('Pricing page copy (V-flat-fee-note)', () => {
     const note = container.querySelector('[data-testid="flat-fee-note"]');
     expect(note).not.toBeNull();
     expect(note?.textContent).toContain(
-      'One flat fee. No commission on your bookings. A ₹5 lakh wedding band booked through a commission agency costs ₹75,000–₹1,00,000 in fees; on Verse it costs your monthly plan.',
+      'One flat fee. No commission on your bookings. A ₹5 lakh wedding band booked through a commission agency costs ₹75,000–₹1,00,000 in fees; on MusiLynk it costs your monthly plan.',
     );
     expect(note?.textContent).toContain(
       'Cancel any time. We email you three days before your trial ends and before every renewal.',

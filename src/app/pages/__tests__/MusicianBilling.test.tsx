@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 describe('MusicianBilling', () => {
-  it('says Verse is free during the beta and shows nothing about hirer plans', () => {
+  it('says MusiLynk is free during the beta and shows nothing about hirer plans', () => {
     act(() =>
       root.render(
         <MemoryRouter>

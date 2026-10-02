@@ -25,7 +25,7 @@ class LifecycleEmailDeliveryJobTest < ActiveJob::TestCase
     assert_equal "3 new requests near you this week", data["subject"]
     assert_includes data["html"], "Manage emails"
     assert_includes data["html"], "https://verse.example/unsubscribe?token="
-    assert_includes data["text"], "Manage which Verse emails you get: https://verse.example/unsubscribe?token="
+    assert_includes data["text"], "Manage which MusiLynk emails you get: https://verse.example/unsubscribe?token="
   end
 
   test "stamps delivered_at on the claimed row once the provider accepts the message, and not when it rejects" do

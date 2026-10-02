@@ -31,10 +31,10 @@ class EmailCopyTest < ActiveSupport::TestCase
       content = NotificationEmail.render(template, params, @musician)
       html = content[:html]
       assert_includes html, ">V</span>", "#{template}: brand mark"
-      assert_includes html, ">Verse</span>", "#{template}: brand name"
+      assert_includes html, ">MusiLynk</span>", "#{template}: brand name"
       assert_equal 1, html.scan(BUTTON).size, "#{template}: one primary button"
       assert_includes html, "/unsubscribe?token=", "#{template}: unsubscribe link"
-      assert_match(/^Verse\n\n/, content[:text])
+      assert_match(/^MusiLynk\n\n/, content[:text])
       assert_includes content[:text], "Turn off these emails:"
     end
   end
@@ -111,7 +111,7 @@ class EmailCopyTest < ActiveSupport::TestCase
       end
       assert_no_match(/VERSE/, html, name)
       text = EmailDelivery.send(:email_text, content:, data:)
-      assert_match(/^Verse\n\n/, text)
+      assert_match(/^MusiLynk\n\n/, text)
     end
   end
 

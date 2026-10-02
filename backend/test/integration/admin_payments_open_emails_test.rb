@@ -103,7 +103,7 @@ class AdminPaymentsOpenEmailsTest < ActionDispatch::IntegrationTest
 
   test "the email is short, says what changed and has one link to pricing" do
     content = NotificationEmail.render("payments_open", { "path" => "https://verse.example/pricing" }, @waiting.first)
-    assert_equal "Payments are now open on Verse", content[:subject]
+    assert_equal "Payments are now open on MusiLynk", content[:subject]
     assert_equal 1, content[:text].scan("https://verse.example/pricing").size
     assert_includes content[:text], "See pricing: https://verse.example/pricing"
   end

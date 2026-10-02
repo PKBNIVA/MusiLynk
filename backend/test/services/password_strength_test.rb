@@ -13,7 +13,7 @@ class PasswordStrengthTest < ActiveSupport::TestCase
   end
 
   test "users validate the password a person chooses, but seeds can set operator passwords" do
-    user = User.new(name: "Verse Admin", email: "admin@example.com", role: "admin", status: "active", password: "Admin@12345")
+    user = User.new(name: "MusiLynk Admin", email: "admin@example.com", role: "admin", status: "active", password: "Admin@12345")
     assert_not user.valid?
     assert_includes user.errors[:password], PasswordStrength::CONTAINS_IDENTITY
 

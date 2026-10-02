@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { IS_ADMIN_SITE } from '../lib/appTarget';
+import { ADMIN_BRAND_NAME, BRAND_NAME } from '../lib/brand';
 
-const SITE = IS_ADMIN_SITE ? 'Verse Admin' : 'Verse';
+const SITE = IS_ADMIN_SITE ? ADMIN_BRAND_NAME : BRAND_NAME;
 const DATA_ATTR = 'data-page-meta';
 
 export type PageMetaOptions = {
@@ -96,7 +97,7 @@ export function usePageMeta(title?: string, description?: string, options: PageM
       ['og:description', desc || ''],
       ['og:type', type],
       ['og:url', canonical],
-      ['og:site_name', 'Verse'],
+      ['og:site_name', BRAND_NAME],
       ['og:image', resolvedImage],
     ];
     const twitterTags: [string, string][] = [

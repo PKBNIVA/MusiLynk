@@ -166,7 +166,7 @@ jobs:
       - name: Post to alert webhook
         if: needs.backup.result != 'success' && env.ALERT_WEBHOOK_URL != ''
         run: |
-          payload=$(jq -n --arg text "Verse database backup ${RESULT}: ${RUN_URL}" --arg result "$RESULT" --arg url "$RUN_URL" --arg repo "$GH_REPO" \
+          payload=$(jq -n --arg text "MusiLynk database backup ${RESULT}: ${RUN_URL}" --arg result "$RESULT" --arg url "$RUN_URL" --arg repo "$GH_REPO" \
             '{text: $text, content: $text, event: "backup_failure", result: $result, runUrl: $url, repository: $repo}')
           curl -fsS --max-time 20 --retry 2 -H "Content-Type: application/json" -d "$payload" "$ALERT_WEBHOOK_URL" > /dev/null \
             || echo "::warning::Alert webhook POST failed; the GitHub issue is still the primary alert"

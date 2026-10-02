@@ -103,7 +103,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
   end
 
   # --- consent ---------------------------------------------------------------------------------
-  test "inviting a Verse musician adds nobody until they accept, and notifies them" do
+  test "inviting a MusiLynk musician adds nobody until they accept, and notifies them" do
     assert_difference -> { Notification.where(user: @rohan, kind: "act_invite").count }, 1 do
       invite!({ userId: @rohan.id, roleName: "Tabla", instrument: "Tabla" })
     end
@@ -161,7 +161,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
     assert_equal 1, ActInvite.count
   end
 
-  test "add_member without a userId still names a bandmate who is not on Verse, and existing members are untouched" do
+  test "add_member without a userId still names a bandmate who is not on MusiLynk, and existing members are untouched" do
     post "/api/acts/#{@act.id}/members", params: { displayName: "Session Dhol", roleName: "Dhol" }, headers: auth(@owner), as: :json
     assert_response :created
     member = @act.act_members.find(response.parsed_body.fetch("id"))
@@ -173,7 +173,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
   end
 
   # --- email invites ----------------------------------------------------------------------------
-  test "an email invite to someone off Verse queues a sealed link email and only the matching verified address can accept" do
+  test "an email invite to someone off MusiLynk queues a sealed link email and only the matching verified address can accept" do
     ENV["EMAIL_DELIVERY_WEBHOOK"] = "https://email-hook.example.invalid/send"
     assert_enqueued_with(job: EmailDeliveryJob) { invite!({ kind: "email", email: "  New.Person@Example.com ", roleName: "Keys" }) }
     assert_response :created

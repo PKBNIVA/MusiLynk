@@ -31,7 +31,7 @@ import type { HelpStep } from './HelpCallout';
 export const HELP: Record<string, { id: string; title: string; steps: HelpStep[] }> = {
   jobseekerDashboard: {
     id: 'jobseeker-dashboard',
-    title: 'How Verse works for you',
+    title: 'How MusiLynk works for you',
     steps: [
       {
         icon: UserRound,
@@ -139,7 +139,7 @@ export const HELP: Record<string, { id: string; title: string; steps: HelpStep[]
   },
   messages: {
     id: 'messages',
-    title: 'Messaging on Verse',
+    title: 'Messaging on MusiLynk',
     steps: [
       {
         icon: MessageSquare,

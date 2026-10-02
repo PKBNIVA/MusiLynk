@@ -27,7 +27,7 @@ module Admin
     # `captured` is false when SENTRY_DSN is unset (the reporter is inert).
     def sentry_test
       event = begin
-        raise SentryTestError, "Verse Sentry test error (triggered by an admin; safe to resolve)"
+        raise SentryTestError, "MusiLynk Sentry test error (triggered by an admin; safe to resolve)"
       rescue SentryTestError => error
         ErrorReporter.capture(error, tags: { source: "admin_sentry_test", verse_test: "true" }, level: :error)
       end

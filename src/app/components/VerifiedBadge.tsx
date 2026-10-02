@@ -10,9 +10,9 @@ const CHECK_LABELS: Record<string, string> = {
   organization: 'organization',
 };
 
-const PRO_NOTE = 'Verified Pro: 3+ completed jobs on Verse with reviews.';
+const PRO_NOTE = 'Verified Pro: 3+ completed jobs on MusiLynk with reviews.';
 
-/** "Verified by Verse: identity, work links · Sep 2026" (falls back to a plain label
+/** "Verified by MusiLynk: identity, work links · Sep 2026" (falls back to a plain label
  * when nothing was recorded — older, backfilled approvals). Verified Pro adds one line. */
 export function verifiedBadgeCopy(verification?: VerificationSummary | null, tier?: VerificationTier | null): string {
   const base = baseCopy(verification);
@@ -20,11 +20,11 @@ export function verifiedBadgeCopy(verification?: VerificationSummary | null, tie
 }
 
 function baseCopy(verification?: VerificationSummary | null): string {
-  if (!verification) return 'Verified by Verse';
+  if (!verification) return 'Verified by MusiLynk';
   const checks = (verification.checks || []).map((c) => CHECK_LABELS[c] || c).join(', ');
   const when = verification.verifiedAt ? formatDate(verification.verifiedAt).replace(/^\d+ /, '') : null;
   const parts = [checks, when].filter(Boolean);
-  return parts.length ? `Verified by Verse: ${parts.join(' · ')}` : 'Verified by Verse';
+  return parts.length ? `Verified by MusiLynk: ${parts.join(' · ')}` : 'Verified by MusiLynk';
 }
 
 /** The public Verified badge, with a tooltip saying what was actually checked and when.

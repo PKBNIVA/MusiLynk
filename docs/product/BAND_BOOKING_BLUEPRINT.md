@@ -1,7 +1,7 @@
-# Verse — Band Booking & Music Workforce Blueprint
+# MusiLynk — Band Booking & Music Workforce Blueprint
 
 ## Core principle
-Verse has three different work systems that share identity, trust and messaging but must not share one generic data object:
+MusiLynk has three different work systems that share identity, trust and messaging but must not share one generic data object:
 1. **Hire** — recruit a person for a role, seat or ongoing responsibility.
 2. **Book** — reserve an existing solo/duo/group/crew for a dated event and negotiate a quote.
 3. **Build** — assemble a new band/live team from multiple missing seats.

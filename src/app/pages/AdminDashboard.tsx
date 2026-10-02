@@ -77,7 +77,7 @@ const CodesTab = lazy(() => import('./admin/CodesTab'));
 export default function AdminDashboard() {
   const { user, logout } = useAuth(),
     nav = useNavigate();
-  usePageMeta('Admin · Trust & Operations', 'Verse moderation, verification, marketplace health and audit.');
+  usePageMeta('Admin · Trust & Operations', 'MusiLynk moderation, verification, marketplace health and audit.');
   // The active tab lives in the URL (?tab=) so reload, shared links and Back keep it.
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = readAdminTab(searchParams.get('tab'));
@@ -220,7 +220,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-3 min-w-0">
             <ShieldCheck aria-hidden="true" className="text-violet-400 shrink-0" />
             <div className="min-w-0">
-              <div className="font-bold">Verse Trust &amp; Operations</div>
+              <div className="font-bold">MusiLynk Trust &amp; Operations</div>
               <div className="hidden sm:block text-xs text-slate-400">
                 Moderation, verification, marketplace health &amp; audit
               </div>

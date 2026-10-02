@@ -1,6 +1,6 @@
 import type { Page, Request } from '@playwright/test';
 
-// A mocked Verse API for browser specs: `routes` maps "METHOD /api/path" or "/api/path" to a reply
+// A mocked MusiLynk API for browser specs: `routes` maps "METHOD /api/path" or "/api/path" to a reply
 // (or a function of the request); GET /api/me answers with `user` (signed in) or 401.
 export type Reply = { status?: number; body: unknown };
 export type Handler = (request: Request) => Reply;

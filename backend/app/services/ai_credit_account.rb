@@ -30,8 +30,8 @@ class AiCreditAccount
   end
 
   # Monthly allowance credits for this resolution: the higher of the account's plan allowance
-  # and Verse AI Plus (they don't stack), falling back to the account's free-tier allowance.
-  # Free-tier credits (no paid plan, no Verse AI Plus) require a verified email; unverified,
+  # and MusiLynk AI Plus (they don't stack), falling back to the account's free-tier allowance.
+  # Free-tier credits (no paid plan, no MusiLynk AI Plus) require a verified email; unverified,
   # this returns 0 so nothing is granted until the address is confirmed.
   def self.monthly_allowance(resolution, hirer:, email_verified: true)
     allowances = AiPricing.allowances

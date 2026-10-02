@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { reportError } from '../lib/monitoring';
 import { openProblemReport } from '../lib/problemReportEvent';
 
-export function PageLoading({ label = 'Preparing your Verse workspace' }: { label?: string }) {
+export function PageLoading({ label = 'Preparing your MusiLynk workspace' }: { label?: string }) {
   return (
     <div className="min-h-screen bg-slate-950 text-white grid place-items-center px-5" role="status" aria-live="polite">
       <div className="text-center">
@@ -28,7 +28,7 @@ export class AppErrorBoundary extends React.Component<React.PropsWithChildren, {
     return { failed: true };
   }
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('Verse screen error', error);
+    console.error('MusiLynk screen error', error);
     this.lastError = error;
     reportError(error, { tags: { source: 'app_error_boundary' }, extra: { componentStack: info.componentStack } });
   }
@@ -42,12 +42,12 @@ export class AppErrorBoundary extends React.Component<React.PropsWithChildren, {
           </span>
           <h1 className="mt-5 text-2xl font-black">This screen missed a beat.</h1>
           <p className="mt-3 text-slate-300">
-            Your data is safe. Reload the page and Verse will try the request again.
+            Your data is safe. Reload the page and MusiLynk will try the request again.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button onClick={() => window.location.reload()}>
               <RefreshCw size={16} className="mr-2" />
-              Reload Verse
+              Reload MusiLynk
             </Button>
             <Button variant="outline" onClick={() => openProblemReport({ error: this.lastError })}>
               Tell us what happened

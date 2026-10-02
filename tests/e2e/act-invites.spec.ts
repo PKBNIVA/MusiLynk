@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mockApi } from './mock-api';
 
-// Bandmate invites with the mocked API: the owner invites (a Verse musician, a shared link), watches
+// Bandmate invites with the mocked API: the owner invites (a MusiLynk musician, a shared link), watches
 // pending invites and resends or revokes them; the invitee accepts or declines in the Invites section;
 // a stranger following a link signs in and lands back on the accept screen. Joining needs an Accept.
 test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'true', 'Uses local API fixtures only.');
@@ -42,7 +42,7 @@ async function dismissTour(page: Page) {
   await page.addInitScript(() => localStorage.setItem('verse-tour-v2-jobseeker', 'done'));
 }
 
-test('an owner invites a Verse musician, then resends and revokes the pending invite', async ({ page }) => {
+test('an owner invites a MusiLynk musician, then resends and revokes the pending invite', async ({ page }) => {
   await dismissTour(page);
   let invites: unknown[] = [];
   const calls = await mockApi(

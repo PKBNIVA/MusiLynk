@@ -22,10 +22,10 @@ class FounderReportMail
   def label = @data[:week][:label]
 
   def subject
-    return "Verse week #{label}: a quiet week" if @data[:quiet]
+    return "MusiLynk week #{label}: a quiet week" if @data[:quiet]
 
     signups = @current[:musicians] + @current[:hirers]
-    "Verse week #{label}: #{n(signups)} #{'sign-up'.pluralize(signups)}, #{n(needs_you_total)} #{needs_you_total == 1 ? 'thing needs' : 'things need'} you"
+    "MusiLynk week #{label}: #{n(signups)} #{'sign-up'.pluralize(signups)}, #{n(needs_you_total)} #{needs_you_total == 1 ? 'thing needs' : 'things need'} you"
   end
 
   def n(value) = IndianFormat.number(value)
@@ -196,7 +196,7 @@ class FounderReportMail
   # --- Plain text ---
 
   def text(sections)
-    out = ["Verse weekly report", "Week of #{label} (Monday to Sunday, IST)", ""]
+    out = ["MusiLynk weekly report", "Week of #{label} (Monday to Sunday, IST)", ""]
     sections.each do |s|
       out << s[:heading].upcase
       out << s[:intro] if s[:intro]

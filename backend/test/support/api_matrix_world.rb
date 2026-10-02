@@ -69,7 +69,7 @@ module ApiMatrixWorld
       refs[:alert] = JobAlert.create!(user: owner, name: "Alert #{actor}", query: "mix", frequency: "weekly").id
       refs[:portfolio] = PortfolioItem.create!(user: owner, kind: "audio", title: "Sample #{actor}", url: "https://example.com/#{actor}.mp3", visibility: "public").id
       refs[:notification] = Notification.create!(user: owner, kind: "system", title: "Hello #{actor}", body: "Body").id
-      refs[:tax_invoice] = TaxInvoice.create!(user: owner, invoice_number: "VRS/matrix/#{actor}-#{SecureRandom.hex(3)}", financial_year: "matrix-#{SecureRandom.hex(8)}", sequence_number: 1,
+      refs[:tax_invoice] = TaxInvoice.create!(user: owner, invoice_number: "MLK/matrix/#{actor}-#{SecureRandom.hex(3)}", financial_year: "matrix-#{SecureRandom.hex(8)}", sequence_number: 1,
         document_type: "bill_of_supply", issued_at: Time.current, provider_payment_id: "pay_matrix_#{actor}_#{SecureRandom.hex(3)}", buyer: { "name" => owner.name },
         seller: {}, line_items: [], taxable_paise: 249_900, total_paise: 249_900).id
       refs[:availability] = AvailabilityWindow.create!(user: owner, start_at: 2.days.from_now, end_at: 3.days.from_now, status: "available", city: "Mumbai").id

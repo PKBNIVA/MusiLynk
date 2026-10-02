@@ -58,11 +58,11 @@ describe('public/sw.js', () => {
       },
     });
     await fire('push', pushEvent({ title: 'Hi', url: 'https://evil.example/phish' }));
-    expect(shown[0].title).toBe('Verse');
+    expect(shown[0].title).toBe('MusiLynk');
     expect(shown[1].options.data.url).toBe('https://verse.example/');
   });
 
-  it('focuses and navigates an open Verse window on click', async () => {
+  it('focuses and navigates an open MusiLynk window on click', async () => {
     const calls = [];
     const window = {
       url: 'https://verse.example/jobseeker',

@@ -851,7 +851,7 @@ export default function ProfileSetup() {
                   {textField('openTo', 'Open to', {
                     placeholder: 'Sessions, touring, full-time, sync, collaborations',
                     className: 'md:col-span-2',
-                    help: 'The kinds of work you want to be offered. Verse uses this to match you to opportunities.',
+                    help: 'The kinds of work you want to be offered. MusiLynk uses this to match you to opportunities.',
                   })}
                   <Field
                     id={fieldId('credits')}
@@ -986,7 +986,7 @@ export default function ProfileSetup() {
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-4">
                   <div>
                     <p className="font-medium">Email</p>
-                    <p className="text-sm text-slate-400">Hirers and Verse write to this address.</p>
+                    <p className="text-sm text-slate-400">Hirers and MusiLynk write to this address.</p>
                   </div>
                   {f.emailVerified ? (
                     <Badge className="bg-sky-500/15 text-sky-300">

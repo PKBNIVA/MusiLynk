@@ -85,7 +85,7 @@ class BillingReconciliationJobTest < ActiveSupport::TestCase
       BillingAttempt.create!(user: @user, operation: "booking_order_create", provider: "razorpay", idempotency_key: "recon-mm-#{SecureRandom.hex(4)}", state: "ambiguous",
         resource_type: "BookingPayment", resource_id: payment.id, provider_resource_id: "order_mm_#{SecureRandom.hex(3)}", created_at: 10.minutes.ago, updated_at: 10.minutes.ago)
     end
-    # Razorpay says the order is for a different amount than Verse recorded.
+    # Razorpay says the order is for a different amount than MusiLynk recorded.
     gateway = fake_gateway(order: { "id" => "order_mm", "amount" => 999_900, "currency" => "INR" })
 
     with_sentry do

@@ -2,7 +2,7 @@
 # which is the booking-deposit platform-fee invoice. Everything printed is a snapshot taken when
 # the invoice was issued (seller, buyer, line items, tax split); amounts are whole paise.
 #
-# Numbers are "<prefix>/<financial year>/<6-digit sequence>", e.g. VRS/2026-27/000123, drawn from
+# Numbers are "<prefix>/<financial year>/<6-digit sequence>", e.g. MLK/2026-27/000123, drawn from
 # invoice_counters inside the same transaction that inserts the invoice, so a rollback also rolls
 # the counter back and the sequence has no gaps.
 class TaxInvoice < ApplicationRecord

@@ -134,7 +134,7 @@ describe('referral card', () => {
     const link = Array.from(container.querySelectorAll('a')).find((a) => a.textContent?.includes('WhatsApp'))!;
     expect(link.href.startsWith('https://wa.me/?text=')).toBe(true);
     expect(decodeURIComponent(link.href.split('text=')[1])).toBe(
-      'Join me on Verse — hirers get 20% off with my code VERSE-MEERA2K7: https://verse.example/pricing?code=VERSE-MEERA2K7',
+      'Join me on MusiLynk — hirers get 20% off with my code VERSE-MEERA2K7: https://verse.example/pricing?code=VERSE-MEERA2K7',
     );
     expect(link.getAttribute('rel')).toContain('noopener');
   });

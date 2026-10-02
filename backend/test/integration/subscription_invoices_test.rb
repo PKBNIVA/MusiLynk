@@ -122,7 +122,7 @@ class SubscriptionInvoicesTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: NotificationEmailJob) { charge! }
 
     invoice = TaxInvoice.find_by!(user: @user)
-    assert_equal "VRS/2026-27/000001", invoice.invoice_number
+    assert_equal "MLK/2026-27/000001", invoice.invoice_number
     assert_equal "tax_invoice", invoice.document_type
     assert_equal [211_780, 0, 0, 38_120, 249_900], [invoice.taxable_paise, invoice.cgst_paise, invoice.sgst_paise, invoice.igst_paise, invoice.total_paise]
     assert_equal "29", invoice.place_of_supply_code
@@ -149,7 +149,7 @@ class SubscriptionInvoicesTest < ActionDispatch::IntegrationTest
     assert_equal 1, invoice.buyer["profileVersion"]
     charge!
     newest = TaxInvoice.where(user: @user).order(:sequence_number).last
-    assert_equal ["Kapoor Events Pvt Ltd", 2, "VRS/2026-27/000002"], [newest.buyer["name"], newest.buyer["profileVersion"], newest.invoice_number]
+    assert_equal ["Kapoor Events Pvt Ltd", 2, "MLK/2026-27/000002"], [newest.buyer["name"], newest.buyer["profileVersion"], newest.invoice_number]
   end
 
   test "an account with no billing details gets a plain invoice for the account holder in the seller's state" do
@@ -201,7 +201,7 @@ class SubscriptionInvoicesTest < ActionDispatch::IntegrationTest
 
     use_seller
     assert_equal 2, TaxInvoiceGenerator.catch_up!
-    assert_equal ["VRS/2026-27/000001", "VRS/2026-27/000002"], TaxInvoice.order(:sequence_number).pluck(:invoice_number)
+    assert_equal ["MLK/2026-27/000001", "MLK/2026-27/000002"], TaxInvoice.order(:sequence_number).pluck(:invoice_number)
     assert_equal 0, TaxInvoiceGenerator.catch_up!
   end
 
@@ -233,7 +233,7 @@ class SubscriptionInvoicesTest < ActionDispatch::IntegrationTest
     get "/api/billing/invoices", headers: auth
     assert_response :success
     row = response.parsed_body["invoices"].first
-    assert_equal ["VRS/2026-27/000001", 249_900, "tax_invoice"], [row["invoiceNumber"], row["totalPaise"], row["documentType"]]
+    assert_equal ["MLK/2026-27/000001", 249_900, "tax_invoice"], [row["invoiceNumber"], row["totalPaise"], row["documentType"]]
 
     get "/api/billing/invoices/#{row['id']}", headers: auth
     assert_response :success
@@ -283,7 +283,7 @@ class SubscriptionInvoicesTest < ActionDispatch::IntegrationTest
     lines = response.body.lines.map(&:chomp)
     assert_equal %w[invoice_number date buyer_name buyer_type gstin state taxable cgst sgst igst total document_type refund_status payment_reference], lines.first.delete('"').split(",")
     assert_equal 2, lines.size
-    assert_includes lines.last, '"VRS/2026-27/000001","2026-10-02"'
+    assert_includes lines.last, '"MLK/2026-27/000001","2026-10-02"'
     assert_includes lines.last, "\"'=HYPERLINK("
     assert_includes lines.last, '"2118.00"'.sub("2118.00", "2117.80")
     assert_includes lines.last, '"2499.00"'

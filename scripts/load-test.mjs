@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Small HTTP load test for the Verse API. No dependencies: Node 22's fetch keeps
+// Small HTTP load test for the MusiLynk API. No dependencies: Node 22's fetch keeps
 // connections alive, and N concurrent loops per scenario approximate N active visitors.
 //
 //   node scripts/load-test.mjs --base http://127.0.0.1:3000/api \
@@ -26,7 +26,18 @@ const only = option('only', '').split(',').filter(Boolean);
 const markdown = args.includes('--markdown');
 const local = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:|\/)/.test(base);
 
-const SEARCH_TERMS = ['vocalist', 'guitar', 'sound engineer', 'wedding', 'mumbai', 'jazz', 'producer', 'tour', 'drummer', 'bollywood'];
+const SEARCH_TERMS = [
+  'vocalist',
+  'guitar',
+  'sound engineer',
+  'wedding',
+  'mumbai',
+  'jazz',
+  'producer',
+  'tour',
+  'drummer',
+  'bollywood',
+];
 let ipCounter = 0;
 const headersFor = (extra = {}) => {
   const headers = { accept: 'application/json', 'accept-encoding': 'gzip', ...extra };
@@ -39,7 +50,13 @@ async function request(path, extra) {
   const started = performance.now();
   const response = await fetch(base + path, { headers: headersFor(extra) });
   const body = await response.arrayBuffer();
-  return { ms: performance.now() - started, status: response.status, bytes: body.byteLength, timing: response.headers.get('server-timing'), json: () => JSON.parse(Buffer.from(body).toString('utf8')) };
+  return {
+    ms: performance.now() - started,
+    status: response.status,
+    bytes: body.byteLength,
+    timing: response.headers.get('server-timing'),
+    json: () => JSON.parse(Buffer.from(body).toString('utf8')),
+  };
 }
 
 async function login() {
@@ -60,30 +77,46 @@ async function discover(token) {
   const jobsCursor = (await request('/jobs')).json().nextCursor || null;
   let conversation = null;
   if (token) {
-    const conversations = (await request('/conversations', { authorization: `Bearer ${token}` })).json().conversations || [];
+    const conversations =
+      (await request('/conversations', { authorization: `Bearer ${token}` })).json().conversations || [];
     conversation = conversations[0]?.id || null;
   }
-  return { talentIds: talent.map(t => t.id).slice(0, 50), actIds: acts.map(a => a.id).slice(0, 20), conversation, jobsCursor };
+  return {
+    talentIds: talent.map((t) => t.id).slice(0, 50),
+    actIds: acts.map((a) => a.id).slice(0, 20),
+    conversation,
+    jobsCursor,
+  };
 }
 
 function scenarios(ctx, token) {
-  const pick = list => list[Math.floor(Math.random() * list.length)];
+  const pick = (list) => list[Math.floor(Math.random() * list.length)];
   const auth = token ? { authorization: `Bearer ${token}` } : null;
   const all = [
     { name: 'search', path: () => `/search?q=${encodeURIComponent(pick(SEARCH_TERMS))}` },
     { name: 'jobs (all)', path: () => '/jobs' },
-    { name: 'jobs (next page)', path: () => `/jobs?cursor=${encodeURIComponent(ctx.jobsCursor)}`, skip: !ctx.jobsCursor },
+    {
+      name: 'jobs (next page)',
+      path: () => `/jobs?cursor=${encodeURIComponent(ctx.jobsCursor)}`,
+      skip: !ctx.jobsCursor,
+    },
     { name: 'jobs (filtered)', path: () => `/jobs?q=${encodeURIComponent(pick(SEARCH_TERMS))}` },
     { name: 'public talent list', path: () => '/public/talent' },
     { name: 'public profile', path: () => `/public/talent/${pick(ctx.talentIds)}`, skip: ctx.talentIds.length === 0 },
     { name: 'public acts', path: () => '/public/acts' },
     { name: 'inbox', path: () => '/conversations', headers: auth, skip: !auth },
-    { name: 'inbox thread', path: () => `/conversations/${ctx.conversation}/messages`, headers: auth, skip: !auth || !ctx.conversation },
+    {
+      name: 'inbox thread',
+      path: () => `/conversations/${ctx.conversation}/messages`,
+      headers: auth,
+      skip: !auth || !ctx.conversation,
+    },
   ];
-  return all.filter(s => !s.skip && (only.length === 0 || only.some(o => s.name.startsWith(o))));
+  return all.filter((s) => !s.skip && (only.length === 0 || only.some((o) => s.name.startsWith(o))));
 }
 
-const percentile = (sorted, p) => sorted.length ? sorted[Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1)] : NaN;
+const percentile = (sorted, p) =>
+  sorted.length ? sorted[Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1)] : NaN;
 
 async function run(scenario) {
   const samples = [];
@@ -124,8 +157,11 @@ async function run(scenario) {
 const token = await login();
 const ctx = await discover(token);
 const list = scenarios(ctx, token);
-if (!token && (only.length === 0 || only.includes('inbox'))) console.error('LOAD_EMAIL/LOAD_PASSWORD not set: skipping the inbox scenarios.');
-console.error(`Load test: ${base}, ${concurrency} concurrent, ${duration / 1000}s per scenario, ${list.length} scenarios`);
+if (!token && (only.length === 0 || only.includes('inbox')))
+  console.error('LOAD_EMAIL/LOAD_PASSWORD not set: skipping the inbox scenarios.');
+console.error(
+  `Load test: ${base}, ${concurrency} concurrent, ${duration / 1000}s per scenario, ${list.length} scenarios`,
+);
 
 const results = [];
 for (const scenario of list) {
@@ -136,12 +172,27 @@ for (const scenario of list) {
   console.error(`  ${result.name}: ${result.requests} requests, p95 ${result.p95.toFixed(0)} ms`);
 }
 
-const fmt = (n, digits = 0) => Number.isFinite(n) ? n.toFixed(digits) : '-';
+const fmt = (n, digits = 0) => (Number.isFinite(n) ? n.toFixed(digits) : '-');
 if (markdown) {
   console.log('| Scenario | Requests | Req/s | p50 ms | p95 ms | p99 ms | Avg DB ms | Avg KB (JSON) | Errors |');
   console.log('| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |');
-  for (const r of results) console.log(`| ${r.name} | ${r.requests} | ${fmt(r.rps, 1)} | ${fmt(r.p50)} | ${fmt(r.p95)} | ${fmt(r.p99)} | ${fmt(r.dbAvg, 1)} | ${fmt(r.kbAvg, 1)} | ${r.errors} |`);
+  for (const r of results)
+    console.log(
+      `| ${r.name} | ${r.requests} | ${fmt(r.rps, 1)} | ${fmt(r.p50)} | ${fmt(r.p95)} | ${fmt(r.p99)} | ${fmt(r.dbAvg, 1)} | ${fmt(r.kbAvg, 1)} | ${r.errors} |`,
+    );
 } else {
-  console.table(results.map(r => ({ scenario: r.name, requests: r.requests, 'req/s': fmt(r.rps, 1), p50: fmt(r.p50), p95: fmt(r.p95), p99: fmt(r.p99), 'db ms': fmt(r.dbAvg, 1), 'KB': fmt(r.kbAvg, 1), errors: r.errors })));
+  console.table(
+    results.map((r) => ({
+      scenario: r.name,
+      requests: r.requests,
+      'req/s': fmt(r.rps, 1),
+      p50: fmt(r.p50),
+      p95: fmt(r.p95),
+      p99: fmt(r.p99),
+      'db ms': fmt(r.dbAvg, 1),
+      KB: fmt(r.kbAvg, 1),
+      errors: r.errors,
+    })),
+  );
 }
-process.exitCode = results.some(r => r.errors !== '0') ? 1 : 0;
+process.exitCode = results.some((r) => r.errors !== '0') ? 1 : 0;

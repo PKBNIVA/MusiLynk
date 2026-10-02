@@ -18,7 +18,7 @@ test.describe('real frontend and Rails journeys', () => {
       // fill the one-screen join (what they hire for, organisation) and open "More" for the name
       // and the password choice.
       await page.goto(`/auth/${role}`);
-      await page.getByRole('link', { name: 'New to Verse? Join in two minutes' }).click();
+      await page.getByRole('link', { name: 'New to MusiLynk? Join in two minutes' }).click();
       if (role === 'jobseeker') {
         await page.getByRole('button', { name: 'Complete my profile later' }).click();
         await page.getByLabel('Your name').fill(name);

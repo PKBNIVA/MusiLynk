@@ -94,7 +94,7 @@ test('a moderation warning notification opens the community guidelines, which co
           {
             id: 'n1',
             type: 'moderation_warning',
-            title: 'A warning from Verse moderation',
+            title: 'A warning from MusiLynk moderation',
             body: 'Do not ask artists for fees.',
             link: '/community-guidelines',
             readAt: null,

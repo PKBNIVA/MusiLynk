@@ -248,16 +248,16 @@ type PurchaseCheckout = { checkout: RazorpayCheckoutConfig | { mode: 'mock' } };
 export async function purchaseAiTopup(pack: string): Promise<void> {
   const d = await apiPost<PurchaseCheckout>('/ai/topups', { pack });
   if (d.checkout.mode === 'razorpay') {
-    const result = await openRazorpayCheckout(d.checkout, { description: 'Verse AI credits top-up' });
+    const result = await openRazorpayCheckout(d.checkout, { description: 'MusiLynk AI credits top-up' });
     if (result.status !== 'success') throw new Error(result.lastError || 'Checkout was closed.');
   }
 }
 
-/** Subscribes the signed-in account to Verse AI Plus (independent of the hiring/talent plan). */
+/** Subscribes the signed-in account to MusiLynk AI Plus (independent of the hiring/talent plan). */
 export async function subscribeAiPlus(): Promise<void> {
   const d = await apiPost<PurchaseCheckout>('/ai/plus/subscribe', {});
   if (d.checkout.mode === 'razorpay') {
-    const result = await openRazorpayCheckout(d.checkout, { description: 'Verse AI Plus' });
+    const result = await openRazorpayCheckout(d.checkout, { description: 'MusiLynk AI Plus' });
     if (result.status !== 'success') throw new Error(result.lastError || 'Checkout was closed.');
   }
 }

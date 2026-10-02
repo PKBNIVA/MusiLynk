@@ -208,7 +208,7 @@ export const DOCUMENT_TITLE: Record<InvoiceDocumentData['documentType'], string>
   booking_invoice: 'Invoice',
 };
 
-/** The file name a browser proposes when saving the print as PDF: "Invoice-VRS-2026-27-000123". */
+/** The file name a browser proposes when saving the print as PDF: "Invoice-MLK-2026-27-000123". */
 export const invoiceFileTitle = (invoiceNumber: string) => `Invoice-${invoiceNumber.replace(/[^A-Za-z0-9]+/g, '-')}`;
 
 /** Opens the print dialog with document.title set to the invoice file name, then restores it. */

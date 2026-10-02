@@ -117,7 +117,7 @@ test('no banner once two-step sign-in is enforced', async ({ page }) => {
 
 test('the account page shows the current email and whether it can receive email', async ({ page }) => {
   await openAccount(page);
-  await expect(page).toHaveTitle(/Your admin account · Verse Admin/);
+  await expect(page).toHaveTitle(/Your admin account · MusiLynk Admin/);
   await expect(page.getByTestId('admin-current-email')).toHaveText(admin.email);
   await expect(page.getByText('Cannot receive email', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Your account' })).toHaveAttribute('aria-current', 'page');

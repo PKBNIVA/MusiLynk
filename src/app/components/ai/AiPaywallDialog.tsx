@@ -17,7 +17,7 @@ const TITLES: Record<AiPaywallError['code'], string> = {
 /**
  * Shown whenever an AI call answers 402: a friendly notice that AI help is used up (the
  * account's own free allowance) or resting for everyone this month (the platform-wide budget) —
- * never a purchase offer. Everything else on Verse keeps working either way.
+ * never a purchase offer. Everything else on MusiLynk keeps working either way.
  */
 export function AiPaywallDialog({ error, onClose }: AiPaywallDialogProps) {
   return (
@@ -31,8 +31,8 @@ export function AiPaywallDialog({ error, onClose }: AiPaywallDialogProps) {
           <DialogDescription>
             {error.code === 'AI_USAGE_LIMIT_REACHED' &&
               (error.period === 'month'
-                ? "You've used this month's free AI help. It's back next month — everything else on Verse works as usual."
-                : "You've used your free AI help. Everything else on Verse works as usual.")}
+                ? "You've used this month's free AI help. It's back next month — everything else on MusiLynk works as usual."
+                : "You've used your free AI help. Everything else on MusiLynk works as usual.")}
             {error.code === 'AI_FREE_PAUSED' && 'AI help is resting this month. Everything else works as usual.'}
           </DialogDescription>
         </DialogHeader>

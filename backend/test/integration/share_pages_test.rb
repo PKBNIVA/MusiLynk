@@ -57,7 +57,7 @@ class SharePagesTest < ActionDispatch::IntegrationTest
   test "unknown job id returns default share html" do
     get "/share/opportunities/does-not-exist"
     assert_response :not_found
-    assert_includes response.body, "Verse"
+    assert_includes response.body, "MusiLynk"
   end
 
   test "script tags in job description are escaped in meta and JSON-LD" do
@@ -202,7 +202,7 @@ class SharePagesTest < ActionDispatch::IntegrationTest
     job = create_job("published", description: "Evening house band for a hotel lounge, four nights a week, with a written contract and a stable rota.")
     get "/share/opportunities/#{job.id}", headers: { "User-Agent" => "Googlebot/2.1" }
     body = Nokogiri::HTML(response.body)
-    assert_equal "#{job.title} at #{job.company} | Verse", body.at_css("main h1").text
+    assert_equal "#{job.title} at #{job.company} | MusiLynk", body.at_css("main h1").text
     assert_includes body.at_css("main p").text, "Evening house band for a hotel lounge"
   end
 end

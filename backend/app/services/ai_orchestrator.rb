@@ -8,7 +8,7 @@
 #   2. This period's allowance is granted lazily if due (verified-email gated for free tier).
 #   3. The spend guard is checked (free-tier pause, hard stop) — admin calls skip it.
 #   4. A cache hit short-circuits the API call entirely; it is still charged unless the account
-#      is on a paid plan (pro/studio/enterprise) or has Verse AI Plus.
+#      is on a paid plan (pro/studio/enterprise) or has MusiLynk AI Plus.
 #   5. Otherwise the balance is checked and the credits are reserved (charged) before the call,
 #      so a concurrent spend can never overdraw the account; a provider error or timeout refunds
 #      the reservation, and a success updates it with the real token usage and cost.

@@ -15,7 +15,7 @@ const COPY: Record<Variant, { title: string; body: string; cta: string }> = {
   },
   musician: {
     title: 'Get urgent gig alerts',
-    body: 'Hear about matching “need someone by tomorrow” requests on this device, even when Verse is closed.',
+    body: 'Hear about matching “need someone by tomorrow” requests on this device, even when MusiLynk is closed.',
     cta: 'Turn on alerts',
   },
 };
@@ -103,13 +103,13 @@ export function PushOptIn({ variant, className = '' }: { variant: Variant; class
         <h2 className="font-semibold text-white">{copy.title}</h2>
         {state === 'needs-install' ? (
           <p className="text-sm text-slate-300 mt-1">
-            Add Verse to your home screen to get alerts. In Safari, tap Share, then “Add to Home Screen”, and open Verse
-            from there.
+            Add MusiLynk to your home screen to get alerts. In Safari, tap Share, then “Add to Home Screen”, and open
+            MusiLynk from there.
           </p>
         ) : state === 'blocked' ? (
           <p className="text-sm text-slate-300 mt-1" role="status">
-            Notifications are blocked for Verse in this browser. Allow them in your browser’s site settings, then come
-            back to turn alerts on.
+            Notifications are blocked for MusiLynk in this browser. Allow them in your browser’s site settings, then
+            come back to turn alerts on.
           </p>
         ) : (
           <>

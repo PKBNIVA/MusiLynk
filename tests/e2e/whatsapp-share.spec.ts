@@ -166,7 +166,7 @@ test('the hirer sees share on their published opportunity', async ({ page }) => 
   await page.goto('/employer/jobs/j1');
   await openMenu(page, 'share-hirer-opportunity');
   const text = decodedWhatsappUrl(await page.getByTestId('share-hirer-opportunity-whatsapp').getAttribute('href'));
-  expect(text).toContain('We are hiring on Verse: Wedding sangeet band');
+  expect(text).toContain('We are hiring on MusiLynk: Wedding sangeet band');
   expect(text).toContain('utm_campaign=hirer_opportunity');
 });
 

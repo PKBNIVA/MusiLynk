@@ -25,13 +25,13 @@ import { InvoiceList } from '../components/billing/InvoiceList';
 import { useBillingProfile } from '../lib/billingProfile';
 
 /**
- * Billing for a musician. Verse is free for musicians during the beta, so there is nothing to
+ * Billing for a musician. MusiLynk is free for musicians during the beta, so there is nothing to
  * buy here and no hirer plans to show. (Hirers, and musicians who also hire, use /employer/billing.)
  */
 export default function MusicianBilling() {
   const { user } = useAuth();
   const profileApi = useBillingProfile();
-  usePageMeta('Plan & billing', 'Verse is free for musicians during the beta.');
+  usePageMeta('Plan & billing', 'MusiLynk is free for musicians during the beta.');
   const [searchParams, setSearchParams] = useSearchParams();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);

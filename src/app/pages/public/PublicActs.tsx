@@ -21,7 +21,7 @@ const ACT_SUGGESTIONS = ['wedding band', 'sufi', 'jazz', 'DJ', 'singer'] as cons
 export default function PublicActs() {
   usePageMeta(
     'Book singers, bands & live acts',
-    'Discover bookable singers, duos, bands and ensembles, compare lineups and request a quote for your event on Verse.',
+    'Discover bookable singers, duos, bands and ensembles, compare lineups and request a quote for your event on MusiLynk.',
     { canonicalPath: '/book-music', type: 'website' },
   );
   const { values, query, update, clear } = useUrlFilters(FILTERS);

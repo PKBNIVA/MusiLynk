@@ -69,14 +69,14 @@ export function jobPostingJsonLd(job: Job, now: Date = new Date()): Record<strin
     description,
     datePosted,
     hiringOrganization: { '@type': 'Organization', name: company },
-    identifier: { '@type': 'PropertyValue', name: 'Verse', value: String(job.id) },
+    identifier: { '@type': 'PropertyValue', name: 'MusiLynk', value: String(job.id) },
   };
   const employmentType = EMPLOYMENT_TYPES[(job.type || '').trim().toLowerCase()];
   if (employmentType) ld.employmentType = employmentType;
   if (validThrough) ld.validThrough = validThrough;
 
   if (job.workplace === 'remote') {
-    // Google needs to know who may apply from where; Verse is an India-only marketplace.
+    // Google needs to know who may apply from where; MusiLynk is an India-only marketplace.
     ld.jobLocationType = 'TELECOMMUTE';
     ld.applicantLocationRequirements = { '@type': 'Country', name: 'IN' };
   } else if (job.location?.trim()) {

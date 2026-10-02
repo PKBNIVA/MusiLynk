@@ -92,7 +92,7 @@ export function professionalCard(id: string, person: Json): Card | null {
   return {
     kicker: clip(['Musician', location].filter(Boolean).join(' · '), 48),
     title: clip(name, 48),
-    subtitle: clip(str(person.headline) || roles.join(', ') || 'Music professional on Verse', 90),
+    subtitle: clip(str(person.headline) || roles.join(', ') || 'Music professional on MusiLynk', 90),
     chips: chips.slice(0, 3),
     seed: id,
     genres: [...genres, ...roles],
@@ -120,7 +120,7 @@ export function opportunityCard(id: string, job: Json): Card | null {
   return {
     kicker: clip(['Opportunity', kind].filter(Boolean).join(' · '), 48),
     title: clip(title, 70),
-    subtitle: clip(company || 'Hiring on Verse', 90),
+    subtitle: clip(company || 'Hiring on MusiLynk', 90),
     chips: [str(job.location), pay, job.employerVerified === true ? 'Verified hirer' : ''].filter(Boolean).slice(0, 3),
     seed: id,
     kind,
@@ -146,7 +146,7 @@ export function actCard(id: string, act: Json): Card | null {
   return {
     kicker: clip(['Live act', str(act.city)].filter(Boolean).join(' · '), 48),
     title: clip(name, 48),
-    subtitle: clip(str(act.tagline) || str(act.act_type) || 'Bookable on Verse', 90),
+    subtitle: clip(str(act.tagline) || str(act.act_type) || 'Bookable on MusiLynk', 90),
     chips: chips.slice(0, 3),
     seed: id,
     kind: str(act.act_type),
@@ -160,10 +160,10 @@ export function actCard(id: string, act: Json): Card | null {
 /** The card when there is nothing to show about: the site's own promise. */
 export function defaultCard(): Card {
   return {
-    kicker: 'Verse · Mumbai',
+    kicker: 'MusiLynk · Mumbai',
     title: 'Hire a verified musician for your session or gig',
     subtitle: 'Within 24 hours. Free to post; musicians never pay.',
-    chips: ['Verified by the Verse team', 'Reply within 2 hours'],
+    chips: ['Verified by the MusiLynk team', 'Reply within 2 hours'],
     seed: 'verse',
     genres: [],
     monogram: 'V',
@@ -327,7 +327,7 @@ export function cardTree(card: Card, photoDataUrl?: string): El {
         [
           h('div', { ...FLEX, alignItems: 'center', gap: 16 }, [
             h('img', { width: 52, height: 52, borderRadius: 12 }, undefined, { src: MARK_URI, width: 52, height: 52 }),
-            h('div', { ...FLEX, fontSize: 36 }, 'Verse'),
+            h('div', { ...FLEX, fontSize: 36 }, 'MusiLynk'),
           ]),
           h('div', { ...FLEX, flexDirection: 'column' }, [
             h(

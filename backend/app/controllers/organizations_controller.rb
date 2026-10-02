@@ -37,7 +37,7 @@ class OrganizationsController < ApplicationController
     return render_error("Only the workspace owner can grant admin access.", :forbidden) if role == "admin" && @membership.role != "owner"
     return render_error("Workspace seat limit reached.", :payment_required, "PLAN_LIMIT") if org.organization_members.count >= seat_limit(org.owner)
     user = User.find_by(email: params[:email].to_s.strip.downcase)
-    return render_error("That email must already have an active Verse account.", :not_found) unless user&.active?
+    return render_error("That email must already have an active MusiLynk account.", :not_found) unless user&.active?
     begin
       org.organization_members.find_or_create_by!(user:) { _1.role = role }
     rescue ActiveRecord::RecordNotUnique

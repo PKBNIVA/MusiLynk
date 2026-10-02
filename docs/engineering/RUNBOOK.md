@@ -1,4 +1,4 @@
-# Verse incident runbook
+# MusiLynk incident runbook
 
 What to do when something breaks in production. Every step uses something the code or
 [DEPLOYMENT.md](../../DEPLOYMENT.md) actually provides. Steps marked **[owner]** need the
@@ -95,7 +95,7 @@ statement timeout plus the configuration checks. Signed in as an admin,
   are read at build time).
 - Release mismatch: compare `release` in `/api/health` with
   `<meta name="verse-release">` on the web app (or `window.__VERSE_RELEASE__`). Running
-  **Actions → Verse QA Agent → Run workflow** on `production` fails if either side is not
+  **Actions → MusiLynk QA Agent → Run workflow** on `production` fails if either side is not
   serving the latest commit.
 
 ### 1.6 Roll back
@@ -130,14 +130,14 @@ orders; only signed webhooks (`POST /api/billing/webhook/razorpay`) change subsc
 2. **Is Razorpay up?** https://status.razorpay.com. Gateway errors reach the user as HTTP 502
    and, with Sentry on, as `verse-api` issues.
 3. **Are webhooks arriving? [owner]** Razorpay Dashboard → Account & Settings → Webhooks →
-   the Verse webhook: check it is **Active**, the URL is
+   the MusiLynk webhook: check it is **Active**, the URL is
    `https://verse-music-platform-production.up.railway.app/api/billing/webhook/razorpay`, and
    look at recent deliveries. A `401` response means `RAZORPAY_WEBHOOK_SECRET` on Railway does
    not match the dashboard secret; a `503` means the secret is not set. Razorpay retries
    failed deliveries for a limited time and can disable a webhook that keeps failing; after
    fixing the cause, re-enable it. Replayed or duplicate events are safe: they are
    de-duplicated by `X-Razorpay-Event-Id` and older events are recorded as `stale`.
-4. **What did Verse record?** Admin dashboard (`/admin`) → **Commerce** tab, or:
+4. **What did MusiLynk record?** Admin dashboard (`/admin`) → **Commerce** tab, or:
    - `GET /api/admin/billing-events` (and `/:id`): every webhook with its `processingResult`
      (`applied`, `stale`, `invalid_transition`, `subscription_not_found`, `ignored`, …; a
      duplicate delivery is acknowledged and not stored again).
@@ -231,7 +231,7 @@ the server's (`psql "$DATABASE_PUBLIC_URL" -XAtc "show server_version"`).
    spot-check recent users, jobs and bookings.
 7. **Recover the gap.** Everything after the backup's timestamp is gone. Then:
    - Payments: open `/api/admin/billing-attempts` and the Razorpay dashboard for the lost
-     window; reconcile attempts and re-grant plans for payments Razorpay has but Verse lost
+     window; reconcile attempts and re-grant plans for payments Razorpay has but MusiLynk lost
      (section 2).
    - Sessions created after the backup no longer exist; those users simply sign in again.
    - Uploads in R2/S3 made after the backup are orphans; the daily `upload_sweep` removes

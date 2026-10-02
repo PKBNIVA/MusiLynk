@@ -1,6 +1,6 @@
 # Sessions and token theft
 
-What protects a Verse session today, and the plan to move it into an HttpOnly cookie.
+What protects a MusiLynk session today, and the plan to move it into an HttpOnly cookie.
 
 ## Today
 

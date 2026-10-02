@@ -5,7 +5,7 @@ class JobAlertJobsTest < ActiveJob::TestCase
     @candidate = User.create!(name: "Alert Recipient", email: "alert-jobs@example.com", password: "StrongPass123!", role: "jobseeker", status: "active")
     @employer = User.create!(name: "Alert Employer", email: "alert-employer@example.com", password: "StrongPass123!", role: "employer", status: "active")
     @alert = @candidate.job_alerts.create!(name: "Fresh work", frequency: "daily", active: true)
-    @job = @employer.jobs.create!(title: "Session Guitarist", company: "Verse Studio", location: "Mumbai", kind: "Project", genre: "Rock", description: "A sufficiently detailed opportunity description for an experienced session guitarist.", status: "published", published_at: 1.hour.ago)
+    @job = @employer.jobs.create!(title: "Session Guitarist", company: "MusiLynk Studio", location: "Mumbai", kind: "Project", genre: "Rock", description: "A sufficiently detailed opportunity description for an experienced session guitarist.", status: "published", published_at: 1.hour.ago)
   end
 
   test "delivery creates one notification per alert and job even when retried" do

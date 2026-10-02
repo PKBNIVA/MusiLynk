@@ -77,7 +77,7 @@ export default function FunnelTab() {
         description="Landing to first booking or urgent hire, self-hosted (no third-party analytics)."
       />
       <HowToCallout storageKey="funnel">
-        Every number here comes from Verse's own event log, cached for 5 minutes. Nothing is sent to a third party.
+        Every number here comes from MusiLynk's own event log, cached for 5 minutes. Nothing is sent to a third party.
       </HowToCallout>
       <div className="flex gap-2 mb-4" role="group" aria-label="Time window">
         {WINDOWS.map((w) => (

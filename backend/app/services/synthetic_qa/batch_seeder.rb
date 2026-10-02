@@ -126,7 +126,7 @@ module SyntheticQa
       user.availability_windows.create!(start_at: 5.weeks.from_now + index.hours, end_at: 5.weeks.from_now + index.hours + 1.day,
         status: %w[booked hold unavailable][index % 3], city: CITIES[(index + 1) % CITIES.length], note: "Tour date")
       user.job_alerts.create!(name: "#{role_name} alerts", query: role_name, location: city, frequency: index.even? ? "daily" : "weekly", active: true)
-      user.notifications.create!(kind: "welcome", title: "Profile ready", body: "Your profile is live on Verse.", link: "/jobseeker/profile")
+      user.notifications.create!(kind: "welcome", title: "Profile ready", body: "Your profile is live on MusiLynk.", link: "/jobseeker/profile")
       user.notifications.create!(kind: "job_alert", title: "New #{role_name} opportunities", body: "3 new matches in #{city}.", link: "/jobseeker/jobs",
         read_at: index.even? ? 1.day.ago : nil)
       user

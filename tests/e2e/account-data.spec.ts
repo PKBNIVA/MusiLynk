@@ -48,7 +48,7 @@ test('download my data saves the export as a JSON file', async ({ page }) => {
   await page.goto('/jobseeker/account');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download my data' }).click();
-  expect((await download).suggestedFilename()).toMatch(/^verse-data-\d{4}-\d{2}-\d{2}\.json$/);
+  expect((await download).suggestedFilename()).toMatch(/^musilynk-data-\d{4}-\d{2}-\d{2}\.json$/);
   expect(errors).toEqual([]);
 });
 

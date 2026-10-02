@@ -37,8 +37,8 @@ class WeeklyDigestTest < ActiveSupport::TestCase
       currency: "INR", status: "filled", start_at: 1.day.from_now).update_column(:updated_at, 30.days.ago)
 
     sections = WeeklyDigest.build(musician, since: @since, until_time: Time.current)
-    community = sections.find { _1[:heading] == "Across Verse" }
-    assert_equal "1 request was filled through Verse this week.", community[:footnote]
+    community = sections.find { _1[:heading] == "Across MusiLynk" }
+    assert_equal "1 request was filled through MusiLynk this week.", community[:footnote]
   end
 
   test "musician digest ignores demo urgent requests, in the list and in the filled count" do
@@ -52,7 +52,7 @@ class WeeklyDigestTest < ActiveSupport::TestCase
 
     sections = WeeklyDigest.build(musician, since: @since, until_time: Time.current)
     assert_empty sections.find { _1[:heading] == "Urgent requests near you" }[:items]
-    assert_nil sections.find { _1[:heading] == "Across Verse" }[:footnote], "a zero is left out, not printed"
+    assert_nil sections.find { _1[:heading] == "Across MusiLynk" }[:footnote], "a zero is left out, not printed"
   end
 
   test "hirer digest includes newly verified musicians matching posted roles and city" do

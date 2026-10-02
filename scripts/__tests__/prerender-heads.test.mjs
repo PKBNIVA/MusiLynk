@@ -19,7 +19,7 @@ const FAKE_INDEX = `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Verse</title>
+  <title>MusiLynk</title>
   <meta name="description" content="default description">
   <meta property="og:title" content="Default og title">
   <meta
@@ -137,12 +137,12 @@ describe('prerender-heads.mjs', () => {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://verse.example' },
     });
     const hire = readFileSync(join(dist, 'hire', 'dj', 'pune', 'index.html'), 'utf8');
-    expect(hire).toContain('<title>Hire a verified DJ in Pune | Verse</title>');
+    expect(hire).toContain('<title>Hire a verified DJ in Pune | MusiLynk</title>');
     expect(hire).toContain('<link rel="canonical" href="https://verse.example/hire/dj/pune">');
     expect(hire).not.toContain('noindex');
     expect(hire).toContain('<div id="root"></div>');
     const rates = readFileSync(join(dist, 'rates', 'goa', 'index.html'), 'utf8');
-    expect(rates).toContain('<title>What musicians charge in Goa | Verse</title>');
+    expect(rates).toContain('<title>What musicians charge in Goa | MusiLynk</title>');
     // Descriptions are cut at 160 characters, like PageMeta.tsx does.
     for (const match of hire.matchAll(/name="description" content="([^"]*)"/g))
       expect(match[1].length).toBeLessThanOrEqual(160);
@@ -156,7 +156,7 @@ describe('prerender-heads.mjs', () => {
     expect(lists.cities[0]).toEqual(['mumbai', 'Mumbai']);
     const routes = seoPageRoutes(lists);
     expect(Object.keys(routes)).toHaveLength(12 * 16 + 16);
-    expect(routes['/hire/sound-engineer/kochi'][0]).toBe('Hire a verified sound engineer in Kochi | Verse');
+    expect(routes['/hire/sound-engineer/kochi'][0]).toBe('Hire a verified sound engineer in Kochi | MusiLynk');
   });
 
   it('parses a small list and ignores comments and other keys', () => {
@@ -170,12 +170,12 @@ describe('prerender-heads.mjs', () => {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://verse.example' },
     });
     const html = readFileSync(join(dist, '404.html'), 'utf8');
-    expect(html).toContain('<title>Page not found | Verse</title>');
+    expect(html).toContain('<title>Page not found | MusiLynk</title>');
     expect(html).toContain('<div id="root"></div>');
     expect(html).toContain('<script type="module" src="/assets/index-abc.js"></script>');
     expect(html).not.toContain('rel="canonical"');
     const shell =
-      '<head><title>Verse</title><meta name="robots" content="index, follow"><link rel="canonical" href="https://x.test/"></head>';
+      '<head><title>MusiLynk</title><meta name="robots" content="index, follow"><link rel="canonical" href="https://x.test/"></head>';
     expect(renderNotFound(shell)).toContain('<meta name="robots" content="noindex, nofollow">');
     expect(renderNotFound(shell)).not.toContain('index, follow');
   });
@@ -220,7 +220,7 @@ describe('prerender-heads.mjs', () => {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://verse.example' },
     });
     const shell = readFileSync(join(dist, 'app-shell.html'), 'utf8');
-    expect(shell).toContain('<title>Verse</title>');
+    expect(shell).toContain('<title>MusiLynk</title>');
     expect(shell).not.toContain('rel="canonical"');
     expect(shell).not.toContain('Hire verified musicians in Mumbai');
     expect(shell).toContain('<div id="root"></div>');

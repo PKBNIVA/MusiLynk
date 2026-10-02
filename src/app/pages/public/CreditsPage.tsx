@@ -8,7 +8,7 @@ import { IMAGE_CREDITS, creditLine } from './imageCredits';
 export default function CreditsPage() {
   usePageMeta(
     'Photo credits',
-    'The photographers and licences behind the pictures on Verse, from Wikimedia Commons under Creative Commons and public-domain terms.',
+    'The photographers and licences behind the pictures on MusiLynk, from Wikimedia Commons under Creative Commons and public-domain terms.',
     { canonicalPath: '/credits' },
   );
   return (
@@ -17,7 +17,7 @@ export default function CreditsPage() {
       <main className="mx-auto max-w-5xl px-5 py-14">
         <h1 className="text-4xl font-bold sm:text-5xl">Photo credits</h1>
         <p className="mt-3 max-w-2xl leading-7 text-slate-400">
-          The photographs on Verse come from Wikimedia Commons and are used under their Creative Commons or
+          The photographs on MusiLynk come from Wikimedia Commons and are used under their Creative Commons or
           public-domain licences. They show musicians at work; they are never attached to anyone’s profile. Generated
           artwork on profiles and opportunities is not a photograph and is not credited here.
         </p>

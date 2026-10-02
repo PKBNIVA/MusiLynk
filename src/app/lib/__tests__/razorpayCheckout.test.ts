@@ -62,7 +62,7 @@ describe('openRazorpayCheckout with Razorpay', () => {
       key: 'rzp_test_1',
       subscription_id: 'sub_1',
       description: 'Pro plan',
-      name: 'Verse',
+      name: 'MusiLynk',
     });
     expect(rz.options.order_id).toBeUndefined();
     rz.options.handler({ razorpay_payment_id: 'pay_1', razorpay_signature: 'sig' });

@@ -1,4 +1,4 @@
-# Public "I'm verified on Verse" share cards for Instagram/WhatsApp (ShareCard). Only served for
+# Public "I'm verified on MusiLynk" share cards for Instagram/WhatsApp (ShareCard). Only served for
 # a user whose profile is verified and who has consented to sharing that publicly
 # (share_verification_publicly); anyone else 404s, same as an unpublished record. Cached at the
 # edge for 24h since the badge and profile basics rarely change within a day.

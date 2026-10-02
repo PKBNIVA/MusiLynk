@@ -16,7 +16,7 @@ import { fetchFeed, authorPath, groupFeed, isSystemPost } from '../../lib/stage'
 import { usePageMeta } from '../../components/PageMeta';
 
 export default function StageFeed() {
-  usePageMeta('The Stage', "Updates, performances, releases and gigs from Verse's music community.");
+  usePageMeta('The Stage', "Updates, performances, releases and gigs from MusiLynk's music community.");
   const { posts, loading, loadingMore, error, done, loadMore, update, remove, prepend } = useFeedList(
     'feed',
     fetchFeed,
@@ -80,7 +80,8 @@ export default function StageFeed() {
 
         {!loading && !error && posts.length === 0 && (
           <EmptyState icon={Music4} title="The Stage is quiet here" action={null}>
-            No posts to show yet. Follow people and Pages to fill your feed — here are a few active on Verse right now.
+            No posts to show yet. Follow people and Pages to fill your feed — here are a few active on MusiLynk right
+            now.
             {suggestions.length > 0 && (
               <ul className="mt-4 flex flex-wrap justify-center gap-2">
                 {suggestions.map((a) => (

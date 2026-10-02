@@ -125,7 +125,7 @@ describe('cards', () => {
   it('draws the text of the card into the element tree', () => {
     const tree = cardTree(professionalCard('p1', person));
     const drawn = text(tree);
-    for (const part of ['Verse', 'Aarav Kulkarni', 'Session drummer', 'from ₹6,000', 'AK'])
+    for (const part of ['MusiLynk', 'Aarav Kulkarni', 'Session drummer', 'from ₹6,000', 'AK'])
       expect(drawn).toContain(part);
     expect(tree.props.style).toMatchObject({ width: 1200, height: 630 });
     expect(text(cardTree(defaultCard()))).toContain('Hire a verified musician');

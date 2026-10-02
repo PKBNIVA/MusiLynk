@@ -80,11 +80,11 @@ class BookingFeePolicy
   def self.plain_english
     lines = []
     lines << if enabled?
-      "Verse charges a platform fee of #{format_percent(platform_fee_percent)} of the quoted total" \
+      "MusiLynk charges a platform fee of #{format_percent(platform_fee_percent)} of the quoted total" \
         "#{min_fee_inr.positive? ? " (minimum ₹#{min_fee_inr})" : ""}, plus #{format_percent(gst_percent)} GST on the fee." \
         " #{fee_paid_by == "split" ? "The fee is split between the hirer and the musician's payout." : "The fee is added to the hirer's deposit."}"
     else
-      "Verse does not currently charge a platform fee on bookings."
+      "MusiLynk does not currently charge a platform fee on bookings."
     end
     lines << "If the hirer cancels more than #{full_refund_days} days before the event, the deposit is fully refunded."
     lines << "If the hirer cancels #{partial_refund_days}-#{full_refund_days} days before the event, #{partial_refund_percent}% of the deposit is refunded."

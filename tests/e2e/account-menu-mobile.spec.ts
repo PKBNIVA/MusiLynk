@@ -38,7 +38,7 @@ for (const role of ['jobseeker', 'employer'] as const) {
   test(`${role}: every account menu item is reachable at 390px and Sign out covers none of them`, async ({ page }) => {
     const menu = await openAccountMenu(page, role);
     const items = menu.getByTestId('account-menu-items');
-    const guide = menu.getByRole('menuitem', { name: 'How to use Verse' });
+    const guide = menu.getByRole('menuitem', { name: 'How to use MusiLynk' });
     const signOut = menu.getByRole('menuitem', { name: 'Sign out' });
 
     // Sign out is on screen at once, inside the viewport.

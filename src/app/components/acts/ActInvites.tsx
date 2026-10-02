@@ -261,12 +261,12 @@ export function PendingInvites({ actId, refreshKey, ask }: { actId: string; refr
 
 type Mode = 'user' | 'email' | 'link';
 const MODES: { id: Mode; label: string; icon: typeof Search }[] = [
-  { id: 'user', label: 'Find on Verse', icon: Search },
+  { id: 'user', label: 'Find on MusiLynk', icon: Search },
   { id: 'email', label: 'By email', icon: Mail },
   { id: 'link', label: 'Share a link', icon: MessageCircle },
 ];
 
-/** Invite a bandmate to an act: a Verse musician (found by name), an email address, or a shareable link. */
+/** Invite a bandmate to an act: a MusiLynk musician (found by name), an email address, or a shareable link. */
 export function InviteBandmateDialog({
   act,
   onClose,
@@ -357,7 +357,7 @@ export function InviteBandmateDialog({
     }
   }
 
-  const share = `${act?.name ?? 'My band'} invited you to join on Verse: ${link}`;
+  const share = `${act?.name ?? 'My band'} invited you to join on MusiLynk: ${link}`;
   return (
     <FormDialog
       open={Boolean(act)}

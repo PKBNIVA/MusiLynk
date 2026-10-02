@@ -8,12 +8,12 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const base: InvoiceDocumentData = {
   id: 'tax_1',
-  invoiceNumber: 'VRS/2026-27/000123',
+  invoiceNumber: 'MLK/2026-27/000123',
   issuedAt: '2026-10-02T06:30:00Z',
   documentType: 'tax_invoice',
   seller: { legalName: 'Alien Brains Pvt Ltd', gstin: '27AAPFU0939F1ZV', stateCode: '27', state: 'Maharashtra' },
   buyer: { name: 'Meera Kapoor', type: 'individual' },
-  lineItems: [{ description: 'Verse Pro plan, monthly subscription', sacCode: '998314', taxableValuePaise: 211780 }],
+  lineItems: [{ description: 'MusiLynk Pro plan, monthly subscription', sacCode: '998314', taxableValuePaise: 211780 }],
   placeOfSupply: { code: '27', name: 'Maharashtra' },
   taxableValuePaise: 211780,
   cgstPaise: 19060,

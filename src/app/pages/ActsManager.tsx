@@ -457,7 +457,7 @@ export default function ActsManager() {
           title="Add a lineup member"
           description={
             member
-              ? `Shown on ${member.actName}'s lineup. This adds a name only; to bring in a musician who is on Verse, invite them instead.`
+              ? `Shown on ${member.actName}'s lineup. This adds a name only; to bring in a musician who is on MusiLynk, invite them instead.`
               : undefined
           }
           submitLabel="Add member"

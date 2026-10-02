@@ -89,18 +89,18 @@ describe('invoice helpers', () => {
     expect(formatPaise(12345650)).toBe('₹1,23,456.50');
   });
   it('names the PDF after the invoice number', () => {
-    expect(invoiceFileTitle('VRS/2026-27/000123')).toBe('Invoice-VRS-2026-27-000123');
+    expect(invoiceFileTitle('MLK/2026-27/000123')).toBe('Invoice-MLK-2026-27-000123');
   });
   it('prints with the invoice title and puts the page title back', () => {
-    document.title = 'Verse';
+    document.title = 'MusiLynk';
     let during = '';
     const print = vi.spyOn(window, 'print').mockImplementation(() => {
       during = document.title;
     });
-    printInvoice('VRS/2026-27/000123');
-    expect(during).toBe('Invoice-VRS-2026-27-000123');
+    printInvoice('MLK/2026-27/000123');
+    expect(during).toBe('Invoice-MLK-2026-27-000123');
     window.dispatchEvent(new Event('afterprint'));
-    expect(document.title).toBe('Verse');
+    expect(document.title).toBe('MusiLynk');
     print.mockRestore();
   });
 });

@@ -67,7 +67,7 @@ export default function AdminAiTab() {
       <AdminPageHeader
         icon={Sparkles}
         title="AI spend"
-        description="This month's Verse AI spend and budget guardrails, for the free profile and job-post writing help."
+        description="This month's MusiLynk AI spend and budget guardrails, for the free profile and job-post writing help."
       />
       <HowToCallout storageKey="ai">
         Spend is estimated from reported token usage and resets on the 1st (UTC). The <b>free-tier</b> and <b>hard</b>{' '}

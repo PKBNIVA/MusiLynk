@@ -3,7 +3,7 @@ if Rails.env.production? && (ENV["ADMIN_EMAIL"].blank? || ENV.fetch("ADMIN_PASSW
 end
 
 admin = User.find_or_initialize_by(email: ENV.fetch("ADMIN_EMAIL", "admin@verse.local").downcase)
-admin.assign_attributes(name: "Verse Admin", role: "admin", status: "active", profile_complete: true)
+admin.assign_attributes(name: "MusiLynk Admin", role: "admin", status: "active", profile_complete: true)
 admin.password = ENV.fetch("ADMIN_PASSWORD", "Admin@12345") if admin.new_record? || ENV["ADMIN_PASSWORD"].present?
 admin.skip_password_strength = true
 admin.save!

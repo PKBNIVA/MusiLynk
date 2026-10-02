@@ -209,7 +209,7 @@ export function PostCard({ post, onChanged, onDeleted }: PostCardProps) {
               )}
               {post.author.system && (
                 <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-xs font-normal uppercase tracking-wide text-slate-400">
-                  Verse
+                  MusiLynk
                 </span>
               )}
             </p>

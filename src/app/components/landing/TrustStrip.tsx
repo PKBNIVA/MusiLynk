@@ -5,7 +5,7 @@ import { BadgeCheck, Ban, FileCheck2, Star } from 'lucide-react';
 export function TrustStrip() {
   const items = [
     [BadgeCheck, 'Verified badges', 'Checked by our team, not self-declared'],
-    [FileCheck2, 'Terms in writing', 'The fee and terms are agreed on Verse before anyone is booked'],
+    [FileCheck2, 'Terms in writing', 'The fee and terms are agreed on MusiLynk before anyone is booked'],
     [Star, 'Reviews', 'Read what other hirers said before you book'],
     [Ban, 'Report and block', 'One step, and our team reviews every report'],
   ] as const;

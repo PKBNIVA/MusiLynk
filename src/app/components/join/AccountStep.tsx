@@ -314,7 +314,7 @@ export function AccountStep({
       </Field>
       {exists && (
         <p role="status" className="rounded-xl border border-violet-300/30 bg-violet-500/10 p-3 text-sm text-slate-200">
-          You already have a Verse account with this email.{' '}
+          You already have a MusiLynk account with this email.{' '}
           <Link
             to={signInPath}
             state={location.state}

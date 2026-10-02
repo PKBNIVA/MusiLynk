@@ -91,7 +91,7 @@ export async function openRazorpayCheckout(
       ...(checkout.subscriptionId
         ? { subscription_id: checkout.subscriptionId }
         : { order_id: checkout.orderId, amount: checkout.amount, currency: checkout.currency }),
-      name: 'Verse',
+      name: 'MusiLynk',
       description: options.description,
       handler: (response: Record<string, string>) => resolve({ status: 'success', response }),
       modal: { ondismiss: () => resolve({ status: 'dismissed', lastError }) },
@@ -120,7 +120,7 @@ function openSimulatedCheckout(checkout: RazorpayCheckoutConfig, options: Option
       <div role="dialog" aria-modal="true" aria-labelledby="rzp-sim-title" aria-describedby="rzp-sim-desc" data-testid="razorpay-simulator"
         class="w-full max-w-sm rounded-2xl border border-amber-300/40 bg-white p-6 text-slate-900 shadow-2xl">
         <div class="text-xs font-semibold uppercase tracking-wider text-amber-700">Test mode · Razorpay simulator</div>
-        <h2 id="rzp-sim-title" class="mt-2 text-xl font-semibold">Verse</h2>
+        <h2 id="rzp-sim-title" class="mt-2 text-xl font-semibold">MusiLynk</h2>
         <p id="rzp-sim-desc" class="mt-1 text-sm text-slate-600"></p>
         <p data-role="amount" class="mt-3 text-2xl font-bold"></p>
         <p data-role="error" role="alert" class="mt-3 hidden rounded-lg bg-rose-50 p-3 text-sm text-rose-700"></p>

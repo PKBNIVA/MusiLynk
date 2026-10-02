@@ -1,4 +1,4 @@
-# AI credit purchases: one-time top-ups and the Verse AI Plus subscription. Entirely separate
+# AI credit purchases: one-time top-ups and the MusiLynk AI Plus subscription. Entirely separate
 # from Billing::BillingController's plan catalogue; every purchase endpoint here answers 503
 # until AI_BILLING_ENABLED is "true", so nothing can charge a real card until Razorpay is
 # actually configured for this product.
@@ -63,10 +63,10 @@ module Ai
       render json: { ok: true, alreadyCredited: true }
     end
 
-    # POST /api/ai/plus/subscribe — Verse AI Plus, available to any account, independent of the
+    # POST /api/ai/plus/subscribe — MusiLynk AI Plus, available to any account, independent of the
     # hiring/talent subscription plan (a user may hold both at once; they don't conflict).
     def subscribe_plus
-      return render_error("You already have Verse AI Plus.", :conflict, "ALREADY_SUBSCRIBED") if Subscription.where(user: current_user, plan_code: "ai_plus", status: %w[active trialing pending]).exists?
+      return render_error("You already have MusiLynk AI Plus.", :conflict, "ALREADY_SUBSCRIBED") if Subscription.where(user: current_user, plan_code: "ai_plus", status: %w[active trialing pending]).exists?
 
       unless RazorpayConfig.key_present?
         return render_error("Live billing is not configured.", :service_unavailable) if Rails.env.production?

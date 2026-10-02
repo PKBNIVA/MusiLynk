@@ -13,7 +13,7 @@ export function ShareBadgeSection({ userId }: { userId: string }) {
   const profileUrl = `${window.location.origin}/professionals/${userId}`;
   const storyCardUrl = `${BACKEND_ORIGIN}/share-cards/verified/${userId}.svg`;
   const landscapeCardUrl = `${BACKEND_ORIGIN}/share-cards/verified/${userId}/landscape.svg`;
-  const whatsappText = encodeURIComponent(`I'm verified on Verse — ${profileUrl}`);
+  const whatsappText = encodeURIComponent(`I'm verified on MusiLynk — ${profileUrl}`);
 
   async function copyLink() {
     try {
@@ -46,7 +46,7 @@ export function ShareBadgeSection({ userId }: { userId: string }) {
     >
       <h2 className="text-sm font-semibold text-white">Share your badge</h2>
       <p className="mt-1 text-xs text-slate-400">
-        You're verified on Verse — share the story card on Instagram or WhatsApp to reach more work.
+        You're verified on MusiLynk — share the story card on Instagram or WhatsApp to reach more work.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <Button

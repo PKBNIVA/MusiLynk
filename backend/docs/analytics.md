@@ -1,6 +1,6 @@
 # Self-hosted funnel analytics
 
-No third-party analytics anywhere in Verse. Every event is stored in this app's own
+No third-party analytics anywhere in MusiLynk. Every event is stored in this app's own
 `product_events` table (`db/migrate/20260928163300_create_product_events.rb`) via
 `POST /api/events` (`EventsController`), and read back by the admin Funnel tab
 (`Admin::FunnelController` / `FunnelQueries`).

@@ -38,7 +38,7 @@ class AiCredits
   # Grants this period's allowance for `resolution` if it hasn't been granted yet, idempotent
   # per account+period via the unique ledger index (belt-and-suspenders with the advisory lock).
   # Returns the grant amount (0 if already granted this period, or if the plan has no allowance,
-  # e.g. Enterprise without Verse AI Plus).
+  # e.g. Enterprise without MusiLynk AI Plus).
   def self.ensure_monthly_allowance!(resolution, hirer:, email_verified: true, now: Time.current)
     amount = AiCreditAccount.monthly_allowance(resolution, hirer:, email_verified:)
     return 0 if amount.nil? || amount <= 0

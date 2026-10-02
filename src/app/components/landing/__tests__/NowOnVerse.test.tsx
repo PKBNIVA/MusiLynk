@@ -64,7 +64,7 @@ describe('NowOnVerse', () => {
     expect(cards[0].querySelector('img')).toBeNull();
     expect(cards[0].querySelector('[data-testid=user-avatar]')?.getAttribute('data-layer')).not.toBe('photo');
     expect(cards[1].querySelector('[data-layer=initials]')).not.toBeNull();
-    expect(host.querySelector('h2')?.textContent).toBe('Now on Verse in Mumbai');
+    expect(host.querySelector('h2')?.textContent).toBe('Now on MusiLynk in Mumbai');
   });
   it('uses the photo a real person uploaded', async () => {
     vi.mocked(apiGet).mockResolvedValue({

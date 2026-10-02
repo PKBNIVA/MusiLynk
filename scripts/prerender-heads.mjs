@@ -31,11 +31,11 @@ export const ROUTES = {
   ],
   '/music-professionals': [
     'Find musicians & music professionals',
-    'Search singers, instrumentalists, composers, engineers, technical directors, tour crew and managers on Verse.',
+    'Search singers, instrumentalists, composers, engineers, technical directors, tour crew and managers on MusiLynk.',
   ],
   '/book-music': [
     'Book singers, bands & live acts',
-    'Discover bookable singers, duos, bands and ensembles, compare lineups and request a quote for your event on Verse.',
+    'Discover bookable singers, duos, bands and ensembles, compare lineups and request a quote for your event on MusiLynk.',
   ],
   '/urgent': [
     'Need someone by tomorrow?',
@@ -51,28 +51,31 @@ export const ROUTES = {
   ],
   '/pricing': [
     'Pricing',
-    'Verse plans for music hiring and booking teams. Professionals build profiles and apply free; paid plans add capacity, seats and trials.',
+    'MusiLynk plans for music hiring and booking teams. Professionals build profiles and apply free; paid plans add capacity, seats and trials.',
   ],
   '/guide': [
-    'How to use Verse',
-    'Step-by-step guides for music professionals, hiring teams, bands and event bookers on Verse.',
+    'How to use MusiLynk',
+    'Step-by-step guides for music professionals, hiring teams, bands and event bookers on MusiLynk.',
   ],
   '/about': [
-    'About Verse',
-    'Verse connects musicians, bands and hiring teams for gigs, sessions and live bookings across India.',
+    'About MusiLynk',
+    'MusiLynk connects musicians, bands and hiring teams for gigs, sessions and live bookings across India.',
   ],
-  '/safety': ['Trust & Safety', 'How Verse verifies professionals, protects payments and keeps the marketplace safe.'],
+  '/safety': [
+    'Trust & Safety',
+    'How MusiLynk verifies professionals, protects payments and keeps the marketplace safe.',
+  ],
   '/credits': [
     'Photo credits',
-    'The photographers and licences behind the pictures on Verse, from Wikimedia Commons under Creative Commons and public-domain terms.',
+    'The photographers and licences behind the pictures on MusiLynk, from Wikimedia Commons under Creative Commons and public-domain terms.',
   ],
-  '/contact': ['Contact Verse', 'Get in touch with the Verse team.'],
+  '/contact': ['Contact MusiLynk', 'Get in touch with the MusiLynk team.'],
   '/community-guidelines': [
     'Community guidelines',
-    'The standards Verse expects from every musician, band and hiring team on the platform.',
+    'The standards MusiLynk expects from every musician, band and hiring team on the platform.',
   ],
-  '/terms': ['Terms of service', "Verse's terms of service."],
-  '/privacy': ['Privacy policy', "Verse's privacy policy."],
+  '/terms': ['Terms of service', "MusiLynk's terms of service."],
+  '/privacy': ['Privacy policy', "MusiLynk's privacy policy."],
 };
 
 /** The `roles:` and `cities:` maps of backend/config/seo_pages.yml (flat `slug: Label` lines). */
@@ -101,15 +104,15 @@ export function seoPageRoutes({ roles, cities }) {
   for (const [roleSlug, role] of roles) {
     for (const [citySlug, city] of cities) {
       routes[`/hire/${roleSlug}/${citySlug}`] = [
-        `Hire a verified ${lowerRole(role)} in ${city} | Verse`,
+        `Hire a verified ${lowerRole(role)} in ${city} | MusiLynk`,
         `Browse verified ${lowerRole(role)}s in ${city} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`,
       ];
     }
   }
   for (const [citySlug, city] of cities) {
     routes[`/rates/${citySlug}`] = [
-      `What musicians charge in ${city} | Verse`,
-      `Median session, show and day rates reported by verified and unverified musicians on Verse in ${city}. A guide, not a quote.`,
+      `What musicians charge in ${city} | MusiLynk`,
+      `Median session, show and day rates reported by verified and unverified musicians on MusiLynk in ${city}. A guide, not a quote.`,
     ];
   }
   return routes;
@@ -158,7 +161,7 @@ export function seoPageBreadcrumbs({ roles, cities }, baseUrl = BASE_URL) {
     for (const [citySlug, city] of cities) {
       const path = `/hire/${roleSlug}/${citySlug}`;
       out[path] = breadcrumbs(baseUrl, [
-        ['Verse', '/'],
+        ['MusiLynk', '/'],
         ['Musicians', '/music-professionals'],
         [`${role} in ${city}`, path],
       ]);
@@ -166,7 +169,7 @@ export function seoPageBreadcrumbs({ roles, cities }, baseUrl = BASE_URL) {
   for (const [citySlug, city] of cities) {
     const path = `/rates/${citySlug}`;
     out[path] = breadcrumbs(baseUrl, [
-      ['Verse', '/'],
+      ['MusiLynk', '/'],
       ['Musicians', '/music-professionals'],
       [`Rates in ${city}`, path],
     ]);
@@ -179,7 +182,7 @@ function pageHead({ title, description, canonical, image, jsonLd }) {
     <meta name="description" content="${description}">
     <link rel="canonical" href="${canonical}">
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Verse">
+    <meta property="og:site_name" content="MusiLynk">
     <meta property="og:locale" content="en_IN">
     <meta property="og:title" content="${title}">
     <meta property="og:description" content="${description}">
@@ -223,7 +226,7 @@ export function render(indexHtml, path, [title, description], jsonLd) {
  * its own not-found page. noindex stays in the markup in case a proxy ever serves it with a 200.
  */
 export function renderNotFound(indexHtml) {
-  const title = 'Page not found | Verse';
+  const title = 'Page not found | MusiLynk';
   return indexHtml
     .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
     .replace(/<meta\s+name="robots"[^>]*>/, '<meta name="robots" content="noindex, nofollow">')

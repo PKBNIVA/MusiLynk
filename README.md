@@ -1,6 +1,6 @@
-# Verse
+# MusiLynk
 
-Verse is a music-industry careers, hiring and live-booking marketplace, built first for India.
+MusiLynk is a music-industry careers, hiring and live-booking marketplace, built first for India.
 Musicians, engineers and crew build a profile with work samples and find jobs, gigs, sessions
 and tours. Employers, studios, venues and bands post opportunities, search talent, assemble
 line-ups and book acts with a Razorpay deposit. Paid plans unlock more hiring capacity.

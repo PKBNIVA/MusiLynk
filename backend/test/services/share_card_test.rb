@@ -12,7 +12,7 @@ class ShareCardTest < ActiveSupport::TestCase
     assert_includes story, "Card Musician"
     assert_includes story, "Guitarist"
     assert_includes story, "Bengaluru"
-    assert_includes story, "Verified on Verse"
+    assert_includes story, "Verified on MusiLynk"
 
     landscape = ShareCard.landscape(user)
     assert_includes landscape, "1200"

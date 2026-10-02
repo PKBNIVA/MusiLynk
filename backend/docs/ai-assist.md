@@ -1,6 +1,6 @@
 # AI Assist
 
-Server-side AI writing help across Verse: job descriptions, screening questions, profile and
+Server-side AI writing help across MusiLynk: job descriptions, screening questions, profile and
 portfolio copy, cover letters, post captions, message replies, resume summaries, "improve this
 text", and taxonomy autocomplete. Every result is a suggestion the person accepts, edits or
 discards — nothing is ever sent on their behalf.
@@ -33,7 +33,7 @@ for the person paying, so it stays free-only, small, and capped hard.
   same `402 AI_FREE_PAUSED` with the copy "AI help is resting this month. Everything else works
   as usual."
 - **Billing stays off**: `AI_BILLING_ENABLED` is unset (defaults to off), so `Ai::BillingController`
-  answers `503 AI_BILLING_DISABLED` for top-ups and Verse AI Plus, and `GET /api/ai/pricing`
+  answers `503 AI_BILLING_DISABLED` for top-ups and MusiLynk AI Plus, and `GET /api/ai/pricing`
   leaves `aiPlus`/`topups`/`topupExpiresAfterMonths` out of its response entirely
   (`AiPricing.public_catalogue`). The code, routes and tests for billing are untouched — only the
   flag is off.
@@ -63,7 +63,7 @@ Every one of the above is a config change, not a code change:
 - **A bigger monthly budget, or splitting free/paid again**: change
   `free_tier_monthly_budget_inr` / `hard_monthly_budget_inr` — `AiSpendGuard` already checks them
   independently, it's only the launch config that set them equal.
-- **AI billing (top-ups, Verse AI Plus)**: set `AI_BILLING_ENABLED=true`. `GET /api/ai/pricing`
+- **AI billing (top-ups, MusiLynk AI Plus)**: set `AI_BILLING_ENABLED=true`. `GET /api/ai/pricing`
   picks the fields back up automatically.
 - **Batch classification**: add `classify_portfolio_item` to a launch task list (or its own
   config key, since it isn't really a talent/hirer task) and the cron entry comes back on the

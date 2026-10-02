@@ -28,7 +28,7 @@ const intents = [
   ],
   [
     'I have a show but do not know which crew roles I need',
-    'Describe the event and Verse will help structure a practical music/technical/production team.',
+    'Describe the event and MusiLynk will help structure a practical music/technical/production team.',
     '/auth/employer',
     Users,
     '/employer/build-my-crew',
@@ -51,7 +51,7 @@ const intents = [
 export default function IntentHub() {
   usePageMeta(
     'Choose your path',
-    'Find music work, hire musicians and crew, build a show team, book a live act or fill an urgent gap on Verse.',
+    'Find music work, hire musicians and crew, build a show team, book a live act or fill an urgent gap on MusiLynk.',
     { noindex: true },
   );
   return (
@@ -59,7 +59,7 @@ export default function IntentHub() {
       <PublicNav />
       <main className="max-w-6xl mx-auto px-5 py-14">
         <div className="text-center max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-6xl font-bold">What did you come to Verse for?</h1>
+          <h1 className="text-4xl md:text-6xl font-bold">What did you come to MusiLynk for?</h1>
           <p className="text-slate-400 text-lg mt-4">Choose one. We’ll take you to the shortest useful path.</p>
           <Link to="/search" className="inline-flex items-center gap-2 mt-5 text-violet-300 hover:text-violet-200">
             <Search size={17} />

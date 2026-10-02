@@ -132,7 +132,7 @@ export function reportApiFailure(details: {
   if (!SENTRY_DSN) return;
   const once = ONCE_PER_SESSION_CODES.has(details.code || '');
   if (!once && details.status >= 400 && details.status < 500) return;
-  // An offline device is the user's connection, not a Verse outage.
+  // An offline device is the user's connection, not a MusiLynk outage.
   if (details.code === 'NETWORK_ERROR' && typeof navigator !== 'undefined' && navigator.onLine === false) return;
   const kind = once ? String(details.code) : String(details.status || details.code || 'unknown');
   if (!allowSampled(`api:${kind}`)) return;
@@ -215,7 +215,7 @@ export function whenMonitoringReady(): Promise<boolean> {
 export async function sendClientTestError(): Promise<string | null> {
   if (!(await whenMonitoringReady()) || !client) return null;
   return (
-    client.captureError(new Error('Verse Sentry client test error (triggered by an admin; safe to resolve)'), {
+    client.captureError(new Error('MusiLynk Sentry client test error (triggered by an admin; safe to resolve)'), {
       tags: { source: 'admin_sentry_test', verse_test: 'true' },
     }) || null
   );

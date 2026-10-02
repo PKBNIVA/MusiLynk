@@ -14,7 +14,7 @@ class SharePagesController < ActionController::API
 
     description = plain_text(job.description)
     render_html(
-      title: "#{job.title} at #{job.company} | Verse",
+      title: "#{job.title} at #{job.company} | MusiLynk",
       description: truncate(description),
       canonical_path: "/opportunities/#{job.id}",
       og_type: "article",
@@ -30,8 +30,8 @@ class SharePagesController < ActionController::API
     profile = user.profile
     bio = plain_text(profile&.bio)
     render_html(
-      title: "#{user.name} | Verse",
-      description: truncate(bio.presence || profile&.headline.presence || "#{user.name} on Verse: see their work, rates and availability, then book or message them."),
+      title: "#{user.name} | MusiLynk",
+      description: truncate(bio.presence || profile&.headline.presence || "#{user.name} on MusiLynk: see their work, rates and availability, then book or message them."),
       canonical_path: "/professionals/#{user.id}",
       og_type: "profile",
       image: og_image("professional", user.id),
@@ -45,8 +45,8 @@ class SharePagesController < ActionController::API
 
     bio = plain_text(act.bio)
     render_html(
-      title: "#{act.name} | Verse",
-      description: truncate(bio.presence || act.tagline.presence || "#{act.name} on Verse: see the lineup, sample fees and availability, then request a quote."),
+      title: "#{act.name} | MusiLynk",
+      description: truncate(bio.presence || act.tagline.presence || "#{act.name} on MusiLynk: see the lineup, sample fees and availability, then request a quote."),
       canonical_path: "/acts/#{act.id}",
       og_type: "website",
       image: og_image("act", act.id),
@@ -61,8 +61,8 @@ class SharePagesController < ActionController::API
     bio = plain_text(portfolio.effective["bio"])
     image = portfolio.members.first&.first&.thumbnail_url.presence
     render_html(
-      title: "#{portfolio.title} | Verse",
-      description: truncate(bio.presence || portfolio.headline.presence || "#{portfolio.title} on Verse: a musician portfolio with work samples and links."),
+      title: "#{portfolio.title} | MusiLynk",
+      description: truncate(bio.presence || portfolio.headline.presence || "#{portfolio.title} on MusiLynk: a musician portfolio with work samples and links."),
       canonical_path: "/p/#{portfolio.slug}",
       og_type: "website",
       image:,
@@ -92,7 +92,7 @@ class SharePagesController < ActionController::API
     "#{text[0, length]}..."
   end
 
-  # schema.org baseSalary.value.unitText only takes HOUR, DAY, WEEK, MONTH or YEAR; Verse's per-session,
+  # schema.org baseSalary.value.unitText only takes HOUR, DAY, WEEK, MONTH or YEAR; MusiLynk's per-session,
   # per-show and per-project periods have no equivalent, so those jobs publish no baseSalary at all
   # (an invalid unitText makes Google drop the whole posting from rich results).
   SALARY_UNITS = { "hour" => "HOUR", "day" => "DAY", "week" => "WEEK", "month" => "MONTH", "year" => "YEAR" }.freeze
@@ -117,7 +117,7 @@ class SharePagesController < ActionController::API
       "employmentType" => employment_type,
       "hiringOrganization" => { "@type" => "Organization", "name" => job.company },
       "directApply" => true,
-      "identifier" => { "@type" => "PropertyValue", "name" => "Verse", "value" => job.id }
+      "identifier" => { "@type" => "PropertyValue", "name" => Brand::NAME, "value" => job.id }
     }
     ld["validThrough"] = job.application_deadline.iso8601 if job.application_deadline.present?
     if job.workplace == "remote"
@@ -155,8 +155,8 @@ class SharePagesController < ActionController::API
   def render_default(status)
     expires_in 10.minutes, public: true
     render html: page_html(
-      title: "Verse — Find a verified musician for your session or gig within 24 hours",
-      description: "Verse connects musicians, bands and venues for gigs, sessions and hires.",
+      title: "MusiLynk — Find a verified musician for your session or gig within 24 hours",
+      description: "MusiLynk connects musicians, bands and venues for gigs, sessions and hires.",
       canonical: base,
       og_type: "website",
       image: "#{base}/og-default.png",
@@ -199,7 +199,7 @@ class SharePagesController < ActionController::API
         <link rel="canonical" href="#{esc.call(canonical)}">
         #{robots_tag}
         <meta property="og:type" content="#{esc.call(og_type)}">
-        <meta property="og:site_name" content="Verse">
+        <meta property="og:site_name" content="#{Brand::NAME}">
         <meta property="og:title" content="#{esc.call(title)}">
         <meta property="og:description" content="#{esc.call(description)}">
         <meta property="og:url" content="#{esc.call(canonical)}">
@@ -217,7 +217,7 @@ class SharePagesController < ActionController::API
         <main>
           <h1>#{esc.call(title)}</h1>
           #{description_html}
-          <a href="#{esc.call(canonical)}">Open on Verse</a>
+          <a href="#{esc.call(canonical)}">Open on MusiLynk</a>
         </main>
       </body>
       </html>

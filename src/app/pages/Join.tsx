@@ -130,11 +130,11 @@ function JoinShell({
     <div className="min-h-screen bg-slate-950 text-white">
       <SkipLink />
       <header className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
-        <Link to="/" aria-label="Verse home" className="inline-flex min-h-11 items-center rounded-xl">
+        <Link to="/" aria-label="MusiLynk home" className="inline-flex min-h-11 items-center rounded-xl">
           <BrandMark compact />
         </Link>
         <p className="text-sm text-slate-300">
-          On Verse already?{' '}
+          On MusiLynk already?{' '}
           <Link
             to={`/auth/${signInRole}`}
             state={location.state}
@@ -512,7 +512,7 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
         id="join-company"
         label="Organisation or team name"
         error={errors.company}
-        hint="We’ll create its Page on Verse, so you can post work as it."
+        hint="We’ll create its Page on MusiLynk, so you can post work as it."
       >
         <Input
           autoComplete="organization"

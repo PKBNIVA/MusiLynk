@@ -68,7 +68,7 @@ const HIRE_PAGE_DATA = {
   faq: [
     {
       question: 'How much does a session drummer in Mumbai charge?',
-      answer: 'Rates vary by experience and event; ask for a quote through Verse.',
+      answer: 'Rates vary by experience and event; ask for a quote through MusiLynk.',
     },
     { question: 'Q2', answer: 'A2' },
     { question: 'Q3', answer: 'A3' },

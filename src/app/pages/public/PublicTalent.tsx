@@ -41,7 +41,7 @@ function Chip({ pressed, onClick, children }: { pressed: boolean; onClick: () =>
 export default function PublicTalent() {
   usePageMeta(
     'Find musicians',
-    'Search singers, instrumentalists, composers, engineers, technical directors, tour crew and managers on Verse.',
+    'Search singers, instrumentalists, composers, engineers, technical directors, tour crew and managers on MusiLynk.',
     { canonicalPath: '/music-professionals', type: 'website' },
   );
   // Filters live in the URL; each change is a history entry, so Back undoes it.

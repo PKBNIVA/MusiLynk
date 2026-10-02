@@ -19,7 +19,7 @@ export function RouteErrorPage() {
       window.location.reload();
       return;
     }
-    console.error('Verse route error', error);
+    console.error('MusiLynk route error', error);
     // A stale chunk reaches here only once the one automatic reload has already failed.
     // Route responses such as 404 are expected and not reported.
     if (!isRouteErrorResponse(error) || error.status >= 500) {
@@ -38,7 +38,7 @@ export function RouteErrorPage() {
           <div className="mx-auto w-fit animate-pulse">
             <BrandMark />
           </div>
-          <p className="mt-4 text-sm text-slate-400">Loading the latest version of Verse…</p>
+          <p className="mt-4 text-sm text-slate-400">Loading the latest version of MusiLynk…</p>
         </div>
       </div>
     );
@@ -46,12 +46,12 @@ export function RouteErrorPage() {
 
   const notFound = isRouteErrorResponse(error) && error.status === 404;
   const title = chunkError
-    ? 'Verse has been updated.'
+    ? 'MusiLynk has been updated.'
     : notFound
       ? 'This page could not be found.'
       : 'This screen missed a beat.';
   const body = chunkError
-    ? 'A new version of Verse was released while this page was open. Reload to continue with the latest version.'
+    ? 'A new version of MusiLynk was released while this page was open. Reload to continue with the latest version.'
     : notFound
       ? 'Check the address, or head back home.'
       : 'Your data is safe. Reload the page to try again, or head back home.';

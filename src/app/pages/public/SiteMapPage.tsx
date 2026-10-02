@@ -18,7 +18,7 @@ const groups: [title: string, links: [label: string, path: string][]][] = [
     'Get started',
     [
       ['Choose your goal', '/start'],
-      ['How to use Verse', '/guide'],
+      ['How to use MusiLynk', '/guide'],
       ['Pricing', '/pricing'],
       ['Join as a musician or crew', '/join/musician'],
       ['Join to hire', '/join/hiring'],
@@ -49,7 +49,7 @@ const groups: [title: string, links: [label: string, path: string][]][] = [
 export default function SiteMapPage() {
   usePageMeta(
     'Site map',
-    'Every public area of Verse: music opportunities, musicians, bookable acts, guides, pricing, trust and legal pages.',
+    'Every public area of MusiLynk: music opportunities, musicians, bookable acts, guides, pricing, trust and legal pages.',
     { canonicalPath: '/sitemap' },
   );
   return (

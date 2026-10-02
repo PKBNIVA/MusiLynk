@@ -12,7 +12,7 @@ import { consumeReturnTo } from '../../lib/api';
 import { isSecondFactorChallenge, useAuth, type SecondFactorChallenge, type User } from '../../lib/authContext';
 import { errorCode, errorMessage } from '../../lib/errors';
 
-const NOT_ADMIN_MESSAGE = 'This site is only for Verse admins. Sign in to your own account on the Verse website.';
+const NOT_ADMIN_MESSAGE = 'This site is only for MusiLynk admins. Sign in to your own account on the MusiLynk website.';
 
 /** The protected page that sent the admin here, if it belongs to this site; otherwise the console. */
 function returnDestination(requested: unknown) {
@@ -22,7 +22,7 @@ function returnDestination(requested: unknown) {
 // Admin site sign-in: password first, then the 6-digit code the API emails when the admin's
 // second step is on (POST /auth/login answers 202 with a challenge; /auth/second-factor finishes).
 export default function AdminSignIn() {
-  usePageMeta('Sign in', 'Sign in to the Verse admin console.');
+  usePageMeta('Sign in', 'Sign in to the MusiLynk admin console.');
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user, loading: restoring, login, completeSecondFactor, logout } = useAuth();
@@ -162,7 +162,7 @@ export default function AdminSignIn() {
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-violet-500/20 text-violet-200">
             <ShieldCheck aria-hidden="true" />
           </div>
-          <p className="mt-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Verse Admin</p>
+          <p className="mt-3 text-sm font-semibold uppercase tracking-wider text-slate-400">MusiLynk Admin</p>
           <h1 className="mt-1 text-2xl font-black">{challenge ? 'Check your email' : 'Sign in'}</h1>
           {searchParams.get('reason') === 'expired' && (
             <p role="status" data-testid="session-expired" className="mt-2 text-sm text-amber-200">

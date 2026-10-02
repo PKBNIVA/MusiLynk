@@ -15,7 +15,7 @@ const me = {
 const job = (n: number) => ({
   id: `job-${n}`,
   title: `Session Bassist ${n}`,
-  company: 'Verse Studio',
+  company: 'MusiLynk Studio',
   location: 'Mumbai',
   workplace: 'onsite',
   type: 'Contract',

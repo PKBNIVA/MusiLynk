@@ -253,7 +253,7 @@ class VerificationAutomationTest < ActiveSupport::TestCase
     assert u.profile.reload.verified?
     assert_equal "verified", Vouch.find_by!(vouchee_id: u.id).status
     note = u.notifications.where(kind: "verification").order(:created_at).last
-    assert_equal "You're verified on Verse", note.title
+    assert_equal "You're verified on MusiLynk", note.title
     assert AuditLog.exists?(action: "verification.auto_approve", entity_id: request.id)
   end
 

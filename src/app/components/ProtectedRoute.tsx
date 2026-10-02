@@ -15,7 +15,7 @@ export function ProtectedRoute({ roles, children }: { roles: Role[]; children: R
     return (
       <div role="alert" className="grid min-h-screen place-items-center bg-slate-950 px-5 text-white">
         <div className="max-w-sm text-center">
-          <h1 className="text-xl font-semibold">We couldn't reach Verse</h1>
+          <h1 className="text-xl font-semibold">We couldn't reach MusiLynk</h1>
           <p className="mt-2 text-sm text-slate-400">
             Your session is still saved. Check your connection and try again.
           </p>

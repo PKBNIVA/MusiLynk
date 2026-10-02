@@ -82,13 +82,13 @@ class LifecycleMailer
     "milestone_profile_100_views" => {
       category: "product", subject: "Your profile has been viewed 100 times",
       heading: "Your profile passed 100 views",
-      copy: ->(_) { "People are finding you on Verse. A complete profile with rates and a work sample keeps that going." },
+      copy: ->(_) { "People are finding you on MusiLynk. A complete profile with rates and a work sample keeps that going." },
       action: "View your profile", path: "/jobseeker/profile"
     },
     "milestone_hirer_5th_filled_request" => {
-      category: "product", subject: "You've filled 5 urgent requests on Verse",
-      heading: "5 requests filled through Verse",
-      copy: ->(_) { "You've filled 5 urgent requests through Verse. Thanks for using it to find people fast." },
+      category: "product", subject: "You've filled 5 urgent requests on MusiLynk",
+      heading: "5 requests filled through MusiLynk",
+      copy: ->(_) { "You've filled 5 urgent requests through MusiLynk. Thanks for using it to find people fast." },
       action: "Post another request", path: "/employer/urgent"
     }
   }.freeze
@@ -146,11 +146,11 @@ class LifecycleMailer
 
   def self.manage_emails_url(user) = "#{NotificationEmail.frontend_url}/unsubscribe?token=#{CGI.escape(NotificationEmail.unsubscribe_token(user))}"
 
-  def self.footer_text(user) = "Manage which Verse emails you get: #{manage_emails_url(user)}"
+  def self.footer_text(user) = "Manage which MusiLynk emails you get: #{manage_emails_url(user)}"
 
   def self.footer_html(user)
     h = ERB::Util.method(:html_escape)
-    %(<p style="margin-top:28px;color:#94a3b8;font-size:13px">You are receiving this because of activity on your Verse account. <a href="#{h.call(manage_emails_url(user))}" style="color:#a78bfa">Manage emails</a> or turn them off.</p>)
+    %(<p style="margin-top:28px;color:#94a3b8;font-size:13px">You are receiving this because of activity on your MusiLynk account. <a href="#{h.call(manage_emails_url(user))}" style="color:#a78bfa">Manage emails</a> or turn them off.</p>)
   end
 
   def self.html(heading:, copy:, action:, link:, user:)
@@ -161,7 +161,7 @@ class LifecycleMailer
   end
 
   def self.text(heading:, copy:, action:, link:, user:)
-    "Verse\n\n#{heading}\n\n#{copy}\n\n#{action}: #{link}\n\n#{footer_text(user)}"
+    "#{Brand::NAME}\n\n#{heading}\n\n#{copy}\n\n#{action}: #{link}\n\n#{footer_text(user)}"
   end
 
   def self.digest_link(user) = "#{NotificationEmail.frontend_url}#{NotificationEmail.workspace(user)}"
@@ -175,7 +175,7 @@ class LifecycleMailer
       %(<h2 style="font-size:17px;margin:22px 0 6px;color:#f8fafc">#{h.call(section[:heading])}</h2>#{note}#{list})
     end.join
     <<~HTML.squish
-      #{EmailDelivery.head_html('Open requests, new opportunities and what happened this week.')}<div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:24px;margin:28px 0 4px">This week on Verse</h1>#{body}#{EmailDelivery.button_html('Open Verse', digest_link(user))}#{footer_html(user)}</div></body></html>
+      #{EmailDelivery.head_html('Open requests, new opportunities and what happened this week.')}<div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:24px;margin:28px 0 4px">This week on MusiLynk</h1>#{body}#{EmailDelivery.button_html('Open MusiLynk', digest_link(user))}#{footer_html(user)}</div></body></html>
     HTML
   end
 
@@ -184,7 +184,7 @@ class LifecycleMailer
       lines = Array(section[:items]).map { |i| "- #{i[:text]}: #{i[:link]}" }
       [section[:heading], section[:footnote], *lines].compact.join("\n")
     end.join("\n\n")
-    "Verse\n\nThis week on Verse\n\n#{body}\n\nOpen Verse: #{digest_link(user)}\n\n#{footer_text(user)}"
+    "#{Brand::NAME}\n\nThis week on #{Brand::NAME}\n\n#{body}\n\nOpen MusiLynk: #{digest_link(user)}\n\n#{footer_text(user)}"
   end
   private_class_method :html, :digest_html, :digest_text, :footer_html
 end

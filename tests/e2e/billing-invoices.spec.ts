@@ -70,7 +70,7 @@ const seller = {
   pan: 'AAPFU0939F',
 };
 const line = {
-  description: 'Verse Pro plan, monthly subscription',
+  description: 'MusiLynk Pro plan, monthly subscription',
   sacCode: '998314',
   taxableValuePaise: 211780,
   periodStart: '2026-10-02T06:30:00Z',
@@ -80,7 +80,7 @@ const words = 'Indian Rupees Two Thousand Four Hundred Ninety Nine Only';
 const invoices = {
   b2cIntra: {
     id: 'tax_b2c',
-    invoiceNumber: 'VRS/2026-27/000123',
+    invoiceNumber: 'MLK/2026-27/000123',
     issuedAt: '2026-10-02T06:30:00Z',
     documentType: 'tax_invoice',
     seller,
@@ -107,7 +107,7 @@ const invoices = {
   },
   b2bInter: {
     id: 'tax_b2b',
-    invoiceNumber: 'VRS/2026-27/000124',
+    invoiceNumber: 'MLK/2026-27/000124',
     issuedAt: '2026-10-03T06:30:00Z',
     documentType: 'tax_invoice',
     seller,
@@ -136,7 +136,7 @@ const invoices = {
   },
   b2bIntra: {
     id: 'tax_b2b_intra',
-    invoiceNumber: 'VRS/2026-27/000125',
+    invoiceNumber: 'MLK/2026-27/000125',
     issuedAt: '2026-10-04T06:30:00Z',
     documentType: 'tax_invoice',
     seller,
@@ -164,7 +164,7 @@ const invoices = {
   },
   billOfSupply: {
     id: 'tax_bos_1',
-    invoiceNumber: 'VRS/2026-27/000126',
+    invoiceNumber: 'MLK/2026-27/000126',
     issuedAt: '2026-10-05T06:30:00Z',
     documentType: 'bill_of_supply',
     seller: {
@@ -186,7 +186,7 @@ const invoices = {
   },
   refunded: {
     id: 'tax_ref',
-    invoiceNumber: 'VRS/2026-27/000127',
+    invoiceNumber: 'MLK/2026-27/000127',
     issuedAt: '2026-10-06T06:30:00Z',
     documentType: 'tax_invoice',
     seller,
@@ -346,7 +346,7 @@ test.describe('billing details and invoice list', () => {
 
     const rows = page.getByTestId('invoice-row');
     await expect(rows).toHaveCount(2);
-    await expect(rows.first()).toContainText('VRS/2026-27/000123');
+    await expect(rows.first()).toContainText('MLK/2026-27/000123');
     await expect(rows.first()).toContainText('₹2,499.00');
     await expect(rows.first()).toContainText('Paid');
     await expect(rows.first().getByRole('link', { name: /View or print invoice/ })).toBeVisible();
@@ -385,7 +385,7 @@ test.describe('invoice page', () => {
   test('individual, same state: CGST and SGST', async ({ page }) => {
     await open(page, 'b2cIntra');
     await expect(page.getByTestId('invoice-title')).toHaveText('Tax invoice');
-    await expect(page.getByTestId('invoice-number')).toHaveText('VRS/2026-27/000123');
+    await expect(page.getByTestId('invoice-number')).toHaveText('MLK/2026-27/000123');
     await expect(page.getByTestId('cgst')).toHaveText('₹190.60');
     await expect(page.getByTestId('sgst')).toHaveText('₹190.60');
     await expect(page.getByTestId('igst')).toHaveCount(0);
@@ -436,9 +436,9 @@ test.describe('invoice page', () => {
     await open(page, 'b2cIntra');
     await page.getByRole('button', { name: 'Download PDF' }).click();
     expect(await page.evaluate(() => (window as unknown as { printedAs: string[] }).printedAs)).toEqual([
-      'Invoice-VRS-2026-27-000123',
+      'Invoice-MLK-2026-27-000123',
     ]);
-    await expect.poll(() => page.title()).not.toContain('Invoice-VRS-2026-27-000123');
+    await expect.poll(() => page.title()).not.toContain('Invoice-MLK-2026-27-000123');
   });
 
   test("the list's Download PDF link opens the print dialog by itself", async ({ page }) => {

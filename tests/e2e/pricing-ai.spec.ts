@@ -40,7 +40,7 @@ test('Pricing shows the plans and one line about free AI help, with no credits t
   );
   await expect(page.getByTestId('ai-pricing-section')).toHaveCount(0);
   await expect(page.getByText('credits/mo')).toHaveCount(0);
-  await expect(page.getByText('Verse AI Plus')).toHaveCount(0);
+  await expect(page.getByText('MusiLynk AI Plus')).toHaveCount(0);
   await expect(page.getByText('Top-ups')).toHaveCount(0);
 
   const axeResult = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();

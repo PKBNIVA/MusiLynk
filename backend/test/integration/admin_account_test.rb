@@ -133,12 +133,12 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
         EmailDelivery.call(to: "a@example.com", template: "admin_email_change", data: { code: "042917" })
         EmailDelivery.call(to: "a@example.com", template: "admin_email_changed", data: { detail: "new@example.com" })
       end
-      change = bodies.fetch("Confirm your new Verse admin email")
+      change = bodies.fetch("Confirm your new MusiLynk admin email")
       assert_includes change["textContent"], "042917"
       assert_includes change["htmlContent"], "042917"
       assert_includes change["htmlContent"], "change your admin password now"
       assert_not_includes change["htmlContent"], "href="
-      notice = bodies.fetch("Your Verse admin email was changed")
+      notice = bodies.fetch("Your MusiLynk admin email was changed")
       assert_includes notice["textContent"], "new@example.com"
       assert_includes notice["htmlContent"], "new@example.com"
       assert_includes notice["htmlContent"], "change your password"

@@ -41,8 +41,8 @@ export default function GlobalSearch() {
   const rawType = sp.get('type') || 'all';
   const selectedType = isType(rawType) ? rawType : 'all';
   usePageMeta(
-    query.trim() ? `Search: ${query.trim().slice(0, 60)}` : 'Search Verse',
-    'Search opportunities, musicians, bookable acts and work samples across the Verse network.',
+    query.trim() ? `Search: ${query.trim().slice(0, 60)}` : 'Search MusiLynk',
+    'Search opportunities, musicians, bookable acts and work samples across the MusiLynk network.',
     { noindex: true },
   );
   const [q, setQ] = useState(query);
@@ -116,7 +116,7 @@ export default function GlobalSearch() {
         >
           <div className="relative flex-1">
             <label htmlFor="network-search" className="sr-only">
-              Search Verse
+              Search MusiLynk
             </label>
             <Search className="absolute left-3.5 top-3.5 text-slate-400" size={18} />
             <Input

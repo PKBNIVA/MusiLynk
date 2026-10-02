@@ -1,4 +1,4 @@
-# Builds a machine-readable copy of everything Verse holds about one user, for the
+# Builds a machine-readable copy of everything MusiLynk holds about one user, for the
 # "Download my data" button. Secrets (password and token digests, provider
 # signatures) and other people's private details are never included; for
 # conversations, the other side appears only by the name the user already sees.
@@ -63,7 +63,7 @@ class AccountExport
     }
   end
 
-  def filename = "verse-data-#{Time.current.strftime('%Y-%m-%d')}.json"
+  def filename = "musilynk-data-#{Time.current.strftime('%Y-%m-%d')}.json"
 
   private
 

@@ -348,7 +348,7 @@ test.describe('The Stage', () => {
     const pinnedRoundup = post({
       id: 'post_roundup',
       kind: 'system',
-      author: { type: 'system', id: 'verse', name: 'Verse', avatar: null, system: true },
+      author: { type: 'system', id: 'verse', name: 'MusiLynk', avatar: null, system: true },
       body: "This week: who's looking, who's free. Comment with your roles and free dates.",
       pinned: true,
       pinnedUntil: '2026-10-05T04:30:00Z',

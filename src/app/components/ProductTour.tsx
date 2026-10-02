@@ -25,7 +25,7 @@ const tours: { [k: string]: TourStep[] } = {
     {
       icon: Compass,
       title: 'Start with your goal',
-      text: 'Verse is organized around what you came to do: find work, hire someone, book live music, or solve an urgent crew gap.',
+      text: 'MusiLynk is organized around what you came to do: find work, hire someone, book live music, or solve an urgent crew gap.',
       to: '/start',
       cta: 'Show me the shortcuts',
     },
@@ -113,7 +113,7 @@ const tours: { [k: string]: TourStep[] } = {
     {
       icon: CalendarDays,
       title: 'Book acts separately from hiring',
-      text: 'Booking an existing act is a quote/availability/payment journey. Recruiting a musician is an application journey; Verse keeps them separate.',
+      text: 'Booking an existing act is a quote/availability/payment journey. Recruiting a musician is an application journey; MusiLynk keeps them separate.',
       to: '/employer/book-talent',
       cta: 'Book talent',
     },
@@ -166,7 +166,7 @@ export function ProductTour({
     >
       <DialogContent
         className="w-full max-w-lg rounded-2xl border-white/15 bg-slate-950 p-0 text-white shadow-2xl overflow-hidden sm:max-w-lg"
-        aria-label="Verse product tour"
+        aria-label="MusiLynk product tour"
       >
         <div className="h-1 bg-white/10">
           <div

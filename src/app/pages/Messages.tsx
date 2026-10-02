@@ -38,7 +38,7 @@ const isDesktop = () =>
   window.matchMedia('(min-width: 768px)').matches;
 
 const SAFETY_TIPS: Record<string, string> = {
-  upfront_fee: 'Genuine opportunities on Verse never ask you to pay a registration, audition or joining fee.',
+  upfront_fee: 'Genuine opportunities on MusiLynk never ask you to pay a registration, audition or joining fee.',
   payment_details: 'Be careful about sending money to UPI IDs or bank accounts shared in chat.',
   off_platform: 'Be cautious about moving to WhatsApp or Telegram before you have met or checked this person.',
 };
@@ -376,7 +376,7 @@ export default function Messages() {
       ? 'Conversation'
       : c.counterpartName ||
         (c.viewerSide === 'candidate' ? c.employerName : c.viewerSide === 'employer' ? c.candidateName : undefined) ||
-        'Verse member';
+        'MusiLynk member';
   const active = convs.find((c) => c.id === activeId);
   const people = useMemo(() => groupByPerson(convs), [convs]);
   const activePerson = active ? people.find((p) => p.threads.some((t) => t.id === active.id)) : undefined;

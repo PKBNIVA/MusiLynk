@@ -12,7 +12,7 @@ type Handler = (url: URL, request: Request) => unknown;
 const job = (n: number, extra: Record<string, unknown> = {}) => ({
   id: `job-${n}`,
   title: `Violinist for a wedding ${n}`,
-  company: 'Verse Weddings',
+  company: 'MusiLynk Weddings',
   location: 'Goa',
   workplace: 'hybrid',
   function_area: 'Performance',

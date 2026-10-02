@@ -23,7 +23,7 @@ class AccountDataRightsTest < ActionDispatch::IntegrationTest
     get "/api/account/export", headers: auth(candidate)
 
     assert_response :success
-    assert_match(/attachment; filename="verse-data-\d{4}-\d{2}-\d{2}\.json"/, response.headers["Content-Disposition"])
+    assert_match(/attachment; filename="musilynk-data-\d{4}-\d{2}-\d{2}\.json"/, response.headers["Content-Disposition"])
     assert_equal "no-store", response.headers["Cache-Control"]
     data = response.parsed_body
     assert_equal candidate.email, data.dig("account", "email")

@@ -193,7 +193,7 @@ test.describe('payments against the Razorpay simulator', () => {
     await page.goto('/employer/workspace');
     const workspace = page.getByRole('button', { name: /Limit QA Studio/ });
     if (await workspace.count()) await workspace.first().click();
-    await page.getByPlaceholder('Existing Verse user email').fill(teammate.email);
+    await page.getByPlaceholder('Existing MusiLynk user email').fill(teammate.email);
     await page.getByRole('button', { name: 'Add team member' }).click();
     const prompt = page.getByRole('alertdialog', { name: 'Plan limit reached' });
     await expect(prompt).toContainText('Workspace seat limit reached.');

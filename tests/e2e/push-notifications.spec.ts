@@ -240,7 +240,7 @@ test('the prompt and the settings card are hidden entirely when the server has p
   await expect(page.getByText('Push notifications')).toHaveCount(0);
 });
 
-test('iPhone Safari outside an installed app is told to add Verse to the home screen', async ({ page }) => {
+test('iPhone Safari outside an installed app is told to add MusiLynk to the home screen', async ({ page }) => {
   await stubBrowser(page, {
     userAgent:
       'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
@@ -248,7 +248,7 @@ test('iPhone Safari outside an installed app is told to add Verse to the home sc
   });
   await mockApi(page, { enabled: true, user: musician });
   await page.goto('/jobseeker/urgent');
-  await expect(page.getByTestId('push-opt-in')).toContainText('Add Verse to your home screen to get alerts');
+  await expect(page.getByTestId('push-opt-in')).toContainText('Add MusiLynk to your home screen to get alerts');
   await expect(page.getByRole('button', { name: 'Turn on alerts' })).toHaveCount(0);
 });
 

@@ -26,9 +26,9 @@ export default function NotFoundPublic() {
         </p>
         <h1 className="mt-2 text-3xl font-bold md:text-4xl">Page not found</h1>
         <p className="mx-auto mt-3 max-w-md text-slate-300">
-          That page has moved or never existed. Search Verse, or start from one of these.
+          That page has moved or never existed. Search MusiLynk, or start from one of these.
         </p>
-        <form onSubmit={go} role="search" aria-label="Search Verse" className="mx-auto mt-8 flex max-w-md gap-2">
+        <form onSubmit={go} role="search" aria-label="Search MusiLynk" className="mx-auto mt-8 flex max-w-md gap-2">
           <label htmlFor="not-found-search" className="sr-only">
             Search jobs, people and acts
           </label>

@@ -7,7 +7,7 @@ class ProviderContractsTest < ActiveSupport::TestCase
   end
 
   test "Brevo receives the intended recipient and reset link without leaking its key into the body" do
-    with_env("BREVO_API_KEY" => "test-api-key", "BREVO_SENDER_EMAIL" => "sender@example.invalid", "BREVO_SENDER_NAME" => "Verse") do
+    with_env("BREVO_API_KEY" => "test-api-key", "BREVO_SENDER_EMAIL" => "sender@example.invalid", "BREVO_SENDER_NAME" => "MusiLynk") do
       transport = lambda do |url, &configure|
         assert_equal "https://api.brevo.com/v3/smtp/email", url
         request = fake_request

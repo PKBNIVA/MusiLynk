@@ -1,4 +1,4 @@
-# Posts the platform's own updates to The Stage as the "Verse" system author (Post.author_type
+# Posts the platform's own updates to The Stage as the "MusiLynk" system author (Post.author_type
 # "system"). Runs hourly (config/initializers/good_job.rb); every event it posts is idempotent
 # via a unique `system_ref`, keyed off a fixed one-hour bucket ending at the top of the current
 # hour — re-running the same bucket (a retry, or calling the job by hand) always computes the

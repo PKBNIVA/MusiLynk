@@ -121,7 +121,7 @@ describe('whatsappShareUrl', () => {
     const url = whatsappShareUrl('VERSE-ABCD1234', 'https://verse.example/pricing?code=VERSE-ABCD1234');
     expect(url.startsWith('https://wa.me/?text=')).toBe(true);
     expect(decodeURIComponent(url.split('text=')[1])).toBe(
-      'Join me on Verse — hirers get 20% off with my code VERSE-ABCD1234: https://verse.example/pricing?code=VERSE-ABCD1234',
+      'Join me on MusiLynk — hirers get 20% off with my code VERSE-ABCD1234: https://verse.example/pricing?code=VERSE-ABCD1234',
     );
     expect(decodeURIComponent(whatsappShareUrl('C', 'u', 15).split('text=')[1])).toContain('15% off');
   });

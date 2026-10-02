@@ -263,7 +263,7 @@ class AuthAndJobsTest < ActionDispatch::IntegrationTest
   test "bearer-authenticated hiring flow works from posting through shortlist" do
     employer_token = register("Hiring Studio", "studio@example.com", "employer")
     candidate_token = register("Working Artist", "artist@example.com", "jobseeker")
-    User.create!(name: "Verse Admin", email: "admin@example.com", password: "StrongPass123!", role: "admin", status: "active").create_profile!
+    User.create!(name: "MusiLynk Admin", email: "admin@example.com", password: "StrongPass123!", role: "admin", status: "active").create_profile!
     admin_token = admin_login("admin@example.com")
 
     post "/api/jobs", params: {

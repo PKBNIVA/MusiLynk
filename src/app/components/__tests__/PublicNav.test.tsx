@@ -51,7 +51,7 @@ describe('PublicNav', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(container.querySelector('[data-testid="account-menu"]')).toBeNull();
     expect(container.textContent).toContain('Sign in');
-    expect(container.textContent).toContain('Join Verse');
+    expect(container.textContent).toContain('Join MusiLynk');
   });
 
   it('renders the neutral header (no auth buttons) while a stored token is still being verified', async () => {
@@ -68,7 +68,7 @@ describe('PublicNav', () => {
     await settle();
     // Still loading: neither the signed-out nor the signed-in controls have appeared yet.
     expect(container.querySelector('[data-testid="account-menu"]')).toBeNull();
-    expect(container.textContent).not.toContain('Join Verse');
+    expect(container.textContent).not.toContain('Join MusiLynk');
 
     await act(async () => {
       resolveMe(jsonResponse({ user: { id: 'u1', name: 'Asha', role: 'jobseeker' } }));
@@ -85,7 +85,7 @@ describe('PublicNav', () => {
     await settle();
     expect(container.querySelector('[data-testid="account-menu"]')).not.toBeNull();
     expect(container.textContent).toContain('Ravi');
-    expect(container.textContent).not.toContain('Join Verse');
+    expect(container.textContent).not.toContain('Join MusiLynk');
   });
 
   it('clears the token and shows signed-out once /me rejects with 401', async () => {

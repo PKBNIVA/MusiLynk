@@ -44,7 +44,7 @@ function releaseMeta(): Plugin {
       appTarget === 'admin'
         ? {
             html: html
-              .replace(/<title>[^<]*<\/title>/, '<title>Verse Admin</title>')
+              .replace(/<title>[^<]*<\/title>/, '<title>MusiLynk Admin</title>')
               .replace(/\s*<meta name="description"[^>]*>/, '')
               .replace(/<meta name="robots"[^>]*>/, '<meta name="robots" content="noindex, nofollow" />'),
             tags: [releaseTag],

@@ -22,7 +22,7 @@ issues the held-back invoices in charge order.
 | `sac_code` | Services Accounting Code | Defaults to `998314` (software platform subscription); the CA confirms it |
 | `gst_registered` | `true` or `false` | `false` makes every document a "Bill of supply" with no GST lines |
 | `prices_include_gst` | `true` or `false` | `true` (default): plan prices already include 18% GST, so the taxable value is backed out of what was charged |
-| `invoice_prefix` | Defaults to `VRS` | Numbers look like `VRS/2026-27/000123` |
+| `invoice_prefix` | Defaults to `MLK` | Numbers look like `MLK/2026-27/000123` |
 
 `prices_include_gst: false` means the price list is before GST. Razorpay plan amounts are fixed at Razorpay, so the plan
 must then be set up at the GST-added amount: the invoice always splits the amount Razorpay actually collected, so its total

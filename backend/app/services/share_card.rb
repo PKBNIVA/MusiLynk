@@ -1,4 +1,4 @@
-# Renders the "I'm verified on Verse" share card for Instagram/WhatsApp — a 1080x1920 story
+# Renders the "I'm verified on MusiLynk" share card for Instagram/WhatsApp — a 1080x1920 story
 # card and a 1200x630 landscape variant, both as inline SVG.
 #
 # The production image (backend/Dockerfile) has no headless browser and no ImageMagick, so this
@@ -48,9 +48,9 @@ class ShareCard
       <svg xmlns="http://www.w3.org/2000/svg" width="#{width}" height="#{height}" viewBox="0 0 #{width} #{height}">
         <rect width="#{width}" height="#{height}" fill="#{BACKGROUND}"/>
         <rect width="#{width}" height="6" fill="#{PRIMARY}"/>
-        <text x="#{text_x}" y="140" text-anchor="#{anchor}" font-family="Helvetica, Arial, sans-serif" font-size="44" font-weight="700" fill="#{FOREGROUND}">Verse</text>
+        <text x="#{text_x}" y="140" text-anchor="#{anchor}" font-family="Helvetica, Arial, sans-serif" font-size="44" font-weight="700" fill="#{FOREGROUND}">MusiLynk</text>
         <rect x="#{text_x - (anchor == 'middle' ? 110 : 0)}" y="190" width="220" height="52" rx="26" fill="#{PRIMARY}"/>
-        <text x="#{text_x}" y="225" text-anchor="#{anchor == 'middle' ? 'middle' : 'start'}" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="600" fill="#ffffff">Verified on Verse</text>
+        <text x="#{text_x}" y="225" text-anchor="#{anchor == 'middle' ? 'middle' : 'start'}" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="600" fill="#ffffff">Verified on MusiLynk</text>
         <text x="#{text_x}" y="#{name_y}" text-anchor="#{anchor}" font-family="Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#{FOREGROUND}">#{escape(user.name)}</text>
         #{roles.present? ? %(<text x="#{text_x}" y="#{name_y + 70}" text-anchor="#{anchor}" font-family="Helvetica, Arial, sans-serif" font-size="34" fill="#{MUTED}">#{escape(roles)}</text>) : ""}
         #{city ? %(<text x="#{text_x}" y="#{name_y + 118}" text-anchor="#{anchor}" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#{MUTED}">#{escape(city)}</text>) : ""}

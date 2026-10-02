@@ -249,7 +249,7 @@ function PasswordChange() {
 }
 
 export default function AdminAccount() {
-  usePageMeta('Your admin account', 'Your Verse admin email, two-step sign-in and password.');
+  usePageMeta('Your admin account', 'Your MusiLynk admin email, two-step sign-in and password.');
   const { user, logout } = useAuth();
   const { account, accountError, reloadAccount } = useAdminSite();
   const navigate = useNavigate();

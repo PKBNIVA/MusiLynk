@@ -54,7 +54,7 @@ Rails.application.configure do
       # Tuesday 09:30 IST = 04:00 UTC.
       cron: "0 4 * * 2",
       class: "WeeklyDigestJob",
-      description: "Send the weekly 'This week on Verse' digest"
+      description: "Send the weekly 'This week on MusiLynk' digest"
     },
     urgent_requests_sweep: {
       cron: "*/30 * * * *",
@@ -74,7 +74,7 @@ Rails.application.configure do
     stage_system_posts: {
       cron: "0 * * * *",
       class: "StageSystemPostsJob",
-      description: "Post welcomes, verifications, urgent fills and the Monday roundup to The Stage as Verse"
+      description: "Post welcomes, verifications, urgent fills and the Monday roundup to The Stage as MusiLynk"
     },
     review_prompt_sweep: {
       cron: "12 * * * *",

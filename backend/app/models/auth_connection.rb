@@ -1,4 +1,4 @@
-# A third-party sign-in / API identity linked to a Verse owner (a User today; a Page —
+# A third-party sign-in / API identity linked to a MusiLynk owner (a User today; a Page —
 # Organization or Act — later). One row per (provider, provider_uid): Google sign-in creates
 # and reads these, and the account settings "sign-in methods" section lists and removes them
 # (AuthController#connections / #destroy_connection).

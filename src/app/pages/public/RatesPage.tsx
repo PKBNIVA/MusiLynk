@@ -63,9 +63,9 @@ export default function RatesPage() {
     };
   }, [city]);
 
-  const title = data ? `What musicians charge in ${data.city.name} | Verse` : 'Musician rates';
+  const title = data ? `What musicians charge in ${data.city.name} | MusiLynk` : 'Musician rates';
   const description = data
-    ? `Median session, show and day rates reported by verified and unverified musicians on Verse in ${data.city.name}. A guide, not a quote.`
+    ? `Median session, show and day rates reported by verified and unverified musicians on MusiLynk in ${data.city.name}. A guide, not a quote.`
     : undefined;
   const jsonLd = data
     ? [
@@ -73,14 +73,14 @@ export default function RatesPage() {
           '@context': 'https://schema.org',
           '@type': 'Dataset',
           name: `Musician and crew rates in ${data.city.name}`,
-          description: `Session, show and day rates reported by musicians on Verse in ${data.city.name}.`,
+          description: `Session, show and day rates reported by musicians on MusiLynk in ${data.city.name}.`,
           spatialCoverage: { '@type': 'Place', name: data.city.name },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Verse', item: absoluteUrl('/') },
+            { '@type': 'ListItem', position: 1, name: 'MusiLynk', item: absoluteUrl('/') },
             { '@type': 'ListItem', position: 2, name: 'Musicians', item: absoluteUrl('/music-professionals') },
             {
               '@type': 'ListItem',
@@ -126,7 +126,7 @@ export default function RatesPage() {
               title={`What musicians charge in ${data.city.name}`}
             >
               <p className="max-w-2xl">
-                Ranges reported by verified and unverified musicians on Verse; they are a guide, not a quote.
+                Ranges reported by verified and unverified musicians on MusiLynk; they are a guide, not a quote.
               </p>
               <p className="mt-3 text-xs text-slate-300">Last updated {formatDate(data.updatedAt)}</p>
             </PhotoHeader>

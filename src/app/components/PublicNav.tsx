@@ -35,7 +35,7 @@ const links = [
   ['Music jobs', '/music-jobs', Briefcase],
   ['Musicians', '/music-professionals', Users],
   ['Book music', '/book-music', CalendarDays],
-  ['How Verse works', '/guide', Compass],
+  ['How MusiLynk works', '/guide', Compass],
 ] as const;
 
 export function PublicNav() {
@@ -57,7 +57,7 @@ export function PublicNav() {
       >
         <SkipLink />
         <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-3 px-4 md:px-6">
-          <Link to="/" aria-label="Verse home" className="inline-flex min-h-11 shrink-0 items-center">
+          <Link to="/" aria-label="MusiLynk home" className="inline-flex min-h-11 shrink-0 items-center">
             <BrandMark />
           </Link>
           <form
@@ -207,7 +207,7 @@ export function PublicNav() {
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button size="sm" asChild className="border-0 bg-gradient-to-r from-fuchsia-500 to-violet-500">
-                <Link to="/join/musician">Join Verse</Link>
+                <Link to="/join/musician">Join MusiLynk</Link>
               </Button>
             </>
           )}

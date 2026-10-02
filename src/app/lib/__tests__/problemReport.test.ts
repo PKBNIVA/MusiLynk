@@ -29,7 +29,7 @@ describe('sanitizePageUrl', () => {
     expect(sanitizePageUrl('/join?vouch=vch_1&email=a%40b.in&ref=friend')).toBe('/join?ref=friend');
   });
 
-  it('replaces credential-looking path segments but keeps Verse record ids', () => {
+  it('replaces credential-looking path segments but keeps MusiLynk record ids', () => {
     expect(sanitizePageUrl(`/x/${'a1'.repeat(20)}/y`)).toBe('/x/:token/y');
     expect(sanitizePageUrl('/opportunities/job_0f8e6c1a-2b4d-4c7e-9a31-5d6e7f8a9b0c')).toBe(
       '/opportunities/job_0f8e6c1a-2b4d-4c7e-9a31-5d6e7f8a9b0c',

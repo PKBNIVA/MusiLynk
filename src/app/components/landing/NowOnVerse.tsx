@@ -17,7 +17,7 @@ const SHOWN = 6;
 const MIN_SHOWN = 3;
 
 /**
- * "Now on Verse in {city}": up to six people from GET /public/talent (the directory's own order),
+ * "Now on MusiLynk in {city}": up to six people from GET /public/talent (the directory's own order),
  * each with an avatar (their photo, or generated art for a demo account; never a stock face), name,
  * role, "from ₹" and one play chip. Renders nothing on failure or under three people.
  */
@@ -41,7 +41,7 @@ export function NowOnVerse({ city }: { city: string }) {
     <section aria-labelledby="now-title" className="px-4 pb-4 pt-2 sm:px-6" data-testid="now-on-verse">
       <div className="mx-auto max-w-6xl">
         <h2 id="now-title" className="text-xl font-black md:text-2xl">
-          Now on Verse in {city}
+          Now on MusiLynk in {city}
         </h2>
         <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {people

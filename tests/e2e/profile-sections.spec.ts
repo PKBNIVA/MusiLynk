@@ -127,7 +127,7 @@ test('leaving with unsaved changes asks first', async ({ page }) => {
   await page.getByLabel('Phone').focus();
   await page.getByLabel('Bio').focus(); // leaving Links tries to save it and cannot
   await expect(page.getByTestId('section-status-links')).toHaveText(/Not saved/);
-  const home = page.getByRole('link', { name: 'Verse dashboard' });
+  const home = page.getByRole('link', { name: 'MusiLynk dashboard' });
   await home.click();
   const dialog = page.getByTestId('unsaved-dialog');
   await expect(dialog).toBeVisible();
@@ -146,7 +146,7 @@ test('leaving while a save is on its way waits for it instead of asking', async 
   await page.goto('/jobseeker/profile');
   await page.getByLabel('Headline').fill('Session guitarist and arranger');
   await page.getByLabel('Website').focus(); // leaving About starts its (slow) save
-  await page.getByRole('link', { name: 'Verse dashboard' }).click();
+  await page.getByRole('link', { name: 'MusiLynk dashboard' }).click();
   await expect(page.getByTestId('unsaved-dialog')).toHaveCount(0);
   await expect(page).not.toHaveURL(/\/jobseeker\/profile/);
 });

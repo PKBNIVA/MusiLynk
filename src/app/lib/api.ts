@@ -300,7 +300,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
           requestId: requestIdFor(response),
         });
         throw new ApiError(
-          'Verse received an unexpected response. Please try again shortly.',
+          'MusiLynk received an unexpected response. Please try again shortly.',
           response.status,
           'INVALID_RESPONSE',
           requestIdFor(response),
@@ -500,7 +500,7 @@ export const GOOGLE_AUTH_ERROR_MESSAGES: Record<string, string> = {
   state_mismatch: 'That sign-in link expired. Try again.',
   email_unverified: "Google hasn't verified that email. Sign in with your email instead.",
   connected_elsewhere:
-    'That Google account is already connected to another Verse account. Sign in with Google to use it, or contact us to merge.',
+    'That Google account is already connected to another MusiLynk account. Sign in with Google to use it, or contact us to merge.',
   provider_error: "Google didn't complete the sign-in. Try again.",
 };
 

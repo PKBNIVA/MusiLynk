@@ -16,7 +16,7 @@ export const CARD_TYPES = ['professional', 'opportunity', 'act'] as const;
 export type CardType = (typeof CARD_TYPES)[number];
 
 /** Where the public JSON comes from. OG_API_ORIGIN overrides it (a preview API, a local Rails). */
-export const DEFAULT_API_ORIGIN = 'https://verse-music-platform-production.up.railway.app';
+export const DEFAULT_API_ORIGIN = 'https://musilynk-api-production.up.railway.app';
 
 export const SIZE = { width: 1200, height: 630 } as const;
 

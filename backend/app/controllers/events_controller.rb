@@ -78,7 +78,7 @@ class EventsController < ApplicationController
     props = event["props"].is_a?(Hash) ? scrub_props(event["props"]) : {}
     row = {
       id: "prod_#{SecureRandom.uuid}", user_id: current_user&.id, anon_id: anon_id.first(100), name:,
-      props:, page: self.class.redact_path(event["page"].to_s).first(300).presence, referrer: event["referrer"].to_s.first(300).presence,
+      props:, page: self.class.redact_path(event["page"].to_s).first(300).presence, referrer: self.class.redact_secrets(event["referrer"].to_s).first(300).presence,
       city: event["city"].to_s.first(100).presence, created_at: Time.current
     }
     return nil if row.to_json.bytesize > MAX_EVENT_BYTES

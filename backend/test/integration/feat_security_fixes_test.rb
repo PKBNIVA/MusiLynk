@@ -237,4 +237,13 @@ class FeatSecurityFixesTest < ActionDispatch::IntegrationTest
     assert_equal 0, act.act_members.where(user_id: [unverified.id, other.id, alias_user.id]).count
     assert invite.reload.open?
   end
+
+  test "a referrer carrying an invite token is stored redacted" do
+    post "/api/events", params: { events: [{ name: "route_change", anonId: "r", page: "/stage", referrer: "https://verse.example/invites/SECRETTOKEN123?x=1" }] }, as: :json
+    assert_response :success
+    row = ProductEvent.order(:created_at).last
+    assert row, "event stored"
+    assert_not_includes row.referrer.to_s, "SECRETTOKEN123"
+  end
+
 end

@@ -126,7 +126,7 @@ class AccountErasure
     # an act they own (those acts are retired below, and the invites hold other people's addresses).
     owned_act_ids = Act.where(owner_id: id).select(:id)
     ActInvite.where(inviter_id: id).or(ActInvite.where(invitee_user_id: id))
-      .or(ActInvite.where(invitee_email: email)).or(ActInvite.where(act_id: owned_act_ids)).delete_all
+      .or(ActInvite.where("lower(invitee_email) = ?", email.downcase)).or(ActInvite.where(act_id: owned_act_ids)).delete_all
     ActInvite.where(accepted_by_id: id).update_all(accepted_by_id: nil)
   end
 

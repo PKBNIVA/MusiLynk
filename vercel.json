@@ -19,7 +19,7 @@
   "rewrites": [
     {
       "source": "/sitemap.xml",
-      "destination": "https://verse-music-platform-production.up.railway.app/sitemap.xml"
+      "destination": "https://musilynk-api-production.up.railway.app/sitemap.xml"
     },
     {
       "source": "/opportunities/:id",
@@ -30,7 +30,7 @@
           "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot|Googlebot|Google-InspectionTool).*"
         }
       ],
-      "destination": "https://verse-music-platform-production.up.railway.app/share/opportunities/:id"
+      "destination": "https://musilynk-api-production.up.railway.app/share/opportunities/:id"
     },
     {
       "source": "/professionals/:id",
@@ -41,7 +41,7 @@
           "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot|Googlebot|Google-InspectionTool).*"
         }
       ],
-      "destination": "https://verse-music-platform-production.up.railway.app/share/professionals/:id"
+      "destination": "https://musilynk-api-production.up.railway.app/share/professionals/:id"
     },
     {
       "source": "/acts/:id",
@@ -52,7 +52,7 @@
           "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot|Googlebot|Google-InspectionTool).*"
         }
       ],
-      "destination": "https://verse-music-platform-production.up.railway.app/share/acts/:id"
+      "destination": "https://musilynk-api-production.up.railway.app/share/acts/:id"
     },
     {
       "source": "/p/:slug",
@@ -63,7 +63,7 @@
           "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|redditbot|Googlebot|Google-InspectionTool).*"
         }
       ],
-      "destination": "https://verse-music-platform-production.up.railway.app/share/p/:slug"
+      "destination": "https://musilynk-api-production.up.railway.app/share/p/:slug"
     },
     {
       "source": "/",
@@ -184,7 +184,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self' data:; connect-src 'self' https://verse-music-platform-production.up.railway.app https://*.razorpay.com https://*.r2.cloudflarestorage.com https://*.amazonaws.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; frame-src https://*.razorpay.com https://www.youtube.com https://www.youtube-nocookie.com https://open.spotify.com https://w.soundcloud.com; upgrade-insecure-requests"
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self' data:; connect-src 'self' https://musilynk-api-production.up.railway.app https://verse-music-platform-production.up.railway.app https://*.razorpay.com https://*.r2.cloudflarestorage.com https://*.amazonaws.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; frame-src https://*.razorpay.com https://www.youtube.com https://www.youtube-nocookie.com https://open.spotify.com https://w.soundcloud.com; upgrade-insecure-requests"
         }
       ]
     }

@@ -852,6 +852,8 @@ export interface UrgentRequest {
   myResponse: boolean;
   responseCount: number;
   notified_count?: number;
+  /** Requester-only: 'pending' while the background matching job has not finished. */
+  match_status?: 'pending' | 'matching' | 'done' | 'skipped';
   first_notified_at?: string | null;
   founder_notes?: string | null;
   filled_by_id?: string | null;

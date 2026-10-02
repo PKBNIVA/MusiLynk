@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { CheckCircle2, Clock3, MessageCircle, Zap } from 'lucide-react';
 import type { UrgentRequest, UrgentRequestResponse } from '../lib/apiTypes';
 
-type Confirmed = { id: string; notifiedCount: number; responseTimePromise: string };
+type Confirmed = { id: string; notifiedCount: number; matchStatus?: string; responseTimePromise: string };
 // Passed via navigate(..., { state }) either directly (signed-in submit) or after the
 // sign-up hop completes and AuthPage submits the saved draft on this person's behalf.
 type LocationState = { confirmed?: Confirmed } | null;
@@ -57,11 +57,16 @@ export default function UrgentHire() {
     }
     setSubmitting(true);
     try {
-      const d = await apiPost<{ id: string; notifiedCount: number; responseTimePromise: string }>(
+      const d = await apiPost<{ id: string; notifiedCount: number; matchStatus?: string; responseTimePromise: string }>(
         '/urgent-requests',
         body,
       );
-      setConfirmed({ id: d.id, notifiedCount: d.notifiedCount, responseTimePromise: d.responseTimePromise });
+      setConfirmed({
+        id: d.id,
+        notifiedCount: d.notifiedCount,
+        matchStatus: d.matchStatus,
+        responseTimePromise: d.responseTimePromise,
+      });
     } catch (e: unknown) {
       if (form.setFromApi(e, 'Could not publish this request. Please try again.')) form.focusFirst();
     } finally {
@@ -123,6 +128,8 @@ function StatusCard({ confirmed, onNewRequest }: { confirmed: Confirmed; onNewRe
   const [item, setItem] = useState<UrgentRequest | null>(null);
   const [responses, setResponses] = useState<UrgentRequestResponse[]>([]);
 
+  const matching = (item?.match_status ?? confirmed.matchStatus) === 'pending';
+
   const refresh = useCallback(async () => {
     try {
       const d = await apiGet<{ request: UrgentRequest }>(`/urgent-requests/${confirmed.id}`);
@@ -138,9 +145,10 @@ function StatusCard({ confirmed, onNewRequest }: { confirmed: Confirmed; onNewRe
 
   useEffect(() => {
     void refresh();
-    const interval = setInterval(() => void refresh(), 15_000);
+    // Matching runs in the background right after posting, so check often until it finishes.
+    const interval = setInterval(() => void refresh(), matching ? 4_000 : 15_000);
     return () => clearInterval(interval);
-  }, [refresh]);
+  }, [refresh, matching]);
 
   async function message(userId: string) {
     try {
@@ -166,8 +174,12 @@ function StatusCard({ confirmed, onNewRequest }: { confirmed: Confirmed; onNewRe
         </p>
         <div className="grid grid-cols-2 gap-3 mt-6">
           <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-center">
-            <div className="text-2xl font-bold">{notifiedCount}</div>
-            <div className="text-xs text-slate-400 mt-1">Musicians notified</div>
+            <div className="text-2xl font-bold" data-testid="urgent-notified-count">
+              {matching ? '…' : notifiedCount}
+            </div>
+            <div className="text-xs text-slate-400 mt-1">
+              {matching ? 'Finding musicians for you' : 'Musicians notified'}
+            </div>
           </div>
           <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-center">
             <div className="text-2xl font-bold">{responseCount}</div>

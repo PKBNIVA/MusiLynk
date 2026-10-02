@@ -77,8 +77,10 @@ class UrgentRequestsController < ApplicationController
     return render_record_invalid(ActiveRecord::RecordInvalid.new(item)) if item.errors.any?
 
     item.save!
-    notified = UrgentMatcher.notify!(item)
-    render json: { id: item.id, notifiedCount: notified.size, responseTimePromise: UrgentConfig.response_time_promise }, status: :created
+    # Matching and the alert fan-out are CPU-bound, so they run in UrgentMatchJob, enqueued only now that the
+    # row is committed. The status card polls GET /urgent-requests/:id for matchStatus and the notified count.
+    UrgentMatchJob.perform_later(item.id)
+    render json: { id: item.id, notifiedCount: 0, matchStatus: "pending", responseTimePromise: UrgentConfig.response_time_promise }, status: :created
   end
 
   def respond
@@ -221,7 +223,7 @@ class UrgentRequestsController < ApplicationController
 
   # Columns only the founders (admin site) and, for delivery counts, the requester may see.
   INTERNAL_COLUMNS = %w[founder_notes expiry_warned_at].freeze
-  DELIVERY_COLUMNS = %w[notified_count first_notified_at last_notified_at].freeze
+  DELIVERY_COLUMNS = %w[notified_count first_notified_at last_notified_at match_status matched_at].freeze
 
   def serialize(item, responded_ids, my_reasons = nil)
     hidden = item.requester_id == current_user.id ? INTERNAL_COLUMNS : INTERNAL_COLUMNS + DELIVERY_COLUMNS

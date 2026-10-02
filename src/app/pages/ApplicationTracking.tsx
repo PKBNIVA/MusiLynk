@@ -133,7 +133,7 @@ export default function ApplicationTracking() {
                         return (
                           <div key={s}>
                             <div className={`h-1.5 rounded-full ${done ? 'bg-violet-500' : 'bg-white/10'}`} />
-                            <div className="text-[10px] text-slate-600 mt-1 hidden sm:block truncate">{s}</div>
+                            <div className="text-xs text-slate-600 mt-1 hidden sm:block truncate">{s}</div>
                           </div>
                         );
                       })}

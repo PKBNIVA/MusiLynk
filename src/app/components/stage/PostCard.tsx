@@ -208,7 +208,7 @@ export function PostCard({ post, onChanged, onDeleted }: PostCardProps) {
                 <ShieldCheck aria-hidden="true" size={14} className="shrink-0 text-emerald-400" />
               )}
               {post.author.system && (
-                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-slate-400">
+                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-xs font-normal uppercase tracking-wide text-slate-400">
                   Verse
                 </span>
               )}

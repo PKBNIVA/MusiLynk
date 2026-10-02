@@ -82,7 +82,7 @@ export function JobCard({ job, to, index, aside, compact = false }: Props) {
                     <Badge
                       variant="outline"
                       key={c}
-                      className="border-white/15 px-1.5 py-0 text-[11px] leading-5 text-slate-300"
+                      className="border-white/15 px-1.5 py-0 text-xs leading-5 text-slate-300"
                     >
                       {c}
                     </Badge>

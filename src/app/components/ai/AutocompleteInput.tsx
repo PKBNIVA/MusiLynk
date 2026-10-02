@@ -227,7 +227,7 @@ export function AutocompleteInput({
           }}
           onKeyDown={onKeyDown}
           className={cn(
-            'w-full rounded-md border border-white/15 bg-white/[.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-400 focus:outline-none',
+            'min-h-10 w-full rounded-md border border-white/15 bg-white/[.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-400 focus:outline-none',
             !multiple && query.trim() && 'pr-8',
           )}
         />
@@ -241,7 +241,7 @@ export function AutocompleteInput({
               event.preventDefault();
               clearSingleValue();
             }}
-            className="absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400 hover:text-slate-100"
+            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 hover:text-slate-100"
           >
             <X className="size-3.5" aria-hidden="true" />
           </button>

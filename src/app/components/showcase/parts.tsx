@@ -184,7 +184,7 @@ const STATE_TONE: Record<ItemState, string> = {
 
 export function StateBadge({ state }: { state: ItemState }) {
   return (
-    <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold', STATE_TONE[state])}>
+    <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold', STATE_TONE[state])}>
       {STATE_LABEL[state]}
     </span>
   );

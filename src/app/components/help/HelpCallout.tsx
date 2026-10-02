@@ -46,7 +46,7 @@ export function HelpCallout({ id, title, steps }: { id: string; title: string; s
         type="button"
         onClick={onLink}
         aria-expanded={shown}
-        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1.5 text-sm text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-2 py-1.5 text-sm text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
       >
         <HelpCircle aria-hidden="true" size={16} />
         How this works

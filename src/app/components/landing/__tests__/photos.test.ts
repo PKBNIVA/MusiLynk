@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { SEO_ROLES } from '../../../lib/seoPages';
+import { HERO_PHOTO_WIDTHS } from '../../../lib/photo';
 import { HERO_PHOTO, ROLE_PHOTOS, editorialPhoto, rolePhoto } from '../photos';
 
 const PUBLIC = join(process.cwd(), 'public');
@@ -14,6 +15,10 @@ describe('landing photos', () => {
     expect(photo.height).toBeGreaterThan(600);
     expect(photo.alt.length).toBeGreaterThan(10);
     expect(() => editorialPhoto('nope')).toThrow(/No photo named/);
+  });
+  it('ships every responsive width of the hero photo', () => {
+    for (const w of HERO_PHOTO_WIDTHS)
+      expect(existsSync(join(PUBLIC, `${editorialPhoto(HERO_PHOTO).src}-${w}.webp`)), `${w}`).toBe(true);
   });
   it('has a shipped photo for every one of the 12 SEO roles', () => {
     for (const [slug] of SEO_ROLES) {

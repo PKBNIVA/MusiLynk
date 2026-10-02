@@ -97,7 +97,7 @@ export function PromoCodeField({
       <div className="mt-4 text-center">
         <button
           type="button"
-          className="text-sm text-violet-300 underline underline-offset-4 hover:text-violet-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 rounded"
+          className="min-h-10 px-2 text-sm text-violet-300 underline underline-offset-4 hover:text-violet-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 rounded"
           onClick={() => setOpen(true)}
         >
           Have a code?

@@ -11,11 +11,11 @@ const DEFAULT_TIMEOUT_MS = 12_000;
 const MIN_RETRY_ATTEMPT_MS = 250;
 const RETRYABLE_GET_STATUSES = new Set([429, 502, 503, 504]);
 let authRedirectStarted = false;
-const TOKEN_KEY = 'verse_access_token';
-const RETURN_TO_KEY = 'verse_return_to';
-const ACT_AS_KEY = 'verse_act_as';
+const TOKEN_KEY = 'musilynk_access_token';
+const RETURN_TO_KEY = 'musilynk_return_to';
+const ACT_AS_KEY = 'musilynk_act_as';
 /** The header the API reads the "acting as" identity from (see ActingAs on the backend). */
-export const ACT_AS_HEADER = 'X-Verse-Act-As';
+export const ACT_AS_HEADER = 'X-MusiLynk-Act-As';
 /** Fired on window (detail: the new key or null) when the acting-as identity changes. */
 export const ACTING_AS_EVENT = 'musilynk:acting-as';
 type StoreKind = 'local' | 'session';
@@ -170,7 +170,7 @@ export function onBeforeSignInRedirect(listener: () => void) {
 // still signs in as the right kind of account.
 /** Added to the sign-in address after an expired session, so that page can say why it is showing. */
 export const SESSION_EXPIRED_QUERY = 'reason=expired';
-const ROLE_HINT_KEY = 'verse_session_role';
+const ROLE_HINT_KEY = 'musilynk_session_role';
 let sessionRoleHint: string | null = null;
 export function rememberSessionRole(role?: string | null) {
   sessionRoleHint = role ?? null;

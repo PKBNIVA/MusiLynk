@@ -19,8 +19,8 @@ const me = {
 test('Find work pre-selects every role as a removable chip and sends them together', async ({ page }) => {
   const queries: URLSearchParams[] = [];
   await page.addInitScript(() => {
-    localStorage.setItem('verse_access_token', 'qa-token');
-    localStorage.setItem('verse-tour-v2-jobseeker', 'done');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
+    localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
   });
   await page.route('**/api/**', (route) => {
     const url = new URL(route.request().url());

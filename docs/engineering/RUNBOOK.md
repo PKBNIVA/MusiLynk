@@ -204,7 +204,7 @@ the server's (`psql "$DATABASE_PUBLIC_URL" -XAtc "show server_version"`).
    green run before the incident. A green run means that dump was already restored and
    checked by `scripts/db/restore-verify.sh`. Download its artifact `verse-db-<run id>`:
    ```bash
-   gh run download <run id> --repo PKBNIVA/verse-music-platform --name verse-db-<run id> --dir restore
+   gh run download <run id> --repo PKBNIVA/musilynk --name verse-db-<run id> --dir restore
    ls restore   # musilynk-<stamp>.dump.gpg, .dump.sha256, .manifest.tsv
    ```
    If there is no green run in the last 30 days, there is no backup to restore; stop and

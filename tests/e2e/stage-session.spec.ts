@@ -20,7 +20,7 @@ async function mockStage(page: Page, state: State) {
   await page.addInitScript(() => {
     if (sessionStorage.getItem('qa-seeded')) return;
     sessionStorage.setItem('qa-seeded', '1');
-    localStorage.setItem('verse_access_token', 'qa-token');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
   });
   await page.route('**/api/**', (route) => {
     const request = route.request();
@@ -69,12 +69,12 @@ test('an expired session on the Stage signs out, redirects to sign-in and keeps 
 
   await expect(page).toHaveURL(/\/auth\/jobseeker/);
   await expect(page.getByTestId('session-expired')).toHaveText('Your session expired. Sign in to continue.');
-  expect(await page.evaluate(() => localStorage.getItem('verse_access_token'))).toBeNull();
-  expect(await page.evaluate(() => sessionStorage.getItem('verse_return_to'))).toBe('/stage');
+  expect(await page.evaluate(() => localStorage.getItem('musilynk_access_token'))).toBeNull();
+  expect(await page.evaluate(() => sessionStorage.getItem('musilynk_return_to'))).toBe('/stage');
 
   // Signing in again brings the person back to the Stage with the post still in the composer.
   state.signedIn = true;
-  await page.evaluate(() => localStorage.setItem('verse_access_token', 'qa-token-2'));
+  await page.evaluate(() => localStorage.setItem('musilynk_access_token', 'qa-token-2'));
   await page.goto('/stage');
   await expect(page.getByLabel('Post text')).toHaveValue(draft);
 });
@@ -96,7 +96,7 @@ test('a Stage with only system posts shows one roundup card and says what to do 
     id: `sys_${n}`,
     kind: 'system',
     body: `MusiLynk update number ${n}`,
-    author: { type: 'system', id: 'verse', name: 'MusiLynk', system: true },
+    author: { type: 'system', id: 'musilynk', name: 'MusiLynk', system: true },
     createdAt: '2026-09-30T10:00:00Z',
   });
   await page.route('**/api/stage/feed**', (route) =>

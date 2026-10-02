@@ -441,23 +441,23 @@ describe('api() retries and deadlines', () => {
 describe('session token handling', () => {
   it('stores the token in localStorage and clears the legacy session copy', async () => {
     const { setAccessToken, hasAccessToken } = await loadApi();
-    sessionStorage.setItem('verse_access_token', 'old');
+    sessionStorage.setItem('musilynk_access_token', 'old');
     setAccessToken('new-token');
-    expect(localStorage.getItem('verse_access_token')).toBe('new-token');
-    expect(sessionStorage.getItem('verse_access_token')).toBeNull();
+    expect(localStorage.getItem('musilynk_access_token')).toBe('new-token');
+    expect(sessionStorage.getItem('musilynk_access_token')).toBeNull();
     expect(hasAccessToken()).toBe(true);
 
     setAccessToken(null);
-    expect(localStorage.getItem('verse_access_token')).toBeNull();
+    expect(localStorage.getItem('musilynk_access_token')).toBeNull();
     expect(hasAccessToken()).toBe(false);
   });
 
   it('moves a legacy sessionStorage token into localStorage once', async () => {
-    sessionStorage.setItem('verse_access_token', 'legacy-token');
+    sessionStorage.setItem('musilynk_access_token', 'legacy-token');
     const { hasAccessToken } = await loadApi();
     expect(hasAccessToken()).toBe(true);
-    expect(localStorage.getItem('verse_access_token')).toBe('legacy-token');
-    expect(sessionStorage.getItem('verse_access_token')).toBeNull();
+    expect(localStorage.getItem('musilynk_access_token')).toBe('legacy-token');
+    expect(sessionStorage.getItem('musilynk_access_token')).toBeNull();
   });
 
   it('keeps the session in memory when storage is blocked', async () => {
@@ -479,12 +479,12 @@ describe('session token handling', () => {
 
   it('reads from memory after a write fails even if the store becomes readable', async () => {
     const { setAccessToken, hasAccessToken } = await loadApi();
-    localStorage.setItem('verse_access_token', 'stale');
+    localStorage.setItem('musilynk_access_token', 'stale');
     const restore = blockStorage('localStorage');
     setAccessToken(null);
     restore();
     // The stale token is still in real storage, but the failed sign-out wins.
-    expect(localStorage.getItem('verse_access_token')).toBe('stale');
+    expect(localStorage.getItem('musilynk_access_token')).toBe('stale');
     expect(hasAccessToken()).toBe(false);
   });
 
@@ -495,13 +495,13 @@ describe('session token handling', () => {
 
     window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated', newValue: 'x', storageArea: localStorage }));
     window.dispatchEvent(
-      new StorageEvent('storage', { key: 'verse_access_token', newValue: 'x', storageArea: sessionStorage }),
+      new StorageEvent('storage', { key: 'musilynk_access_token', newValue: 'x', storageArea: sessionStorage }),
     );
     expect(listener).not.toHaveBeenCalled();
 
-    localStorage.setItem('verse_access_token', 'other-tab');
+    localStorage.setItem('musilynk_access_token', 'other-tab');
     window.dispatchEvent(
-      new StorageEvent('storage', { key: 'verse_access_token', newValue: 'other-tab', storageArea: localStorage }),
+      new StorageEvent('storage', { key: 'musilynk_access_token', newValue: 'other-tab', storageArea: localStorage }),
     );
     expect(listener).toHaveBeenLastCalledWith(true);
     expect(hasAccessToken()).toBe(true);
@@ -512,7 +512,7 @@ describe('session token handling', () => {
 
     stop();
     window.dispatchEvent(
-      new StorageEvent('storage', { key: 'verse_access_token', newValue: 'again', storageArea: localStorage }),
+      new StorageEvent('storage', { key: 'musilynk_access_token', newValue: 'again', storageArea: localStorage }),
     );
     expect(listener).toHaveBeenCalledTimes(2);
   });
@@ -522,7 +522,7 @@ describe('session token handling', () => {
     const listener = vi.fn();
     const stop = onAccessTokenChange(listener);
     const original = Object.getOwnPropertyDescriptor(window, 'localStorage')!;
-    const event = new StorageEvent('storage', { key: 'verse_access_token', newValue: 'x' });
+    const event = new StorageEvent('storage', { key: 'musilynk_access_token', newValue: 'x' });
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
       get: () => {
@@ -663,6 +663,6 @@ describe('401 handling', () => {
 
     await expect(apiGet('/me')).rejects.toMatchObject({ status: 401 });
     expect(hasAccessToken()).toBe(true);
-    expect(localStorage.getItem('verse_access_token')).toBe('new-from-other-tab');
+    expect(localStorage.getItem('musilynk_access_token')).toBe('new-from-other-tab');
   });
 });

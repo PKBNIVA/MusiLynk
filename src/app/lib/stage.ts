@@ -202,7 +202,7 @@ export interface ActingAsOption extends StageAuthor {
 }
 
 function actingAsStorageKey(userId: string) {
-  return `verse_stage_acting_as:${userId}`;
+  return `musilynk_stage_acting_as:${userId}`;
 }
 
 export function useActingAsOptions() {
@@ -281,7 +281,7 @@ export function useActingAs() {
   );
 
   const header: Record<string, string> | undefined =
-    active && active.type !== 'user' ? { 'X-Verse-Act-As': `${active.type}:${active.id}` } : undefined;
+    active && active.type !== 'user' ? { 'X-MusiLynk-Act-As': `${active.type}:${active.id}` } : undefined;
 
   return { active, options, loading, setActive, header };
 }

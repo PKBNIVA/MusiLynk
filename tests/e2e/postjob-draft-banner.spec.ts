@@ -28,7 +28,7 @@ const json = (route: Route, body: unknown, status = 200) =>
 async function openWithDraft(page: Page, width: number) {
   await page.setViewportSize({ width, height: 800 });
   await page.addInitScript(() => {
-    localStorage.setItem('verse_access_token', 'qa-token');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
     const w = window as unknown as { __cls: number };
     w.__cls = 0;
     new PerformanceObserver((list) => {

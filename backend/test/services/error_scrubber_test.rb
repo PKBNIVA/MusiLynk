@@ -1,6 +1,12 @@
 require "test_helper"
 
 class ErrorScrubberTest < ActiveSupport::TestCase
+  test "the access token is scrubbed under both its old and new storage key names" do
+    %w[verse_access_token musilynk_access_token].each do |key|
+      assert_match ErrorScrubber::SENSITIVE_KEY, key
+    end
+  end
+
   test "strings lose email addresses, bearer tokens and secret query parameters" do
     raw = "user jane.doe+tag@example.co.uk sent Authorization: Bearer abc.DEF-123_xyz= to " \
       "https://musilynk.test/reset-password?token=s3cr3t&page=2&code=123456#frag and /x?reset_token=zz"

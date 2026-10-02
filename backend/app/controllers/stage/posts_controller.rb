@@ -14,7 +14,7 @@ module Stage
       type = params[:type].to_s
       return render_error("Unknown author type.", :unprocessable_content, "INVALID_AUTHOR_TYPE") unless Post::AUTHOR_TYPES.include?(type)
 
-      candidates = Post.visible.by_author(type, params[:authorId] || params[:id])
+      candidates = Post.visible.by_author(type, Post.canonical_author_id(type, params[:authorId] || params[:id]))
         .includes(:created_by, :shared_portfolio_item, :shared_job, reshared_post: :created_by)
         .order(created_at: :desc, id: :desc).limit(500).to_a
         .select { post_visible_to?(_1, current_user) }

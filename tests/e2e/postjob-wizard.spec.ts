@@ -54,9 +54,12 @@ async function mock(
   } = {},
 ) {
   const calls: { method: string; path: string; body: unknown }[] = [];
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
   if (options.savedPostedAs !== undefined)
-    await page.addInitScript((value) => localStorage.setItem('verse:post-job:posted-as', value), options.savedPostedAs);
+    await page.addInitScript(
+      (value) => localStorage.setItem('musilynk:post-job:posted-as', value),
+      options.savedPostedAs,
+    );
   await page.route('**/api/**', (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace(/^\/api/, '');

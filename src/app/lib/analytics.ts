@@ -39,8 +39,8 @@ export const EVENT_NAMES = [
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 
-const DNT_KEY = 'verse_dnt';
-const ANON_ID_KEY = 'verse_anon_id';
+const DNT_KEY = 'musilynk_dnt';
+const ANON_ID_KEY = 'musilynk_anon_id';
 const FLUSH_INTERVAL_MS = 5_000;
 const MAX_QUEUE = 25;
 
@@ -143,7 +143,7 @@ function redactValue(value: string): string {
 
 function authHeaders(): Record<string, string> {
   try {
-    const token = localStorage.getItem('verse_access_token');
+    const token = localStorage.getItem('musilynk_access_token');
     return token ? { Authorization: `Bearer ${token}` } : {};
   } catch {
     return {};
@@ -261,7 +261,7 @@ export function trackBookingDepositPaid(props?: EventProps): void {
   track('booking_deposit_paid', props);
 }
 
-const VIEWED_PROFILES_KEY = 'verse_viewed_profiles';
+const VIEWED_PROFILES_KEY = 'musilynk_viewed_profiles';
 
 /** Fires once per profile per session (sessionStorage-deduped): a repeat mount of the same
  * PublicProfile page, or a re-render, never double-counts a view. Feeds the "New: N views this

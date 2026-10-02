@@ -27,9 +27,9 @@ async function mockApi(
 ) {
   const sent: Sent = [];
   await page.addInitScript((signedIn) => {
-    if (signedIn) localStorage.setItem('verse_access_token', 'qa-token-secret-123');
-    localStorage.setItem('verse-tour-v2-jobseeker', 'done');
-    localStorage.setItem('verse-tour-v2-employer', 'done');
+    if (signedIn) localStorage.setItem('musilynk_access_token', 'qa-token-secret-123');
+    localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
+    localStorage.setItem('musilynk-tour-v2-employer', 'done');
   }, options.signedIn);
   await page.route('**/api/**', (route) => {
     const request = route.request();

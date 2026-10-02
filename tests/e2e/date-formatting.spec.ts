@@ -34,8 +34,8 @@ async function mockApi(page: Page, signedIn: boolean) {
   await page.clock.setFixedTime(new Date('2026-09-28T10:00:00Z'));
   if (signedIn) {
     await page.addInitScript(() => {
-      localStorage.setItem('verse_access_token', 'qa-token');
-      localStorage.setItem('verse-tour-v2-jobseeker', 'done');
+      localStorage.setItem('musilynk_access_token', 'qa-token');
+      localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
     });
   }
   await page.route('**/api/**', (route) => {

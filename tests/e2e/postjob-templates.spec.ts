@@ -19,8 +19,8 @@ function json(route: Route, body: unknown, status = 200) {
 }
 
 async function mockPostJob(page: Page) {
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
-  await page.addInitScript(() => localStorage.removeItem('verse:post-job:posted-as'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
+  await page.addInitScript(() => localStorage.removeItem('musilynk:post-job:posted-as'));
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
     if (path === '/me') return json(route, { user: employer });
@@ -109,8 +109,8 @@ test("picking a different template replaces the previous one's content", async (
 test('a 402 plan limit on publish opens the plan-limit dialog instead of a toast, and keeps the work as a draft', async ({
   page,
 }) => {
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
-  await page.addInitScript(() => localStorage.removeItem('verse:post-job:posted-as'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
+  await page.addInitScript(() => localStorage.removeItem('musilynk:post-job:posted-as'));
   let jobsPosts = 0;
   let submitted = 0;
   await page.route('**/api/**', (route) => {

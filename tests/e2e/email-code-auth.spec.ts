@@ -41,7 +41,7 @@ async function mockApi(page: Page, opts: { user?: typeof jobseeker; validCode?: 
   // deterministic under any amount of CPU load, unlike a delay a slow machine could outrun.
   let release: (() => void) | null = null;
   calls.release = () => release?.();
-  await page.addInitScript((role) => localStorage.setItem(`verse-tour-v2-${role}`, 'done'), user.role);
+  await page.addInitScript((role) => localStorage.setItem(`musilynk-tour-v2-${role}`, 'done'), user.role);
   await page.route('**/api/**', async (route: Route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
@@ -93,7 +93,7 @@ test('email code is the primary sign-in and a pasted code signs in', async ({ pa
   await pasteCode(page, 'Your code: 482 913');
   await expect(page).toHaveURL(/\/jobseeker$/);
   expect(calls.verifies).toEqual([{ email: 'qa@example.invalid', code: '482913' }]);
-  expect(await page.evaluate(() => localStorage.getItem('verse_access_token'))).toBe('qa-otp-token');
+  expect(await page.evaluate(() => localStorage.getItem('musilynk_access_token'))).toBe('qa-otp-token');
 });
 
 test('a wrong code shows an error, clears the input and allows a retry', async ({ page }) => {

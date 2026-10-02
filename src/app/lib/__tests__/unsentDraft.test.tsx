@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerUnsentDraft as register, saveUnsentDrafts, takeUnsentDraft, useUnsentDraft } from '../unsentDraft';
 
-const KEY = 'verse_unsent_drafts';
+const KEY = 'musilynk_unsent_drafts';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 

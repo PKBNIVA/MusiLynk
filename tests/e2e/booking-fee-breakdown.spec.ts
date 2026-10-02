@@ -78,7 +78,7 @@ function bookingFor(policyOn: boolean, overrides: Record<string, unknown> = {}) 
 }
 
 async function openBookings(page: Page, policyOn: boolean, overrides: Record<string, unknown> = {}) {
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
   await page.route('**/api/**', async (route: Route) => {
     const { pathname } = new URL(route.request().url());
     const json = (body: unknown, status = 200) =>

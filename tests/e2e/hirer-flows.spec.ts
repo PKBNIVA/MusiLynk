@@ -24,7 +24,7 @@ type Handler = (path: string, method: string, body: unknown, route: Route) => Pr
 
 async function mock(page: Page, handler: Handler, user: Record<string, unknown> = hirer) {
   const calls: Call[] = [];
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace(/^\/api/, '');

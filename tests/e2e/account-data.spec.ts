@@ -21,8 +21,8 @@ async function signIn(page: Page, handler: (request: Request, pathname: string) 
   await page.addInitScript(() => {
     if (sessionStorage.getItem('qa-seeded')) return;
     sessionStorage.setItem('qa-seeded', '1');
-    localStorage.setItem('verse_access_token', 'qa-token');
-    localStorage.setItem('verse-tour-v2-jobseeker', 'done');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
+    localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
   });
   await page.route('**/api/**', (route) => {
     const request = route.request();
@@ -85,6 +85,6 @@ test('delete stays disabled until the email matches, shows refusals, then signs 
   refuse = false;
   await button.click();
   await expect(page).toHaveURL(/\/$/);
-  expect(await page.evaluate(() => localStorage.getItem('verse_access_token'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('musilynk_access_token'))).toBeNull();
   expect(errors).toEqual([]);
 });

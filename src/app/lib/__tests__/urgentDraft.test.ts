@@ -17,7 +17,7 @@ describe('urgentDraft', () => {
   it('round-trips a saved draft and clears it on consume', () => {
     saveUrgentDraft(draft);
     expect(consumeUrgentDraft()).toEqual(draft);
-    expect(sessionStorage.getItem('verse_urgent_draft')).toBeNull();
+    expect(sessionStorage.getItem('musilynk_urgent_draft')).toBeNull();
     expect(consumeUrgentDraft()).toBeNull();
   });
 
@@ -26,14 +26,14 @@ describe('urgentDraft', () => {
   });
 
   it('returns null for corrupted JSON without throwing', () => {
-    sessionStorage.setItem('verse_urgent_draft', 'not-json{');
+    sessionStorage.setItem('musilynk_urgent_draft', 'not-json{');
     expect(consumeUrgentDraft()).toBeNull();
   });
 
   it('returns null for valid JSON that is not an object', () => {
-    sessionStorage.setItem('verse_urgent_draft', '"just a string"');
+    sessionStorage.setItem('musilynk_urgent_draft', '"just a string"');
     expect(consumeUrgentDraft()).toBeNull();
-    sessionStorage.setItem('verse_urgent_draft', '42');
+    sessionStorage.setItem('musilynk_urgent_draft', '42');
     expect(consumeUrgentDraft()).toBeNull();
   });
 

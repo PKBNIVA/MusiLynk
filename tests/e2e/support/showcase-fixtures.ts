@@ -248,8 +248,8 @@ export async function signInShowcase(
   let r1 = resume();
   let pending = [...suggestions];
   await page.addInitScript((r) => {
-    localStorage.setItem('verse_access_token', 'qa-token');
-    localStorage.setItem(`verse-tour-v2-${r}`, 'done');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
+    localStorage.setItem(`musilynk-tour-v2-${r}`, 'done');
   }, role);
   await page.route('https://media.musilynk.test/**', (route) => {
     const name = new URL(route.request().url()).pathname.slice(1);
@@ -267,7 +267,7 @@ export async function signInShowcase(
     } catch {
       body = request.postData();
     }
-    const actAs = (await request.allHeaders())['x-verse-act-as'] ?? null;
+    const actAs = (await request.allHeaders())['x-musilynk-act-as'] ?? null;
     calls.push({ method: request.method(), path: `${path}${url.search}`, body, actAs });
     const json = (b: unknown, status = 200) => route.fulfill({ status, json: b });
     const custom = overrides(request, path);

@@ -48,13 +48,13 @@ describe('HelpCallout', () => {
     expect(host.querySelector('[data-help-callout]')).toBeNull();
     click(button('How this works') ?? null);
     expect(host.querySelector('[data-help-callout="t"]')).not.toBeNull();
-    expect(localStorage.getItem('verse_help_shown:t')).toBe('1');
+    expect(localStorage.getItem('musilynk_help_shown:t')).toBe('1');
     act(() => root.render(<div />));
     show(<HelpCallout {...props} />);
     expect(host.querySelector('[data-help-callout="t"]')).not.toBeNull();
     click(host.querySelector('[aria-label="Hide tips: How it works"]'));
     expect(host.querySelector('[data-help-callout]')).toBeNull();
-    expect(localStorage.getItem('verse_help_shown:t')).toBeNull();
+    expect(localStorage.getItem('musilynk_help_shown:t')).toBeNull();
   });
 });
 

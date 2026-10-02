@@ -18,7 +18,7 @@ async function mockApi(
   otp: { status: number; body: unknown } = { status: 200, body: { ok: true, expiresIn: 600 } },
 ) {
   const calls = { otp: 0, login: 0 };
-  await page.addInitScript(() => localStorage.setItem('verse-tour-v2-jobseeker', 'done'));
+  await page.addInitScript(() => localStorage.setItem('musilynk-tour-v2-jobseeker', 'done'));
   await page.route('**/api/**', (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;

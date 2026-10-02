@@ -97,7 +97,7 @@ export function urgentPath(fields: { role?: string; city?: string; startAt?: str
   return qs ? `/urgent?${qs}` : '/urgent';
 }
 
-/** A line from the platform's own account on The Stage (author type "system", id "verse"). */
+/** A line from the platform's own account on The Stage (author type "system", id "musilynk"). */
 export interface StageTeaserPost {
   id: string;
   body: string;
@@ -111,7 +111,7 @@ export interface StageTeaserPost {
  */
 export async function loadStageTeaser(limit = 3): Promise<StageTeaserPost[]> {
   const body = await apiGet<{ posts?: { id: string; body?: string | null; createdAt: string; visibility?: string }[] }>(
-    '/stage/authors/system/verse/posts',
+    '/stage/authors/system/musilynk/posts',
     { skipAuthRedirect: true, timeoutMs: 6_000 },
   );
   return (body.posts || [])

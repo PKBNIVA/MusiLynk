@@ -60,8 +60,8 @@ async function mockApi(page: Page, role: Role, routes: Record<string, Handler>) 
   await page.clock.setFixedTime(new Date('2026-09-28T10:00:00Z'));
   if (role) {
     await page.addInitScript((r) => {
-      localStorage.setItem('verse_access_token', 'qa-token');
-      localStorage.setItem(`verse-tour-v2-${r}`, 'done');
+      localStorage.setItem('musilynk_access_token', 'qa-token');
+      localStorage.setItem(`musilynk-tour-v2-${r}`, 'done');
     }, role);
   }
   await page.route('**/api/**', async (route) => {

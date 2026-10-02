@@ -211,11 +211,11 @@ describe('API wrappers', () => {
 
   it('createPost posts to /stage/posts with the acting-as header when given', async () => {
     vi.mocked(apiPost).mockResolvedValue({ id: 'post_1', post: {} });
-    await createPost({ body: 'hi' }, { 'X-Verse-Act-As': 'act:act_1' });
+    await createPost({ body: 'hi' }, { 'X-MusiLynk-Act-As': 'act:act_1' });
     expect(apiPost).toHaveBeenCalledWith(
       '/stage/posts',
       { body: 'hi' },
-      { headers: { 'X-Verse-Act-As': 'act:act_1' } },
+      { headers: { 'X-MusiLynk-Act-As': 'act:act_1' } },
     );
   });
 
@@ -329,8 +329,8 @@ describe('useActingAs', () => {
     await act(async () => Promise.resolve());
     act(() => seen?.setActive('act:act_1'));
     expect(seen?.active?.key).toBe('act:act_1');
-    expect(seen?.header).toEqual({ 'X-Verse-Act-As': 'act:act_1' });
-    expect(localStorage.getItem('verse_stage_acting_as:user_1')).toBe('act:act_1');
+    expect(seen?.header).toEqual({ 'X-MusiLynk-Act-As': 'act:act_1' });
+    expect(localStorage.getItem('musilynk_stage_acting_as:user_1')).toBe('act:act_1');
   });
 
   it('a failed acts/organizations fetch still resolves to acting as yourself', async () => {

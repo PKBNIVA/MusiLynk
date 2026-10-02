@@ -132,7 +132,7 @@ class ProblemReportsTest < ActionDispatch::IntegrationTest
     context = {
       release: "r1", browser: "Chrome", os: "iOS", viewport: { width: 400, height: 800 },
       errors: Array.new(14) { |i| "Error #{i} for asha@example.com token=abcd1234 Bearer abc.def" },
-      localStorage: { verse_access_token: "LEAK" }, formValues: { password: "LEAK" }, cookie: "LEAK"
+      localStorage: { musilynk_access_token: "LEAK" }, formValues: { password: "LEAK" }, cookie: "LEAK"
     }.to_json
     submit({ context: }, headers: auth(@musician))
     stored = ProblemReport.last.context

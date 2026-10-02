@@ -6,9 +6,9 @@ test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'tr
 async function openAccountMenu(page: Page, role: 'jobseeker' | 'employer') {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
-    localStorage.setItem('verse_access_token', 'qa-token');
-    localStorage.setItem('verse-tour-v2-jobseeker', 'done');
-    localStorage.setItem('verse-tour-v2-employer', 'done');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
+    localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
+    localStorage.setItem('musilynk-tour-v2-employer', 'done');
   });
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');

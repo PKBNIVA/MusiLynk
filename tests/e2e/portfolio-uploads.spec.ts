@@ -34,8 +34,8 @@ async function signInFreshArtist(page: Page, request: APIRequestContext) {
   expect(response.status()).toBe(201);
   const token = (await response.json()).accessToken as string;
   await page.addInitScript((value) => {
-    localStorage.setItem('verse_access_token', value);
-    localStorage.setItem('verse-tour-v2-jobseeker', 'done');
+    localStorage.setItem('musilynk_access_token', value);
+    localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
   }, token);
   return token;
 }

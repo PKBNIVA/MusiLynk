@@ -1,6 +1,6 @@
 # Portfolios: many per person or Page, each a view over the owner's one library of work samples
 # (see Portfolio). Every action works on the portfolios of the identity the request acts as (the
-# X-Verse-Act-As header, see ActingAs), so a Page's portfolios are managed while acting as it.
+# X-MusiLynk-Act-As header, see ActingAs), so a Page's portfolios are managed while acting as it.
 # GET /api/public/portfolios/:slug is the public (EPK) view of a public or link-only portfolio.
 class PortfoliosController < ApplicationController
   include ActingAs

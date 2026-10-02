@@ -162,7 +162,7 @@ export function AdminPageHeader({
  * localStorage; if storage is unavailable the callout simply shows every time.
  */
 export function HowToCallout({ storageKey, children }: { storageKey: string; children: ReactNode }) {
-  const key = `verse-admin-howto-dismissed:${storageKey}`;
+  const key = `musilynk-admin-howto-dismissed:${storageKey}`;
   const [dismissed, setDismissed] = useState(() => {
     try {
       return localStorage.getItem(key) === '1';

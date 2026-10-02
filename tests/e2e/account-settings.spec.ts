@@ -19,8 +19,8 @@ async function signIn(page: Page, handler: (request: Request, pathname: string) 
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.addInitScript(() => {
-    localStorage.setItem('verse_access_token', 'qa-token');
-    localStorage.setItem('verse-tour-v2-jobseeker', 'done');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
+    localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
   });
   await page.route('**/api/**', (route) => {
     const request = route.request();

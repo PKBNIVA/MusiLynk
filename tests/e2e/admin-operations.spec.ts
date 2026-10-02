@@ -45,7 +45,7 @@ const operations = {
 
 async function openOperations(page: Page, respond: (route: Route) => Promise<void>) {
   const calls: string[] = [];
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-admin-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-admin-token'));
   await page.route('**/api/**', async (route) => {
     const { pathname } = new URL(route.request().url());
     const json = (status: number, body: unknown) =>

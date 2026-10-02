@@ -52,10 +52,10 @@ function apiMock(extra?: Handler) {
 async function seedSession(target: Page | BrowserContext) {
   await target.addInitScript(() => {
     // The first-run product tour is a modal; mark it seen so it does not cover the workspace.
-    localStorage.setItem('verse-tour-v2-jobseeker', 'done');
+    localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
     if (localStorage.getItem('qa_seeded')) return;
     localStorage.setItem('qa_seeded', '1');
-    localStorage.setItem('verse_access_token', 'qa-token');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
   });
 }
 
@@ -82,7 +82,7 @@ test('a token saved per tab by an older release is migrated and keeps the user s
   await page.addInitScript(() => {
     if (sessionStorage.getItem('qa_legacy_seeded')) return;
     sessionStorage.setItem('qa_legacy_seeded', '1');
-    sessionStorage.setItem('verse_access_token', 'legacy-token');
+    sessionStorage.setItem('musilynk_access_token', 'legacy-token');
   });
   await page.route('**/api/**', apiMock());
 
@@ -90,8 +90,8 @@ test('a token saved per tab by an older release is migrated and keeps the user s
   await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
   expect(
     await page.evaluate(() => [
-      localStorage.getItem('verse_access_token'),
-      sessionStorage.getItem('verse_access_token'),
+      localStorage.getItem('musilynk_access_token'),
+      sessionStorage.getItem('musilynk_access_token'),
     ]),
   ).toEqual(['legacy-token', null]);
 });

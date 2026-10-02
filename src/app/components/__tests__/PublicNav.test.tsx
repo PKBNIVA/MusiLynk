@@ -56,7 +56,7 @@ describe('PublicNav', () => {
 
   it('renders the neutral header (no auth buttons) while a stored token is still being verified', async () => {
     let resolveMe!: (response: Response) => void;
-    localStorage.setItem('verse_access_token', 'tok');
+    localStorage.setItem('musilynk_access_token', 'tok');
     fetchMock.mockImplementation(
       () =>
         new Promise<Response>((resolve) => {
@@ -79,7 +79,7 @@ describe('PublicNav', () => {
   });
 
   it('shows the account menu once the stored token resolves to a signed-in user', async () => {
-    localStorage.setItem('verse_access_token', 'tok');
+    localStorage.setItem('musilynk_access_token', 'tok');
     fetchMock.mockResolvedValue(jsonResponse({ user: { id: 'u1', name: 'Ravi', role: 'employer' } }));
     mount();
     await settle();
@@ -89,11 +89,11 @@ describe('PublicNav', () => {
   });
 
   it('clears the token and shows signed-out once /me rejects with 401', async () => {
-    localStorage.setItem('verse_access_token', 'tok');
+    localStorage.setItem('musilynk_access_token', 'tok');
     fetchMock.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
     mount();
     await settle();
-    expect(localStorage.getItem('verse_access_token')).toBeNull();
+    expect(localStorage.getItem('musilynk_access_token')).toBeNull();
     expect(container.querySelector('[data-testid="account-menu"]')).toBeNull();
     expect(container.textContent).toContain('Sign in');
   });

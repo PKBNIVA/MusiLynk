@@ -62,7 +62,7 @@ describe('initSentry', () => {
 
   it('scrubs events and never sends the stored access token', async () => {
     const { initSentry } = await loadClient();
-    localStorage.setItem('verse_access_token', 'secret-access-token-value');
+    localStorage.setItem('musilynk_access_token', 'secret-access-token-value');
     initSentry(baseOptions);
     const event = {
       message: 'Request with secret-access-token-value failed for a@b.co',
@@ -87,7 +87,7 @@ describe('initSentry', () => {
 
   it('scrubs spans and breadcrumbs, even when storage is blocked', async () => {
     const { initSentry } = await loadClient();
-    sessionStorage.setItem('verse_access_token', 'legacy-session-token');
+    sessionStorage.setItem('musilynk_access_token', 'legacy-session-token');
     initSentry(baseOptions);
     const { beforeSendSpan, beforeBreadcrumb } = initOptions();
 

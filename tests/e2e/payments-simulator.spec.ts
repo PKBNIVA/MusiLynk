@@ -55,8 +55,8 @@ test.describe('payments against the Razorpay simulator', () => {
 
   async function signIn(page: Page, user: { token: string; role: string }) {
     await page.addInitScript(({ token, role }) => {
-      localStorage.setItem('verse_access_token', token);
-      localStorage.setItem(`verse-tour-v2-${role}`, 'done');
+      localStorage.setItem('musilynk_access_token', token);
+      localStorage.setItem(`musilynk-tour-v2-${role}`, 'done');
     }, user);
   }
 

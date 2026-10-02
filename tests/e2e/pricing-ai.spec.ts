@@ -136,9 +136,9 @@ const employer = {
 
 async function mockPostJob(page: Page, storedActingAs?: string) {
   if (storedActingAs) {
-    await page.addInitScript((value) => localStorage.setItem('verse:post-job:posted-as', value), storedActingAs);
+    await page.addInitScript((value) => localStorage.setItem('musilynk:post-job:posted-as', value), storedActingAs);
   }
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
     if (path === '/me') return json(route, { user: employer });

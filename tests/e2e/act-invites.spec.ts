@@ -39,7 +39,7 @@ const pendingUserInvite = {
 };
 
 async function dismissTour(page: Page) {
-  await page.addInitScript(() => localStorage.setItem('verse-tour-v2-jobseeker', 'done'));
+  await page.addInitScript(() => localStorage.setItem('musilynk-tour-v2-jobseeker', 'done'));
 }
 
 test('an owner invites a MusiLynk musician, then resends and revokes the pending invite', async ({ page }) => {

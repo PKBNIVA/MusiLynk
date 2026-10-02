@@ -139,7 +139,7 @@ export function ProductTour({
   forceOpen?: boolean;
   onClose?: () => void;
 }) {
-  const key = `verse-tour-v2-${role}`,
+  const key = `musilynk-tour-v2-${role}`,
     steps = useMemo(() => tours[role] || tours.public, [role]);
   const [open, setOpen] = useState(false),
     [i, setI] = useState(0);
@@ -266,7 +266,7 @@ const strips: { [k in 'jobseeker' | 'employer']: StripCard[] } = {
     { key: 'urgent', icon: Zap, title: 'Need someone fast?', text: 'Send an urgent request.', to: '/employer/urgent' },
   ],
 };
-const stripKey = (role: string) => `verse-tour-strip-v1-${role}`;
+const stripKey = (role: string) => `musilynk-tour-strip-v1-${role}`;
 
 /**
  * A dismissible three-card strip for the top of a dashboard. It replaces the old auto-opening
@@ -285,7 +285,7 @@ export function TourStrip({
     try {
       // People who already finished or closed the old first-run tour do not need the strip either.
       return (
-        localStorage.getItem(stripKey(role)) === 'done' || localStorage.getItem(`verse-tour-v2-${role}`) === 'done'
+        localStorage.getItem(stripKey(role)) === 'done' || localStorage.getItem(`musilynk-tour-v2-${role}`) === 'done'
       );
     } catch {
       return false;

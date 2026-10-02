@@ -237,7 +237,7 @@ describe('"Have a code?"', () => {
     );
     expect(result()).toContain('Pro at ₹1,999/month for 3 months');
     expect(result()).toContain('Studio at ₹4,799/month for 3 months');
-    expect(sessionStorage.getItem('verse_promo_code')).toBe('MUMBAI50');
+    expect(sessionStorage.getItem('musilynk_promo_code')).toBe('MUMBAI50');
   });
 
   it('validates on Enter, and the call to action then carries the code', async () => {
@@ -268,7 +268,7 @@ describe('"Have a code?"', () => {
     await act(async () => button('Have a code?').click());
     await typeCode('OLD');
     expect(result()).toBe('This code has expired.');
-    expect(sessionStorage.getItem('verse_promo_code')).toBeNull();
+    expect(sessionStorage.getItem('musilynk_promo_code')).toBeNull();
     const links = Array.from(container.querySelectorAll('a')).filter((a) => a.textContent === 'Start free trial');
     await act(async () => links[0].click());
     expect(container.querySelector('[data-testid="landed"]')!.textContent).not.toContain('code=');
@@ -292,7 +292,7 @@ describe('"Have a code?"', () => {
     await act(async () => button('Have a code?').click());
     await typeCode('MUMBAI50');
     expect(result()).toContain("Sign in and we'll check this code");
-    expect(sessionStorage.getItem('verse_promo_code')).toBe('MUMBAI50');
+    expect(sessionStorage.getItem('musilynk_promo_code')).toBe('MUMBAI50');
   });
 
   it('reports a failed check without keeping the code', async () => {
@@ -325,7 +325,7 @@ describe('"Have a code?"', () => {
   });
 
   it('picks up the code kept before sign-in', async () => {
-    sessionStorage.setItem('verse_promo_code', 'KEPT10');
+    sessionStorage.setItem('musilynk_promo_code', 'KEPT10');
     vi.mocked(apiPost).mockResolvedValue(good({ percentOff: 10 }));
     await render();
     expect(input().value).toBe('KEPT10');
@@ -335,9 +335,9 @@ describe('"Have a code?"', () => {
   it('clearing the field forgets the code', async () => {
     vi.mocked(apiPost).mockResolvedValue(good({ percentOff: 10 }));
     await render('/pricing?code=KEEP');
-    expect(sessionStorage.getItem('verse_promo_code')).toBe('KEEP');
+    expect(sessionStorage.getItem('musilynk_promo_code')).toBe('KEEP');
     await typeCode('');
-    expect(sessionStorage.getItem('verse_promo_code')).toBeNull();
+    expect(sessionStorage.getItem('musilynk_promo_code')).toBeNull();
     expect(result()).toBe('');
   });
 

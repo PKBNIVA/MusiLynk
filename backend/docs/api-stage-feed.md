@@ -2,8 +2,8 @@
 
 Base path: `/api/stage`. All endpoints require a signed-in person (`Authorization: Bearer
 <token>`) unless marked **Public**. Mutating endpoints support acting as a Page you run
-(an organization or an act you own/admin) via the `X-Verse-Act-As` header, e.g.
-`X-Verse-Act-As: organization:org_123` or `X-Verse-Act-As: act:act_123`. Without the header
+(an organization or an act you own/admin) via the `X-MusiLynk-Act-As` header, e.g.
+`X-MusiLynk-Act-As: organization:org_123` or `X-MusiLynk-Act-As: act:act_123`. Without the header
 you act as yourself. See `backend/app/services/actor_resolver.rb`.
 
 An `author` object always has the shape:
@@ -59,7 +59,7 @@ public `url` of the author's finished upload (omitted when it cannot be resolved
 
 ## POST /api/stage/posts
 
-Creates a post, as yourself or as the Page named in `X-Verse-Act-As`. Rate limit: 20/hour
+Creates a post, as yourself or as the Page named in `X-MusiLynk-Act-As`. Rate limit: 20/hour
 per person.
 
 Body:
@@ -109,7 +109,7 @@ Soft-deletes your own post (`status` becomes `deleted`; it stops appearing anywh
 
 Who an author page is about, whether or not they have posted: `{ "author": { type, id, name,
 avatar, verified, system, demo? } }`. `type` is `user`, `organization`, `act` or `system` (id
-`verse`). An unknown, removed or hidden identity is `404 NOT_FOUND`.
+`musilynk`; the old id `verse` still resolves, for links shared before the rename). An unknown, removed or hidden identity is `404 NOT_FOUND`.
 
 ## GET /api/stage/authors/:type/:authorId/posts — Public
 

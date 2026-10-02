@@ -91,7 +91,7 @@ async function openAdmin(page: Page, contextStatus = 200) {
     '/api/admin/subscriptions': { subscriptions: [] },
     '/api/admin/bookings': { bookings: [] },
   };
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-admin-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-admin-token'));
   await page.route('**/api/**', (route) => {
     const request = route.request();
     const { pathname } = new URL(request.url());

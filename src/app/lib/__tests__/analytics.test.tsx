@@ -109,11 +109,11 @@ describe('track / flush', () => {
     a.flush();
     const [first, second] = lastBody().events;
     expect(first!.anonId).toBe(second!.anonId);
-    expect(localStorage.getItem('verse_anon_id')).toBe(first!.anonId);
+    expect(localStorage.getItem('musilynk_anon_id')).toBe(first!.anonId);
   });
 
   it('reuses an anon id already persisted in localStorage from a previous visit', async () => {
-    localStorage.setItem('verse_anon_id', 'existing-anon-id');
+    localStorage.setItem('musilynk_anon_id', 'existing-anon-id');
     const a = await load();
     a.track('job_posted');
     a.flush();
@@ -132,7 +132,7 @@ describe('track / flush', () => {
   it('sends without an Authorization header when reading the token throws', async () => {
     const a = await load();
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => {
-      if (key === 'verse_access_token') throw new Error('blocked');
+      if (key === 'musilynk_access_token') throw new Error('blocked');
       return null;
     });
     a.track('job_posted');
@@ -144,11 +144,11 @@ describe('track / flush', () => {
   it('generates a fresh (unpersisted) anon id when localStorage is unavailable', async () => {
     const a = await load();
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => {
-      if (key === 'verse_anon_id') throw new Error('blocked');
+      if (key === 'musilynk_anon_id') throw new Error('blocked');
       return null;
     });
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key: string) => {
-      if (key === 'verse_anon_id') throw new Error('blocked');
+      if (key === 'musilynk_anon_id') throw new Error('blocked');
     });
     a.track('job_posted');
     a.flush();
@@ -163,7 +163,7 @@ describe('track / flush', () => {
   });
 
   it("includes the signed-in user's bearer token when present", async () => {
-    localStorage.setItem('verse_access_token', 'test-token');
+    localStorage.setItem('musilynk_access_token', 'test-token');
     const a = await load();
     a.track('job_posted');
     a.flush();

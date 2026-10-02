@@ -27,7 +27,7 @@ class StageTest < ActionDispatch::IntegrationTest
   end
 
   test "creates a post acting as a Page you run" do
-    post "/api/stage/posts", params: { body: "From the studio" }, headers: auth(@org_owner).merge("X-Verse-Act-As" => "organization:#{@org.id}"), as: :json
+    post "/api/stage/posts", params: { body: "From the studio" }, headers: auth(@org_owner).merge("X-MusiLynk-Act-As" => "organization:#{@org.id}"), as: :json
     assert_response :created
     body = response.parsed_body
     assert_equal "organization", body["post"]["author"]["type"]
@@ -36,9 +36,24 @@ class StageTest < ActionDispatch::IntegrationTest
     assert_equal @org_owner.id, saved.created_by_user_id, "the real person is kept for audit"
   end
 
+  test "the pre-rename X-Verse-Act-As header still selects the Page (remove after 2026-11-01)" do
+    post "/api/stage/posts", params: { body: "From the studio, old client" }, headers: auth(@org_owner).merge("X-Verse-Act-As" => "organization:#{@org.id}"), as: :json
+    assert_response :created
+    assert_equal "organization", response.parsed_body["post"]["author"]["type"]
+    assert_equal @org.id, response.parsed_body["post"]["author"]["id"]
+  end
+
+  test "the new header wins when both are sent" do
+    other_org = Organization.create!(owner: @org_owner, name: "Second Org", status: "active")
+    other_org.organization_members.create!(user: @org_owner, role: "owner")
+    post "/api/stage/posts", params: { body: "Both headers" }, headers: auth(@org_owner).merge("X-MusiLynk-Act-As" => "organization:#{other_org.id}", "X-Verse-Act-As" => "organization:#{@org.id}"), as: :json
+    assert_response :created
+    assert_equal other_org.id, response.parsed_body["post"]["author"]["id"]
+  end
+
   test "refuses to post as a Page you do not run" do
     other_org = Organization.create!(owner: @org_owner, name: "Someone Else's Org", status: "active")
-    post "/api/stage/posts", params: { body: "Not mine" }, headers: auth(@bob).merge("X-Verse-Act-As" => "organization:#{other_org.id}"), as: :json
+    post "/api/stage/posts", params: { body: "Not mine" }, headers: auth(@bob).merge("X-MusiLynk-Act-As" => "organization:#{other_org.id}"), as: :json
     assert_response :forbidden
     assert_equal "ACT_AS_FORBIDDEN", response.parsed_body["code"]
   end
@@ -474,8 +489,12 @@ class StageTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     get "/api/stage/authors/act/#{@act.id}"
     assert_equal "The Act", response.parsed_body["author"]["name"]
+    get "/api/stage/authors/system/musilynk"
+    assert_response :success
+    assert_equal "musilynk", response.parsed_body["author"]["id"]
     get "/api/stage/authors/system/verse"
     assert_response :success
+    assert_equal "musilynk", response.parsed_body["author"]["id"]
     get "/api/stage/authors/bogus/x"
     assert_response :unprocessable_content
   end
@@ -542,7 +561,7 @@ class StageTest < ActionDispatch::IntegrationTest
   end
 
   test "account erasure keeps posts made as a Page, anonymising only the person" do
-    post "/api/stage/posts", params: { body: "From the studio" }, headers: auth(@org_owner).merge("X-Verse-Act-As" => "organization:#{@org.id}"), as: :json
+    post "/api/stage/posts", params: { body: "From the studio" }, headers: auth(@org_owner).merge("X-MusiLynk-Act-As" => "organization:#{@org.id}"), as: :json
     org_post_id = response.parsed_body["id"]
 
     AccountErasure.new(@org_owner).call!

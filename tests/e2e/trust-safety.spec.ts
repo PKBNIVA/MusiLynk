@@ -32,8 +32,8 @@ test('the recipient sees a safety notice on a flagged message, the sender never 
     { id: 'm3', senderId: 'user-scam', body: 'Rehearsal is at 5pm', createdAt: at(12), readAt: null },
   ];
   await page.addInitScript(() => {
-    localStorage.setItem('verse_access_token', 'qa-token');
-    localStorage.setItem('verse-tour-v2-jobseeker', 'done');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
+    localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
   });
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
@@ -72,8 +72,8 @@ test('a moderation warning notification opens the community guidelines, which co
   page,
 }) => {
   await page.addInitScript(() => {
-    localStorage.setItem('verse_access_token', 'qa-token');
-    localStorage.setItem('verse-tour-v2-employer', 'done');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
+    localStorage.setItem('musilynk-tour-v2-employer', 'done');
   });
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');

@@ -44,7 +44,7 @@ async function mock(page: Page, options: { putDelayMs?: number } = {}) {
   const posts: { path: string; body: unknown }[] = [];
   // GET /me says whether a verification request is waiting, so the state survives a reload (and a new device).
   let verificationPending = false;
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace(/^\/api/, '');

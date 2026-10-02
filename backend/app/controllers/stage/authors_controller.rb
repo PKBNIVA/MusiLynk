@@ -9,7 +9,7 @@ module Stage
       type = params[:type].to_s
       return render_error("Unknown author type.", :unprocessable_content, "INVALID_AUTHOR_TYPE") unless Post::AUTHOR_TYPES.include?(type)
 
-      author = author_json(type, params[:id].to_s)
+      author = author_json(type, Post.canonical_author_id(type, params[:id].to_s).to_s)
       return render_error("This author could not be found.", :not_found, "NOT_FOUND") unless author
       render json: { author: }
     end

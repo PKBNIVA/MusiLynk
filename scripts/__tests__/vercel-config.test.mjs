@@ -105,6 +105,21 @@ describe('vercel.json crawler routing and headers', () => {
       expect(re.test(path), path).toBe(false);
   });
 
+  it('serves the push service worker as a real file, uncached and allowed to control the whole site', () => {
+    expect(existsSync(resolve(root, 'public/sw.js'))).toBe(true);
+    expect(servedAsApp('/sw.js')).toBe(false);
+    const rule = config.headers.find((entry) => entry.source === '/sw.js');
+    const value = (key) => rule.headers.find((header) => header.key === key)?.value;
+    expect(value('Service-Worker-Allowed')).toBe('/');
+    expect(value('Cache-Control')).toMatch(/max-age=0/);
+    // The worker script loads under script-src 'self' (worker-src falls back to it).
+    const csp = config.headers
+      .flatMap((entry) => entry.headers)
+      .find((header) => header.key === 'Content-Security-Policy');
+    expect(csp.value).not.toMatch(/worker-src/);
+    expect(csp.value).toMatch(/script-src 'self'/);
+  });
+
   it('never marks an asset immutable unless it is a hashed build file', () => {
     const immutable = config.headers.filter((entry) => entry.headers.some((header) => /immutable/.test(header.value)));
     expect(immutable.map((entry) => entry.source)).toEqual(['/assets/(.*)']);

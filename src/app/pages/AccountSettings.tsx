@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
+import { PushSettingsCard } from '../components/push/PushSettingsCard';
 import { PasswordChecklist } from '../components/PasswordChecklist';
 import { UserAvatar } from '../components/kit/UserAvatar';
 import { cropSquare } from '../components/media/cropSquare';
@@ -65,6 +66,7 @@ export default function AccountSettings() {
         {user && <PhotoCard user={user} onSaved={setUser} />}
         {user && <EmailCard user={user} onSaved={setUser} />}
         {user?.role === 'jobseeker' && <WhatsAppCard user={user} />}
+        {user && <PushSettingsCard />}
         {user && <PasswordCard user={user} onSaved={setUser} />}
         {user && <SignInMethodsCard />}
       </main>

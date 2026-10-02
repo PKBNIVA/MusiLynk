@@ -29,6 +29,7 @@ class User < ApplicationRecord
   has_many :subscriptions, dependent: :destroy
   has_many :billing_attempts, dependent: :destroy
   has_many :auth_connections, as: :owner, dependent: :destroy
+  has_many :push_subscriptions, dependent: :delete_all
   has_many :vouches, foreign_key: :voucher_id, dependent: :destroy
   # A newly verified phone changes a pending verification request's evidence score.
   after_commit -> { Verification::RescoreJob.for_user(id) }, if: -> { saved_change_to_phone_verified_at? && phone_verified_at.present? }

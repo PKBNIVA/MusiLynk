@@ -38,6 +38,7 @@ class Notifier
       notify(recipient, kind: "booking_status", title: "Booking update", link: "/bookings",
         body: "#{booking.act.name}: #{label} by #{actor.name}.")
       email(recipient, "booking_status", act: booking.act.name, status: label)
+      push_booking_status(booking, recipient, actor)
     end
 
     def new_application(application)
@@ -118,6 +119,7 @@ class Notifier
 
         recent = recipient.notifications.where(kind: MESSAGE_KIND, link:).where(created_at: MESSAGE_EMAIL_INTERVAL.ago..).exists?
         notify(recipient, kind: MESSAGE_KIND, title:, body:, link:)
+        push(recipient, "messages", title:, body:, link:, tag: "message-#{conversation.id}")
         email(recipient, "new_message", name: sender.name, job: conversation.job&.title, path: link) unless recent
       end
     end
@@ -194,6 +196,17 @@ class Notifier
         link: "/jobseeker/urgent", body: "#{urgent_request.title} — #{urgent_request.city}, #{IndianFormat.date_time(urgent_request.start_at)}.#{why}")
       email(recipient, "urgent_request_alert", title: urgent_request.title, role: urgent_request.role_name, city: urgent_request.city,
         startAt: urgent_request.start_at&.iso8601, reasons: reasons.presence)
+      push(recipient, "urgent", title: "Urgent: #{urgent_request.role_name} needed in #{urgent_request.city}",
+        body: "#{urgent_request.title} — #{IndianFormat.date_time(urgent_request.start_at)}. Tap to respond.",
+        link: "/jobseeker/urgent", tag: "urgent-#{urgent_request.id}")
+    end
+
+    # A musician responded to the hirer's urgent request (UrgentRequestsController#respond, which writes
+    # the in-app notice itself); `link` opens the conversation. Push only: the hirer's email goes out
+    # with the musician's first note.
+    def urgent_response_push(urgent_request, responder, link:)
+      push(urgent_request.requester, "urgent", title: "#{responder.name} can do it", body: "#{responder.name} responded to \"#{urgent_request.title}\". Tap to reply.",
+        link:, tag: "urgent-response-#{urgent_request.id}")
     end
 
     # 6 hours before an open, responded-to urgent request expires: nudge the hirer with
@@ -279,6 +292,23 @@ class Notifier
     def review_prompt_link(prompt)
       return "/jobseeker/reviews?employerId=#{prompt.counterpart_user_id}" if prompt.user&.jobseeker?
       "/employer"
+    end
+
+    BOOKING_PUSH_TITLES = { "accepted" => "Booking confirmed", "cancelled" => "Booking cancelled" }.freeze
+
+    def push_booking_status(booking, recipient, actor)
+      title = BOOKING_PUSH_TITLES[booking.status] or return
+      push(recipient, "bookings", title:, body: "#{booking.act.name}: #{booking.status == 'accepted' ? 'confirmed' : 'cancelled'} by #{actor.name}.",
+        link: "/bookings", tag: "booking-#{booking.id}")
+    end
+
+    # Web push (PushNotifications): queued, never blocks or fails the request. `link` is role-neutral
+    # or already carries the workspace; the payload url is the recipient's own page. Never carries
+    # message text.
+    def push(user, category, title:, body:, link:, tag: nil)
+      return unless user
+
+      PushNotifications.notify(user, category, title:, body:, url: NotificationEmail.in_workspace(link, user), tag:)
     end
 
     def notify(user, **attributes)

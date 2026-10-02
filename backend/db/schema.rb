@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -982,6 +982,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
     t.boolean "share_verification_publicly", default: true, null: false
     t.string "photo_url"
     t.jsonb "event_types", default: [], null: false
+    t.jsonb "push_preferences", default: {}, null: false
     t.index "((roles)::text) gin_trgm_ops", name: "index_profiles_on_roles_text_trgm", using: :gin
     t.index "((skills)::text) gin_trgm_ops", name: "index_profiles_on_skills_text_trgm", using: :gin
     t.index ["bio"], name: "index_profiles_on_bio", opclass: :gin_trgm_ops, using: :gin
@@ -1033,6 +1034,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
     t.index ["promo_code_id", "user_id"], name: "index_promo_redemptions_on_code_and_user"
     t.index ["subscription_id"], name: "index_promo_redemptions_on_subscription_id"
     t.index ["user_id"], name: "index_promo_redemptions_on_user_id"
+  end
+
+  create_table "push_subscriptions", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.text "endpoint", null: false
+    t.string "endpoint_digest", null: false
+    t.text "p256dh", null: false
+    t.text "auth", null: false
+    t.string "user_agent_summary"
+    t.datetime "last_success_at"
+    t.datetime "last_failure_at"
+    t.integer "failure_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["endpoint_digest"], name: "index_push_subscriptions_on_endpoint_digest", unique: true
+    t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
   end
 
   create_table "recent_activities", id: :string, force: :cascade do |t|
@@ -1477,6 +1494,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
   add_foreign_key "promo_redemptions", "promo_codes", on_delete: :cascade
   add_foreign_key "promo_redemptions", "subscriptions", on_delete: :nullify
   add_foreign_key "promo_redemptions", "users", on_delete: :cascade
+  add_foreign_key "push_subscriptions", "users"
   add_foreign_key "recent_activities", "users"
   add_foreign_key "refund_records", "booking_payments", on_delete: :nullify
   add_foreign_key "refund_records", "booking_requests"

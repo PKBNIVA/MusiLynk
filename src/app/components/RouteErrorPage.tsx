@@ -5,42 +5,14 @@ import { BrandMark } from './BrandMark';
 import { Button } from './ui/button';
 import { reportError } from '../lib/monitoring';
 import { openProblemReport } from '../lib/problemReportEvent';
+import { claimChunkReload, clearChunkReloadGuard, failedChunkUrl, isChunkLoadError } from '../lib/chunkReload';
 
-const CHUNK_RELOAD_KEY = 'verse_chunk_reload_at';
-// A reload that fails again inside this window shows the error page instead of reloading forever.
-const CHUNK_RELOAD_WINDOW_MS = 30_000;
-
-/** True when a lazily loaded page's JS/CSS could not be fetched, typically after a redeploy removed old chunks. */
-export function isChunkLoadError(error: unknown) {
-  const message = error instanceof Error ? `${error.name} ${error.message}` : typeof error === 'string' ? error : '';
-  return /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Unable to preload CSS|ChunkLoadError|Loading (CSS )?chunk \S+ failed/i.test(
-    message,
-  );
-}
-
-let reloadScheduled = false;
-
-/**
- * Claims the single automatic reload for this tab. Returns false when a reload was
- * already attempted recently or the guard cannot be stored (a reload could then loop).
- */
-function claimChunkReload() {
-  if (reloadScheduled) return true;
-  try {
-    const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0);
-    if (Date.now() - last < CHUNK_RELOAD_WINDOW_MS) return false;
-    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
-  } catch {
-    return false;
-  }
-  reloadScheduled = true;
-  return true;
-}
+export { isChunkLoadError };
 
 export function RouteErrorPage() {
   const error = useRouteError();
   const chunkError = isChunkLoadError(error);
-  const reloading = chunkError && claimChunkReload();
+  const reloading = chunkError && claimChunkReload(failedChunkUrl(error));
 
   useEffect(() => {
     if (reloading) {
@@ -86,11 +58,7 @@ export function RouteErrorPage() {
 
   const reload = () => {
     // A deliberate reload may retry the automatic chunk recovery once more.
-    try {
-      sessionStorage.removeItem(CHUNK_RELOAD_KEY);
-    } catch {
-      /* storage blocked */
-    }
+    clearChunkReloadGuard();
     window.location.reload();
   };
 

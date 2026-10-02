@@ -27,7 +27,9 @@ describe('Photo', () => {
     expect(img.getAttribute('decoding')).toBe('async');
     expect(img.getAttribute('width')).toBe('1600');
     expect(img.getAttribute('height')).toBe('1067');
-    expect(img.getAttribute('srcset')).toBe('/img/tabla-hands-800.webp 800w, /img/tabla-hands-1600.webp 1600w');
+    expect(img.getAttribute('srcset')).toBe(
+      '/img/tabla-hands-640.webp 640w, /img/tabla-hands-800.webp 800w, /img/tabla-hands-960.webp 960w, /img/tabla-hands-1280.webp 1280w, /img/tabla-hands-1600.webp 1600w',
+    );
     expect(img.getAttribute('src')).toBe('/img/tabla-hands-1600.webp');
     expect(img.getAttribute('sizes')).toBe('50vw');
     expect(img.getAttribute('alt')).toBe('Tabla');

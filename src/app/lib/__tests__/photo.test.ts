@@ -3,7 +3,9 @@ import { photoSrcSet, photoUrl, squareCropRect } from '../photo';
 
 describe('photo helpers', () => {
   it('builds the srcset from a base path', () => {
-    expect(photoSrcSet('/img/tabla-hands')).toBe('/img/tabla-hands-800.webp 800w, /img/tabla-hands-1600.webp 1600w');
+    expect(photoSrcSet('/img/tabla-hands')).toBe(
+      '/img/tabla-hands-640.webp 640w, /img/tabla-hands-800.webp 800w, /img/tabla-hands-960.webp 960w, /img/tabla-hands-1280.webp 1280w, /img/tabla-hands-1600.webp 1600w',
+    );
   });
   it('accepts a base that already carries a size or extension', () => {
     expect(photoUrl('/img/a-800.webp', 800)).toBe('/img/a-800.webp');

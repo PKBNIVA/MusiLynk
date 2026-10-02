@@ -250,6 +250,9 @@ export default function PostJob() {
   const [limits, setLimits] = useState<JobLimits | null>(null);
   // A draft from an earlier visit, offered when this page opens without ?edit= (J-13).
   const [offeredDraft, setOfferedDraft] = useState<Job | null>(null);
+  // False until the draft lookup answers (or 1.5 s pass). The content under the header stays
+  // invisible until then, so a banner arriving late does not push a visible form down the page.
+  const [draftChecked, setDraftChecked] = useState(!!editId);
   // The draft this visit has been saving on every step change ('' until the first save). The ref
   // is what the save logic reads, since a save can finish between two renders.
   const [draftId, setDraftId] = useState('');
@@ -297,10 +300,13 @@ export default function PostJob() {
       setPostedAs(saved || '');
       apiGet<{ jobs?: Job[] }>('/employer/jobs')
         .then((d) => setOfferedDraft((d.jobs || []).find((j) => j.status === 'draft') || null))
-        .catch(() => setOfferedDraft(null));
-      return;
+        .catch(() => setOfferedDraft(null))
+        .finally(() => setDraftChecked(true));
+      const reveal = setTimeout(() => setDraftChecked(true), 1500);
+      return () => clearTimeout(reveal);
     }
     setOfferedDraft(null);
+    setDraftChecked(true);
     setLoadingJob(true);
     setLoadError('');
     apiGet<{ job?: Job }>(`/jobs/${encodeURIComponent(editId)}`)
@@ -1182,147 +1188,153 @@ export default function PostJob() {
           hint={job ? `Editing · ${jobStatusLabel[job.status] || job.status}` : 'Three short steps'}
           actions={<AiCreditsBadge />}
         />
-        {limits && (
-          <p
-            role="status"
-            data-testid="plan-line"
-            className={`mb-5 rounded-xl border p-3 text-sm ${atLimit ? 'border-amber-400/30 bg-amber-500/[.08] text-amber-100' : 'border-white/10 bg-white/[.03] text-slate-300'}`}
-          >
-            {limits.planName || 'Your'} plan: {limits.activeUsed} of {limits.activeAllowed} active
-            {atLimit && (
-              <>
-                {' '}
-                — upgrade to post more.{' '}
-                <Link to={billingPath} className="font-semibold underline underline-offset-4">
-                  See plans
-                </Link>
-              </>
-            )}
-          </p>
-        )}
-        {offeredDraft && !job && !draftId && (
-          <div
-            role="note"
-            data-testid="draft-offer"
-            className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-violet-400/25 bg-violet-500/[.08] p-4 text-sm text-violet-100"
-          >
-            <span className="min-w-0 flex-1">
-              You have an unfinished draft: <strong className="break-words">{offeredDraft.title || 'Untitled'}</strong>
-              <span className="block text-violet-200/80">Starting a new one replaces it, so drafts never pile up.</span>
-            </span>
-            <Button size="sm" onClick={() => continueDraft(offeredDraft.id)}>
-              Continue draft
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                // One draft at a time: the new listing is saved into the old draft's slot, not beside it.
-                draftRef.current = offeredDraft.id;
-                setDraftId(offeredDraft.id);
-                setOfferedDraft(null);
-              }}
-            >
-              Start a new one
-            </Button>
-          </div>
-        )}
-        {job?.status === 'published' && (
-          <div
-            role="note"
-            className="mb-5 rounded-xl border border-sky-400/20 bg-sky-500/[.07] p-4 text-sm text-sky-100"
-          >
-            This opportunity is live. Changes to pay, dates and slots apply straight away.
-          </div>
-        )}
-        {job?.status === 'rejected' && job.moderation_note && (
-          <div
-            role="note"
-            className="mb-5 rounded-xl border border-amber-400/20 bg-amber-500/[.07] p-4 text-sm text-amber-100"
-          >
-            Review note: {job.moderation_note}
-          </div>
-        )}
-        {seeker && !job && (
-          <section className="mb-8" aria-labelledby="my-opportunities">
-            <h2 id="my-opportunities" className="text-2xl font-semibold mb-4 flex items-center gap-2">
-              <Sparkles aria-hidden="true" size={24} className="text-violet-300" />
-              Your opportunities
-            </h2>
-            <OpportunityPipeline
-              role="jobseeker"
-              reloadKey={pipelineKey}
-              emptyHint="Opportunities and drafts you create appear here."
-            />
-          </section>
-        )}
-        <form onSubmit={(e) => submit(e)} className="verse-surface rounded-3xl p-5 md:p-8" noValidate>
-          <StepForm steps={steps} current={step} reached={reached} onStepChange={goTo} />
-          <FormError message={form.formError} className="mt-5" />
-          {reviewEdited && (
+        <div className={draftChecked ? undefined : 'invisible'} data-testid="post-job-body" aria-busy={!draftChecked}>
+          {limits && (
             <p
-              role="note"
-              className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
+              role="status"
+              data-testid="plan-line"
+              className={`mb-5 rounded-xl border p-3 text-sm ${atLimit ? 'border-amber-400/30 bg-amber-500/[.08] text-amber-100' : 'border-white/10 bg-white/[.03] text-slate-300'}`}
             >
-              Changes to the title, description or requirements send the opportunity back to review. It stays hidden
-              from search until it is approved.
+              {limits.planName || 'Your'} plan: {limits.activeUsed} of {limits.activeAllowed} active
+              {atLimit && (
+                <>
+                  {' '}
+                  — upgrade to post more.{' '}
+                  <Link to={billingPath} className="font-semibold underline underline-offset-4">
+                    See plans
+                  </Link>
+                </>
+              )}
             </p>
           )}
-          {submitBlocked && step === last && (
-            <p
+          {offeredDraft && !job && !draftId && (
+            <div
               role="note"
-              data-testid="limit-note"
-              className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
+              data-testid="draft-offer"
+              className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-violet-400/25 bg-violet-500/[.08] p-4 text-sm text-violet-100"
             >
-              Your plan has no room for another active opportunity. Close one or{' '}
-              <Link to={billingPath} className="font-semibold underline underline-offset-4">
-                upgrade your plan
-              </Link>{' '}
-              to submit this. You can still save it as a draft.
-            </p>
+              <span className="min-w-[14rem] flex-1 basis-full sm:basis-0">
+                You have an unfinished draft:{' '}
+                <strong className="break-words">{offeredDraft.title || 'Untitled'}</strong>
+                <span className="block text-violet-200/80">
+                  Starting a new one replaces it, so drafts never pile up.
+                </span>
+              </span>
+              <Button size="sm" className="max-sm:flex-1" onClick={() => continueDraft(offeredDraft.id)}>
+                Continue draft
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="max-sm:flex-1"
+                onClick={() => {
+                  // One draft at a time: the new listing is saved into the old draft's slot, not beside it.
+                  draftRef.current = offeredDraft.id;
+                  setDraftId(offeredDraft.id);
+                  setOfferedDraft(null);
+                }}
+              >
+                Start a new one
+              </Button>
+            </div>
           )}
-          <div className="mt-8 flex flex-col-reverse gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center">
-            {step > 0 ? (
-              <Button type="button" variant="ghost" disabled={busy} onClick={() => goTo(step - 1)}>
-                <ArrowLeft aria-hidden="true" size={16} className="mr-2" />
-                Back
-              </Button>
-            ) : job ? (
-              <Button type="button" variant="ghost" disabled={busy} asChild>
-                <Link to={backTo}>Cancel</Link>
-              </Button>
-            ) : null}
-            {autosave && (
-              <p role="status" className="text-xs text-slate-400 sm:ml-2">
-                {autosave === 'saved' ? 'Draft saved' : 'Couldn’t save the draft yet. Your answers are still here.'}
+          {job?.status === 'published' && (
+            <div
+              role="note"
+              className="mb-5 rounded-xl border border-sky-400/20 bg-sky-500/[.07] p-4 text-sm text-sky-100"
+            >
+              This opportunity is live. Changes to pay, dates and slots apply straight away.
+            </div>
+          )}
+          {job?.status === 'rejected' && job.moderation_note && (
+            <div
+              role="note"
+              className="mb-5 rounded-xl border border-amber-400/20 bg-amber-500/[.07] p-4 text-sm text-amber-100"
+            >
+              Review note: {job.moderation_note}
+            </div>
+          )}
+          {seeker && !job && (
+            <section className="mb-8" aria-labelledby="my-opportunities">
+              <h2 id="my-opportunities" className="text-2xl font-semibold mb-4 flex items-center gap-2">
+                <Sparkles aria-hidden="true" size={24} className="text-violet-300" />
+                Your opportunities
+              </h2>
+              <OpportunityPipeline
+                role="jobseeker"
+                reloadKey={pipelineKey}
+                emptyHint="Opportunities and drafts you create appear here."
+              />
+            </section>
+          )}
+          <form onSubmit={(e) => submit(e)} className="verse-surface rounded-3xl p-5 md:p-8" noValidate>
+            <StepForm steps={steps} current={step} reached={reached} onStepChange={goTo} />
+            <FormError message={form.formError} className="mt-5" />
+            {reviewEdited && (
+              <p
+                role="note"
+                className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
+              >
+                Changes to the title, description or requirements send the opportunity back to review. It stays hidden
+                from search until it is approved.
               </p>
             )}
-            <div className="flex flex-col-reverse gap-3 sm:ml-auto sm:flex-row">
-              {canDraft && (
-                <Button disabled={busy} type="button" variant="outline" onClick={(e) => submit(e, 'draft')}>
-                  {job && job.status !== 'draft' ? 'Move to drafts' : 'Save draft'}
+            {submitBlocked && step === last && (
+              <p
+                role="note"
+                data-testid="limit-note"
+                className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/[.08] p-3 text-sm text-amber-100"
+              >
+                Your plan has no room for another active opportunity. Close one or{' '}
+                <Link to={billingPath} className="font-semibold underline underline-offset-4">
+                  upgrade your plan
+                </Link>{' '}
+                to submit this. You can still save it as a draft.
+              </p>
+            )}
+            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center">
+              {step > 0 ? (
+                <Button type="button" variant="ghost" disabled={busy} onClick={() => goTo(step - 1)}>
+                  <ArrowLeft aria-hidden="true" size={16} className="mr-2" />
+                  Back
                 </Button>
+              ) : job ? (
+                <Button type="button" variant="ghost" disabled={busy} asChild>
+                  <Link to={backTo}>Cancel</Link>
+                </Button>
+              ) : null}
+              {autosave && (
+                <p role="status" className="text-xs text-slate-400 sm:ml-2">
+                  {autosave === 'saved' ? 'Draft saved' : 'Couldn’t save the draft yet. Your answers are still here.'}
+                </p>
               )}
-              {step < last ? (
-                <Button key="next" type="button" onClick={next} className="min-w-36">
-                  Next: {steps[step + 1].title}
-                  <ArrowRight aria-hidden="true" size={16} className="ml-2" />
-                </Button>
-              ) : (
-                <Button
-                  key="submit"
-                  disabled={busy || submitBlocked}
-                  aria-busy={busy}
-                  type="submit"
-                  className="min-w-44"
-                >
-                  <Send aria-hidden="true" size={16} className="mr-2" />
-                  {busy ? 'Saving…' : primary.label}
-                </Button>
-              )}
+              <div className="flex flex-col-reverse gap-3 sm:ml-auto sm:flex-row">
+                {canDraft && (
+                  <Button disabled={busy} type="button" variant="outline" onClick={(e) => submit(e, 'draft')}>
+                    {job && job.status !== 'draft' ? 'Move to drafts' : 'Save draft'}
+                  </Button>
+                )}
+                {step < last ? (
+                  <Button key="next" type="button" onClick={next} className="min-w-36">
+                    Next: {steps[step + 1].title}
+                    <ArrowRight aria-hidden="true" size={16} className="ml-2" />
+                  </Button>
+                ) : (
+                  <Button
+                    key="submit"
+                    disabled={busy || submitBlocked}
+                    aria-busy={busy}
+                    type="submit"
+                    className="min-w-44"
+                  >
+                    <Send aria-hidden="true" size={16} className="mr-2" />
+                    {busy ? 'Saving…' : primary.label}
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </main>
       <PostJobPlanLimitDialog
         message={planLimitMessage}

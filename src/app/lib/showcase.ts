@@ -14,7 +14,7 @@ export interface Identity {
   type: IdentityType;
   id: string;
   name: string;
-  /** "user:<id>", "organization:<id>" or "act:<id>" — the X-Verse-Act-As value. */
+  /** "user:<id>", "organization:<id>" or "act:<id>" — the X-MusiLynk-Act-As value. */
   key: string;
 }
 export interface PostedAs {

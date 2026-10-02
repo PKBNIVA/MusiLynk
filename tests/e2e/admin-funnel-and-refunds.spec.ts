@@ -67,7 +67,7 @@ function json(route: Route, body: unknown, status = 200) {
 }
 
 async function openAdmin(page: Page, extra: (route: Route, pathname: string) => boolean = () => false) {
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-admin-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-admin-token'));
   await page.route('**/api/**', (route) => {
     const { pathname } = new URL(route.request().url());
     if (pathname.endsWith('/me')) return json(route, { user: admin });

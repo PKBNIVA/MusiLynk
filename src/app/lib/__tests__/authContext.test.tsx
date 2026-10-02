@@ -108,7 +108,7 @@ describe('AuthProvider', () => {
       await expect(auth.login('asha@example.com', 'pw')).resolves.toEqual(asha);
     });
     expect(auth.user).toEqual(asha);
-    expect(localStorage.getItem('verse_access_token')).toBe('pw-token');
+    expect(localStorage.getItem('musilynk_access_token')).toBe('pw-token');
     expect(fetchMock.mock.calls[0][0]).toBe('/api/auth/login');
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ user: ravi, accessToken: 'code-token' }));
@@ -117,14 +117,14 @@ describe('AuthProvider', () => {
     });
     expect(auth.user).toEqual(ravi);
     expect(fetchMock.mock.calls[1][0]).toBe('/api/auth/otp/verify');
-    expect(localStorage.getItem('verse_access_token')).toBe('code-token');
+    expect(localStorage.getItem('musilynk_access_token')).toBe('code-token');
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ user: asha, accessToken: 'new-token' }));
     await act(async () => {
       await auth.register({ name: 'Asha', email: 'asha@example.com', password: 'longpassword', role: 'jobseeker' });
     });
     expect(fetchMock.mock.calls[2][0]).toBe('/api/auth/register');
-    expect(localStorage.getItem('verse_access_token')).toBe('new-token');
+    expect(localStorage.getItem('musilynk_access_token')).toBe('new-token');
   });
 
   it('signs out locally even if the logout request fails', async () => {
@@ -142,7 +142,7 @@ describe('AuthProvider', () => {
   });
 
   it('remembers the signed-in role (not the token) for an expired-session redirect, and forgets it on sign-out', async () => {
-    const roleKey = 'verse_session_role';
+    const roleKey = 'musilynk_session_role';
     await mount();
     await settle();
 
@@ -178,13 +178,13 @@ describe('AuthProvider', () => {
   });
 
   it('keeps the remembered role through a failed /me, so a cold load that expires still signs in as the same role', async () => {
-    localStorage.setItem('verse_session_role', 'employer');
+    localStorage.setItem('musilynk_session_role', 'employer');
     modules.api.setAccessToken('tok');
     fetchMock.mockResolvedValue(jsonResponse({ error: 'down' }, 500));
     await mount();
     await settle();
     expect(auth.user).toBeNull();
-    expect(localStorage.getItem('verse_session_role')).toBe('employer');
+    expect(localStorage.getItem('musilynk_session_role')).toBe('employer');
   });
 
   it('drops the remembered role when another tab signs out', async () => {
@@ -194,13 +194,13 @@ describe('AuthProvider', () => {
     await act(async () => {
       await auth.login('ravi@example.com', 'pw');
     });
-    localStorage.removeItem('verse_access_token');
+    localStorage.removeItem('musilynk_access_token');
     await act(async () => {
       window.dispatchEvent(
-        new StorageEvent('storage', { key: 'verse_access_token', newValue: null, storageArea: localStorage }),
+        new StorageEvent('storage', { key: 'musilynk_access_token', newValue: null, storageArea: localStorage }),
       );
     });
-    expect(localStorage.getItem('verse_session_role')).toBeNull();
+    expect(localStorage.getItem('musilynk_session_role')).toBeNull();
   });
 
   it('never lets a slow, older /me response overwrite a newer sign-in', async () => {
@@ -251,19 +251,19 @@ describe('AuthProvider', () => {
     await settle();
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ user: asha }));
-    localStorage.setItem('verse_access_token', 'other-tab');
+    localStorage.setItem('musilynk_access_token', 'other-tab');
     await act(async () => {
       window.dispatchEvent(
-        new StorageEvent('storage', { key: 'verse_access_token', newValue: 'other-tab', storageArea: localStorage }),
+        new StorageEvent('storage', { key: 'musilynk_access_token', newValue: 'other-tab', storageArea: localStorage }),
       );
     });
     await settle();
     expect(auth.user).toEqual(asha);
 
-    localStorage.removeItem('verse_access_token');
+    localStorage.removeItem('musilynk_access_token');
     await act(async () => {
       window.dispatchEvent(
-        new StorageEvent('storage', { key: 'verse_access_token', newValue: null, storageArea: localStorage }),
+        new StorageEvent('storage', { key: 'musilynk_access_token', newValue: null, storageArea: localStorage }),
       );
     });
     expect(auth).toMatchObject({ user: null, loading: false });

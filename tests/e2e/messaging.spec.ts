@@ -40,9 +40,9 @@ async function mockApi(
   const json = (route: Route, body: unknown, status = 200) =>
     route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
   await page.addInitScript(() => {
-    localStorage.setItem('verse_access_token', 'qa-token');
-    localStorage.setItem('verse-tour-v2-jobseeker', 'done');
-    localStorage.setItem('verse-tour-v2-employer', 'done');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
+    localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
+    localStorage.setItem('musilynk-tour-v2-employer', 'done');
   });
   await page.route('**/api/**', (route) => {
     const request = route.request();
@@ -622,7 +622,7 @@ test.describe('email notification preference', () => {
 
   test('the unsubscribe page manages email preferences without signing in and explains bad links', async ({ page }) => {
     const state = await mockApi(page, 'jobseeker');
-    await page.addInitScript(() => localStorage.removeItem('verse_access_token'));
+    await page.addInitScript(() => localStorage.removeItem('musilynk_access_token'));
     await page.goto('/unsubscribe?token=good-token');
     const master = page.getByTestId('toggle-master');
     await expect(master).toHaveAttribute('aria-checked', 'true');

@@ -10,8 +10,8 @@ type Role = 'jobseeker' | 'employer';
 
 async function signIn(page: Page, role: Role) {
   await page.addInitScript(() => {
-    localStorage.setItem('verse_access_token', 'qa-token');
-    for (const key of ['verse-tour-v2-jobseeker', 'verse-tour-v2-employer']) localStorage.setItem(key, 'done');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
+    for (const key of ['musilynk-tour-v2-jobseeker', 'musilynk-tour-v2-employer']) localStorage.setItem(key, 'done');
   });
   await page.route('**/api/**', (route) => {
     const pathname = new URL(route.request().url()).pathname;

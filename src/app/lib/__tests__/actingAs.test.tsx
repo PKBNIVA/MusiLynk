@@ -34,16 +34,16 @@ function headersOfLastCall() {
 }
 
 describe('acting-as header (api.ts)', () => {
-  it('sends X-Verse-Act-As for a chosen Page and nothing for yourself', async () => {
+  it('sends X-MusiLynk-Act-As for a chosen Page and nothing for yourself', async () => {
     api.setAccessToken('tok');
     fetchMock.mockImplementation(() => Promise.resolve(jsonResponse({ ok: true })));
     await api.apiGet('/portfolios');
-    expect(headersOfLastCall().has('X-Verse-Act-As')).toBe(false);
+    expect(headersOfLastCall().has('X-MusiLynk-Act-As')).toBe(false);
 
     api.setActingAs('organization:o1');
-    expect(localStorage.getItem('verse_act_as')).toBe('organization:o1');
+    expect(localStorage.getItem('musilynk_act_as')).toBe('organization:o1');
     await api.apiGet('/portfolios');
-    expect(headersOfLastCall().get('X-Verse-Act-As')).toBe('organization:o1');
+    expect(headersOfLastCall().get('X-MusiLynk-Act-As')).toBe('organization:o1');
 
     api.setActingAs('user:u1');
     expect(api.getActingAs()).toBeNull();
@@ -53,14 +53,14 @@ describe('acting-as header (api.ts)', () => {
     api.setAccessToken('tok');
     api.setActingAs('act:a1');
     fetchMock.mockImplementation(() => Promise.resolve(jsonResponse({ ok: true })));
-    await api.api('/x', { headers: { 'X-Verse-Act-As': 'user:u1' } });
-    expect(headersOfLastCall().get('X-Verse-Act-As')).toBe('user:u1');
-    localStorage.removeItem('verse_access_token');
+    await api.api('/x', { headers: { 'X-MusiLynk-Act-As': 'user:u1' } });
+    expect(headersOfLastCall().get('X-MusiLynk-Act-As')).toBe('user:u1');
+    localStorage.removeItem('musilynk_access_token');
     vi.resetModules();
     const fresh = await import('../api');
-    localStorage.setItem('verse_act_as', 'act:a1');
+    localStorage.setItem('musilynk_act_as', 'act:a1');
     await fresh.apiGet('/public/x');
-    expect(headersOfLastCall().has('X-Verse-Act-As')).toBe(false);
+    expect(headersOfLastCall().has('X-MusiLynk-Act-As')).toBe(false);
   });
 
   it('announces changes once and forgets the choice on sign-in and sign-out', () => {
@@ -101,7 +101,7 @@ describe('acting-as header (api.ts)', () => {
 describe('identities', () => {
   it('loads once per person, and drops a remembered Page they no longer run', async () => {
     api.setAccessToken('tok');
-    localStorage.setItem('verse_act_as', 'act:old');
+    localStorage.setItem('musilynk_act_as', 'act:old');
     fetchMock.mockImplementation(() => Promise.resolve(jsonResponse({ identities })));
     await expect(mod.loadIdentities('u1')).resolves.toHaveLength(3);
     await mod.loadIdentities('u1');
@@ -162,9 +162,9 @@ describe('hooks', () => {
     expect(seen.current?.name).toBe('The Monsoon Collective');
     expect(seen.actingAsPage).toBe(true);
 
-    localStorage.setItem('verse_act_as', 'organization:o1');
+    localStorage.setItem('musilynk_act_as', 'organization:o1');
     act(() => {
-      window.dispatchEvent(new StorageEvent('storage', { key: 'verse_act_as' }));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'musilynk_act_as' }));
       window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated' }));
     });
     expect(seen.current?.name).toBe('Riya Studios');

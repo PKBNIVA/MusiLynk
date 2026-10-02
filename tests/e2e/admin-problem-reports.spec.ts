@@ -58,7 +58,7 @@ const signedOut: Report = {
 async function openAdmin(page: Page, url = '/admin?tab=problems') {
   const state = { patches: [] as Record<string, unknown>[], shotViews: 0, lists: [] as string[] };
   const reports = [{ ...baseReport }, { ...signedOut }];
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-admin-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-admin-token'));
   await page.route('**/api/**', (route) => {
     const req = route.request();
     const { pathname, search } = new URL(req.url());

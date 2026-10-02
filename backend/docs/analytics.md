@@ -16,7 +16,8 @@ No third-party analytics anywhere in MusiLynk. Every event is stored in this app
   rest of the batch. `EventsController#scrub_props` truncates string prop values to 200 characters
   and drops any prop key that looks like it might hold an email address — this app never stores an
   email address or free text in `product_events.props`.
-- **Do not track**: `analytics.ts`'s `doNotTrack()` reads a `verse_dnt` flag from `localStorage`.
+- **Do not track**: `analytics.ts`'s `doNotTrack()` reads a `musilynk_dnt` flag from `localStorage` (named `verse_dnt` before the MusiLynk rename; `legacyStorage.ts` moves old
+  `verse_*` keys on first load).
   When set, `track()` is a complete no-op — nothing is queued, nothing is sent. Call
   `setDoNotTrack(true)` to opt a visitor out (e.g. from a cookie/privacy preferences control).
 - **Route changes**: `initRouteTracking(router)` is wired once in `src/app/App.tsx` against the

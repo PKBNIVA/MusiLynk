@@ -91,7 +91,7 @@ test.describe('The Stage', () => {
         'GET /api/organizations': { body: { organizations: [] } },
         'GET /api/stage/feed': { body: { posts: [], nextCursor: null } },
         'POST /api/stage/posts': (request) => {
-          sentHeader = request.headers()['x-verse-act-as'] || null;
+          sentHeader = request.headers()['x-musilynk-act-as'] || null;
           const data = request.postDataJSON();
           return {
             status: 201,
@@ -348,7 +348,7 @@ test.describe('The Stage', () => {
     const pinnedRoundup = post({
       id: 'post_roundup',
       kind: 'system',
-      author: { type: 'system', id: 'verse', name: 'MusiLynk', avatar: null, system: true },
+      author: { type: 'system', id: 'musilynk', name: 'MusiLynk', avatar: null, system: true },
       body: "This week: who's looking, who's free. Comment with your roles and free dates.",
       pinned: true,
       pinnedUntil: '2026-10-05T04:30:00Z',

@@ -38,7 +38,7 @@ test.describe('real frontend and Rails journeys', () => {
       // The form loads the saved profile first; typing before that finishes would be overwritten.
       await page.waitForLoadState('networkidle');
 
-      const token = await page.evaluate(() => localStorage.getItem('verse_access_token'));
+      const token = await page.evaluate(() => localStorage.getItem('musilynk_access_token'));
       expect(token).toBeTruthy();
       const apiBase = process.env.QA_API_BASE_URL!;
       const me = await request.get(`${apiBase}/me`, { headers: { Authorization: `Bearer ${token}` } });
@@ -97,7 +97,7 @@ test.describe('real frontend and Rails journeys', () => {
           return revoked.status();
         })
         .toBe(401);
-      await expect.poll(() => page.evaluate(() => localStorage.getItem('verse_access_token'))).toBeNull();
+      await expect.poll(() => page.evaluate(() => localStorage.getItem('musilynk_access_token'))).toBeNull();
 
       // Password sign-in waits for the email to be confirmed.
       const refused = await request.post(`${apiBase}/auth/login`, { data: { email, password } });

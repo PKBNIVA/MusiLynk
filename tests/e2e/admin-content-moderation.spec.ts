@@ -33,7 +33,7 @@ async function openAdminReports(
     '/api/admin/subscriptions': { subscriptions: [] },
     '/api/admin/bookings': { bookings: [] },
   };
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-admin-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-admin-token'));
   await page.route('**/api/**', (route) => {
     const { pathname } = new URL(route.request().url());
     if (pathname.endsWith('/me')) return json(route, { user: admin });

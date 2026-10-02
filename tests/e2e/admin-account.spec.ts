@@ -35,7 +35,7 @@ async function openAccount(page: Page, opts: { health?: Health; path?: string } 
   const calls: Calls = { requests: [], confirms: [], passwords: [], accountReads: 0 };
   let health = opts.health ?? undeliverable;
   let user = admin;
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-admin-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-admin-token'));
   await page.route('**/api/**', async (route: Route) => {
     const request = route.request();
     const { pathname } = new URL(request.url());
@@ -167,7 +167,7 @@ test('changing the admin email: refused addresses are explained, then the emaile
     { changeToken: 'change-3', code: '000000' },
     { changeToken: 'change-3', code: VALID_CODE },
   ]);
-  expect(await page.evaluate(() => localStorage.getItem('verse_access_token'))).toBe('qa-admin-token');
+  expect(await page.evaluate(() => localStorage.getItem('musilynk_access_token'))).toBe('qa-admin-token');
 });
 
 test('an expired email change goes back to the address with the reason', async ({ page }) => {
@@ -215,7 +215,7 @@ test('changing the password checks the new one locally, then reports the API ans
     { currentPassword: 'WrongPass123!', newPassword: 'NewAdminPass2026!' },
     { currentPassword: 'CurrentPass123!', newPassword: 'NewAdminPass2026!' },
   ]);
-  expect(await page.evaluate(() => localStorage.getItem('verse_access_token'))).toBe('qa-admin-token');
+  expect(await page.evaluate(() => localStorage.getItem('musilynk_access_token'))).toBe('qa-admin-token');
 });
 
 test('the account page fits a phone screen', async ({ page }) => {

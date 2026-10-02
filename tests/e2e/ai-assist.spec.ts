@@ -41,7 +41,7 @@ async function mockRoutes(
   handler: (route: Route, path: string) => Promise<boolean> | boolean,
 ) {
   const calls: { method: string; path: string; body: unknown }[] = [];
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace(/^\/api/, '');

@@ -29,7 +29,7 @@ const event = scrub.scrubEvent(
       headers: { Referer: 'https://musilynk.test/unsubscribe?token=zz', Authorization: 'Bearer x' },
       cookies: { a: 'b' },
     },
-    extra: { verse_access_token: token, nested: [{ note: `token ${token}` }] },
+    extra: { musilynk_access_token: token, nested: [{ note: `token ${token}` }] },
     breadcrumbs: [{ category: 'navigation', data: { to: '/reset-password?token=r1' } }],
     exception: {
       values: [
@@ -47,7 +47,7 @@ assert.doesNotMatch(
 );
 assert.deepEqual(event.user, { id: 7, role: 'admin' });
 assert.equal(event.request.cookies, undefined);
-assert.equal(event.extra.verse_access_token, '[Filtered]');
+assert.equal(event.extra.musilynk_access_token, '[Filtered]');
 
 // --- Classification and rate limiting ----------------------------------------------------
 const apiError = (status, code) => Object.assign(new Error('x'), { name: 'ApiError', status, code });

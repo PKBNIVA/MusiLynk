@@ -20,7 +20,7 @@ const COPY: Record<Variant, { title: string; body: string; cta: string }> = {
   },
 };
 
-const dismissKey = (variant: Variant) => `verse-push-dismissed-${variant}`;
+const dismissKey = (variant: Variant) => `musilynk-push-dismissed-${variant}`;
 const wasDismissed = (variant: Variant) => {
   try {
     return localStorage.getItem(dismissKey(variant)) === '1';

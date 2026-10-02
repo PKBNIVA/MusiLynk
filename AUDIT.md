@@ -79,7 +79,7 @@ Labels: **R** reproduced locally · **V** verified in code · **I** inferred · 
 
 ### P3/P4
 Mixed snake/camel API casing; `window.prompt` workflows; ~46 unlinked labels; ~24 buttons
-nested in links; ~25 unused dependencies; motion ignores reduced-motion; `verse_return_to` never
+nested in links; ~25 unused dependencies; motion ignores reduced-motion; `musilynk_return_to` never
 read; emails and Razorpay signatures not filtered from logs; `fitScore` never shown.
 
 ## First work package (PR #35)

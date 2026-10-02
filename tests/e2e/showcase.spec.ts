@@ -33,7 +33,7 @@ test('identity switcher: act as a Page, send the header, show the chip, switch b
   await expectAccessible(page);
   await page.getByRole('button', { name: 'Switch back' }).click();
   await expect(page.getByTestId('acting-as-chip')).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem('verse_act_as'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('musilynk_act_as'))).toBeNull();
 });
 
 test('switcher is hidden for someone with no Pages', async ({ page }) => {

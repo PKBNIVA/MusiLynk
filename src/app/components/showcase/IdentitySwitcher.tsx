@@ -40,7 +40,7 @@ export function IdentityAvatar({ identity, className }: { identity: Pick<Identit
 
 /**
  * "Act as": You · Studio · Band. Hidden when the person runs no Pages. Switching stores the choice
- * (api.ts sends it as X-Verse-Act-As on every request) and pages listening for it reload their data.
+ * (api.ts sends it as X-MusiLynk-Act-As on every request) and pages listening for it reload their data.
  */
 export function IdentitySwitcher({ className }: { className?: string }) {
   const { user } = useAuth();

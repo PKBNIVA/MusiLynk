@@ -15,7 +15,7 @@ const admin = {
 
 async function mockApi(page: Page, opts: { signedIn?: boolean; loginReply?: { status: number; body: unknown } } = {}) {
   const calls = { logins: 0, completions: 0, logouts: 0, adminCalls: [] as string[] };
-  if (opts.signedIn) await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-admin-token'));
+  if (opts.signedIn) await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-admin-token'));
   await page.route('**/api/**', async (route: Route) => {
     const request = route.request();
     const { pathname } = new URL(request.url());
@@ -61,7 +61,7 @@ async function passwordSignIn(page: Page) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
-const token = (page: Page) => page.evaluate(() => localStorage.getItem('verse_access_token'));
+const token = (page: Page) => page.evaluate(() => localStorage.getItem('musilynk_access_token'));
 
 test('admin pages and the admin sign-in page are 404s, even for a signed-in admin', async ({ page }) => {
   const calls = await mockApi(page, { signedIn: true });

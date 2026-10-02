@@ -34,7 +34,7 @@ async function mockApi(
   } = {},
 ) {
   const calls: Calls = { logins: [], completions: [], logouts: 0 };
-  if (opts.signedIn) await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+  if (opts.signedIn) await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
   await page.route('**/api/**', async (route: Route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
@@ -89,7 +89,7 @@ async function submitPassword(page: Page) {
   await fillPassword(page);
 }
 
-const token = (page: Page) => page.evaluate(() => localStorage.getItem('verse_access_token'));
+const token = (page: Page) => page.evaluate(() => localStorage.getItem('musilynk_access_token'));
 
 test('the admin site is titled, kept out of search engines and offers only password sign-in', async ({ page }) => {
   await mockApi(page);

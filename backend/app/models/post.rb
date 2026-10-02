@@ -18,9 +18,16 @@ class Post < ApplicationRecord
   # characters. src/app/lib/stage.ts HASHTAG_PATTERN must stay identical.
   HASHTAG_PATTERN = /#([\p{L}\p{M}\p{N}_]{2,50})/
   TRENDING_WINDOW = 72.hours
-  SYSTEM_AUTHOR_ID = "verse".freeze
+  SYSTEM_AUTHOR_ID = "musilynk".freeze
+  # The id before the MusiLynk rename. Old shared links (/stage/authors/system/verse) still resolve;
+  # see .canonical_author_id. Remove after 2026-11-01 together with the other rename fallbacks.
+  LEGACY_SYSTEM_AUTHOR_ID = "verse".freeze
   SYSTEM_AUTHOR_NAME = Brand::NAME.freeze
   SYSTEM_AVATAR = "/musilynk-mark.svg".freeze
+
+  def self.canonical_author_id(type, id)
+    type.to_s == "system" && id.to_s == LEGACY_SYSTEM_AUTHOR_ID ? SYSTEM_AUTHOR_ID : id
+  end
 
   belongs_to :created_by, class_name: "User", foreign_key: :created_by_user_id, optional: true
   belongs_to :shared_portfolio_item, class_name: "PortfolioItem", foreign_key: :shared_portfolio_item_id, optional: true

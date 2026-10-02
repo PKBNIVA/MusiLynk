@@ -32,7 +32,7 @@ A person never enters the same thing twice.
   - Words in the item's title or description that it isn't tagged with (a genre, role,
     instrument or tag word) become a "tags" suggestion.
 - **Acting as.** Portfolios, suggestions, and job create/update act as the identity in the
-  `X-Verse-Act-As` header: `organization:<id>`, `act:<id>` or `user:<id>`. The same value can be
+  `X-MusiLynk-Act-As` header: `organization:<id>`, `act:<id>` or `user:<id>`. The same value can be
   sent as the `actingAs` param. Without either, the person acts as themselves. A Page is an
   organization where they are owner or admin, or an act they own that isn't hidden. Anything else
   returns `403 ACT_AS_FORBIDDEN`. `GET /api/me/identities` lists the choices. Resumes and career

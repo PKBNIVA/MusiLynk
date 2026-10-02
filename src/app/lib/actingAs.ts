@@ -40,7 +40,7 @@ export function useActingAsKey(): string | null {
   useEffect(() => {
     const sync = () => setKey(getActingAs());
     const onStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === 'verse_act_as') sync();
+      if (event.key === null || event.key === 'musilynk_act_as') sync();
     };
     window.addEventListener(ACTING_AS_EVENT, sync);
     window.addEventListener('storage', onStorage);

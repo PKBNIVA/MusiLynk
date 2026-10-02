@@ -4,7 +4,7 @@ import type { BillingInterval, BillingPromo, Plan, PromoValidation } from './api
 // mirrors PlanPricing on the backend, the wording of a code's effect, and the code held in
 // sessionStorage while a signed-out visitor signs in.
 
-const CODE_KEY = 'verse_promo_code';
+const CODE_KEY = 'musilynk_promo_code';
 
 export const inr = (value: number) => `₹${Math.round(value).toLocaleString('en-IN')}`;
 

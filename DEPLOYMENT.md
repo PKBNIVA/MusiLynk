@@ -643,7 +643,7 @@ What is sent, and what is not:
   API 5xx/timeout/network failures rate-limited to one per kind per 5 minutes and at most 5
   per page session. API 4xx responses are never sent. Session replay is off.
 - Privacy: no request bodies, cookies, query strings, IP addresses or job arguments; emails
-  (also URL-encoded), bearer tokens, the `verse_access_token` value, `Authorization`/cookie
+  (also URL-encoded), bearer tokens, the `musilynk_access_token` value, `Authorization`/cookie
   headers and password/token/code/otp/secret/signature/body fields are scrubbed before
   sending. Users are identified by internal id and role only.
 

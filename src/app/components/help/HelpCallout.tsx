@@ -8,7 +8,7 @@ export interface HelpStep {
 }
 
 // Collapsed unless the person has explicitly opened it before (default: just the link).
-const KEY = 'verse_help_shown:';
+const KEY = 'musilynk_help_shown:';
 function readShown(id: string) {
   try {
     return localStorage.getItem(KEY + id) === '1';

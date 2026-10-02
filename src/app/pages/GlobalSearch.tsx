@@ -48,7 +48,7 @@ export default function GlobalSearch() {
   const [q, setQ] = useState(query);
   const [recent, setRecent] = useState<string[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('verse_recent_searches') || '[]');
+      return JSON.parse(localStorage.getItem('musilynk_recent_searches') || '[]');
     } catch {
       return [];
     }
@@ -71,7 +71,7 @@ export default function GlobalSearch() {
     setRecent((previous) => {
       const next = [text, ...previous.filter((x) => x !== text)].slice(0, 6);
       try {
-        localStorage.setItem('verse_recent_searches', JSON.stringify(next));
+        localStorage.setItem('musilynk_recent_searches', JSON.stringify(next));
       } catch {
         /* storage blocked: keep in memory */
       }

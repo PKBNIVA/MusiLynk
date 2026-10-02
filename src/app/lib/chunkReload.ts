@@ -5,7 +5,7 @@
  * and let the route error page offer a manual Reload, so this can never loop.
  */
 
-export const CHUNK_RELOAD_KEY = 'verse_chunk_reload_at';
+export const CHUNK_RELOAD_KEY = 'musilynk_chunk_reload_at';
 /** A reload that fails again inside this window shows the error page instead of reloading forever. */
 export const CHUNK_RELOAD_WINDOW_MS = 30_000;
 

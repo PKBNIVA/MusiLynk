@@ -43,7 +43,7 @@ const candidate = {
 
 async function openAdmin(page: Page) {
   const state = { notified: [] as unknown[], updated: [] as unknown[] };
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-admin-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-admin-token'));
   await page.route('**/api/**', (route) => {
     const req = route.request();
     const { pathname } = new URL(req.url());

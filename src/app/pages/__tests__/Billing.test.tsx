@@ -248,13 +248,13 @@ describe('choosing a plan', () => {
   });
 
   it('uses the code kept across sign-in and forgets it after a successful checkout', async () => {
-    sessionStorage.setItem('verse_promo_code', 'KEPT10');
+    sessionStorage.setItem('musilynk_promo_code', 'KEPT10');
     await render();
     expect(byTestId('billing-code-note')?.textContent).toContain('KEPT10');
     await act(async () => (byTestId('plan-pro')!.querySelector('button') as HTMLButtonElement).click());
     await flush();
     expect(vi.mocked(apiPost).mock.calls[0][1]).toEqual({ planCode: 'pro', interval: 'monthly', code: 'KEPT10' });
-    expect(sessionStorage.getItem('verse_promo_code')).toBeNull();
+    expect(sessionStorage.getItem('musilynk_promo_code')).toBeNull();
   });
 
   it('confirms an Early Access code without any payment step', async () => {

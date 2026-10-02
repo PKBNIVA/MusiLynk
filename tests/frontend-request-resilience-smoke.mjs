@@ -24,7 +24,7 @@ const fakeStorage = () => {
 globalThis.sessionStorage = fakeStorage();
 globalThis.localStorage = fakeStorage();
 // A token saved by an older build lives in this tab's sessionStorage.
-sessionStorage.setItem('verse_access_token', 'legacy-token');
+sessionStorage.setItem('musilynk_access_token', 'legacy-token');
 
 const redirects = [];
 const listeners = new Map();
@@ -46,24 +46,24 @@ const { apiDelete, apiGet, apiPost, ApiError, hasAccessToken, onAccessTokenChang
 
 // The legacy per-tab token is migrated to localStorage on first read so the session survives new tabs.
 assert.equal(hasAccessToken(), true);
-assert.equal(localStorage.getItem('verse_access_token'), 'legacy-token');
-assert.equal(sessionStorage.getItem('verse_access_token'), null);
+assert.equal(localStorage.getItem('musilynk_access_token'), 'legacy-token');
+assert.equal(sessionStorage.getItem('musilynk_access_token'), null);
 setAccessToken(null);
 assert.equal(hasAccessToken(), false);
 setAccessToken('stored-token');
-assert.equal(localStorage.getItem('verse_access_token'), 'stored-token');
+assert.equal(localStorage.getItem('musilynk_access_token'), 'stored-token');
 assert.equal(hasAccessToken(), true);
 
 // Sign-in and sign-out in another tab reach this tab through the storage event.
 const changes = [];
 const unsubscribe = onAccessTokenChange((signedIn) => changes.push(signedIn));
 const storageEvent = listeners.get('storage');
-localStorage.removeItem('verse_access_token');
-storageEvent({ key: 'verse_access_token', newValue: null, storageArea: localStorage });
+localStorage.removeItem('musilynk_access_token');
+storageEvent({ key: 'musilynk_access_token', newValue: null, storageArea: localStorage });
 storageEvent({ key: 'unrelated', newValue: 'x', storageArea: localStorage });
-storageEvent({ key: 'verse_access_token', newValue: 'other', storageArea: sessionStorage });
-localStorage.setItem('verse_access_token', 'other-tab-token');
-storageEvent({ key: 'verse_access_token', newValue: 'other-tab-token', storageArea: localStorage });
+storageEvent({ key: 'musilynk_access_token', newValue: 'other', storageArea: sessionStorage });
+localStorage.setItem('musilynk_access_token', 'other-tab-token');
+storageEvent({ key: 'musilynk_access_token', newValue: 'other-tab-token', storageArea: localStorage });
 storageEvent({ key: null, newValue: null, storageArea: localStorage });
 assert.deepEqual(changes, [false, true, false]);
 unsubscribe();
@@ -145,14 +145,14 @@ await assert.rejects(apiGet('/jobs'), (error) => error instanceof ApiError && er
 // A 401 for a token another tab has already replaced must not sign that newer session out.
 setAccessToken('old-token');
 globalThis.fetch = async () => {
-  localStorage.setItem('verse_access_token', 'new-token-from-other-tab');
+  localStorage.setItem('musilynk_access_token', 'new-token-from-other-tab');
   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
     status: 401,
     headers: { 'content-type': 'application/json' },
   });
 };
 await assert.rejects(apiGet('/jobs'), (error) => error instanceof ApiError && error.status === 401);
-assert.equal(localStorage.getItem('verse_access_token'), 'new-token-from-other-tab');
+assert.equal(localStorage.getItem('musilynk_access_token'), 'new-token-from-other-tab');
 assert.deepEqual(redirects, []);
 
 // A 401 clears the stale session and redirects protected pages only once.
@@ -163,8 +163,8 @@ globalThis.fetch = async () =>
     headers: { 'content-type': 'application/json' },
   });
 await assert.rejects(apiGet('/me'), (error) => error instanceof ApiError && error.status === 401);
-assert.equal(localStorage.getItem('verse_access_token'), null);
-assert.equal(sessionStorage.getItem('verse_return_to'), '/employer/messages?thread=42');
+assert.equal(localStorage.getItem('musilynk_access_token'), null);
+assert.equal(sessionStorage.getItem('musilynk_return_to'), '/employer/messages?thread=42');
 assert.deepEqual(redirects, ['/auth/employer?reason=expired']);
 
 // Caller cancellation remains cancellation and is not retried or mislabeled as a timeout.

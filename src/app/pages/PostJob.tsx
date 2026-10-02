@@ -58,10 +58,10 @@ type JobLimits = { activeAllowed: number; activeUsed: number; plan?: string; pla
 // Which Page (if any) this job is posted as, for this session only: no shared "acting as" key
 // exists yet elsewhere in the app (api.ts has none), so this is scoped to opportunity posting —
 // coordinate with any later global switcher before reusing the key name.
-const POSTED_AS_KEY = 'verse:post-job:posted-as';
+const POSTED_AS_KEY = 'musilynk:post-job:posted-as';
 // A draft with no amount cannot say whether the pay is "Not disclosed" or simply not asked yet,
 // so the explicit choice is remembered on this device, per draft.
-const payModeKey = (id: string | number) => `verse:post-job:pay-mode:${id}`;
+const payModeKey = (id: string | number) => `musilynk:post-job:pay-mode:${id}`;
 function rememberedPayMode(id: string | number | undefined): PayMode | null {
   if (!id) return null;
   try {

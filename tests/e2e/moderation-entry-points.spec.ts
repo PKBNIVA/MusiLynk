@@ -54,7 +54,7 @@ test.describe('public entry points', () => {
 
   test('a signed-in employer can report a candidate profile', async ({ page }) => {
     const state = await reportState(page);
-    await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+    await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
     await page.route('**/api/me', (route) =>
       json(route, {
         user: { id: 'emp-1', name: 'Studio Co', role: 'employer', status: 'active', profileComplete: true },
@@ -72,8 +72,8 @@ test.describe('public entry points', () => {
 
   test('a musician looking at their own public profile is not offered a report', async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('verse_access_token', 'qa-token');
-      localStorage.setItem('verse-tour-v2-jobseeker', 'done');
+      localStorage.setItem('musilynk_access_token', 'qa-token');
+      localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
     });
     await page.route('**/api/me', (route) =>
       json(route, {
@@ -95,7 +95,7 @@ test.describe('public entry points', () => {
 
   test('a signed-in employer can report a bookable act', async ({ page }) => {
     const state = await reportState(page);
-    await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+    await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
     await page.route('**/api/me', (route) =>
       json(route, {
         user: { id: 'emp-1', name: 'Studio Co', role: 'employer', status: 'active', profileComplete: true },
@@ -114,8 +114,8 @@ test.describe('public entry points', () => {
   test('a signed-in user can report a review on the reviews page', async ({ page }) => {
     const state = await reportState(page);
     await page.addInitScript(() => {
-      localStorage.setItem('verse_access_token', 'qa-token');
-      localStorage.setItem('verse-tour-v2-jobseeker', 'done');
+      localStorage.setItem('musilynk_access_token', 'qa-token');
+      localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
     });
     await page.route('**/api/me', (route) =>
       json(route, {

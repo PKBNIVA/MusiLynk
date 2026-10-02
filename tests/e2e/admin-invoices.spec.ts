@@ -30,7 +30,7 @@ test('commerce shows invoices with the seller warning and exports a CSV for the 
   page,
 }) => {
   const requested: string[] = [];
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-admin-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-admin-token'));
   await page.route('**/api/**', async (route) => {
     const url = new URL(route.request().url());
     const json = (body: unknown) =>

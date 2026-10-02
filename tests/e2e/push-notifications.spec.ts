@@ -114,9 +114,9 @@ async function mockApi(page: Page, { enabled, user }: Api) {
   };
   let prefs = { urgent: true, messages: false, bookings: false };
   await page.addInitScript(() => {
-    localStorage.setItem('verse_access_token', 'qa-token');
-    localStorage.setItem('verse-tour-v2-jobseeker', 'done');
-    localStorage.setItem('verse-tour-v2-employer', 'done');
+    localStorage.setItem('musilynk_access_token', 'qa-token');
+    localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
+    localStorage.setItem('musilynk-tour-v2-employer', 'done');
   });
   await page.route('**/api/**', (route) => {
     const request = route.request();

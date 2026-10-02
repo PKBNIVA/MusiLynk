@@ -7,7 +7,7 @@ import { onBeforeSignInRedirect } from './api';
 // the page; the form asks for its draft back with takeUnsentDraft() once the page loads again.
 // sessionStorage only: the draft belongs to this tab and this visit and never outlives it.
 
-const KEY = 'verse_unsent_drafts';
+const KEY = 'musilynk_unsent_drafts';
 const sources = new Map<string, () => string>();
 
 /** Registers a form's snapshot function under a stable `key`; returns the unregister function. */

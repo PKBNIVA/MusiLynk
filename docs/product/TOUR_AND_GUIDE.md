@@ -5,7 +5,7 @@ The first authenticated visit triggers a role-aware tour:
 - Professional: proof/work samples -> opportunities -> availability -> hiring/band building -> urgent replacement.
 - Employer/hiring account: talent search -> opportunity formats -> rosters/folders -> booking -> urgent replacement.
 
-Completion is stored as a browser preference under `verse-tour-v2-*` and never grants permissions or access.
+Completion is stored as a browser preference under `musilynk-tour-v2-*` and never grants permissions or access.
 
 Users can restart it from the account menu: **Take product tour**.
 

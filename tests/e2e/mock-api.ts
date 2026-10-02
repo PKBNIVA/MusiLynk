@@ -7,7 +7,7 @@ export type Handler = (request: Request) => Reply;
 
 export async function mockApi(page: Page, routes: Record<string, Reply | Handler>, user?: Record<string, unknown>) {
   const calls: Array<{ method: string; path: string; body: unknown }> = [];
-  if (user) await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-token'));
+  if (user) await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-token'));
   await page.route('**/api/**', (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace(/^.*\/api/, '/api');

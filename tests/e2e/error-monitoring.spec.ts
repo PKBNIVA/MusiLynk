@@ -35,7 +35,7 @@ const job = {
 const isAppApi = (url: URL) => url.pathname.startsWith('/api/') && !url.pathname.endsWith('/envelope/');
 
 async function signInWithCrashingJob(page: Page) {
-  await page.addInitScript((value) => localStorage.setItem('verse_access_token', value), token);
+  await page.addInitScript((value) => localStorage.setItem('musilynk_access_token', value), token);
   await page.route(isAppApi, (route) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname.endsWith('/me')) {
@@ -171,7 +171,7 @@ test('with a DSN Core Web Vitals are sent as metrics when the page is hidden, ne
   request,
 }) => {
   const { page } = await runPage(browser);
-  await page.addInitScript((value) => localStorage.setItem('verse_access_token', value), token);
+  await page.addInitScript((value) => localStorage.setItem('musilynk_access_token', value), token);
   await page.route(isAppApi, (route) =>
     route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Authentication required"}' }),
   );

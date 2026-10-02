@@ -20,7 +20,7 @@ function secrets(): string[] {
   const found: string[] = [];
   for (const store of ['localStorage', 'sessionStorage'] as const) {
     try {
-      const token = window[store].getItem('verse_access_token');
+      const token = window[store].getItem('musilynk_access_token');
       if (token) found.push(token);
     } catch {
       /* storage blocked */

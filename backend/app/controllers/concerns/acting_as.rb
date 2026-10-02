@@ -1,9 +1,12 @@
-# Resolves the "acting as" identity for a request. Clients send it as the X-Verse-Act-As header
+# Resolves the "acting as" identity for a request. Clients send it as the X-MusiLynk-Act-As header
 # ("organization:org_123", "act:act_123" or "user:<id>"); without it the person acts as themselves.
 module ActingAs
   extend ActiveSupport::Concern
 
-  HEADER = "X-Verse-Act-As".freeze
+  HEADER = "X-MusiLynk-Act-As".freeze
+  # Sent by clients built before the MusiLynk rename. The frontend (Vercel) and API (Railway)
+  # deploy separately, so either side can be a release ahead of the other. Remove after 2026-11-01.
+  LEGACY_HEADER = "X-Verse-Act-As".freeze
 
   private
 
@@ -12,7 +15,7 @@ module ActingAs
   def current_actor
     return @current_actor if defined?(@current_actor)
 
-    key = request.headers[HEADER].presence || params[:actingAs].presence
+    key = request.headers[HEADER].presence || request.headers[LEGACY_HEADER].presence || params[:actingAs].presence
     @current_actor = ActorResolver.resolve(current_user, key)
     render_error("You can't act as that page.", :forbidden, "ACT_AS_FORBIDDEN") unless @current_actor
     @current_actor

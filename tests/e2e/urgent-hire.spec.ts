@@ -130,7 +130,7 @@ test('a request still being matched shows in-progress, then calm fallback copy a
   const state = { registered: true, urgentRequests: [] as unknown[], statusPolls: 0, stuckStatus: 'matching' };
   await page.clock.install();
   await mockCommon(page, state);
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-hirer-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-hirer-token'));
   await page.goto('/urgent');
   await page.getByRole('combobox', { name: 'Role needed' }).fill('Drummer');
   await page.getByRole('combobox', { name: 'Role needed' }).press('Enter');
@@ -180,7 +180,7 @@ test('musician sees an open urgent request and responds in one tap', async ({ pa
     profileComplete: true,
   };
   const state = { responded: [] as unknown[] };
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-musician-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-musician-token'));
   await page.route('**/api/**', (route) => {
     const request = route.request();
     const { pathname } = new URL(request.url());
@@ -226,7 +226,7 @@ test('musician sees status chips, match reasons, and the filled / chosen message
     { ...musicianRequest, id: 'd', title: 'Expired gig', status: 'expired' },
     { ...musicianRequest, id: 'e', title: 'Closed gig', status: 'closed' },
   ];
-  await page.addInitScript(() => localStorage.setItem('verse_access_token', 'qa-musician-token'));
+  await page.addInitScript(() => localStorage.setItem('musilynk_access_token', 'qa-musician-token'));
   await page.route('**/api/**', (route) => {
     const { pathname } = new URL(route.request().url());
     if (pathname.endsWith('/me')) return json(route, { user: musician });

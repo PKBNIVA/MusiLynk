@@ -198,10 +198,10 @@ async function createContext(
   await context.addInitScript(
     ({ token: t, seedTour, kill }) => {
       try {
-        if (t && !localStorage.getItem('verse_access_token')) localStorage.setItem('verse_access_token', t);
+        if (t && !localStorage.getItem('musilynk_access_token')) localStorage.setItem('musilynk_access_token', t);
         if (seedTour) {
-          localStorage.setItem('verse-tour-v2-jobseeker', 'done');
-          localStorage.setItem('verse-tour-v2-employer', 'done');
+          localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
+          localStorage.setItem('musilynk-tour-v2-employer', 'done');
         }
       } catch {
         /* storage blocked: the page still renders signed out */

@@ -74,6 +74,7 @@ module ApiMatrixWorld
       act.act_members.create!(user: owner, display_name: owner.name, role_name: "Leader", is_leader: true, member_status: "confirmed")
       refs[:act] = act.id
       refs[:act_member] = act.act_members.create!(display_name: "Session Drummer", role_name: "Drums", is_leader: false, member_status: "confirmed").id
+      refs[:act_invite] = ActInvite.create!(act:, inviter: owner, kind: "link", role_name: "Keys", token_digest: ActInvite.digest(SecureRandom.hex(8)), expires_at: 7.days.from_now).id
       refs[:inactive_act] = Act.create!(owner:, name: "Hidden act #{actor}", act_type: "duo", status: "inactive", currency: "INR", fee_basis: "event").id
       refs[:urgent] = UrgentRequest.create!(requester: owner, title: "Urgent #{actor}", role_name: "Drummer", city: "Mumbai", start_at: 1.day.from_now, currency: "INR", status: "open").id
       folder = TalentFolder.create!(owner:, name: "Folder #{actor}")
@@ -159,7 +160,7 @@ module ApiMatrixWorld
       portfolio: world.refs[:js][:portfolio], folio: world.refs[:js][:folio], folio_slug: world.refs[:js][:folio_slug],
       private_folio_slug: world.refs[:js][:private_folio_slug], resume: world.refs[:js][:resume],
       career_entry: world.refs[:js][:career_entry], suggestion: world.refs[:js][:suggestion], notification: world.refs[:js][:notification],
-      availability: world.refs[:js][:availability], act_member: world.refs[:js][:act_member],
+      availability: world.refs[:js][:availability], act_member: world.refs[:js][:act_member], act_invite: world.refs[:js][:act_invite],
       my_application: world.refs[:js][:my_application], received_application: world.refs[:emp][:received_application],
       other_job: world.refs[:emp][:job], self: admin.id,
       user: u[:js].id, review: review.id,

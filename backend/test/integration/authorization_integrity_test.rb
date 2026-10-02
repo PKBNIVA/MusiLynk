@@ -103,8 +103,17 @@ class AuthorizationIntegrityTest < ActionDispatch::IntegrationTest
     assert_response :created
     assert_equal "confirmed", ActMember.find(response.parsed_body.fetch("id")).member_status
     post "/api/acts/#{act.id}/members", params: { displayName: professional.name, roleName: "Bass", userId: professional.id, memberStatus: "confirmed" }, headers: auth(owner), as: :json
+    # Linking a real musician needs their consent: the owner's request becomes an invite, not a membership.
     assert_response :created
-    assert_equal professional.id, ActMember.find(response.parsed_body.fetch("id")).user_id
+    assert_equal true, response.parsed_body["invited"]
+    assert_not act.act_members.exists?(user_id: professional.id)
+    invite = ActInvite.find(response.parsed_body.fetch("id"))
+    assert_equal [professional.id, "pending"], [invite.invitee_user_id, invite.status]
+    post "/api/acts/#{act.id}/members", params: { displayName: professional.name, roleName: "Bass", userId: professional.id }, headers: auth(owner), as: :json
+    assert_response :conflict
+    post "/api/act-invites/#{invite.id}/accept", headers: auth(professional), as: :json
+    assert_response :ok
+    assert_equal professional.id, act.act_members.find_by!(user_id: professional.id).user_id
     post "/api/acts/#{act.id}/members", params: { displayName: professional.name, roleName: "Bass", userId: professional.id }, headers: auth(owner), as: :json
     assert_response :conflict
   end

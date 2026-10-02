@@ -88,9 +88,10 @@ export default function AuthPage() {
 
   const go = (r: string, complete = true) => {
     const requested = (location.state as { from?: unknown } | null)?.from ?? consumeReturnTo();
-    // Role-neutral pages (the Stage) are open to either role, so a deep link to one survives sign-in.
+    // Role-neutral pages (the Stage, a bandmate invite) are open to either role, so a deep link to one survives sign-in.
     const allowed =
-      typeof requested === 'string' && (requested.startsWith(`/${r}`) || /^\/stage(?:[/?#]|$)/.test(requested));
+      typeof requested === 'string' &&
+      (requested.startsWith(`/${r}`) || /^\/stage(?:[/?#]|$)/.test(requested) || /^\/invites\/[\w-]+$/.test(requested));
     navigate(
       allowed
         ? requested

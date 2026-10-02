@@ -226,8 +226,21 @@ Rails.application.routes.draw do
       member do
         post :members, to: "acts#add_member"
         delete "members/:member_id", to: "acts#remove_member"
+        post :leave, to: "acts#leave"
+        get :invitees, to: "act_invites#search"
+        get :invites, to: "act_invites#index"
+        post :invites, to: "act_invites#create"
+        post "invites/:invite_id/resend", to: "act_invites#resend"
+        delete "invites/:invite_id", to: "act_invites#revoke"
       end
     end
+    # Bandmate invites, from the invitee's side. Link visitors use the token; signed-in musicians can also answer by id.
+    get "act-invites/mine", to: "act_invites#mine"
+    get "act-invites/preview", to: "act_invites#preview"
+    post "act-invites/accept", to: "act_invites#accept"
+    post "act-invites/decline", to: "act_invites#decline"
+    post "act-invites/:id/accept", to: "act_invites#accept"
+    post "act-invites/:id/decline", to: "act_invites#decline"
     get "bookings/limits", to: "bookings#limits"
     resources :bookings, only: %i[index create] do
       member do

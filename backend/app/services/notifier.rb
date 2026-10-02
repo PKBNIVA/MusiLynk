@@ -237,6 +237,32 @@ class Notifier
       EmailDeliveryJob.enqueue_link_with_name(template: "vouch_invite", link: join_link, email: vouch.vouchee_email, name: vouch.voucher.name)
     end
 
+    ACT_INVITES_LINK = "/acts?tab=invites".freeze
+
+    # A bandmate invite (ActInvites): the musician hears in the app and, when `email`, by notification
+    # email. Nothing about the lineup changes until they accept. The email carries no token.
+    def act_invite(invite, user, email: true)
+      inviter = invite.inviter.name
+      act = invite.act.name
+      notify(user, kind: "act_invite", title: "#{inviter} invited you to join #{act}", link: ACT_INVITES_LINK,
+        body: "As #{invite.role_name}. Open Invites to accept or decline.")
+      email(user, "act_invite", name: inviter, act:, role: invite.role_name) if email
+    end
+
+    # The same invite to an address with no (verified) Verse account behind it: a sealed link email.
+    def act_invite_email(invite, link:)
+      return unless EmailDelivery.configured?
+      EmailDeliveryJob.enqueue_act_invite(link:, email: invite.invitee_email, inviter: invite.inviter.name, act: invite.act.name, role: invite.role_name)
+    end
+
+    # Tells the act owner how the musician answered (in-app only).
+    def act_invite_response(invite, user, accepted:)
+      owner = invite.inviter
+      return if owner.nil? || owner.id == user.id
+      notify(owner, kind: "act_invite", link: "/acts", title: accepted ? "#{user.name} joined #{invite.act.name}" : "#{user.name} declined your invite",
+        body: accepted ? "They are now in the lineup as #{invite.role_name}." : "They turned down the #{invite.role_name} spot in #{invite.act.name}.")
+    end
+
     # Admin::UsersController#grant_early_access just switched this employer onto Early Access Pro.
     def early_access_granted(subscription)
       until_date = IndianFormat.date(subscription.trial_ends_at)

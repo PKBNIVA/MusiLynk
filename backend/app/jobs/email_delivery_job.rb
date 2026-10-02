@@ -50,6 +50,13 @@ class EmailDeliveryJob < ApplicationJob
     perform_later(nil, template, seal(link), seal(email, purpose: RECIPIENT_PURPOSE), seal(name, purpose: NAME_PURPOSE))
   end
 
+  # Sends the bandmate-invite link to an address (an account is not required): the inviter, act and
+  # role travel sealed together as JSON and are merged into the template data.
+  def self.enqueue_act_invite(link:, email:, inviter:, act:, role:)
+    details = { name: inviter, act:, role: }.to_json
+    perform_later(nil, "act_invite", seal(link), seal(email, purpose: RECIPIENT_PURPOSE), seal(details, purpose: NAME_PURPOSE))
+  end
+
   def self.seal(value, purpose: LINK_PURPOSE, expires_in: 1.day) = encryptor.encrypt_and_sign(value, purpose:, expires_in:)
 
   def self.unseal(sealed, purpose: LINK_PURPOSE) = encryptor.decrypt_and_verify(sealed, purpose:)
@@ -70,12 +77,17 @@ class EmailDeliveryJob < ApplicationJob
     elsif NOTICE_TEMPLATES.include?(template) then { detail: secret }
     else { link: secret }
     end
-    data[:name] = self.class.unseal(sealed_name, purpose: NAME_PURPOSE) if sealed_name.present?
+    if sealed_name.present?
+      detail = self.class.unseal(sealed_name, purpose: NAME_PURPOSE)
+      if template == "act_invite" then data.merge!(JSON.parse(detail).symbolize_keys.slice(:name, :act, :role))
+      else data[:name] = detail
+      end
+    end
     result = EmailDelivery.call(to:, template:, data:, raise_errors: true)
     raise ProviderUnavailable, "email provider returned #{result[:status]}" if result[:status].to_i >= 500
 
     log_skip(result[:reason] || "rejected_#{result[:status]}", template) unless result[:delivered]
-  rescue ActiveSupport::MessageEncryptor::InvalidMessage
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage, JSON::ParserError
     log_skip("link_unreadable", template)
   end
 

@@ -79,7 +79,7 @@ class MailAuditTest < ActiveSupport::TestCase
         token = Rack::Utils.parse_query(URI.parse(link).query)["token"]
         assert_equal email.recipient, NotificationEmail.user_for_unsubscribe_token(token), "#{email.id}: token names the recipient"
         assert_includes email.text, "/unsubscribe?token="
-      elsif email.id == "vouch_invite"
+      elsif %w[vouch_invite act_invite].include?(email.id)
         assert_no_match(/cannot be turned off|your Verse account/, visible_text(email.html), "an invitee has no account yet")
       else
         assert_includes email.html, EmailDelivery::SERVICE_NOTE, "#{email.id}: service note"

@@ -140,6 +140,7 @@ export const ADMIN_TABS = [
   'queue',
   'verification',
   'reports',
+  'problems',
   'users',
   'reviews',
   'signin',

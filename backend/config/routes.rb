@@ -107,6 +107,9 @@ Rails.application.routes.draw do
           post :moderate
         end
       end
+      resources :problem_reports, path: "problem-reports", only: %i[index show update] do
+        get :screenshot, on: :member
+      end
       get :operations, to: "operations#show"
       get :audit, to: "operations#audit"
       get :subscriptions, to: "operations#subscriptions"
@@ -183,6 +186,7 @@ Rails.application.routes.draw do
     post "email/webhook/brevo", to: "email_webhooks#brevo"
     resources :notifications, only: %i[index update]
     resources :reports, only: :create
+    post "problem-reports", to: "problem_reports#create"
     resources :verification_requests, path: "verification-requests", only: :create
     resources :reviews, only: %i[index create]
     resources :resources, only: :index

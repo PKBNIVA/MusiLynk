@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   UserCheck,
   Flag,
+  MessageSquareWarning,
   Star,
   Stethoscope,
   CreditCard,
@@ -69,6 +70,7 @@ const DemoDataTab = lazy(() => import('./admin/DemoDataTab'));
 const AuditTab = lazy(() => import('./admin/AuditTab'));
 const AdminAiTab = lazy(() => import('./admin/AdminAiTab'));
 const UrgentTab = lazy(() => import('./admin/UrgentTab'));
+const ProblemReportsTab = lazy(() => import('./admin/ProblemReportsTab'));
 const FunnelTab = lazy(() => import('./admin/FunnelTab'));
 const CodesTab = lazy(() => import('./admin/CodesTab'));
 
@@ -314,6 +316,10 @@ export default function AdminDashboard() {
               <Flag aria-hidden="true" size={14} />
               Reports ({errors.stats ? '!' : (stats.openReports ?? 0)})
             </TabsTrigger>
+            <TabsTrigger value="problems" className="flex-none gap-1.5">
+              <MessageSquareWarning aria-hidden="true" size={14} />
+              Problem reports ({errors.stats ? '!' : (stats.newProblemReports ?? 0)})
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex-none gap-1.5">
               <Users aria-hidden="true" size={14} />
               Users
@@ -486,6 +492,11 @@ export default function AdminDashboard() {
             </Suspense>
           </TabsContent>
 
+          <TabsContent value="problems" className="mt-5">
+            <Suspense fallback={null}>
+              <ProblemReportsTab />
+            </Suspense>
+          </TabsContent>
           <TabsContent value="urgent" className="mt-5">
             <Suspense fallback={null}>
               <UrgentTab />

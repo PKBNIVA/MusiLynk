@@ -126,6 +126,11 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/admin/reports", :admin, { keys: %w[reports] }],
     [:patch, "/api/admin/reports/{report}", :admin, { params: { status: "resolved" }, missing: :report, bad: { status: "x" }, bad_status: [400] }],
     [:put, "/api/admin/reports/{report}", :admin, { params: { status: "dismissed" }, missing: :report }],
+    [:get, "/api/admin/problem-reports", :admin, { keys: %w[reports counts page perPage total] }],
+    [:get, "/api/admin/problem-reports/{problem_report}", :admin, { missing: :problem_report, keys: %w[report] }],
+    [:patch, "/api/admin/problem-reports/{problem_report}", :admin, { params: { status: "triaged", adminNote: "Matrix note" }, missing: :problem_report, bad: { status: "x" }, bad_status: [400], keys: %w[ok report] }],
+    [:put, "/api/admin/problem-reports/{problem_report}", :admin, { params: { status: "resolved" }, missing: :problem_report }],
+    [:get, "/api/admin/problem-reports/{problem_report}/screenshot", :admin, { ok: [404], missing: :problem_report, note: "the matrix report has no screenshot; the signed link is covered in ProblemReportsTest" }],
     [:get, "/api/admin/ai/costs", :admin, { keys: %w[totalSpendInr freeTierSpendInr byTask byTier topAccounts] }],
     [:get, "/api/admin/ai/usage?accountType=user&accountId=none", :admin, { keys: %w[balance monthlyAllowance usedThisPeriod resetsAt plan recent] }],
     [:post, "/api/admin/ai/grants", :admin, { params: ->(w, _a) { { accountType: "user", accountId: w.user(:js).id, credits: 10 } }, bad: { accountType: "user", accountId: "x", credits: 0 }, bad_status: [400] }],
@@ -204,6 +209,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     # on :shared[:job] (see api_matrix_world.rb `report:`), which would otherwise trip the new
     # duplicate-report rejection (see reports_test.rb) when `js`'s turn comes up below.
     [:post, "/api/reports", :any, { ok: [201], params: ->(w, _a) { { entityType: "job", entityId: w.refs[:shared][:draft_job], reason: "Spam or scam" } }, bad: {}, bad_status: [422], keys: %w[id] }],
+    [:post, "/api/problem-reports", :public, { ok: [201], params: ->(_w, _a) { { description: "Matrix: the page froze", email: "matrix-pr-#{SecureRandom.hex(4)}@example.com" } }, bad: {}, bad_status: [422], keys: %w[id screenshotSaved] }],
     [:post, "/api/verification-requests", :any, { ok: { default: [201], admin: [400] }, params: verification_kind, bad: { kind: "celebrity" }, bad_status: [400] }],
     [:get, "/api/reviews", :public, { keys: %w[reviews] }],
     [:post, "/api/reviews", :jobseeker, { ok: [201, 403, 409], params: ->(w, _a) { { employerId: w.user(:emp).id, rating: 5, body: "Great" } }, bad: { employerId: ApiMatrixWorld::MISSING_ID }, bad_status: [404, 422] }],
@@ -514,6 +520,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     end
     world.refs[:shared][:stage_post] = world.refs[:js][:stage_post]
     world.refs[:shared][:stage_comment] = world.refs[:js][:stage_comment]
+    world.refs[:shared][:problem_report] = ProblemReport.create!(user: world.user(:js), description: "Matrix problem report").id
     world.refs[:shared][:promo_code] = PromoCode.create!(code: "MATRIX#{SecureRandom.hex(3)}", kind: "discount_percent", percent_off: 15).id
     world.refs[:shared][:stage_follow_target] = User.create!(name: "Matrix Stage Followable", email: "matrix-stage-follow-#{SecureRandom.hex(4)}@example.com",
       password: ApiMatrixWorld::PASSWORD, role: "jobseeker", status: "active", profile_complete: true).id

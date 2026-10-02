@@ -863,6 +863,33 @@ export interface UrgentRequest {
   conversationId?: string | null;
 }
 
+export type ProblemReportStatus = 'new' | 'triaged' | 'resolved';
+
+/** Admin::ProblemReportsController#index / #show row. The screenshot is fetched separately (a short-lived signed link). */
+export interface AdminProblemReport {
+  id: string;
+  status: ProblemReportStatus;
+  description: string;
+  expected: string | null;
+  page: string | null;
+  context: {
+    release?: string;
+    browser?: string;
+    os?: string;
+    language?: string;
+    viewport?: { width: number; height: number };
+    role?: string;
+    errors?: string[];
+  };
+  email: string | null;
+  hasScreenshot: boolean;
+  adminNote: string | null;
+  createdAt: string;
+  handledAt: string | null;
+  handledByName: string | null;
+  user: { id: string; name: string; email: string; role: string } | null;
+}
+
 /** Admin::UrgentRequestsController#index row: the above plus founder-facing fields. */
 export interface AdminUrgentRequest extends UrgentRequest {
   ageMinutes: number;
@@ -1118,6 +1145,7 @@ export interface AdminStats {
   pendingReviews: number;
   verificationQueue: number;
   openReports: number;
+  newProblemReports?: number;
   messages: number;
   flaggedMessages: number;
   acts: number;

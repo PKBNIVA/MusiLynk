@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -948,6 +948,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
     t.index ["system_ref"], name: "index_posts_on_system_ref", unique: true
   end
 
+  create_table "problem_reports", id: :string, force: :cascade do |t|
+    t.string "user_id"
+    t.string "email"
+    t.text "description", null: false
+    t.text "expected"
+    t.string "page"
+    t.jsonb "context", default: {}, null: false
+    t.string "status", default: "new", null: false
+    t.text "admin_note"
+    t.bigint "screenshot_blob_id"
+    t.string "handled_by_id"
+    t.datetime "handled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["screenshot_blob_id"], name: "index_problem_reports_on_screenshot_blob_id"
+    t.index ["status", "created_at"], name: "index_problem_reports_on_status_and_created_at"
+    t.index ["user_id"], name: "index_problem_reports_on_user_id"
+  end
+
   create_table "product_events", id: :string, force: :cascade do |t|
     t.string "user_id"
     t.string "anon_id", null: false
@@ -1516,6 +1535,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
   add_foreign_key "posts", "portfolio_items", column: "shared_portfolio_item_id", on_delete: :nullify
   add_foreign_key "posts", "posts", column: "reshared_post_id", on_delete: :nullify
   add_foreign_key "posts", "users", column: "created_by_user_id"
+  add_foreign_key "problem_reports", "users", column: "handled_by_id", on_delete: :nullify
+  add_foreign_key "problem_reports", "users", on_delete: :cascade
   add_foreign_key "product_events", "users", on_delete: :nullify
   add_foreign_key "profiles", "users"
   add_foreign_key "promo_codes", "users", column: "created_by_id", on_delete: :nullify

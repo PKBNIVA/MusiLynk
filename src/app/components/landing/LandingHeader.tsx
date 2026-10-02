@@ -1,8 +1,11 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router';
 import { LayoutDashboard } from 'lucide-react';
 import { Button } from '../ui/button';
 import { BrandMark } from '../BrandMark';
 import { useAuth } from '../../lib/authContext';
+import { openProblemReport } from '../../lib/problemReportEvent';
+import { watchClientErrors } from '../../lib/recentErrors';
 
 const dashboardPathFor = (role: string) => (role === 'employer' ? '/employer' : role === 'admin' ? '/' : '/jobseeker');
 
@@ -48,6 +51,7 @@ export function LandingHeader() {
 }
 
 export function LandingFooter() {
+  useEffect(watchClientErrors, []);
   const links = [
     ['How Verse works', '/guide'],
     ['Pricing', '/pricing'],
@@ -74,6 +78,9 @@ export function LandingFooter() {
               {label}
             </Link>
           ))}
+          <button type="button" onClick={() => openProblemReport()} className="hover:text-white">
+            Report a problem
+          </button>
         </nav>
       </div>
     </footer>

@@ -18,7 +18,7 @@ module SyntheticQa
       "notifications" => %w[user_id], "organization_members" => %w[user_id], "organizations" => %w[owner_id],
       "portfolio_items" => %w[user_id], "portfolios" => %w[owner_id], "post_comments" => %w[created_by_user_id author_id],
       "post_reactions" => %w[actor_id], "posts" => %w[created_by_user_id author_id], "product_events" => %w[user_id],
-      "profiles" => %w[user_id], "promo_codes" => %w[created_by_id owner_user_id], "promo_redemptions" => %w[user_id],
+      "problem_reports" => %w[user_id handled_by_id], "profiles" => %w[user_id], "promo_codes" => %w[created_by_id owner_user_id], "promo_redemptions" => %w[user_id],
       "push_subscriptions" => %w[user_id],
       "recent_activities" => %w[user_id entity_id], "refund_records" => %w[requested_by_id decided_by_id], "reports" => %w[reporter_id resolved_by_id entity_id],
       "resumes" => %w[user_id], "review_prompts" => %w[user_id counterpart_user_id], "reviews" => %w[author_id employer_id],
@@ -168,6 +168,8 @@ module SyntheticQa
       remove(Conversation.where(id: ids[:conversations]), "conversations")
       remove(Application.where(id: ids[:applications]), "applications")
       remove(Report.where(reporter_id: user_ids).or(Report.where(resolved_by_id: user_ids)).or(Report.where(entity_id: ids[:all_entity_ids])), "reports")
+      # destroy (not delete_all) so a report's screenshot file goes with it; handled_by_id is nulled by the database.
+      @counts["problem_reports"] += ProblemReport.where(user_id: user_ids).destroy_all.size
       remove(Review.where(author_id: user_ids).or(Review.where(employer_id: user_ids)), "reviews")
       remove(VerificationRequest.where(user_id: user_ids).or(VerificationRequest.where(reviewed_by_id: user_ids)), "verification_requests")
       remove(Vouch.where(voucher_id: user_ids).or(Vouch.where(vouchee_id: user_ids)), "vouches")

@@ -31,6 +31,7 @@ import {
   Layers,
   ScrollText,
   Inbox,
+  Flag,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '../lib/authContext';
@@ -50,6 +51,8 @@ import { SIGN_IN_CODE_TOAST } from '../lib/authToasts';
 import { apiGet } from '../lib/api';
 import { UNREAD_CHANGED_EVENT, useVisiblePolling } from '../lib/usePolling';
 import { ProductTour } from './ProductTour';
+import { openProblemReport } from '../lib/problemReportEvent';
+import { watchClientErrors } from '../lib/recentErrors';
 import { BrandMark } from './BrandMark';
 import { SkipLink } from './SkipLink';
 import type { UnreadCounts } from '../lib/apiTypes';
@@ -72,6 +75,8 @@ export function Navigation() {
   const [unread, setUnread] = useState(0);
   const [tourOpen, setTourOpen] = useState(false);
   // The "check your email" toast is stale once the person is in and moving between pages (J-26).
+  // Keep the last few error messages in memory for "Report a problem".
+  useEffect(watchClientErrors, []);
   useEffect(() => {
     toast.dismiss(SIGN_IN_CODE_TOAST);
   }, [location.pathname]);
@@ -488,6 +493,10 @@ export function Navigation() {
                       <BookOpen className="mr-2 h-4 w-4" />
                       How to use Verse
                     </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => openProblemReport({ role: user?.role })} className="cursor-pointer">
+                    <Flag className="mr-2 h-4 w-4" />
+                    Report a problem
                   </DropdownMenuItem>
                 </div>
                 <div className="shrink-0">

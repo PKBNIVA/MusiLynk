@@ -101,6 +101,16 @@ class EmailDelivery
       action: "See the invite",
       footer: "You are getting this one email because someone invited you to their band on Verse. If you do not know them, ignore it: you are only added if you accept.",
       service_note: false
+    },
+    # data: { link: the report in the admin console, name: who sent it }. Sent to the founder when a
+    # problem report arrives (ProblemReportNotifier). No report text: it stays in the admin console.
+    "problem_report" => {
+      subject: "New problem report on Verse",
+      heading: ->(d) { "New problem report from #{d[:name]}" },
+      copy: "Someone sent a problem report from the app. Open it in the admin console to read it and see the screenshot, if they added one.",
+      action: "Open the report",
+      footer: "You are getting this because you receive Verse founder emails. Reports are also listed under Problem reports in the admin console.",
+      service_note: false
     }
   }.freeze
   DEFAULT_FOOTER = "If you did not request this, you can safely ignore this email.".freeze

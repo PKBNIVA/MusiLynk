@@ -1,24 +1,17 @@
 import { Link } from 'react-router';
-import { ArrowRight, BriefcaseBusiness, MapPin, Mic2, Zap, type LucideIcon } from 'lucide-react';
-import { AppSelect, type AppSelectOption } from '../ui/app-select';
+import { ArrowRight, BriefcaseBusiness, Mic2, Zap, type LucideIcon } from 'lucide-react';
 import { Photo } from '../media/Photo';
 import { trackPathChosen } from '../../lib/analytics';
 import { HERO_PHOTO_WIDTHS } from '../../lib/photo';
 import { HERO_PHOTO, editorialPhoto } from './photos';
 
 export const LAUNCH_CITIES = ['Mumbai'] as const;
-// Live cities, then a disabled row saying more are coming. The shared dark listbox, never the OS one.
-const CITY_OPTIONS: AppSelectOption[] = [
-  ...LAUNCH_CITIES.map((name) => ({ value: name, label: name, description: null })),
-  { value: 'more-cities-soon', label: 'Delhi, Bengaluru, Pune, Goa coming', description: null, disabled: true },
-];
-
 /**
- * Above the fold: the promise in one line, the city, and the two ways in, over a full-bleed
+ * Above the fold: the promise in one line and the two ways in, over a full-bleed
  * photograph (the right two-fifths on desktop; behind a scrim on a phone). Sized so that on a
  * 390×844 phone the headline and both path buttons are visible without scrolling.
  */
-export function LandingHero({ city, onCityChange }: { city: string; onCityChange: (city: string) => void }) {
+export function LandingHero({ city }: { city: string; onCityChange?: (city: string) => void }) {
   const photo = editorialPhoto(HERO_PHOTO);
   return (
     <section
@@ -44,22 +37,9 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
       </div>
       <div className="relative mx-auto max-w-6xl">
         <div className="lg:max-w-[56%]">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.05] py-1 pl-3 pr-1.5 text-sm text-slate-200">
-            <MapPin aria-hidden="true" size={15} className="text-teal-300" />
-            <span id="landing-city-label">Now booking in</span>
-            <AppSelect
-              id="landing-city"
-              aria-labelledby="landing-city-label landing-city"
-              value={city}
-              onValueChange={(value) => value && onCityChange(value)}
-              options={CITY_OPTIONS}
-              className="h-11 w-auto rounded-full bg-slate-900 px-3.5 font-semibold text-white sm:h-9"
-              contentClassName="min-w-48"
-            />
-          </div>
           <h1
             id="hero-title"
-            className="mt-4 text-[2.1rem] font-black leading-[1.07] tracking-[-.035em] sm:text-5xl lg:text-[3.6rem]"
+            className="text-[2.1rem] font-black leading-[1.07] tracking-[-.035em] sm:text-5xl lg:text-[3.6rem]"
           >
             Hire a verified musician for your session or gig,{' '}
             <span className="musilynk-gradient-text">within 24 hours.</span>

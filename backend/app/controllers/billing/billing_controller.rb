@@ -194,6 +194,8 @@ module Billing
         sub&.apply_provider_period!(payload.dig("payload", "subscription", "entity") || {}) if status && subscription_result != :invalid_transition
         supersede_internal_subscriptions!(sub) if subscription_result == :applied && %w[trialing active].include?(status)
         record_charge!(sub) if subscription_result == :applied && payload["event"] == "subscription.charged"
+        # The money was taken whatever the ordering of the status events, so the invoice does not wait on them.
+        issue_invoice!(sub, payload) if sub && payload["event"] == "subscription.charged"
         payment, payment_result = process_booking_payment(payload, event_at:, event_id:)
         result = subscription_result || payment_result || (status ? :subscription_not_found : :ignored)
         BillingEvent.create!(provider: "razorpay", provider_event_id: event_id, user: sub&.user || payment&.payer, event_type: payload["event"], payload:, processing_result: result, processed_at: Time.current)
@@ -335,6 +337,9 @@ module Billing
         [payment, result]
       when "refund.processed"
         refund = payload.dig("payload", "refund", "entity") || {}
+        invoice = TaxInvoice.find_by(provider_payment_id: refund["payment_id"]) if refund["payment_id"].present?
+        return [nil, record_invoice_refund!(invoice, refund)] if invoice
+
         payment = BookingPayment.find_by(provider_payment_id: refund["payment_id"]) if refund["payment_id"].present?
         return [payment, :payment_not_found] unless payment&.provider == "razorpay"
 
@@ -362,6 +367,22 @@ module Billing
 
       name = PLANS.dig(mandate.plan_code, :name) || mandate.plan_code
       ["You already have a #{name} subscription (#{mandate.status}). Cancel your current plan first; you can switch once it has ended.", :conflict, "PLAN_CHANGE_REQUIRES_CANCELLATION"]
+    end
+
+    # Issuing the invoice must never undo the charge it documents: a failure is reported and the
+    # nightly TaxInvoiceCatchUpJob issues it later.
+    def issue_invoice!(sub, payload)
+      TaxInvoiceGenerator.for_charge(subscription: sub, payment: payload.dig("payload", "payment", "entity"))
+    rescue StandardError => error
+      Rails.logger.error("tax invoice issue failed: #{error.class}")
+      ErrorReporter.capture(error, tags: { source: "tax_invoice_issue_failed" })
+    end
+
+    # Razorpay processed a refund for a subscription charge: the invoice shows as refunded with
+    # the refund reference. (Credit notes are not issued; the original invoice is left as it was.)
+    def record_invoice_refund!(invoice, refund)
+      invoice.update!(refund_status: refund["amount"].to_i >= invoice.total_paise ? "full" : "partial", refund_reference: refund["id"].to_s.first(80), refunded_at: Time.current)
+      :invoice_refund_recorded
     end
 
     # A paid Razorpay subscription has just been authorised or activated: only now

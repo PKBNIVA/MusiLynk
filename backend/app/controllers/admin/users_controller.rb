@@ -108,6 +108,14 @@ module Admin
       render json: { ok: true, alreadyVerified: was_verified }
     end
 
+    # Read-only: the account's billing details (current and earlier versions) and invoices.
+    def billing
+      user = User.find(params[:id])
+      profiles = BillingProfile.where(user_id: user.id).order(version: :desc).limit(20)
+      render json: { profile: profiles.find(&:current)&.as_json_for_owner, versions: profiles.map(&:as_json_for_owner),
+                     invoices: TaxInvoice.where(user_id: user.id).newest_first.limit(100).map(&:list_json) }
+    end
+
     def grant_plan
       return render_error("Invalid plan.", :bad_request) unless %w[pro studio enterprise].include?(params[:planCode])
       days = params.fetch(:days, 30)

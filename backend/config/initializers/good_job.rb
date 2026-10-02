@@ -34,6 +34,11 @@ Rails.application.configure do
       class: "UploadSweepJob",
       description: "Delete stale pending uploads, unused or ownerless uploads, and orphaned bucket objects"
     },
+    tax_invoice_catch_up: {
+      cron: "27 5 * * *",
+      class: "TaxInvoiceCatchUpJob",
+      description: "Issue subscription invoices that were waiting for the seller details in config/legal.yml"
+    },
     # 09:30 IST == 04:00 UTC (GoodJob cron times are UTC, like every other entry here).
     billing_reminders: {
       cron: "0 4 * * *",

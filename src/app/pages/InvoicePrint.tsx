@@ -1,17 +1,18 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router';
+import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { usePageMeta } from '../components/PageMeta';
 import { useWorkspaceBase } from '../components/showcase/parts';
+import { InvoiceDocument } from '../components/billing/InvoiceDocument';
 import { apiGet } from '../lib/api';
 import { errorMessage } from '../lib/errors';
-import { formatDate, formatMoney } from '../lib/format';
+import { printInvoice, type InvoiceDocumentData } from '../lib/billingProfile';
 
-// GET /api/invoices/:id (InvoicesController#show). GST fields come from config/legal.yml at
-// render time; a blank GSTIN prints blank rather than a placeholder, since a real GSTIN must
-// never be fabricated (see backend/docs/compliance-checklist.md).
-type InvoiceDetail = {
+// GET /api/invoices/:id (InvoicesController#show): the booking-deposit invoice. GST fields come
+// from config/legal.yml at render time; a blank GSTIN prints blank rather than a placeholder, since
+// a real GSTIN must never be fabricated (see backend/docs/compliance-checklist.md).
+type BookingInvoiceDetail = {
   invoiceNumber: string;
   financialYear: string;
   createdAt: string;
@@ -24,57 +25,118 @@ type InvoiceDetail = {
   actName: string;
   payerName: string;
   bookingId: string;
-  seller: {
-    legalName: string;
-    gstin: string;
-    gstinPresent: boolean;
-    businessAddress: string;
-    businessState: string;
-  };
+  amountInWords?: string;
+  seller: { legalName: string; gstin: string; gstinPresent: boolean; businessAddress: string; businessState: string };
 };
 
-const money = (currency: string, value: number) => formatMoney(Number(value || 0), currency);
+const paise = (rupees: number) => Math.round(Number(rupees || 0) * 100);
+
+function fromBooking(id: string, b: BookingInvoiceDetail): InvoiceDocumentData {
+  return {
+    id,
+    invoiceNumber: b.invoiceNumber,
+    issuedAt: b.createdAt,
+    documentType: 'booking_invoice',
+    seller: {
+      legalName: b.seller.legalName,
+      address: b.seller.businessAddress,
+      state: b.seller.businessState,
+      gstin: b.seller.gstinPresent ? b.seller.gstin : '',
+    },
+    buyer: { name: b.payerName },
+    lineItems: [
+      { description: `Booking deposit, ${b.actName}`, taxableValuePaise: paise(b.depositAmount) },
+      { description: 'Verse platform fee', taxableValuePaise: paise(b.feeAmount) },
+      { description: 'GST on platform fee', taxableValuePaise: paise(b.gstAmount) },
+    ],
+    taxableValuePaise: paise(b.totalAmount),
+    cgstPaise: 0,
+    sgstPaise: 0,
+    igstPaise: 0,
+    totalPaise: paise(b.totalAmount),
+    ratePercent: 0,
+    amountInWords: b.amountInWords ?? '',
+    note: `Booking fee policy version ${b.policyVersion}. Draft invoice generated automatically, for a lawyer/CA to review. Not legal or tax advice.`,
+  };
+}
 
 /**
- * The invoice laid out for paper: black on white, no navigation. The browser's own
- * "Print → Save as PDF" makes the PDF; nothing is rendered on the server. This is a draft
- * invoice generator for a lawyer/CA to review, not a substitute for one (see
- * backend/docs/compliance-checklist.md).
+ * The invoice laid out for paper: black on white, A4, no navigation. "Download PDF" opens the
+ * browser's print dialog titled with the invoice number, so "Save as PDF" proposes the right file
+ * name; nothing is rendered on the server. Serves /invoices/:id/print for booking-deposit invoices and for subscription invoices. `?print=1` (the list's Download PDF link) opens it at once.
  */
 export default function InvoicePrint() {
   const { id = '' } = useParams();
+  // One page for both documents, so no extra route is needed in the entry bundle: subscription invoice ids start "tax_".
+  const kind: 'booking' | 'subscription' = id.startsWith('tax_') ? 'subscription' : 'booking';
+  const [search, setSearch] = useSearchParams();
   const base = useWorkspaceBase();
-  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceDocumentData | null>(null);
   const [error, setError] = useState('');
   const load = useCallback(() => {
-    apiGet<InvoiceDetail>(`/invoices/${encodeURIComponent(id)}`)
-      .then(setInvoice)
-      .catch((e: unknown) => setError(errorMessage(e, 'This invoice could not be loaded.')));
-  }, [id]);
+    const request =
+      kind === 'subscription'
+        ? apiGet<{ invoice: InvoiceDocumentData }>(`/billing/invoices/${encodeURIComponent(id)}`).then((d) => d.invoice)
+        : apiGet<BookingInvoiceDetail>(`/invoices/${encodeURIComponent(id)}`).then((d) => fromBooking(id, d));
+    request.then(setInvoice).catch((e: unknown) => setError(errorMessage(e, 'This invoice could not be loaded.')));
+  }, [id, kind]);
   useEffect(load, [load]);
   usePageMeta(invoice ? `Invoice ${invoice.invoiceNumber}` : 'Invoice');
 
+  const autoPrinted = useRef(false);
+  const printTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(printTimer.current), []);
+  useEffect(() => {
+    if (!invoice || autoPrinted.current || search.get('print') !== '1') return;
+    autoPrinted.current = true;
+    setSearch(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('print');
+        return next;
+      },
+      { replace: true },
+    );
+    // Let the document paint before the print dialog opens.
+    printTimer.current = window.setTimeout(() => printInvoice(invoice.invoiceNumber), 300);
+  }, [invoice, search, setSearch]);
+
+  const back = kind === 'subscription' ? `${base}/billing` : `${base}/bookings`;
   return (
-    <div className="min-h-screen bg-slate-200 text-slate-900 print:bg-white">
+    <div className="invoice-page min-h-screen bg-slate-200 text-slate-900 print:bg-white">
+      <style>
+        {'@media print { @page { size: A4; margin: 12mm; } .invoice-page { background: #fff !important; } }'}
+      </style>
       <div className="mx-auto flex max-w-[210mm] flex-wrap items-center justify-between gap-2 px-4 py-4 print:hidden">
         <Link
-          to={`${base}/bookings`}
+          to={back}
           className="inline-flex min-h-11 items-center gap-1.5 text-sm text-slate-700 hover:text-slate-950"
         >
           <ArrowLeft size={16} aria-hidden="true" />
-          Back to bookings
+          {kind === 'subscription' ? 'Back to billing' : 'Back to bookings'}
         </Link>
-        <Button
-          onClick={() => window.print()}
-          disabled={!invoice}
-          className="bg-slate-900 text-white hover:bg-slate-800"
-        >
-          <Printer size={16} aria-hidden="true" />
-          Print or save as PDF
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => invoice && printInvoice(invoice.invoiceNumber)}
+            disabled={!invoice}
+            className="border-slate-400 bg-white text-slate-900 hover:bg-slate-100"
+          >
+            <Printer size={16} aria-hidden="true" />
+            Print
+          </Button>
+          <Button
+            onClick={() => invoice && printInvoice(invoice.invoiceNumber)}
+            disabled={!invoice}
+            className="bg-slate-900 text-white hover:bg-slate-800"
+          >
+            <Download size={16} aria-hidden="true" />
+            Download PDF
+          </Button>
+        </div>
       </div>
       <main
-        className="mx-auto mb-10 max-w-[210mm] bg-white px-6 py-8 shadow-xl sm:px-12 sm:py-12 print:m-0 print:max-w-none print:p-0 print:shadow-none"
+        className="mx-auto mb-10 max-w-[210mm] bg-white px-5 py-6 shadow-xl sm:px-12 sm:py-12 print:m-0 print:max-w-none print:p-0 print:shadow-none"
         data-testid="invoice-print"
       >
         {!invoice ? (
@@ -82,70 +144,14 @@ export default function InvoicePrint() {
             {error || 'Loading…'}
           </p>
         ) : (
-          <article>
-            <div className="mb-4 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-xs text-amber-900 print:border-slate-400 print:bg-white">
-              Draft invoice — generated automatically, for a lawyer/CA to review before this format is relied on. Not
-              legal or tax advice.
-            </div>
-            <header className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-slate-900 pb-4">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">{invoice.seller.legalName}</h1>
-                {invoice.seller.businessAddress && (
-                  <p className="mt-1 text-sm text-slate-700">{invoice.seller.businessAddress}</p>
-                )}
-                {invoice.seller.businessState && (
-                  <p className="text-sm text-slate-700">{invoice.seller.businessState}</p>
-                )}
-                <p className="mt-1 text-sm text-slate-700">
-                  GSTIN: {invoice.seller.gstinPresent ? invoice.seller.gstin : '—'}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold">Invoice {invoice.invoiceNumber}</p>
-                <p className="text-sm text-slate-700">FY {invoice.financialYear}</p>
-                <p className="text-sm text-slate-700">{formatDate(invoice.createdAt)}</p>
-              </div>
-            </header>
-            <div className="mt-5 flex flex-wrap justify-between gap-4 text-sm text-slate-800">
-              <div>
-                <p className="font-semibold text-slate-900">Billed to</p>
-                <p>{invoice.payerName}</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-900">For booking with</p>
-                <p>{invoice.actName}</p>
-              </div>
-            </div>
-            <table className="mt-6 w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-300 text-left text-slate-700">
-                  <th className="py-2">Line</th>
-                  <th className="py-2 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-slate-200">
-                  <td className="py-2">Booking deposit</td>
-                  <td className="py-2 text-right">{money(invoice.currency, invoice.depositAmount)}</td>
-                </tr>
-                <tr className="border-b border-slate-200">
-                  <td className="py-2">Verse platform fee</td>
-                  <td className="py-2 text-right">{money(invoice.currency, invoice.feeAmount)}</td>
-                </tr>
-                <tr className="border-b border-slate-200">
-                  <td className="py-2">GST on platform fee</td>
-                  <td className="py-2 text-right">{money(invoice.currency, invoice.gstAmount)}</td>
-                </tr>
-                <tr>
-                  <td className="py-2 font-semibold">Total</td>
-                  <td className="py-2 text-right font-semibold">{money(invoice.currency, invoice.totalAmount)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p className="mt-6 text-xs text-slate-600">Booking fee policy version {invoice.policyVersion}.</p>
-          </article>
+          <InvoiceDocument invoice={invoice} />
         )}
       </main>
+      {invoice && (
+        <p className="mx-auto mb-8 max-w-[210mm] px-4 text-center text-xs text-slate-600 print:hidden">
+          To save a PDF, choose “Save as PDF” as the printer in the print window.
+        </p>
+      )}
     </div>
   );
 }

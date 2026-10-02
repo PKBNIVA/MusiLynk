@@ -11,7 +11,7 @@ module SyntheticQa
       "act_members" => %w[user_id], "acts" => %w[owner_id], "ai_topup_payments" => %w[user_id], "application_events" => %w[actor_id],
       "applications" => %w[candidate_id], "audit_logs" => %w[actor_id entity_id], "auth_connections" => %w[owner_id],
       "availability_windows" => %w[user_id], "badges" => %w[user_id], "band_projects" => %w[owner_id], "billing_attempts" => %w[user_id],
-      "billing_credits" => %w[user_id], "billing_events" => %w[user_id], "booking_payments" => %w[payer_id], "booking_quotes" => %w[created_by_id],
+      "billing_credits" => %w[user_id], "billing_events" => %w[user_id], "billing_profiles" => %w[user_id], "booking_payments" => %w[payer_id], "booking_quotes" => %w[created_by_id],
       "booking_requests" => %w[requester_id], "career_entries" => %w[user_id], "conversations" => %w[candidate_id employer_id],
       "crew_plans" => %w[owner_id], "email_tokens" => %w[user_id], "follows" => %w[follower_user_id followable_id],
       "job_alerts" => %w[user_id], "jobs" => %w[employer_id], "lifecycle_emails" => %w[user_id], "messages" => %w[sender_id],
@@ -22,7 +22,7 @@ module SyntheticQa
       "recent_activities" => %w[user_id entity_id], "refund_records" => %w[requested_by_id decided_by_id], "reports" => %w[reporter_id resolved_by_id entity_id],
       "resumes" => %w[user_id], "review_prompts" => %w[user_id counterpart_user_id], "reviews" => %w[author_id employer_id],
       "saved_jobs" => %w[user_id], "sessions" => %w[user_id], "showcase_suggestions" => %w[owner_id], "subscriptions" => %w[user_id],
-      "talent_folder_members" => %w[candidate_id], "talent_folders" => %w[owner_id], "talent_shortlists" => %w[candidate_id employer_id],
+      "talent_folder_members" => %w[candidate_id], "tax_invoices" => %w[user_id], "talent_folders" => %w[owner_id], "talent_shortlists" => %w[candidate_id employer_id],
       "uploads" => %w[user_id], "urgent_request_notifications" => %w[user_id notified_by_admin_id], "urgent_request_responses" => %w[user_id],
       "urgent_requests" => %w[requester_id filled_by_id], "user_blocks" => %w[blocker_id blocked_id],
       "users" => %w[vouched_by_id], "verification_requests" => %w[user_id reviewed_by_id], "vouches" => %w[voucher_id vouchee_id]
@@ -171,6 +171,8 @@ module SyntheticQa
       remove(AuditLog.where(actor_id: user_ids).or(AuditLog.where(entity_id: ids[:all_entity_ids])), "audit_logs")
       remove(BillingEvent.where(user_id: user_ids), "billing_events")
       remove(BillingAttempt.where(user_id: user_ids), "billing_attempts")
+      remove(TaxInvoice.where(user_id: user_ids), "tax_invoices")
+      remove(BillingProfile.where(user_id: user_ids), "billing_profiles")
       remove(Job.where(id: ids[:jobs]), "jobs")
       remove(Act.where(id: ids[:acts]), "acts")
       remove(Organization.where(id: ids[:organizations]), "organizations")

@@ -19,7 +19,7 @@ class OperationsSnapshot
       jobs: jobs,
       payments: payments,
       email: email,
-      legal: { unfilled: LegalConfig.unfilled_fields }
+      legal: { unfilled: LegalConfig.unfilled_fields, invoiceSellerPending: LegalConfig.invoice_pending_fields }
     }
   end
 

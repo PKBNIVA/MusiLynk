@@ -16,6 +16,7 @@ import { errorMessage } from '../../lib/errors';
 import { Panel, Pager, Empty, date, RECONCILABLE, type AdminActions, type PageMeta } from './shared';
 import { AdminPageHeader, HowToCallout, InfoTip } from './ui';
 import { formatMoney } from '../../lib/format';
+import { InvoicesPanel } from '../../components/admin/InvoicesPanel';
 
 const money = (currency: string | null | undefined, value: unknown) =>
   formatMoney(Number(value || 0), currency || 'INR');
@@ -146,6 +147,7 @@ export default function CommerceTab({
       </HowToCallout>
       <div className="grid xl:grid-cols-2 gap-5">
         <RefundsToReview />
+        <InvoicesPanel />
         <Card className="bg-white/[.05] border-white/10 xl:col-span-2">
           <CardHeader>
             <CardTitle>

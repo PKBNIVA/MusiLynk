@@ -9,6 +9,22 @@ default: &default
     address: "[REGISTERED ADDRESS]"
     state: "[STATE, for place-of-supply on GST invoices]"
 
+    # --- Subscription invoices (TaxInvoiceGenerator). See docs/ops/billing-invoices.md. ---
+    # Two-digit GST state code of the registered address (27 = Maharashtra). Left blank, it is read
+    # from the GSTIN or from `state` when that is a state name. Decides CGST+SGST versus IGST.
+    state_code: "[STATE CODE, e.g. 27]"
+    pan: "[PAN]"
+    # Services Accounting Code printed on each line. 998314 is the usual choice for a software
+    # platform subscription; the CA confirms it.
+    sac_code: "998314"
+    # false = Verse is not GST-registered yet: every document is a "Bill of supply" with no GST.
+    gst_registered: false
+    # true = plan prices already include 18% GST (the taxable value is backed out of the amount
+    # charged). false = prices are before GST; Razorpay plan amounts must then hold the GST-added
+    # price, because the invoice always splits what was actually collected.
+    prices_include_gst: true
+    invoice_prefix: "VRS"
+
   # DPDP Act, 2023 grievance officer. Shown on the Privacy Policy page.
   grievance_officer:
     name: "[NAME]"

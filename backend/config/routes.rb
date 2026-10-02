@@ -83,6 +83,7 @@ Rails.application.routes.draw do
       get "users/lookup", to: "users#lookup"
       resources :users, only: %i[index update] do
         member do
+          get :billing, path: "billing"
           post :grant_plan, path: "grant-plan"
           post :revoke_sessions, path: "revoke-sessions"
           post :confirm_email, path: "confirm-email"
@@ -114,6 +115,8 @@ Rails.application.routes.draw do
       get "billing-attempts", to: "operations#billing_attempts"
       post "billing-attempts/:id/reconcile", to: "operations#reconcile_billing_attempt"
       resources :billing_events, path: "billing-events", only: %i[index show]
+      get "invoices/export", to: "invoices#export", defaults: { format: "csv" }
+      resources :invoices, only: :index
       get "ai/costs", to: "ai#costs"
       get "ai/usage", to: "ai#usage"
       post "ai/grants", to: "ai#create_grant"
@@ -293,6 +296,9 @@ Rails.application.routes.draw do
       post :cancel, to: "billing#cancel"
       get "cancel-link", to: "billing#verify_cancel_link"
       post "codes/validate", to: "codes#validate"
+      get :profile, to: "profiles#show"
+      put :profile, to: "profiles#update"
+      resources :invoices, only: %i[index show]
       post "webhook/razorpay", to: "billing#razorpay_webhook"
     end
     # Local Razorpay simulator (RAZORPAY_SIMULATOR=true, test key, never production).

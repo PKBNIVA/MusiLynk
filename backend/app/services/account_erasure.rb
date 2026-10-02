@@ -123,6 +123,8 @@ class AccountErasure
       vouch.update_columns(vouchee_email: "deleted-#{vouch.id.to_s.downcase.gsub(/[^a-z0-9]/, "")}@deleted.invalid", vouchee_id: nil)
     end
     Organization.where(owner_id: @user.id).update_all(tax_id: nil, billing_email: nil, updated_at: Time.current)
+    # Saved billing details go; issued invoices stay (tax rules) with the snapshot they were issued with.
+    BillingProfile.where(user_id: @user.id).delete_all
   end
 
   AUDIT_PII_KEYS = %w[email ip remoteIp origin from to].freeze

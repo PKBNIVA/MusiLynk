@@ -130,7 +130,7 @@ function JoinShell({
     <div className="min-h-screen bg-slate-950 text-white">
       <SkipLink />
       <header className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
-        <Link to="/" aria-label="Verse home" className="rounded-xl">
+        <Link to="/" aria-label="Verse home" className="inline-flex min-h-11 items-center rounded-xl">
           <BrandMark compact />
         </Link>
         <p className="text-sm text-slate-300">
@@ -550,7 +550,7 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
           {HIRER_KINDS.map((option) => (
             <label
               key={option.value}
-              className="flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border border-white/15 bg-white/[.03] px-3 text-sm leading-tight text-slate-100 hover:border-white/30 has-[:checked]:border-violet-300/70 has-[:checked]:bg-violet-500/20 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet-300"
+              className="relative flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border border-white/15 bg-white/[.03] px-3 text-sm leading-tight text-slate-100 hover:border-white/30 has-[:checked]:border-violet-300/70 has-[:checked]:bg-violet-500/20 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet-300"
             >
               <input
                 type="radio"
@@ -561,7 +561,11 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
                   setKind(option.value);
                   setErrors((current) => ({ ...current, kind: undefined }));
                 }}
-                className="size-4 shrink-0 accent-violet-500 focus-visible:outline-none"
+                className="peer absolute inset-0 m-0 size-full cursor-pointer opacity-0 focus-visible:outline-none"
+              />
+              <span
+                aria-hidden="true"
+                className="size-4 shrink-0 rounded-full border-2 border-slate-400 peer-checked:border-violet-400 peer-checked:bg-violet-400 peer-checked:shadow-[inset_0_0_0_2px_rgb(30_27_75)]"
               />
               {HIRING_FOR[option.value]}
             </label>

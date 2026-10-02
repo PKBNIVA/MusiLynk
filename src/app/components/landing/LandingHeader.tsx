@@ -17,7 +17,7 @@ export function LandingHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070813]/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-        <Link to="/" aria-label="Verse home" className="shrink-0 rounded-xl">
+        <Link to="/" aria-label="Verse home" className="inline-flex min-h-11 shrink-0 items-center rounded-xl">
           <BrandMark />
         </Link>
         <nav className="flex items-center gap-1" aria-label="Primary navigation">
@@ -72,13 +72,17 @@ export function LandingFooter() {
             Verified musicians and crew for sessions, weddings, events and tours. Starting in Mumbai.
           </p>
         </div>
-        <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2">
+        <nav aria-label="Footer" className="flex flex-wrap gap-x-5">
           {links.map(([label, to]) => (
-            <Link key={to} to={to} className="hover:text-white">
+            <Link key={to} to={to} className="inline-flex min-h-10 min-w-10 items-center hover:text-white">
               {label}
             </Link>
           ))}
-          <button type="button" onClick={() => openProblemReport()} className="hover:text-white">
+          <button
+            type="button"
+            onClick={() => openProblemReport()}
+            className="inline-flex min-h-10 min-w-10 items-center hover:text-white"
+          >
             Report a problem
           </button>
         </nav>

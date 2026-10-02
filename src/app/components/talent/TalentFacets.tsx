@@ -70,7 +70,7 @@ function Chip({ pressed, onClick, children }: { pressed: boolean; onClick: () =>
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className={`min-h-9 shrink-0 snap-start whitespace-nowrap rounded-full border px-3.5 text-sm ${
+      className={`min-h-10 shrink-0 snap-start whitespace-nowrap rounded-full border px-3.5 text-sm ${
         pressed
           ? 'border-violet-400 bg-violet-500/20 text-white'
           : 'border-white/15 bg-white/[.04] text-slate-300 hover:bg-white/[.08]'
@@ -100,7 +100,7 @@ export function TalentFacets({ values, update }: Props) {
         aria-expanded={open || active > 0}
         aria-controls="talent-facets"
         onClick={() => setOpen(!open)}
-        className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/15 bg-white/[.04] px-3.5 text-sm text-slate-300 hover:bg-white/[.08]"
+        className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/15 bg-white/[.04] px-3.5 text-sm text-slate-300 hover:bg-white/[.08]"
       >
         <SlidersHorizontal size={14} aria-hidden="true" />
         More filters{active > 0 ? ` (${active})` : ''}

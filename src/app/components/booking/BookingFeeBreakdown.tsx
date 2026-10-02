@@ -65,7 +65,7 @@ export function BookingFeeBreakdown({
               <li key={line}>{line}</li>
             ))}
           </ul>
-          <div className="text-[11px] text-slate-500 mt-1.5">Policy version {policy.policyVersion}</div>
+          <div className="text-xs text-slate-500 mt-1.5">Policy version {policy.policyVersion}</div>
         </div>
       )}
     </div>

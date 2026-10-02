@@ -429,10 +429,10 @@ export default function AuthPage() {
       <div className="verse-orb absolute -bottom-40 -right-20 h-[34rem] w-[34rem] rounded-full bg-cyan-400/25" />
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col">
         <header className="flex items-center justify-between">
-          <Link to="/">
+          <Link to="/" aria-label="Verse home" className="inline-flex min-h-11 items-center">
             <BrandMark />
           </Link>
-          <Link to="/" className="inline-flex items-center text-sm text-slate-300 hover:text-white">
+          <Link to="/" className="-my-2 inline-flex min-h-11 items-center py-2 text-sm text-slate-300 hover:text-white">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to home
           </Link>

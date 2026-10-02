@@ -28,7 +28,7 @@ export function PortfolioPreview({ portfolio, members }: { portfolio: Portfolio;
         {members.slice(0, 8).map((m) => (
           <li key={m.itemId} className="rounded-xl border border-white/10 bg-black/20 p-2.5">
             <p className="line-clamp-2 text-sm font-medium text-white">{m.item.title}</p>
-            <p className="mt-0.5 text-[11px] text-slate-400">
+            <p className="mt-0.5 text-xs text-slate-400">
               {m.source === 'pinned' ? 'Pinned' : [m.item.type || m.item.kind, m.item.year].filter(Boolean).join(' · ')}
             </p>
           </li>

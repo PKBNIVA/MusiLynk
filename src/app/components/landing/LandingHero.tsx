@@ -3,6 +3,7 @@ import { ArrowRight, BriefcaseBusiness, MapPin, Mic2, Zap, type LucideIcon } fro
 import { AppSelect, type AppSelectOption } from '../ui/app-select';
 import { Photo } from '../media/Photo';
 import { trackPathChosen } from '../../lib/analytics';
+import { HERO_PHOTO_WIDTHS } from '../../lib/photo';
 import { HERO_PHOTO, editorialPhoto } from './photos';
 
 export const LAUNCH_CITIES = ['Mumbai'] as const;
@@ -37,6 +38,7 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
           height={photo.height}
           sizes="(min-width: 1024px) 42vw, 100vw"
           priority
+          widths={HERO_PHOTO_WIDTHS}
           className="size-full object-cover object-[35%_50%] opacity-35 lg:opacity-100"
         />
       </div>

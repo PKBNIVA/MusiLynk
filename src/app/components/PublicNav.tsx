@@ -57,7 +57,7 @@ export function PublicNav() {
       >
         <SkipLink />
         <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-3 px-4 md:px-6">
-          <Link to="/" aria-label="Verse home" className="shrink-0">
+          <Link to="/" aria-label="Verse home" className="inline-flex min-h-11 shrink-0 items-center">
             <BrandMark />
           </Link>
           <form

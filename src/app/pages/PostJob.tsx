@@ -320,6 +320,7 @@ export default function PostJob() {
       })
       .catch((e: unknown) => setLoadError(errorMessage(e, 'This opportunity could not be loaded.')))
       .finally(() => setLoadingJob(false));
+    return undefined;
   }, [editId, userId, clearErrors]);
   // A fresh listing starts from what onboarding already told us: the city from the profile, and
   // the Page made from the company name (unless a choice was remembered on this device).

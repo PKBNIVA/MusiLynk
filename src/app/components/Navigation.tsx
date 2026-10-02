@@ -105,7 +105,7 @@ export function Navigation() {
     unreadMessages > 0 ? (
       <span
         data-testid="unread-messages-badge"
-        className={`grid h-4 min-w-4 place-items-center rounded-full bg-fuchsia-700 px-1 text-[9px] font-bold text-white ${className}`}
+        className={`grid h-4 min-w-4 place-items-center rounded-full bg-fuchsia-700 px-1 text-xs font-bold text-white ${className}`}
         aria-hidden="true"
       >
         {unreadMessages > 9 ? '9+' : unreadMessages}
@@ -248,7 +248,7 @@ export function Navigation() {
       >
         <SkipLink />
         <div className="mx-auto flex h-[72px] max-w-[1500px] items-center gap-2 px-4 sm:gap-4 md:px-6">
-          <Link to={baseUrl} aria-label="Verse dashboard" className="shrink-0">
+          <Link to={baseUrl} aria-label="Verse dashboard" className="inline-flex min-h-11 shrink-0 items-center">
             {/* The tagline costs ~70px; below sm the header must also fit the identity switcher, bell,
                 account menu and the menu button inside 360px. */}
             <span className="sm:hidden">
@@ -356,7 +356,7 @@ export function Navigation() {
                   <span
                     data-testid="unread-notifications-badge"
                     aria-hidden="true"
-                    className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-fuchsia-700 px-1 text-[9px] font-bold text-white"
+                    className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-fuchsia-700 px-1 text-xs font-bold text-white"
                   >
                     {unread > 9 ? '9+' : unread}
                   </span>
@@ -387,7 +387,7 @@ export function Navigation() {
                     <span
                       aria-hidden="true"
                       data-testid="review-badge"
-                      className="absolute -right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-teal-600 px-1 text-[9px] font-bold text-white"
+                      className="absolute -right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-teal-600 px-1 text-xs font-bold text-white"
                     >
                       {pendingReview > 9 ? '9+' : pendingReview}
                     </span>
@@ -410,7 +410,7 @@ export function Navigation() {
                   <DropdownMenuSeparator />
                   {accountGroups.map((group) => (
                     <DropdownMenuGroup key={group.label}>
-                      <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <DropdownMenuLabel className="text-xs uppercase tracking-widest text-muted-foreground">
                         {group.label}
                       </DropdownMenuLabel>
                       {group.items.map((item) => {
@@ -422,7 +422,7 @@ export function Navigation() {
                               <Icon className="mr-2 h-4 w-4" />
                               {item.label}
                               {isReview && pendingReview > 0 && (
-                                <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-[10px] font-bold text-white">
+                                <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-xs font-bold text-white">
                                   {pendingReview}
                                   <span className="sr-only"> to review</span>
                                 </span>
@@ -447,7 +447,7 @@ export function Navigation() {
                           <Inbox className="mr-2 h-4 w-4" />
                           Review changes
                           {pendingReview > 0 && (
-                            <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-[10px] font-bold text-white">
+                            <span className="ml-auto rounded-full bg-teal-600 px-1.5 text-xs font-bold text-white">
                               {pendingReview}
                               <span className="sr-only"> to review</span>
                             </span>
@@ -481,7 +481,7 @@ export function Navigation() {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                  <DropdownMenuLabel className="text-xs uppercase tracking-widest text-muted-foreground">
                     Help
                   </DropdownMenuLabel>
                   <DropdownMenuItem onSelect={() => setTourOpen(true)} className="cursor-pointer">
@@ -517,9 +517,7 @@ export function Navigation() {
               <DropdownMenuContent align="end" tabIndex={0} className="max-h-[72vh] w-72 overflow-y-auto">
                 {menuGroups.map((group) => (
                   <DropdownMenuGroup key={group.label}>
-                    <DropdownMenuLabel className="text-[10px] uppercase tracking-widest">
-                      {group.label}
-                    </DropdownMenuLabel>
+                    <DropdownMenuLabel className="text-xs uppercase tracking-widest">{group.label}</DropdownMenuLabel>
                     {group.items.map((item) => {
                       const Icon = item.icon;
                       return (
@@ -572,7 +570,7 @@ export function Navigation() {
                   ? `${item.label}, ${unreadMessages} unread`
                   : undefined
               }
-              className={`relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold ${active(item.path) || location.pathname === item.path ? 'bg-violet-500/20 text-violet-200' : 'text-slate-400'}`}
+              className={`relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold ${active(item.path) || location.pathname === item.path ? 'bg-violet-500/20 text-violet-200' : 'text-slate-400'}`}
             >
               <Icon size={18} />
               {item.label}

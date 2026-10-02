@@ -5,7 +5,7 @@ export function DemoBadge({ show, className = '' }: { show?: boolean; className?
     <span
       data-testid="demo-badge"
       title="Sample content for previewing Verse. Not a real account."
-      className={`inline-flex items-center rounded-full border border-white/15 px-1.5 py-px text-[10px] uppercase tracking-wide text-slate-400 ${className}`}
+      className={`inline-flex items-center rounded-full border border-white/15 px-1.5 py-px text-xs uppercase tracking-wide text-slate-400 ${className}`}
     >
       Demo
     </span>

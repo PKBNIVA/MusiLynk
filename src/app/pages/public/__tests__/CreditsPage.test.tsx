@@ -1,3 +1,5 @@
+import { HERO_PHOTO } from '../../../components/landing/photos';
+import { HERO_PHOTO_WIDTHS, PHOTO_WIDTHS } from '../../../lib/photo';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -65,8 +67,10 @@ describe('photo credits', () => {
 describe('public/img', () => {
   const imgDir = join(ROOT, 'public/img');
 
-  it('has an 800 and a 1600 variant for every credit and no uncredited files', () => {
-    const expected = IMAGE_CREDITS.flatMap((c) => [`${c.file}-800.webp`, `${c.file}-1600.webp`]).sort();
+  it('has an 800 and a 1600 variant for every credit (the hero also 640, 960, 1280) and no uncredited files', () => {
+    const expected = IMAGE_CREDITS.flatMap((c) =>
+      (c.file === HERO_PHOTO ? HERO_PHOTO_WIDTHS : PHOTO_WIDTHS).map((w) => `${c.file}-${w}.webp`),
+    ).sort();
     expect(readdirSync(imgDir).sort()).toEqual(expected);
   });
 

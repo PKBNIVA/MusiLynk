@@ -17,7 +17,7 @@ export function FieldHelp({ topic, children, className }: { topic: string; child
           aria-label="More info"
           title={`About ${topic.toLowerCase()}`}
           className={cn(
-            'inline-grid size-6 shrink-0 place-items-center rounded-full text-slate-400 outline-none hover:bg-white/10 hover:text-violet-200 focus-visible:ring-2 focus-visible:ring-violet-400',
+            '-m-2 inline-grid size-10 shrink-0 place-items-center rounded-full text-slate-400 outline-none hover:bg-white/10 hover:text-violet-200 focus-visible:ring-2 focus-visible:ring-violet-400',
             className,
           )}
         >

@@ -61,6 +61,11 @@ Rails.application.configure do
       class: "UrgentRequestsSweepJob",
       description: "Warn hirers 6 hours before an urgent request expires, and expire lapsed ones"
     },
+    urgent_match_sweep: {
+      cron: "*/5 * * * *",
+      class: "UrgentMatchSweepJob",
+      description: "Re-enqueue matching for urgent requests whose first run never started or died part-way"
+    },
     jobs_deadline_sweep: {
       cron: "13 * * * *",
       class: "JobsDeadlineSweepJob",

@@ -501,7 +501,7 @@ export default function Messages() {
                             </span>
                             {unread > 0 && (
                               <span
-                                className="shrink-0 rounded-full bg-fuchsia-700 px-2 py-0.5 text-[11px] font-bold text-white"
+                                className="shrink-0 rounded-full bg-fuchsia-700 px-2 py-0.5 text-xs font-bold text-white"
                                 aria-label={`${unread} unread`}
                               >
                                 {unread}
@@ -683,9 +683,7 @@ export default function Messages() {
                           {/* opacity-70 on the light bubble reads fine against the page background, but the
                               same 70% white over the solid violet "mine" bubble drops below AA contrast;
                               give that variant near-full opacity instead. */}
-                          <div
-                            className={`text-[11px] mt-1 flex gap-2 justify-end ${mine ? 'opacity-90' : 'opacity-70'}`}
-                          >
+                          <div className={`text-xs mt-1 flex gap-2 justify-end ${mine ? 'opacity-90' : 'opacity-70'}`}>
                             <time dateTime={m.createdAt}>{formatTime(m.createdAt)}</time>
                             {mine && m.id === lastMineId && (
                               <span data-testid="read-receipt">
@@ -754,7 +752,7 @@ export default function Messages() {
                       <Send size={16} aria-hidden="true" />
                     </Button>
                   </div>
-                  <div className="mt-1 flex justify-between gap-3 text-[11px] text-slate-500">
+                  <div className="mt-1 flex justify-between gap-3 text-xs text-slate-500">
                     <span id="message-hint" className="hidden sm:inline">
                       Enter to send · Shift+Enter for a new line
                     </span>

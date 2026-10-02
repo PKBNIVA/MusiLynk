@@ -692,7 +692,7 @@ export default function Library() {
                         {words.slice(0, 8).map((w) => (
                           <li
                             key={w}
-                            className="rounded-full border border-white/10 bg-white/[.05] px-2 py-0.5 text-[11px] text-slate-300"
+                            className="rounded-full border border-white/10 bg-white/[.05] px-2 py-0.5 text-xs text-slate-300"
                           >
                             {w}
                           </li>

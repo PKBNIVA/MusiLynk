@@ -1,23 +1,66 @@
 require "test_helper"
+require "minitest/mock"
 
 # Covers the "need someone by tomorrow" additions on top of the existing urgent_requests
 # create/respond flow (see api_matrix_test.rb for the base CRUD contract): matching on
 # create, the confirmation/status #show, and admin "mark filled by" attribution.
 class UrgentRequestsMatchingTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
   setup do
     @hirer = create_user("Hirer", "urgent-hirer@example.com", "employer")
     @musician = create_user("Ready Musician", "urgent-musician@example.com", "jobseeker")
     @musician.create_profile!(headline: "Drummer", location: "Mumbai", roles: ["Drummer"], verified: true)
   end
 
-  test "create matches and notifies, and returns the response-time promise" do
-    post "/api/urgent-requests", params: { title: "Drummer needed", roleName: "Drummer", city: "Mumbai",
-      startAt: 1.day.from_now.iso8601, budgetMin: 5_000, budgetMax: 10_000, note: "Two sets, gear provided." }, headers: auth(@hirer), as: :json
+  test "create returns at once with matching pending, and the job then matches and notifies" do
+    post_urgent
     assert_response :created
     body = response.parsed_body
-    assert_equal 1, body["notifiedCount"]
+    assert_equal 0, body["notifiedCount"]
+    assert_equal "pending", body["matchStatus"]
     assert_equal UrgentConfig.response_time_promise, body["responseTimePromise"]
+    assert_not Notification.exists?(user: @musician, kind: "urgent_alert"), "no alert is sent inside the request"
+
+    perform_enqueued_jobs(only: UrgentMatchJob)
     assert Notification.exists?(user: @musician, kind: "urgent_alert")
+    get "/api/urgent-requests/#{body['id']}", headers: auth(@hirer)
+    assert_equal 1, response.parsed_body.dig("request", "notified_count")
+    assert_equal "done", response.parsed_body.dig("request", "match_status")
+  end
+
+  test "create still returns 201 when the enqueue raises, leaving the row for the sweep" do
+    boom = ->(*) { raise StandardError, "queue down" }
+    UrgentMatchJob.stub(:perform_later, boom) do
+      assert_difference -> { UrgentRequest.count }, 1 do
+        post_urgent
+      end
+    end
+    assert_response :created
+    assert_equal "pending", UrgentRequest.find(response.parsed_body["id"]).match_status
+  end
+
+  test "create enqueues exactly one UrgentMatchJob and does no matching or notifying queries itself" do
+    sql = []
+    counter = ->(*, payload) { sql << payload[:sql] unless payload[:name] == "SCHEMA" || payload[:cached] }
+    assert_enqueued_jobs 1, only: UrgentMatchJob do
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { post_urgent }
+    end
+    assert_response :created
+    assert_enqueued_with(job: UrgentMatchJob, args: [response.parsed_body["id"]])
+    assert_no_enqueued_jobs(only: [NotificationEmailJob, PushDeliveryJob, WhatsappAlertJob])
+    assert_empty sql.grep(/urgent_request_notifications|MAX\("sessions"|availability_windows|FROM "notifications"/i),
+      "matching and notification queries must not run in the request"
+    assert_operator sql.size, :<=, 12, "POST should only validate, insert and enqueue (#{sql.size} queries)"
+    assert_empty Notification.where(kind: "urgent_alert")
+  end
+
+  test "match_status is not shown to musicians browsing the request" do
+    post_urgent
+    get "/api/urgent-requests", params: { scope: "browse" }, headers: auth(@musician)
+    row = response.parsed_body["requests"].first
+    assert_not row.key?("match_status")
+    assert_not row.key?("notified_count")
   end
 
   test "create needs role, when, city, a budget band and a note, and reports every gap at once" do
@@ -125,6 +168,11 @@ class UrgentRequestsMatchingTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def post_urgent
+    post "/api/urgent-requests", params: { title: "Drummer needed", roleName: "Drummer", city: "Mumbai",
+      startAt: 1.day.from_now.iso8601, budgetMin: 5_000, budgetMax: 10_000, note: "Two sets, gear provided." }, headers: auth(@hirer), as: :json
+  end
 
   def create_user(name, email, role)
     User.create!(name:, email:, password: "StrongPass123!", role:, status: "active", email_verified: true, profile_complete: true)

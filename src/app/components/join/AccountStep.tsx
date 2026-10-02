@@ -365,19 +365,21 @@ export function AccountStep({
       )}
       <div>
         <div className="flex items-start gap-3">
-          <input
-            id="join-consent"
-            type="checkbox"
-            checked={consent}
-            onChange={(event) => {
-              setConsent(event.target.checked);
-              clear('consent');
-            }}
-            aria-invalid={errors.consent ? true : undefined}
-            aria-describedby={errors.consent ? 'join-consent-error' : undefined}
-            className="mt-0.5 size-5 shrink-0 cursor-pointer accent-violet-500"
-          />
-          <label htmlFor="join-consent" className="text-sm leading-6 text-slate-200">
+          <span className="-m-2.5 mr-0 grid size-10 shrink-0 place-items-center">
+            <input
+              id="join-consent"
+              type="checkbox"
+              checked={consent}
+              onChange={(event) => {
+                setConsent(event.target.checked);
+                clear('consent');
+              }}
+              aria-invalid={errors.consent ? true : undefined}
+              aria-describedby={errors.consent ? 'join-consent-error' : undefined}
+              className="size-5 shrink-0 cursor-pointer accent-violet-500"
+            />
+          </span>
+          <label htmlFor="join-consent" className="-my-2 block min-h-10 py-2 text-sm leading-6 text-slate-200">
             I agree to the{' '}
             <Link
               to="/terms"

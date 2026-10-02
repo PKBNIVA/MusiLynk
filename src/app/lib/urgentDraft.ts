@@ -34,6 +34,7 @@ export function consumeUrgentDraft(): UrgentDraft | null {
 export interface UrgentConfirmation {
   id: string;
   notifiedCount: number;
+  matchStatus?: string;
   responseTimePromise: string;
 }
 
@@ -46,5 +47,10 @@ export async function submitUrgentDraft(): Promise<UrgentConfirmation | null> {
   const draft = consumeUrgentDraft();
   if (!draft) return null;
   const d = await apiPost<UrgentConfirmation>('/urgent-requests', draft);
-  return { id: d.id, notifiedCount: d.notifiedCount, responseTimePromise: d.responseTimePromise };
+  return {
+    id: d.id,
+    notifiedCount: d.notifiedCount,
+    matchStatus: d.matchStatus,
+    responseTimePromise: d.responseTimePromise,
+  };
 }

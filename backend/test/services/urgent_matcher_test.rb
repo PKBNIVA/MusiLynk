@@ -127,6 +127,28 @@ class UrgentMatcherTest < ActiveSupport::TestCase
     record = UrgentRequestNotification.find_by(urgent_request: @request, channel: "in_app")
     assert_includes record.reasons, "Plays Drummer"
   end
+  test "ranking runs a fixed number of queries however many candidates the city has" do
+    count_queries = lambda do
+      n = 0
+      counter = ->(*, payload) { n += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { UrgentMatcher.call(@request) }
+      n
+    end
+    3.times { |i| create_musician("Few#{i}", city: "Mumbai", roles: ["Drummer"]) }
+    few = count_queries.call
+    12.times { |i| create_musician("Many#{i}", city: "Mumbai", roles: ["Drummer"]) }
+    assert_equal few, count_queries.call, "queries must not grow with the number of candidates"
+  end
+
+  test "batched signals still score availability and last-seen per person" do
+    free = create_musician("Free window", city: "Mumbai", roles: ["Drummer"])
+    plain = create_musician("Plain", city: "Mumbai", roles: ["Drummer"])
+    AvailabilityWindow.create!(user: free, start_at: 4.hours.from_now, end_at: 11.hours.from_now, status: "available")
+
+    by_id = UrgentMatcher.call(@request).index_by { _1.user.id }
+    assert by_id.fetch(free.id).reasons.any? { _1.start_with?("Available on") } || by_id.fetch(free.id).score == by_id.fetch(plain.id).score + 5
+    assert_equal by_id.fetch(plain.id).score + 5, by_id.fetch(free.id).score
+  end
 
   private
 

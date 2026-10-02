@@ -58,7 +58,13 @@ class UrgentMatcher
   def ranked_candidates
     scope = User.discoverable_talent.includes(:profile).where.not(id: @request.requester_id)
     scope = scope.joins(:profile).where("profiles.location ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(city)}%") if city.present?
-    scored = scope.find_each.filter_map { |user| score(user) }
+    scored = []
+    # Availability and last-seen are looked up once per batch of 1,000 people, not once per person:
+    # a city-wide fan-out used to cost 1-3 queries per candidate inside the posting request.
+    scope.find_in_batches(batch_size: 1_000) do |users|
+      preload_signals(users)
+      scored.concat(users.filter_map { |user| score(user) })
+    end
     scored.sort_by { |c| -c.score }.first(UrgentConfig.candidate_limit)
   end
 
@@ -139,6 +145,7 @@ class UrgentMatcher
   # request's start time — a positive signal distinct from just not being blocked.
   def available_on_request_date?(user)
     return false unless @request.start_at
+    return @available_ids.include?(user.id) if preloaded?(user)
     window_end = @request.end_at || @request.start_at + 3.hours
     AvailabilityWindow.where(user:, status: "available")
       .where("start_at <= ? AND end_at >= ?", @request.start_at, window_end).exists?
@@ -148,6 +155,7 @@ class UrgentMatcher
   # request's window blocks them from being matched at all (not just scored lower).
   def blocked_by_availability?(user)
     return false unless @request.start_at
+    return @blocked_ids.include?(user.id) if preloaded?(user)
     window_end = @request.end_at || @request.start_at + 3.hours
     AvailabilityWindow.where(user:, status: %w[unavailable booked hold])
       .where("start_at < ? AND end_at > ?", window_end, @request.start_at).exists?
@@ -156,6 +164,28 @@ class UrgentMatcher
   def last_seen_at(user)
     @last_seen ||= {}
     @last_seen.fetch(user.id) { @last_seen[user.id] = user.sessions.maximum(:last_seen_at) }
+  end
+
+  def preloaded?(user) = @preloaded&.include?(user.id)
+
+  # One query each for the three per-person signals, for a whole batch of users. score() falls back
+  # to a per-user query for anyone not preloaded (the admin's single-person "Notify").
+  def preload_signals(users)
+    ids = users.map(&:id)
+    @preloaded ||= Set.new
+    @blocked_ids ||= Set.new
+    @available_ids ||= Set.new
+    @preloaded.merge(ids)
+    @last_seen ||= {}
+    ids.each { @last_seen[_1] = nil }
+    @last_seen.merge!(Session.where(user_id: ids).group(:user_id).maximum(:last_seen_at))
+    return unless @request.start_at
+
+    window_end = @request.end_at || @request.start_at + 3.hours
+    @blocked_ids.merge(AvailabilityWindow.where(user_id: ids, status: %w[unavailable booked hold])
+      .where("start_at < ? AND end_at > ?", window_end, @request.start_at).distinct.pluck(:user_id))
+    @available_ids.merge(AvailabilityWindow.where(user_id: ids, status: "available")
+      .where("start_at <= ? AND end_at >= ?", @request.start_at, window_end).distinct.pluck(:user_id))
   end
 
   def notify_one(candidate, actor_admin:)

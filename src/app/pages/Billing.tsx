@@ -17,16 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
-import {
-  AlertTriangle,
-  Check,
-  ClipboardCheck,
-  CreditCard,
-  FlaskConical,
-  MessageCircle,
-  ShieldCheck,
-  Sparkles,
-} from 'lucide-react';
+import { AlertTriangle, Check, ClipboardCheck, CreditCard, FlaskConical, ShieldCheck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '../lib/errors';
 import type {
@@ -49,11 +40,12 @@ import {
   periodPrice,
   storeCode,
   storedCode,
-  whatsappShareUrl,
+  referralShareText,
 } from '../lib/promo';
 import { loadAiUsage, type AiUsage } from '../lib/ai';
 import { formatDate, formatMoney } from '../lib/format';
 import { optionLabel } from '../components/ui/option-labels';
+import { ShareMenu } from '../components/ShareMenu';
 import { PaymentsNotify } from '../components/PaymentsNotify';
 
 type Summary = {
@@ -179,16 +171,14 @@ function ReferralCard() {
               <ClipboardCheck size={14} aria-hidden="true" className="mr-1.5" />
               Copy
             </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a
-                href={whatsappShareUrl(referral.code, referral.shareUrl, referral.refereePercentOff ?? 20)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <MessageCircle size={14} aria-hidden="true" className="mr-1.5" />
-                Share on WhatsApp
-              </a>
-            </Button>
+            <ShareMenu
+              surface="referral"
+              path={referral.shareUrl}
+              plainUrl
+              channels={['whatsapp']}
+              compose={(url) => referralShareText(referral.code, url, referral.refereePercentOff ?? 20)}
+              testId="share-referral"
+            />
           </div>
         </div>
         <dl className="flex gap-6 text-sm">

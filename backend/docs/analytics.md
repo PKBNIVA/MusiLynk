@@ -39,6 +39,7 @@ No third-party analytics anywhere in Verse. Every event is stored in this app's 
 | `booking_quote_sent` | `trackBookingQuoteSent(props?)` | Called from `Bookings.tsx`. |
 | `booking_quote_accepted` | `trackBookingQuoteAccepted(props?)` | Called from `Bookings.tsx`. |
 | `booking_deposit_paid` | `trackBookingDepositPaid(props?)` | Called from `BookingDepositPanel.tsx`. |
+| `share_clicked` | `ShareMenu` (`components/ShareMenu.tsx`) | `props.surface` (professional, opportunity, act, hirer_opportunity, hirer_opportunity_posted, booking, referral) and `props.channel` (whatsapp, copy, native). Never the shared text or URL. |
 
 ## For the agent that owns the landing/signup pages
 

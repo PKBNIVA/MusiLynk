@@ -20,6 +20,7 @@ class EventsController < ApplicationController
     route_change
     profile_view
     share_card_download share_whatsapp
+    share_clicked
   ].freeze
 
   def create

@@ -35,6 +35,7 @@ export const EVENT_NAMES = [
   'profile_view',
   'share_card_download',
   'share_whatsapp',
+  'share_clicked',
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 

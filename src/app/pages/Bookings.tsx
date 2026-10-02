@@ -1,3 +1,5 @@
+import { ShareMenu } from '../components/ShareMenu';
+import { shareCopy } from '../lib/share';
 import { EmptyState as SceneEmptyState } from '../components/kit/EmptyState';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
@@ -413,6 +415,23 @@ export default function Bookings() {
                         )}
                       </div>
                       <div className="flex gap-2 flex-wrap items-start md:justify-end">
+                        {b.status === 'accepted' && b.depositPaid && (
+                          <ShareMenu
+                            surface="booking"
+                            path={`${base}/bookings`}
+                            compose={(url) =>
+                              shareCopy.booking(
+                                b.actName,
+                                formatDate(b.event_date, { fallback: 'date to be confirmed' }),
+                                b.city,
+                                url,
+                              )
+                            }
+                            title={`Booking: ${b.actName}`}
+                            label={b.isOwner ? 'Share with venue' : 'Share with band'}
+                            testId={`share-booking-${b.id}`}
+                          />
+                        )}
                         {b.isOwner && QUOTABLE.includes(b.status) && (
                           <Button size="sm" onClick={() => beginQuote(b)}>
                             {b.latestQuote ? 'Revise quote' : 'Send quote'}

@@ -32,6 +32,10 @@ class AdminFunnelAndLegalTest < ActionDispatch::IntegrationTest
   end
 
   test "the public legal policy endpoint exposes the booking policy and legal placeholders" do
+    LegalConfig.instance_variable_set(:@config, {
+      business: { legal_name: "[LEGAL ENTITY NAME]", gstin: "", address: "[REGISTERED ADDRESS]", state: "[STATE]" },
+      grievance_officer: { name: "[NAME]", email: "[EMAIL]", address: "[ADDRESS]" }
+    })
     get "/api/legal/policy"
     assert_response :success
     body = response.parsed_body
@@ -39,9 +43,15 @@ class AdminFunnelAndLegalTest < ActionDispatch::IntegrationTest
     assert body.dig("booking", "plainEnglish").is_a?(Array)
     assert body.dig("legal", "grievanceOfficer").is_a?(Hash)
     assert_equal false, body.dig("legal", "gstinPresent")
+  ensure
+    LegalConfig.reload!
   end
 
   test "unfilled legal fields are served blank with configured false, and listed for the admin" do
+    LegalConfig.instance_variable_set(:@config, {
+      business: { legal_name: "[LEGAL ENTITY NAME]", gstin: "", address: "[REGISTERED ADDRESS]", state: "[STATE]" },
+      grievance_officer: { name: "[NAME]", email: "[EMAIL]", address: "[ADDRESS]" }
+    })
     get "/api/legal/policy"
     legal = response.parsed_body.fetch("legal")
     assert_equal "", legal["legalName"]
@@ -53,6 +63,8 @@ class AdminFunnelAndLegalTest < ActionDispatch::IntegrationTest
     get "/api/admin/operations", headers: auth(admin)
     assert_response :success
     assert_equal LegalConfig::REQUIRED_FIELDS, response.parsed_body.dig("legal", "unfilled")
+  ensure
+    LegalConfig.reload!
   end
 
   test "a filled-in legal field is served and marked configured" do

@@ -27,6 +27,15 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, ProductEvent.where(anon_id: "anon-2").count
   end
 
+  test "accepts share_clicked with surface and channel props" do
+    post "/api/events", params: { events: [{ name: "share_clicked", anonId: "anon-share", props: { surface: "professional", channel: "whatsapp" } }] }, as: :json
+    assert_response :success
+    assert_equal 1, response.parsed_body.fetch("accepted")
+    event = ProductEvent.find_by!(anon_id: "anon-share")
+    assert_equal "share_clicked", event.name
+    assert_equal({ "surface" => "professional", "channel" => "whatsapp" }, event.props)
+  end
+
   test "drops an event missing anonId" do
     post "/api/events", params: { events: [{ name: "landing_view" }] }, as: :json
     assert_response :success

@@ -33,7 +33,7 @@ class FounderReportMail
   def needs_you_total = waiting_total
 
   def waiting_total
-    @waiting_total ||= @waiting[:opportunities] + @waiting[:verification] + @data[:needsYou][:reportsTotal] + @data[:needsYou][:urgentTotal]
+    @waiting_total ||= @waiting[:opportunities] + @waiting[:verification] + @data[:needsYou][:reportsTotal] + @data[:needsYou][:urgentTotal] + @data[:needsYou][:problemReportsTotal]
   end
 
   # --- Sections: [{ heading:, intro:, rows: [[label, value, note]], list: [...], link: [label, url] }] ---
@@ -102,7 +102,8 @@ class FounderReportMail
       row("Quotes sent", :quotes),
       row("Bookings accepted", :bookingsAccepted),
       row("Bookings completed", :bookingsCompleted),
-      row("Messages sent", :messages)
+      row("Messages sent", :messages),
+      row("Problem reports sent", :problemReports)
     ] }
   end
 
@@ -112,6 +113,7 @@ class FounderReportMail
       ["Opportunities to review", n(@waiting[:opportunities]), nil],
       ["Verification requests", n(@waiting[:verification]), compare_note(@waiting[:verification], @waiting[:verificationWeekAgo], "a week ago")],
       ["Reports", n(@waiting[:reports]), compare_note(@waiting[:reports], @waiting[:reportsWeekAgo], "a week ago")],
+      ["Problem reports (new)", n(@waiting[:problemReports]), compare_note(@waiting[:problemReports], @waiting[:problemReportsWeekAgo], "a week ago")],
       ["Urgent requests unanswered for 2 hours", n(needs[:urgentTotal]), nil]
     ] }
   end
@@ -144,6 +146,7 @@ class FounderReportMail
       ["Opportunities waiting for review", needs[:opportunities], @waiting[:opportunities], @links[:opportunities]],
       ["Verification requests waiting", needs[:verification], @waiting[:verification], @links[:verification]],
       ["Open reports", needs[:reports], needs[:reportsTotal], @links[:reports]],
+      ["New problem reports", needs[:problemReports], needs[:problemReportsTotal], @links[:problems]],
       ["Urgent requests with no response after 2 hours", needs[:urgent], needs[:urgentTotal], @links[:urgent]]
     ].map do |title, items, total, link|
       { title:, total:, link:, items: items.map { |i| "#{i[:text]}, waiting #{age(i[:since])}" }, more: [total - items.size, 0].max }

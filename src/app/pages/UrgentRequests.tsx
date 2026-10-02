@@ -9,6 +9,7 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { UserAvatar } from '../components/kit/UserAvatar';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
+import { PushOptIn } from '../components/push/PushOptIn';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/authContext';
 import { useLatestCallback } from '../lib/useLatestCallback';
@@ -53,6 +54,8 @@ export default function UrgentRequests() {
     [responses, setResponses] = useState<Record<string, UrgentRequestResponse[]>>({}),
     [expanded, setExpanded] = useState<string | null>(null),
     [posting, setPosting] = useState(false),
+    // A hirer who has just published a request is offered response alerts (PushOptIn).
+    [justPosted, setJustPosted] = useState(false),
     [reply, setReply] = useState<{ request: UrgentRequest; message: string; rate: string } | null>(null),
     [formError, setFormError] = useState(''),
     // The mutation in flight ("create" or a request id); others wait so nothing is submitted twice.
@@ -114,6 +117,7 @@ export default function UrgentRequests() {
       await apiPost('/urgent-requests', body);
       trackUrgentRequestSubmitted();
       toast.success('Urgent request published');
+      setJustPosted(true);
       setPosting(false);
       urgent.reset();
       setScope('mine');
@@ -242,6 +246,8 @@ export default function UrgentRequests() {
             </Button>
           }
         />
+        {user?.role === 'jobseeker' && <PushOptIn variant="musician" className="mt-7" />}
+        {user?.role !== 'jobseeker' && justPosted && <PushOptIn variant="hirer" className="mt-7" />}
         <form role="search" onSubmit={filter} className="grid md:grid-cols-[1fr_1fr_auto] gap-3 mt-7">
           <Input
             aria-label="Role"

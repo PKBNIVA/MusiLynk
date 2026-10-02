@@ -43,6 +43,11 @@ Rails.application.routes.draw do
     get "me/identities", to: "identities#index"
     get "me/referral-code", to: "referrals#show"
     put "me/email-preferences", to: "notifications#update_email_preferences"
+    get "push/config", to: "push#settings"
+    post "push/subscriptions", to: "push#subscribe"
+    delete "push/subscriptions", to: "push#unsubscribe"
+    get "push/preferences", to: "push#preferences"
+    put "push/preferences", to: "push#update_preferences"
     get "account/export", to: "account#export"
     delete "account", to: "account#destroy"
     patch "account/name", to: "account#update_name"
@@ -83,6 +88,7 @@ Rails.application.routes.draw do
       get "users/lookup", to: "users#lookup"
       resources :users, only: %i[index update] do
         member do
+          get :billing, path: "billing"
           post :grant_plan, path: "grant-plan"
           post :revoke_sessions, path: "revoke-sessions"
           post :confirm_email, path: "confirm-email"
@@ -102,6 +108,9 @@ Rails.application.routes.draw do
           post :moderate
         end
       end
+      resources :problem_reports, path: "problem-reports", only: %i[index show update] do
+        get :screenshot, on: :member
+      end
       get :operations, to: "operations#show"
       get :audit, to: "operations#audit"
       get :subscriptions, to: "operations#subscriptions"
@@ -114,6 +123,8 @@ Rails.application.routes.draw do
       get "billing-attempts", to: "operations#billing_attempts"
       post "billing-attempts/:id/reconcile", to: "operations#reconcile_billing_attempt"
       resources :billing_events, path: "billing-events", only: %i[index show]
+      get "invoices/export", to: "invoices#export", defaults: { format: "csv" }
+      resources :invoices, only: :index
       get "ai/costs", to: "ai#costs"
       get "ai/usage", to: "ai#usage"
       post "ai/grants", to: "ai#create_grant"
@@ -178,6 +189,7 @@ Rails.application.routes.draw do
     post "email/webhook/brevo", to: "email_webhooks#brevo"
     resources :notifications, only: %i[index update]
     resources :reports, only: :create
+    post "problem-reports", to: "problem_reports#create"
     resources :verification_requests, path: "verification-requests", only: :create
     resources :reviews, only: %i[index create]
     resources :resources, only: :index
@@ -226,8 +238,21 @@ Rails.application.routes.draw do
       member do
         post :members, to: "acts#add_member"
         delete "members/:member_id", to: "acts#remove_member"
+        post :leave, to: "acts#leave"
+        get :invitees, to: "act_invites#search"
+        get :invites, to: "act_invites#index"
+        post :invites, to: "act_invites#create"
+        post "invites/:invite_id/resend", to: "act_invites#resend"
+        delete "invites/:invite_id", to: "act_invites#revoke"
       end
     end
+    # Bandmate invites, from the invitee's side. Link visitors use the token; signed-in musicians can also answer by id.
+    get "act-invites/mine", to: "act_invites#mine"
+    get "act-invites/preview", to: "act_invites#preview"
+    post "act-invites/accept", to: "act_invites#accept"
+    post "act-invites/decline", to: "act_invites#decline"
+    post "act-invites/:id/accept", to: "act_invites#accept"
+    post "act-invites/:id/decline", to: "act_invites#decline"
     get "bookings/limits", to: "bookings#limits"
     resources :bookings, only: %i[index create] do
       member do
@@ -293,6 +318,9 @@ Rails.application.routes.draw do
       post :cancel, to: "billing#cancel"
       get "cancel-link", to: "billing#verify_cancel_link"
       post "codes/validate", to: "codes#validate"
+      get :profile, to: "profiles#show"
+      put :profile, to: "profiles#update"
+      resources :invoices, only: %i[index show]
       post "webhook/razorpay", to: "billing#razorpay_webhook"
     end
     # Local Razorpay simulator (RAZORPAY_SIMULATOR=true, test key, never production).

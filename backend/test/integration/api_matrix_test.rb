@@ -51,6 +51,12 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/me", :any, { keys: %w[user] }],
     [:get, "/api/me/identities", :talent, { keys: %w[identities] }],
     [:put, "/api/me/email-preferences", :any, { params: { emailPreferences: { digest: false } }, bad: { emailPreferences: { spam: false } }, bad_status: [400], keys: %w[emailPreferences paymentsNotify] }],
+    # Push is off in tests (no VAPID variables): config reports it, subscribing is refused with 404.
+    [:get, "/api/push/config", :public, { keys: %w[enabled publicKey] }],
+    [:post, "/api/push/subscriptions", :any, { ok: [404], params: { endpoint: "https://fcm.googleapis.com/fcm/send/matrix", keys: { p256dh: "a", auth: "b" } } }],
+    [:delete, "/api/push/subscriptions", :any, { params: { endpoint: "https://fcm.googleapis.com/fcm/send/matrix" }, bad: {}, bad_status: [400], keys: %w[ok] }],
+    [:get, "/api/push/preferences", :any, { keys: %w[preferences devices] }],
+    [:put, "/api/push/preferences", :any, { params: { preferences: { urgent: true } }, bad: { preferences: { spam: true } }, bad_status: [400], keys: %w[preferences devices] }],
     [:get, "/api/account/export", :any, { keys: %w[format version account profile conversations] }],
     # Without the typed email the request is refused, so the matrix never erases its own users.
     [:delete, "/api/account", :any, { ok: [422], params: { confirmEmail: "someone-else@example.com" } }],
@@ -120,6 +126,11 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/admin/reports", :admin, { keys: %w[reports] }],
     [:patch, "/api/admin/reports/{report}", :admin, { params: { status: "resolved" }, missing: :report, bad: { status: "x" }, bad_status: [400] }],
     [:put, "/api/admin/reports/{report}", :admin, { params: { status: "dismissed" }, missing: :report }],
+    [:get, "/api/admin/problem-reports", :admin, { keys: %w[reports counts page perPage total] }],
+    [:get, "/api/admin/problem-reports/{problem_report}", :admin, { missing: :problem_report, keys: %w[report] }],
+    [:patch, "/api/admin/problem-reports/{problem_report}", :admin, { params: { status: "triaged", adminNote: "Matrix note" }, missing: :problem_report, bad: { status: "x" }, bad_status: [400], keys: %w[ok report] }],
+    [:put, "/api/admin/problem-reports/{problem_report}", :admin, { params: { status: "resolved" }, missing: :problem_report }],
+    [:get, "/api/admin/problem-reports/{problem_report}/screenshot", :admin, { ok: [404], missing: :problem_report, note: "the matrix report has no screenshot; the signed link is covered in ProblemReportsTest" }],
     [:get, "/api/admin/ai/costs", :admin, { keys: %w[totalSpendInr freeTierSpendInr byTask byTier topAccounts] }],
     [:get, "/api/admin/ai/usage?accountType=user&accountId=none", :admin, { keys: %w[balance monthlyAllowance usedThisPeriod resetsAt plan recent] }],
     [:post, "/api/admin/ai/grants", :admin, { params: ->(w, _a) { { accountType: "user", accountId: w.user(:js).id, credits: 10 } }, bad: { accountType: "user", accountId: "x", credits: 0 }, bad_status: [400] }],
@@ -198,6 +209,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     # on :shared[:job] (see api_matrix_world.rb `report:`), which would otherwise trip the new
     # duplicate-report rejection (see reports_test.rb) when `js`'s turn comes up below.
     [:post, "/api/reports", :any, { ok: [201], params: ->(w, _a) { { entityType: "job", entityId: w.refs[:shared][:draft_job], reason: "Spam or scam" } }, bad: {}, bad_status: [422], keys: %w[id] }],
+    [:post, "/api/problem-reports", :public, { ok: [201], params: ->(_w, _a) { { description: "Matrix: the page froze", email: "matrix-pr-#{SecureRandom.hex(4)}@example.com" } }, bad: {}, bad_status: [422], keys: %w[id screenshotSaved] }],
     [:post, "/api/verification-requests", :any, { ok: { default: [201], admin: [400] }, params: verification_kind, bad: { kind: "celebrity" }, bad_status: [400] }],
     [:get, "/api/reviews", :public, { keys: %w[reviews] }],
     [:post, "/api/reviews", :jobseeker, { ok: [201, 403, 409], params: ->(w, _a) { { employerId: w.user(:emp).id, rating: 5, body: "Great" } }, bad: { employerId: ApiMatrixWorld::MISSING_ID }, bad_status: [404, 422] }],
@@ -262,6 +274,19 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:delete, "/api/acts/{act}", :talent, { idor: true, missing: :act }],
     [:post, "/api/acts/{act}/members", :talent, { ok: [201], params: { displayName: "Dep", roleName: "Keys" }, idor: true, missing: :act, bad: { roleName: "" }, bad_status: [422] }],
     [:delete, "/api/acts/{act}/members/{act_member}", :talent, { idor: true, missing: :act_member }],
+    # Bandmate invites (ActInvitesController): only the owner manages them; the invitee answers by token or id.
+    [:get, "/api/acts/{act}/invitees", :talent, { params: { q: "Matrix" }, idor: true, missing: :act, keys: %w[musicians] }],
+    [:get, "/api/acts/{act}/invites", :talent, { idor: true, missing: :act, keys: %w[invites] }],
+    [:post, "/api/acts/{act}/invites", :talent, { ok: [201], params: { kind: "link", roleName: "Keys" }, idor: true, missing: :act, bad: { kind: "link", roleName: "" }, bad_status: [422], keys: %w[invite link] }],
+    [:post, "/api/acts/{act}/invites/{act_invite}/resend", :talent, { ok: [422], idor: true, missing: :act_invite }],
+    [:delete, "/api/acts/{act}/invites/{act_invite}", :talent, { ok: [200, 410], idor: true, missing: :act_invite }],
+    [:post, "/api/acts/{act}/leave", :talent, { ok: [409], idor: true, missing: :act }],
+    [:get, "/api/act-invites/mine", :jobseeker, { keys: %w[invites] }],
+    [:get, "/api/act-invites/preview", :public, { ok: [404], params: { token: "not-a-token" } }],
+    [:post, "/api/act-invites/accept", :any, { ok: [404], params: { token: "not-a-token" } }],
+    [:post, "/api/act-invites/decline", :any, { ok: [404], params: { token: "not-a-token" } }],
+    [:post, "/api/act-invites/{act_invite}/accept", :any, { ok: [404], missing: :act_invite }],
+    [:post, "/api/act-invites/{act_invite}/decline", :any, { ok: [404], missing: :act_invite }],
     [:get, "/api/bookings", :talent, { keys: %w[bookings] }],
     [:get, "/api/bookings/limits", :talent, { keys: %w[activeAllowed activeUsed plan planName] }],
     [:post, "/api/bookings", :talent, { ok: [201], params: ->(w, a) { { actId: w.refs[a == :js ? :js2 : :emp2][:act], eventType: "wedding", city: "Pune", eventDate: 2.months.from_now.to_date.iso8601 } }, bad: {}, bad_status: [404, 422] }],
@@ -335,6 +360,13 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:delete, "/api/uploads/{upload}", :any, { idor: true, missing: :upload }],
     [:get, "/api/admin/billing-events", :admin, { keys: %w[events nextBefore] }],
     [:get, "/api/admin/billing-events/{billing_event}", :admin, { missing: :billing_event, keys: %w[event] }],
+    [:get, "/api/billing/profile", :talent, { keys: %w[profile states defaults] }],
+    [:put, "/api/billing/profile", :talent, { params: { buyerType: "individual", legalName: "Matrix Person", addressLine1: "5 MG Road", city: "Pune", stateCode: "27", postalCode: "411001" }, bad: { buyerType: "business", legalName: "" }, bad_status: [422], keys: %w[profile] }],
+    [:get, "/api/billing/invoices", :talent, { keys: %w[invoices] }],
+    [:get, "/api/billing/invoices/{tax_invoice}", :talent, { idor: true, missing: :tax_invoice, keys: %w[invoice] }],
+    [:get, "/api/admin/invoices", :admin, { keys: %w[invoices sellerPending] }],
+    [:get, "/api/admin/invoices/export", :admin, { ok: [400], note: "CSV download needs a from/to range; the full flow is covered in SubscriptionInvoicesTest" }],
+    [:get, "/api/admin/users/{user}/billing", :admin, { missing: :user, keys: %w[profile versions invoices] }],
     [:post, "/api/billing/codes/validate", :any, { params: { code: "NO-SUCH-CODE", planCode: "pro", interval: "monthly" }, bad: { code: "X", planCode: "platinum" }, bad_status: [400], keys: %w[valid reason kind effect message] }],
     [:get, "/api/me/referral-code", :talent, { keys: %w[code shareUrl redemptions rewardsEarned] }],
     [:get, "/api/admin/promo-codes", :admin, { keys: %w[codes programme page perPage total] }],
@@ -495,6 +527,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     end
     world.refs[:shared][:stage_post] = world.refs[:js][:stage_post]
     world.refs[:shared][:stage_comment] = world.refs[:js][:stage_comment]
+    world.refs[:shared][:problem_report] = ProblemReport.create!(user: world.user(:js), description: "Matrix problem report").id
     world.refs[:shared][:promo_code] = PromoCode.create!(code: "MATRIX#{SecureRandom.hex(3)}", kind: "discount_percent", percent_off: 15).id
     world.refs[:shared][:stage_follow_target] = User.create!(name: "Matrix Stage Followable", email: "matrix-stage-follow-#{SecureRandom.hex(4)}@example.com",
       password: ApiMatrixWorld::PASSWORD, role: "jobseeker", status: "active", profile_complete: true).id

@@ -7,6 +7,8 @@ import { ActCover } from '../../components/talent/ActCard';
 import { PublicDetailState } from '../../components/PublicDetailState';
 import { usePageMeta } from '../../components/PageMeta';
 import { Card, CardContent } from '../../components/ui/card';
+import { ShareMenu } from '../../components/ShareMenu';
+import { shareCopy } from '../../lib/share';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet, apiPost } from '../../lib/api';
@@ -146,6 +148,15 @@ export default function PublicAct({ shell }: { shell?: 'public' | 'workspace' } 
                   </Link>
                 )}
               </Button>
+              <ShareMenu
+                surface="act"
+                path={`/acts/${a.id ?? id}`}
+                compose={(url) => shareCopy.act(a.name, url)}
+                title={`${a.name} on Verse`}
+                label="Share act"
+                demo={a.demo}
+                testId="share-act"
+              />
               {user ? (
                 <Button variant="outline" onClick={() => setReporting(true)}>
                   <Flag size={15} aria-hidden="true" className="mr-2" />

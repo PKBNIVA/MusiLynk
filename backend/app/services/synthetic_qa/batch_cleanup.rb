@@ -8,21 +8,22 @@ module SyntheticQa
     # have no delete statement (promo_codes.created_by_id/owner_user_id, users.vouched_by_id) are not
     # purged by this class: schema.rb declares ON DELETE SET NULL for them, which the database applies.
     HANDLED_USER_COLUMNS = {
-      "act_members" => %w[user_id], "acts" => %w[owner_id], "ai_topup_payments" => %w[user_id], "application_events" => %w[actor_id],
+      "act_invites" => %w[inviter_id invitee_user_id], "act_members" => %w[user_id], "acts" => %w[owner_id], "ai_topup_payments" => %w[user_id], "application_events" => %w[actor_id],
       "applications" => %w[candidate_id], "audit_logs" => %w[actor_id entity_id], "auth_connections" => %w[owner_id],
       "availability_windows" => %w[user_id], "badges" => %w[user_id], "band_projects" => %w[owner_id], "billing_attempts" => %w[user_id],
-      "billing_credits" => %w[user_id], "billing_events" => %w[user_id], "booking_payments" => %w[payer_id], "booking_quotes" => %w[created_by_id],
+      "billing_credits" => %w[user_id], "billing_events" => %w[user_id], "billing_profiles" => %w[user_id], "booking_payments" => %w[payer_id], "booking_quotes" => %w[created_by_id],
       "booking_requests" => %w[requester_id], "career_entries" => %w[user_id], "conversations" => %w[candidate_id employer_id],
       "crew_plans" => %w[owner_id], "email_tokens" => %w[user_id], "follows" => %w[follower_user_id followable_id],
       "job_alerts" => %w[user_id], "jobs" => %w[employer_id], "lifecycle_emails" => %w[user_id], "messages" => %w[sender_id],
       "notifications" => %w[user_id], "organization_members" => %w[user_id], "organizations" => %w[owner_id],
       "portfolio_items" => %w[user_id], "portfolios" => %w[owner_id], "post_comments" => %w[created_by_user_id author_id],
       "post_reactions" => %w[actor_id], "posts" => %w[created_by_user_id author_id], "product_events" => %w[user_id],
-      "profiles" => %w[user_id], "promo_codes" => %w[created_by_id owner_user_id], "promo_redemptions" => %w[user_id],
+      "problem_reports" => %w[user_id handled_by_id], "profiles" => %w[user_id], "promo_codes" => %w[created_by_id owner_user_id], "promo_redemptions" => %w[user_id],
+      "push_subscriptions" => %w[user_id],
       "recent_activities" => %w[user_id entity_id], "refund_records" => %w[requested_by_id decided_by_id], "reports" => %w[reporter_id resolved_by_id entity_id],
       "resumes" => %w[user_id], "review_prompts" => %w[user_id counterpart_user_id], "reviews" => %w[author_id employer_id],
       "saved_jobs" => %w[user_id], "sessions" => %w[user_id], "showcase_suggestions" => %w[owner_id], "subscriptions" => %w[user_id],
-      "talent_folder_members" => %w[candidate_id], "talent_folders" => %w[owner_id], "talent_shortlists" => %w[candidate_id employer_id],
+      "talent_folder_members" => %w[candidate_id], "tax_invoices" => %w[user_id], "talent_folders" => %w[owner_id], "talent_shortlists" => %w[candidate_id employer_id],
       "uploads" => %w[user_id], "urgent_request_notifications" => %w[user_id notified_by_admin_id], "urgent_request_responses" => %w[user_id],
       "urgent_requests" => %w[requester_id filled_by_id], "user_blocks" => %w[blocker_id blocked_id],
       "users" => %w[vouched_by_id], "verification_requests" => %w[user_id reviewed_by_id], "vouches" => %w[voucher_id vouchee_id]
@@ -108,6 +109,7 @@ module SyntheticQa
         .or(RefundRecord.where(requested_by_id: user_ids)).or(RefundRecord.where(decided_by_id: user_ids)), "refund_records")
       remove(BookingPayment.where(id: ids[:payments]), "booking_payments")
       remove(BookingQuote.where(id: ids[:quotes]), "booking_quotes")
+      remove(ActInvite.where(act_id: ids[:acts]).or(ActInvite.where(inviter_id: user_ids)).or(ActInvite.where(invitee_user_id: user_ids)), "act_invites")
       remove(ActMember.where(act_id: ids[:acts]).or(ActMember.where(user_id: user_ids)), "act_members")
       remove(OrganizationMember.where(organization_id: ids[:organizations]).or(OrganizationMember.where(user_id: user_ids)), "organization_members")
       remove(UrgentRequestNotification.where(urgent_request_id: ids[:urgent_requests]).or(UrgentRequestNotification.where(user_id: user_ids))
@@ -144,6 +146,7 @@ module SyntheticQa
       remove(PostComment.where(post_id: ids[:posts]).or(PostComment.where(created_by_user_id: user_ids)).or(PostComment.where(author_id: ids[:pages])), "post_comments")
       remove(Post.where(id: ids[:posts]), "posts")
       remove(Badge.where(user_id: user_ids), "badges")
+      remove(PushSubscription.where(user_id: user_ids), "push_subscriptions")
     end
 
     # Welcome and verified posts are keyed by user id, urgent-fill posts by request id (including a real
@@ -165,12 +168,16 @@ module SyntheticQa
       remove(Conversation.where(id: ids[:conversations]), "conversations")
       remove(Application.where(id: ids[:applications]), "applications")
       remove(Report.where(reporter_id: user_ids).or(Report.where(resolved_by_id: user_ids)).or(Report.where(entity_id: ids[:all_entity_ids])), "reports")
+      # destroy (not delete_all) so a report's screenshot file goes with it; handled_by_id is nulled by the database.
+      @counts["problem_reports"] += ProblemReport.where(user_id: user_ids).destroy_all.size
       remove(Review.where(author_id: user_ids).or(Review.where(employer_id: user_ids)), "reviews")
       remove(VerificationRequest.where(user_id: user_ids).or(VerificationRequest.where(reviewed_by_id: user_ids)), "verification_requests")
       remove(Vouch.where(voucher_id: user_ids).or(Vouch.where(vouchee_id: user_ids)), "vouches")
       remove(AuditLog.where(actor_id: user_ids).or(AuditLog.where(entity_id: ids[:all_entity_ids])), "audit_logs")
       remove(BillingEvent.where(user_id: user_ids), "billing_events")
       remove(BillingAttempt.where(user_id: user_ids), "billing_attempts")
+      remove(TaxInvoice.where(user_id: user_ids), "tax_invoices")
+      remove(BillingProfile.where(user_id: user_ids), "billing_profiles")
       remove(Job.where(id: ids[:jobs]), "jobs")
       remove(Act.where(id: ids[:acts]), "acts")
       remove(Organization.where(id: ids[:organizations]), "organizations")

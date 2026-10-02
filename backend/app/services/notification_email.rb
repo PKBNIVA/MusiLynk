@@ -52,6 +52,12 @@ class NotificationEmail
       copy: ->(p) { "No card needed. Pro features are unlocked on Verse until #{p['until']}. We'll email you 7 days and 1 day before it ends." },
       action: "Open your billing page", path: "/billing"
     },
+    "invoice_issued" => {
+      subject: ->(p) { "Your Verse #{p['kind'] || 'invoice'} #{p['number']}" },
+      heading: ->(_) { "Your invoice is ready" },
+      copy: ->(p) { "We received your payment of #{p['amount']}. Your #{p['kind'] || 'invoice'} #{p['number']} is ready to view, print or save as a PDF." },
+      action: "View your invoice", path: "/billing"
+    },
     # trial/renewal/early-access lifecycle reminders (BillingRemindersJob). Their `path` is
     # already the full one-click cancel URL (see NotificationEmail.render), not a relative path.
     "trial_ending_soon" => {
@@ -115,6 +121,12 @@ class NotificationEmail
       heading: ->(_) { "Payments are now open on Verse" },
       copy: ->(_) { "You asked us to tell you when payments open. You can now pay and get paid safely through Verse. See the plans and what each one costs." },
       action: "See pricing"
+    },
+    "act_invite" => {
+      subject: ->(p) { "#{p['name']} invited you to join #{p['act']}" },
+      heading: ->(_) { "You've been invited to join a band" },
+      copy: ->(p) { "#{p['name']} invited you to join #{p['act']} as #{p['role']}. You are only added if you accept, and you can decline." },
+      action: "See your invites", path: "/acts?tab=invites"
     },
     "verification_approved" => {
       subject: ->(_) { "You're verified on Verse" },

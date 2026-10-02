@@ -36,7 +36,7 @@ export type Operations = {
     webhookConfigured: boolean;
   };
   /** Required fields of config/legal.yml that still hold a "[PLACEHOLDER]" (e.g. "grievance_officer.email"). */
-  legal?: { unfilled: string[] };
+  legal?: { unfilled: string[]; invoiceSellerPending?: string[] };
 };
 
 const REFRESH_MS = 60_000;
@@ -193,6 +193,20 @@ export default function OperationsPanel() {
           <strong className="font-semibold">Legal details unfilled</strong>
           <span className="text-red-200"> — the Terms, Privacy and invoices still lack: </span>
           <span className="font-mono text-xs">{data.legal.unfilled.join(', ')}</span>
+        </div>
+      )}
+      {data?.legal?.invoiceSellerPending && data.legal.invoiceSellerPending.length > 0 && (
+        <div
+          role="alert"
+          data-testid="invoice-seller-pending"
+          className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-100"
+        >
+          <strong className="font-semibold">Invoice seller details pending</strong>
+          <span className="text-amber-200">
+            {' '}
+            — subscription invoices are held back in production until these are filled in:{' '}
+          </span>
+          <span className="font-mono text-xs">{data.legal.invoiceSellerPending.join(', ')}</span>
         </div>
       )}
       {data && (

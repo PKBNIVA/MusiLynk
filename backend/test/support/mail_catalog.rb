@@ -62,7 +62,9 @@ module MailCatalog
       "account_password_set" => { detail: "asha.catalog@example.com" },
       "account_password_removed" => { detail: "asha.catalog@example.com" },
       "google_connected" => { link: NotificationEmail.settings_link(@musician) },
-      "vouch_invite" => { link: "#{FRONT}/join/musician?vouch=vch_Zm9vYmFy", name: "Asha Rao" }
+      "vouch_invite" => { link: "#{FRONT}/join/musician?vouch=vch_Zm9vYmFy", name: "Asha Rao" },
+      "act_invite" => { link: "#{FRONT}/invites/Zm9vYmFyYmF6cXV4", name: "Asha Rao", act: "The Night Owls", role: "Drummer" },
+      "problem_report" => { link: "#{FRONT}/admin?tab=problems&report=prob_0f8e6c1a-2b4d-4c7e-9a31-5d6e7f8a9b0c", name: "Asha Rao" }
     }
     EmailDelivery::TEMPLATES.each do |template, content|
       template_data = data.fetch(template) { raise "MailCatalog has no fixture data for email template #{template}" }
@@ -110,6 +112,10 @@ module MailCatalog
     capture("verification_more_proof", @musician) do
       Notifier.verification_needs_more_proof(@musician, ["add a link to your best work", "add a clear photo of yourself"])
     end
+    invite = ActInvite.new(act:, inviter: @musician, kind: "user", invitee_user: @other_musician, role_name: "Tabla", instrument: "Tabla")
+    capture("act_invite", @other_musician) { Notifier.act_invite(invite, @other_musician) }
+    capture("act_invite_accepted", @musician) { Notifier.act_invite_response(invite, @other_musician, accepted: true) }
+    capture("act_invite_declined", @musician) { Notifier.act_invite_response(invite, @other_musician, accepted: false) }
     capture("verification_approved", @musician) { Notifier.verification_approved(@musician) }
     prompt = ReviewPrompt.create!(source_type: "urgent_request", source_id: urgent.id, user: @musician, counterpart: @hirer, counterpart_name: "Meera Kapoor")
     capture("review_prompt", @musician) { Notifier.review_prompt(prompt) }
@@ -127,6 +133,10 @@ module MailCatalog
     Subscription.create!(user: @other_hirer, plan_code: "pro", provider: "razorpay", status: "active", interval: "annual", current_period_end: at.(3))
     Subscription.create!(user: @musician, plan_code: "pro", provider: "internal", status: "early_access", early_access: true, trial_ends_at: at.(7))
     capture_jobs { BillingRemindersJob.perform_now(today) }
+    invoice = TaxInvoice.create!(user: @hirer, subscription: Subscription.find_by(user: @hirer), invoice_number: "VRS/2026-27/000123", financial_year: "2026-27", sequence_number: 123,
+      document_type: "tax_invoice", issued_at: at.(0), provider_payment_id: "pay_catalog_invoice", buyer: { "name" => @hirer.name }, seller: {}, line_items: [],
+      taxable_paise: 211_780, cgst_paise: 19_060, sgst_paise: 19_060, total_paise: 249_900)
+    capture("invoice_issued", @hirer) { Notifier.invoice_issued(invoice) }
     add_notification_email("payments_open", @musician, { "path" => "#{FRONT}/pricing" })
   end
 

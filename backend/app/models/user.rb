@@ -16,6 +16,7 @@ class User < ApplicationRecord
   has_many :recent_activities, dependent: :destroy
   has_many :verification_requests, dependent: :destroy
   has_many :reports, foreign_key: :reporter_id, dependent: :destroy
+  has_many :problem_reports, dependent: :destroy
   has_many :reviews, foreign_key: :author_id, dependent: :destroy
   has_many :talent_folders, foreign_key: :owner_id, dependent: :destroy
   has_many :urgent_requests, foreign_key: :requester_id, dependent: :destroy
@@ -29,6 +30,7 @@ class User < ApplicationRecord
   has_many :subscriptions, dependent: :destroy
   has_many :billing_attempts, dependent: :destroy
   has_many :auth_connections, as: :owner, dependent: :destroy
+  has_many :push_subscriptions, dependent: :delete_all
   has_many :vouches, foreign_key: :voucher_id, dependent: :destroy
   # A newly verified phone changes a pending verification request's evidence score.
   after_commit -> { Verification::RescoreJob.for_user(id) }, if: -> { saved_change_to_phone_verified_at? && phone_verified_at.present? }

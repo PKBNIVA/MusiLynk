@@ -92,6 +92,25 @@ class EmailDelivery
       # The invitee may have no account, so "your Verse account" and "cannot be turned off" do not apply.
       footer: "You are getting this one email because someone you know named you on Verse. If you do not know them, you can safely ignore it: nothing happens unless you join.",
       service_note: false
+    },
+    # data: { link:, name: (inviter), act:, role: }. Sent to an address that may have no Verse account yet.
+    "act_invite" => {
+      subject: "You were invited to join a band on Verse",
+      heading: ->(d) { "#{d[:name]} invited you to join #{d[:act]}" },
+      copy: ->(d) { "#{d[:name]} invited you to join #{d[:act]} as #{d[:role]}. Use the button to see the invite, sign in or join Verse, and accept or decline. The link works once and expires in 7 days." },
+      action: "See the invite",
+      footer: "You are getting this one email because someone invited you to their band on Verse. If you do not know them, ignore it: you are only added if you accept.",
+      service_note: false
+    },
+    # data: { link: the report in the admin console, name: who sent it }. Sent to the founder when a
+    # problem report arrives (ProblemReportNotifier). No report text: it stays in the admin console.
+    "problem_report" => {
+      subject: "New problem report on Verse",
+      heading: ->(d) { "New problem report from #{d[:name]}" },
+      copy: "Someone sent a problem report from the app. Open it in the admin console to read it and see the screenshot, if they added one.",
+      action: "Open the report",
+      footer: "You are getting this because you receive Verse founder emails. Reports are also listed under Problem reports in the admin console.",
+      service_note: false
     }
   }.freeze
   DEFAULT_FOOTER = "If you did not request this, you can safely ignore this email.".freeze

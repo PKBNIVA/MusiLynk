@@ -23,6 +23,8 @@ import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import type { Portfolio, Resume } from '../lib/showcase';
 import { ShareToStageButton } from '../components/stage/ShareToStageButton';
 import { FEATURE_STAGE } from '../lib/features';
+import { ShareMenu } from '../components/ShareMenu';
+import { shareCopy } from '../lib/share';
 import { OwnerJobPanel } from '../components/OwnerJobPanel';
 import { optionLabel } from '../components/ui/option-labels';
 
@@ -158,7 +160,22 @@ export default function JobDetails() {
               <CardContent className="p-6 md:p-8">
                 <JobHero
                   job={job}
-                  actions={FEATURE_STAGE && <ShareToStageButton kind="job_share" id={job.id} label={job.title} />}
+                  actions={
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isOwner && job.status === 'published' && (
+                        <ShareMenu
+                          surface="hirer_opportunity"
+                          path={`/opportunities/${job.id}`}
+                          compose={(url) => shareCopy.hirerOpportunity(job.title, job.location, url)}
+                          title={job.title}
+                          label="Share opportunity"
+                          demo={job.demo}
+                          testId="share-hirer-opportunity"
+                        />
+                      )}
+                      {FEATURE_STAGE && <ShareToStageButton kind="job_share" id={job.id} label={job.title} />}
+                    </div>
+                  }
                 />
                 {job.fitScore && job.fitScore >= 60 ? (
                   <p className="mt-3 text-sm text-slate-400">{job.fitScore}% profile fit</p>

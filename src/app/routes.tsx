@@ -65,6 +65,7 @@ function publicRoutes(): RouteObject[] {
   const UrgentRequests = L(() => import('./pages/UrgentRequests'));
   const UrgentHire = L(() => import('./pages/UrgentHire'));
   const UrgentAction = L(() => import('./pages/UrgentAction'));
+  const ActInvite = L(() => import('./pages/ActInvite'));
   const Availability = L(() => import('./pages/Availability'));
   const VerifyEmail = L(() => import('./pages/VerifyEmail'));
   const Unsubscribe = L(() => import('./pages/Unsubscribe'));
@@ -376,6 +377,14 @@ function publicRoutes(): RouteObject[] {
       element: (
         <S>
           <UrgentAction />
+        </S>
+      ),
+    },
+    {
+      path: '/invites/:token',
+      element: (
+        <S>
+          <ActInvite />
         </S>
       ),
     },

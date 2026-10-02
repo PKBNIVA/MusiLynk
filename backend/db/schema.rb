@@ -10,12 +10,38 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
   enable_extension "pgcrypto"
+
+  create_table "act_invites", id: :string, force: :cascade do |t|
+    t.string "act_id", null: false
+    t.string "inviter_id", null: false
+    t.string "kind", null: false
+    t.string "invitee_user_id"
+    t.citext "invitee_email"
+    t.string "role_name", null: false
+    t.string "instrument"
+    t.string "token_digest", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "responded_at"
+    t.string "accepted_by_id"
+    t.datetime "last_sent_at"
+    t.integer "send_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["act_id", "status"], name: "index_act_invites_on_act_id_and_status"
+    t.index ["invitee_email", "status"], name: "index_act_invites_on_invitee_email_and_status"
+    t.index ["invitee_user_id", "status"], name: "index_act_invites_on_invitee_user_id_and_status"
+    t.index ["inviter_id"], name: "index_act_invites_on_inviter_id"
+    t.index ["token_digest"], name: "index_act_invites_on_token_digest", unique: true
+    t.check_constraint "kind::text = ANY (ARRAY['user'::character varying, 'email'::character varying, 'link'::character varying]::text[])", name: "act_invites_kind_valid"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'declined'::character varying, 'revoked'::character varying]::text[])", name: "act_invites_status_valid"
+  end
 
   create_table "act_members", id: :string, force: :cascade do |t|
     t.string "act_id", null: false
@@ -317,6 +343,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
     t.string "processing_result"
     t.index ["provider", "provider_event_id"], name: "index_billing_events_on_provider_and_provider_event_id", unique: true
     t.index ["user_id"], name: "index_billing_events_on_user_id"
+  end
+
+  create_table "billing_profiles", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.integer "version", null: false
+    t.boolean "current", default: true, null: false
+    t.string "buyer_type", default: "individual", null: false
+    t.string "legal_name", null: false
+    t.string "gstin"
+    t.string "pan"
+    t.string "address_line1", null: false
+    t.string "address_line2"
+    t.string "city", null: false
+    t.string "state_code", null: false
+    t.string "postal_code", null: false
+    t.string "country", default: "India", null: false
+    t.string "billing_email", null: false
+    t.string "po_reference"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "version"], name: "index_billing_profiles_on_user_id_and_version", unique: true
+    t.index ["user_id"], name: "index_billing_profiles_on_user_id"
+    t.index ["user_id"], name: "index_billing_profiles_one_current_per_user", unique: true, where: "current"
+    t.check_constraint "buyer_type::text = ANY (ARRAY['individual'::character varying, 'business'::character varying]::text[])", name: "billing_profiles_buyer_type_valid"
   end
 
   create_table "billing_reminders", id: :string, force: :cascade do |t|
@@ -623,6 +673,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
     t.index ["scheduled_at"], name: "index_good_jobs_on_scheduled_at", where: "(finished_at IS NULL)"
   end
 
+  create_table "invoice_counters", id: false, force: :cascade do |t|
+    t.string "series", null: false
+    t.string "financial_year", null: false
+    t.integer "last_value", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["series", "financial_year"], name: "index_invoice_counters_on_series_and_financial_year", unique: true
+  end
+
   create_table "invoices", id: :string, force: :cascade do |t|
     t.string "booking_payment_id", null: false
     t.string "invoice_number", null: false
@@ -922,6 +981,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
     t.index ["system_ref"], name: "index_posts_on_system_ref", unique: true
   end
 
+  create_table "problem_reports", id: :string, force: :cascade do |t|
+    t.string "user_id"
+    t.string "email"
+    t.text "description", null: false
+    t.text "expected"
+    t.string "page"
+    t.jsonb "context", default: {}, null: false
+    t.string "status", default: "new", null: false
+    t.text "admin_note"
+    t.bigint "screenshot_blob_id"
+    t.string "handled_by_id"
+    t.datetime "handled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["screenshot_blob_id"], name: "index_problem_reports_on_screenshot_blob_id"
+    t.index ["status", "created_at"], name: "index_problem_reports_on_status_and_created_at"
+    t.index ["user_id"], name: "index_problem_reports_on_user_id"
+  end
+
   create_table "product_events", id: :string, force: :cascade do |t|
     t.string "user_id"
     t.string "anon_id", null: false
@@ -982,6 +1060,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
     t.boolean "share_verification_publicly", default: true, null: false
     t.string "photo_url"
     t.jsonb "event_types", default: [], null: false
+    t.jsonb "push_preferences", default: {}, null: false
     t.index "((roles)::text) gin_trgm_ops", name: "index_profiles_on_roles_text_trgm", using: :gin
     t.index "((skills)::text) gin_trgm_ops", name: "index_profiles_on_skills_text_trgm", using: :gin
     t.index ["bio"], name: "index_profiles_on_bio", opclass: :gin_trgm_ops, using: :gin
@@ -1033,6 +1112,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
     t.index ["promo_code_id", "user_id"], name: "index_promo_redemptions_on_code_and_user"
     t.index ["subscription_id"], name: "index_promo_redemptions_on_subscription_id"
     t.index ["user_id"], name: "index_promo_redemptions_on_user_id"
+  end
+
+  create_table "push_subscriptions", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.text "endpoint", null: false
+    t.string "endpoint_digest", null: false
+    t.text "p256dh", null: false
+    t.text "auth", null: false
+    t.string "user_agent_summary"
+    t.datetime "last_success_at"
+    t.datetime "last_failure_at"
+    t.integer "failure_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["endpoint_digest"], name: "index_push_subscriptions_on_endpoint_digest", unique: true
+    t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
   end
 
   create_table "recent_activities", id: :string, force: :cascade do |t|
@@ -1269,6 +1364,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
     t.index ["employer_id"], name: "index_talent_shortlists_on_employer_id"
   end
 
+  create_table "tax_invoices", id: :string, force: :cascade do |t|
+    t.string "user_id", null: false
+    t.string "subscription_id"
+    t.string "billing_profile_id"
+    t.string "invoice_number", null: false
+    t.string "financial_year", null: false
+    t.integer "sequence_number", null: false
+    t.string "document_type", null: false
+    t.datetime "issued_at", null: false
+    t.string "provider_payment_id", null: false
+    t.string "provider_invoice_id"
+    t.string "currency", default: "INR", null: false
+    t.jsonb "seller", default: {}, null: false
+    t.jsonb "buyer", default: {}, null: false
+    t.jsonb "line_items", default: [], null: false
+    t.string "sac_code"
+    t.string "place_of_supply_code"
+    t.bigint "taxable_paise", null: false
+    t.bigint "cgst_paise", default: 0, null: false
+    t.bigint "sgst_paise", default: 0, null: false
+    t.bigint "igst_paise", default: 0, null: false
+    t.bigint "total_paise", null: false
+    t.string "refund_status"
+    t.string "refund_reference"
+    t.datetime "refunded_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["billing_profile_id"], name: "index_tax_invoices_on_billing_profile_id"
+    t.index ["financial_year", "sequence_number"], name: "index_tax_invoices_on_financial_year_and_sequence_number", unique: true
+    t.index ["invoice_number"], name: "index_tax_invoices_on_invoice_number", unique: true
+    t.index ["issued_at"], name: "index_tax_invoices_on_issued_at"
+    t.index ["provider_payment_id"], name: "index_tax_invoices_on_provider_payment_id", unique: true
+    t.index ["subscription_id"], name: "index_tax_invoices_on_subscription_id"
+    t.index ["user_id"], name: "index_tax_invoices_on_user_id"
+    t.check_constraint "(taxable_paise + cgst_paise + sgst_paise + igst_paise) = total_paise", name: "tax_invoices_totals_add_up"
+    t.check_constraint "document_type::text = ANY (ARRAY['tax_invoice'::character varying, 'bill_of_supply'::character varying]::text[])", name: "tax_invoices_document_type_valid"
+  end
+
   create_table "uploads", id: :string, force: :cascade do |t|
     t.string "user_id"
     t.string "storage", null: false
@@ -1412,6 +1545,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
     t.check_constraint "status::text = ANY (ARRAY['invited'::character varying, 'joined'::character varying, 'verified'::character varying]::text[])", name: "vouches_status_valid"
   end
 
+  add_foreign_key "act_invites", "acts", on_delete: :cascade
+  add_foreign_key "act_invites", "users", column: "invitee_user_id", on_delete: :cascade
+  add_foreign_key "act_invites", "users", column: "inviter_id", on_delete: :cascade
   add_foreign_key "act_members", "acts"
   add_foreign_key "act_members", "users"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -1432,6 +1568,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
   add_foreign_key "billing_credits", "promo_redemptions", on_delete: :nullify
   add_foreign_key "billing_credits", "users", on_delete: :cascade
   add_foreign_key "billing_events", "users"
+  add_foreign_key "billing_profiles", "users"
   add_foreign_key "billing_reminders", "subscriptions", on_delete: :cascade
   add_foreign_key "booking_payments", "booking_quotes"
   add_foreign_key "booking_payments", "booking_requests"
@@ -1470,6 +1607,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
   add_foreign_key "posts", "portfolio_items", column: "shared_portfolio_item_id", on_delete: :nullify
   add_foreign_key "posts", "posts", column: "reshared_post_id", on_delete: :nullify
   add_foreign_key "posts", "users", column: "created_by_user_id"
+  add_foreign_key "problem_reports", "users", column: "handled_by_id", on_delete: :nullify
+  add_foreign_key "problem_reports", "users", on_delete: :cascade
   add_foreign_key "product_events", "users", on_delete: :nullify
   add_foreign_key "profiles", "users"
   add_foreign_key "promo_codes", "users", column: "created_by_id", on_delete: :nullify
@@ -1477,6 +1616,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
   add_foreign_key "promo_redemptions", "promo_codes", on_delete: :cascade
   add_foreign_key "promo_redemptions", "subscriptions", on_delete: :nullify
   add_foreign_key "promo_redemptions", "users", on_delete: :cascade
+  add_foreign_key "push_subscriptions", "users"
   add_foreign_key "recent_activities", "users"
   add_foreign_key "refund_records", "booking_payments", on_delete: :nullify
   add_foreign_key "refund_records", "booking_requests"
@@ -1500,6 +1640,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_150000) do
   add_foreign_key "talent_folders", "users", column: "owner_id"
   add_foreign_key "talent_shortlists", "users", column: "candidate_id"
   add_foreign_key "talent_shortlists", "users", column: "employer_id"
+  add_foreign_key "tax_invoices", "billing_profiles", on_delete: :nullify
+  add_foreign_key "tax_invoices", "subscriptions", on_delete: :nullify
+  add_foreign_key "tax_invoices", "users"
   add_foreign_key "uploads", "users", on_delete: :nullify
   add_foreign_key "urgent_request_notifications", "urgent_requests"
   add_foreign_key "urgent_request_notifications", "users"

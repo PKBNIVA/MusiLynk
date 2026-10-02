@@ -3,6 +3,9 @@
 class RequestSizeLimit
   DEFAULT_LIMIT = 1.megabyte
   UPLOAD_PATH = "/api/uploads/local".freeze
+  # The problem-report form posts a screenshot (up to ProblemReportsController::SCREENSHOT_MAX) with its text.
+  PROBLEM_REPORT_PATH = "/api/problem-reports".freeze
+  PROBLEM_REPORT_LIMIT = 5.megabytes
 
   def initialize(app, limit: DEFAULT_LIMIT)
     @app = app
@@ -12,9 +15,10 @@ class RequestSizeLimit
   def call(env)
     return @app.call(env) if env["PATH_INFO"] == UPLOAD_PATH
 
+    limit = env["PATH_INFO"] == PROBLEM_REPORT_PATH ? [@limit, PROBLEM_REPORT_LIMIT].max : @limit
     declared = env["CONTENT_LENGTH"].presence&.to_i
-    return too_large if declared && declared > @limit
-    return too_large if declared.nil? && chunked_body_over_limit?(env)
+    return too_large if declared && declared > limit
+    return too_large if declared.nil? && chunked_body_over_limit?(env, limit)
 
     @app.call(env)
   end
@@ -22,11 +26,11 @@ class RequestSizeLimit
   private
 
   # Chunked bodies carry no Content-Length; read at most one byte past the limit, then rewind.
-  def chunked_body_over_limit?(env)
+  def chunked_body_over_limit?(env, limit)
     input = env["rack.input"]
     return false unless input && env["HTTP_TRANSFER_ENCODING"].to_s.downcase.include?("chunked")
 
-    over = input.read(@limit + 1).to_s.bytesize > @limit
+    over = input.read(limit + 1).to_s.bytesize > limit
     input.rewind if input.respond_to?(:rewind)
     over
   end

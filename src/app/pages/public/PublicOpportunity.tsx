@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
 import { PublicDetailState } from '../../components/PublicDetailState';
 import { usePageMeta } from '../../components/PageMeta';
+import { ShareMenu } from '../../components/ShareMenu';
+import { shareCopy } from '../../lib/share';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -81,7 +83,20 @@ export default function PublicOpportunity() {
               <JobHero
                 job={j}
                 actions={
-                  FEATURE_STAGE && isAuthenticated && <ShareToStageButton kind="job_share" id={j.id} label={j.title} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ShareMenu
+                      surface="opportunity"
+                      path={`/opportunities/${j.id ?? id}`}
+                      compose={(url) => shareCopy.opportunity(j.title, j.company, j.location, url)}
+                      title={j.title}
+                      label="Share opportunity"
+                      demo={j.demo}
+                      testId="share-opportunity"
+                    />
+                    {FEATURE_STAGE && isAuthenticated && (
+                      <ShareToStageButton kind="job_share" id={j.id} label={j.title} />
+                    )}
+                  </div>
                 }
               />
               <div className="mt-8 pt-7 border-t border-white/10">

@@ -73,7 +73,10 @@ export function storeCode(code: string) {
   }
 }
 
+export function referralShareText(code: string, shareUrl: string, percentOff = 20) {
+  return `Join me on Verse — hirers get ${percentOff}% off with my code ${code}: ${shareUrl}`;
+}
+
 export function whatsappShareUrl(code: string, shareUrl: string, percentOff = 20) {
-  const text = `Join me on Verse — hirers get ${percentOff}% off with my code ${code}: ${shareUrl}`;
-  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+  return `https://wa.me/?text=${encodeURIComponent(referralShareText(code, shareUrl, percentOff))}`;
 }

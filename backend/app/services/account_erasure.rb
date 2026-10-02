@@ -110,11 +110,33 @@ class AccountErasure
     @user.crew_plans.destroy_all
     UserBlock.where(blocker_id: id).or(UserBlock.where(blocked_id: id)).delete_all
     @user.profile&.destroy!
+    erase_devices_reports_and_invites
+  end
+
+  # Web push subscriptions (endpoint and keys), "Report a problem" messages (free text, an address,
+  # a screenshot) and bandmate invitations. The user row is anonymised rather than deleted, so none
+  # of the foreign-key cascades on these tables would ever fire.
+  def erase_devices_reports_and_invites
+    id = @user.id
+    email = @user.email.to_s
+    PushSubscription.where(user_id: id).delete_all
+    # destroy (not delete_all): ProblemReport's after_destroy_commit removes the screenshot file and its blob row.
+    ProblemReport.where(user_id: id).or(ProblemReport.where("lower(email) = ?", email.downcase)).find_each(&:destroy!)
+    # Invitations the person sent or received, ones sent to their address, and anything still open on
+    # an act they own (those acts are retired below, and the invites hold other people's addresses).
+    owned_act_ids = Act.where(owner_id: id).select(:id)
+    ActInvite.where(inviter_id: id).or(ActInvite.where(invitee_user_id: id))
+      .or(ActInvite.where("lower(invitee_email) = ?", email.downcase)).or(ActInvite.where(act_id: owned_act_ids)).delete_all
+    ActInvite.where(accepted_by_id: id).update_all(accepted_by_id: nil)
   end
 
   # Addresses and billing details this person held about others, or others held about them:
   # vouch invitations they sent are removed, invitations sent to their own address are
   # anonymised, and the tax id and billing address of workspaces they own are cleared.
+  # Billing: saved billing profiles are deleted; issued tax invoices (tax_invoices) are deliberately
+  # kept, with the buyer snapshot they were issued with, because Indian GST rules (CGST Act s.36,
+  # records kept for 72 months) require us to retain them. This matches "erasure deletes saved
+  # profiles and keeps issued invoices".
   def erase_third_party_contact_details
     # Accepted vouches (joined, verified) are evidence for the other person's verification: they stay,
     # pointing at this anonymised account. Unanswered invitations hold a stranger's address and go.
@@ -123,6 +145,8 @@ class AccountErasure
       vouch.update_columns(vouchee_email: "deleted-#{vouch.id.to_s.downcase.gsub(/[^a-z0-9]/, "")}@deleted.invalid", vouchee_id: nil)
     end
     Organization.where(owner_id: @user.id).update_all(tax_id: nil, billing_email: nil, updated_at: Time.current)
+    # Saved billing details go; issued invoices stay (tax rules) with the snapshot they were issued with.
+    BillingProfile.where(user_id: @user.id).delete_all
   end
 
   AUDIT_PII_KEYS = %w[email ip remoteIp origin from to].freeze

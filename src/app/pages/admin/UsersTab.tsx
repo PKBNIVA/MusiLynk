@@ -10,6 +10,7 @@ import {
   Users as UsersIcon,
   Sparkles,
   MailCheck,
+  Receipt,
 } from 'lucide-react';
 import { apiGet, apiPatch, apiPost, apiDelete } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
@@ -22,6 +23,7 @@ import type { AdminUser } from '../../lib/apiTypes';
 import { Panel, Empty, date, type AdminActions } from './shared';
 import { AdminSelect, AdminPageHeader, HowToCallout } from './ui';
 import { formatNumber } from '../../lib/format';
+import { UserBillingDialog } from '../../components/admin/UserBillingDialog';
 
 const PER_PAGE = 50;
 const ROLES = ['jobseeker', 'employer', 'admin'] as const;
@@ -91,6 +93,7 @@ function SignInMethods({ user }: { user: SupportUser }) {
 
 export default function UsersTab({ actions }: { actions: AdminActions }) {
   const { busy, patch, act, setGrant, setConfirm } = actions;
+  const [billingFor, setBillingFor] = useState<{ id: string; name: string } | null>(null);
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('');
   const [status, setStatus] = useState('');
@@ -227,6 +230,10 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
               </div>
               {u.role !== 'admin' && (
                 <div className="flex flex-wrap gap-2 shrink-0">
+                  <Button size="sm" variant="outline" onClick={() => setBillingFor({ id: u.id, name: u.name })}>
+                    <Receipt aria-hidden="true" size={15} className="mr-1" />
+                    Billing
+                  </Button>
                   <Button
                     size="sm"
                     variant="secondary"
@@ -378,6 +385,7 @@ export default function UsersTab({ actions }: { actions: AdminActions }) {
           </Button>
         </div>
       )}
+      <UserBillingDialog user={billingFor} onClose={() => setBillingFor(null)} />
     </Panel>
   );
 }

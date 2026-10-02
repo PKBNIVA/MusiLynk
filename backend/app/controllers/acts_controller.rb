@@ -24,7 +24,7 @@ class ActsController < ApplicationController
 
   def mine
     return unless authenticate!("jobseeker", "employer")
-    render json: { acts: current_user.owned_acts.where.not(id: Act.direct_enquiry.select(:id)).includes(:act_members, owner: :profile).order(updated_at: :desc).limit(200).map(&:api_json) }
+    render json: { acts: current_user.owned_acts.where.not(id: Act.direct_enquiry.select(:id)).includes(:act_members, owner: :profile).order(updated_at: :desc).limit(200).map(&:api_json), memberships: memberships }
   end
 
   def create
@@ -41,14 +41,20 @@ class ActsController < ApplicationController
     act = current_user.owned_acts.find(params[:id])
     status = params[:memberStatus].presence || "confirmed"
     return render_error("Invalid member status.", :bad_request, "INVALID_MEMBER_STATUS") unless MEMBER_STATUSES.include?(status)
-    linked_user = nil
     if params[:userId].present?
-      # Only active professionals can be linked to a lineup; anything else is indistinguishable from unknown.
+      # Joining a lineup needs the musician's own say-so: this sends an invite instead of adding them.
+      # Only active professionals can be invited; anything else is indistinguishable from unknown.
       linked_user = User.jobseeker.active.find_by(id: params[:userId].to_s)
-      return render_error("Musician not found.", :not_found) unless linked_user
-      return render_error("That musician is already in this lineup.", :conflict) if act.act_members.exists?(user_id: linked_user.id)
+      return render_error("Musician not found.", :not_found) if linked_user.nil? || linked_user.id == current_user.id || UserBlock.between?(current_user, linked_user)
+      begin
+        invite, = ActInvites.create!(act:, inviter: current_user, kind: "user", invitee: linked_user, role_name: params[:roleName], instrument: params[:instrument])
+      rescue ActInvites::Refused => error
+        return render_error(error.message, error.status, error.code, fields: error.fields)
+      end
+      audit!("act_invite.create", invite, { actId: act.id, kind: "user" })
+      return render json: { id: invite.id, invited: true, invite: invite.owner_json }, status: :created
     end
-    member = act.act_members.create!(display_name: params[:displayName], role_name: params[:roleName], instrument: params[:instrument], member_status: status, is_leader: false, user: linked_user)
+    member = act.act_members.create!(display_name: params[:displayName], role_name: params[:roleName], instrument: params[:instrument], member_status: status, is_leader: false, user: nil)
     render json: { id: member.id }, status: :created
   end
 
@@ -72,6 +78,18 @@ class ActsController < ApplicationController
     render json: { ok: true }
   end
 
+  # A member leaves the lineup themselves. The leader (the owner) cannot; they would delete or hand over the act.
+  def leave
+    return unless authenticate!("jobseeker", "employer")
+    act = Act.find(params[:id])
+    member = act.act_members.find_by(user_id: current_user.id)
+    return render_error("You're not in this lineup.", :not_found) unless member
+    return render_error("The act leader cannot leave their own act.", :conflict) if member.is_leader?
+    member.destroy!
+    audit!("act.member_leave", act)
+    render json: { ok: true }
+  end
+
   def remove_member
     return unless authenticate!("jobseeker", "employer")
     act = current_user.owned_acts.find(params[:id])
@@ -82,6 +100,12 @@ class ActsController < ApplicationController
   end
 
   private
+
+  # Lineups the signed-in musician plays in but does not own, so they can leave.
+  def memberships
+    ActMember.includes(:act).where(user_id: current_user.id, is_leader: false).where.not(acts: { owner_id: current_user.id }).references(:act)
+      .where.not(acts: { status: "hidden" }).limit(100).map { { actId: _1.act_id, actName: _1.act.name, roleName: _1.role_name, instrument: _1.instrument } }
+  end
 
   # One ranked page of active acts. Filters: q (name, type, genres, events, lineup roles and
   # instruments), city, type (act type), genre, eventType and member (a musician's id); paged like the talent directory.

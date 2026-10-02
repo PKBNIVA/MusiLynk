@@ -95,8 +95,9 @@ class UrgentRequestsController < ApplicationController
     # musician wrote is its first message, but only the email (not a second in-app notice) tells
     # the hirer about it.
     conversation = open_thread(item.requester, current_user, note: (note if first_response))
-    Notification.create!(user: item.requester, kind: "urgent_response", title: "Availability response", body: "#{current_user.name} responded to #{item.title}.",
-      link: conversation ? Notifier.message_link(conversation) : urgent_link(item.requester))
+    response_link = conversation ? Notifier.message_link(conversation) : urgent_link(item.requester)
+    Notification.create!(user: item.requester, kind: "urgent_response", title: "Availability response", body: "#{current_user.name} responded to #{item.title}.", link: response_link)
+    Notifier.urgent_response_push(item, current_user, link: response_link) if first_response
     render json: { ok: true, conversationId: conversation&.id }, status: :created
   end
 

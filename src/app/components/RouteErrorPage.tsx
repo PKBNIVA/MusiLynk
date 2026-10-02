@@ -4,6 +4,7 @@ import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
 import { BrandMark } from './BrandMark';
 import { Button } from './ui/button';
 import { reportError } from '../lib/monitoring';
+import { openProblemReport } from '../lib/problemReportEvent';
 
 const CHUNK_RELOAD_KEY = 'verse_chunk_reload_at';
 // A reload that fails again inside this window shows the error page instead of reloading forever.
@@ -110,6 +111,11 @@ export function RouteErrorPage() {
             <Home size={16} className="mr-2" aria-hidden="true" />
             Go home
           </Button>
+          {!notFound && !chunkError && (
+            <Button variant="outline" onClick={() => openProblemReport({ error })}>
+              Tell us what happened
+            </Button>
+          )}
         </div>
       </div>
     </main>

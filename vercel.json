@@ -78,7 +78,7 @@
       "destination": "/app-shell.html"
     },
     {
-      "source": "/(about|accessibility|acts|auth|book-music|community-guidelines|contact|cookies|credits|employer|forgot-password|guide|jobseeker|join|login|music-jobs|music-professionals|opportunities|p|pages|pricing|privacy|professionals|refund-policy|reset-password|safety|search|signup|sitemap|stage|start|terms|unsubscribe|urgent|verify-email)(/.*)?",
+      "source": "/(about|accessibility|acts|auth|book-music|community-guidelines|contact|cookies|credits|employer|forgot-password|guide|invites|jobseeker|join|login|music-jobs|music-professionals|opportunities|p|pages|pricing|privacy|professionals|refund-policy|reset-password|safety|search|signup|sitemap|stage|start|terms|unsubscribe|urgent|verify-email)(/.*)?",
       "destination": "/app-shell.html"
     }
   ],
@@ -120,6 +120,19 @@
       ]
     },
     {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    },
+    {
       "source": "/(manifest.webmanifest|icon-192.png|icon-512.png|apple-touch-icon.png|verse-mark.svg)",
       "headers": [
         {
@@ -129,7 +142,7 @@
       ]
     },
     {
-      "source": "/(jobseeker|employer|auth|admin|search|start|forgot-password|reset-password|verify-email|unsubscribe|login|signup)(/.*)?",
+      "source": "/(jobseeker|employer|auth|admin|search|start|forgot-password|reset-password|verify-email|unsubscribe|login|signup|invites)(/.*)?",
       "headers": [
         {
           "key": "X-Robots-Tag",

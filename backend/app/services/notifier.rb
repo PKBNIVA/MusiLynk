@@ -38,6 +38,7 @@ class Notifier
       notify(recipient, kind: "booking_status", title: "Booking update", link: "/bookings",
         body: "#{booking.act.name}: #{label} by #{actor.name}.")
       email(recipient, "booking_status", act: booking.act.name, status: label)
+      push_booking_status(booking, recipient, actor)
     end
 
     def new_application(application)
@@ -118,6 +119,7 @@ class Notifier
 
         recent = recipient.notifications.where(kind: MESSAGE_KIND, link:).where(created_at: MESSAGE_EMAIL_INTERVAL.ago..).exists?
         notify(recipient, kind: MESSAGE_KIND, title:, body:, link:)
+        push(recipient, "messages", title:, body:, link:, tag: "message-#{conversation.id}")
         email(recipient, "new_message", name: sender.name, job: conversation.job&.title, path: link) unless recent
       end
     end
@@ -194,6 +196,17 @@ class Notifier
         link: "/jobseeker/urgent", body: "#{urgent_request.title} — #{urgent_request.city}, #{IndianFormat.date_time(urgent_request.start_at)}.#{why}")
       email(recipient, "urgent_request_alert", title: urgent_request.title, role: urgent_request.role_name, city: urgent_request.city,
         startAt: urgent_request.start_at&.iso8601, reasons: reasons.presence)
+      push(recipient, "urgent", title: "Urgent: #{urgent_request.role_name} needed in #{urgent_request.city}",
+        body: "#{urgent_request.title} — #{IndianFormat.date_time(urgent_request.start_at)}. Tap to respond.",
+        link: "/jobseeker/urgent", tag: "urgent-#{urgent_request.id}")
+    end
+
+    # A musician responded to the hirer's urgent request (UrgentRequestsController#respond, which writes
+    # the in-app notice itself); `link` opens the conversation. Push only: the hirer's email goes out
+    # with the musician's first note.
+    def urgent_response_push(urgent_request, responder, link:)
+      push(urgent_request.requester, "urgent", title: "#{responder.name} can do it", body: "#{responder.name} responded to \"#{urgent_request.title}\". Tap to reply.",
+        link:, tag: "urgent-response-#{urgent_request.id}")
     end
 
     # 6 hours before an open, responded-to urgent request expires: nudge the hirer with
@@ -237,12 +250,47 @@ class Notifier
       EmailDeliveryJob.enqueue_link_with_name(template: "vouch_invite", link: join_link, email: vouch.vouchee_email, name: vouch.voucher.name)
     end
 
+    ACT_INVITES_LINK = "/acts?tab=invites".freeze
+
+    # A bandmate invite (ActInvites): the musician hears in the app and, when `email`, by notification
+    # email. Nothing about the lineup changes until they accept. The email carries no token.
+    def act_invite(invite, user, email: true)
+      inviter = invite.inviter.name
+      act = invite.act.name
+      notify(user, kind: "act_invite", title: "#{inviter} invited you to join #{act}", link: ACT_INVITES_LINK,
+        body: "As #{invite.role_name}. Open Invites to accept or decline.")
+      email(user, "act_invite", name: inviter, act:, role: invite.role_name) if email
+    end
+
+    # The same invite to an address with no (verified) Verse account behind it: a sealed link email.
+    def act_invite_email(invite, link:)
+      return unless EmailDelivery.configured?
+      EmailDeliveryJob.enqueue_act_invite(link:, email: invite.invitee_email, inviter: invite.inviter.name, act: invite.act.name, role: invite.role_name)
+    end
+
+    # Tells the act owner how the musician answered (in-app only).
+    def act_invite_response(invite, user, accepted:)
+      owner = invite.inviter
+      return if owner.nil? || owner.id == user.id
+      notify(owner, kind: "act_invite", link: "/acts", title: accepted ? "#{user.name} joined #{invite.act.name}" : "#{user.name} declined your invite",
+        body: accepted ? "They are now in the lineup as #{invite.role_name}." : "They turned down the #{invite.role_name} spot in #{invite.act.name}.")
+    end
+
     # Admin::UsersController#grant_early_access just switched this employer onto Early Access Pro.
     def early_access_granted(subscription)
       until_date = IndianFormat.date(subscription.trial_ends_at)
       notify(subscription.user, kind: "early_access_granted", title: "Your Early Access Pro is active",
         link: "/employer/billing", body: "No card needed. Pro features are unlocked on Verse until #{until_date}.")
       email(subscription.user, "early_access_granted", until: until_date)
+    end
+
+    # TaxInvoiceGenerator issued the invoice for a paid subscription charge. Email only: the
+    # invoice is listed on the billing page, which is where the link goes.
+    def invoice_issued(invoice)
+      rupees, paise = invoice.total_paise.divmod(100)
+      amount = "₹#{IndianFormat.number(rupees)}#{format('.%02d', paise) if paise.positive?}"
+      email(invoice.user, "invoice_issued", number: invoice.invoice_number, amount:, path: "/invoices/#{invoice.id}/print",
+        kind: invoice.tax_invoice? ? "tax invoice" : "bill of supply")
     end
 
     # Verification::Evaluate scored a request below the summary threshold: one nudge, listing what
@@ -279,6 +327,23 @@ class Notifier
     def review_prompt_link(prompt)
       return "/jobseeker/reviews?employerId=#{prompt.counterpart_user_id}" if prompt.user&.jobseeker?
       "/employer"
+    end
+
+    BOOKING_PUSH_TITLES = { "accepted" => "Booking confirmed", "cancelled" => "Booking cancelled" }.freeze
+
+    def push_booking_status(booking, recipient, actor)
+      title = BOOKING_PUSH_TITLES[booking.status] or return
+      push(recipient, "bookings", title:, body: "#{booking.act.name}: #{booking.status == 'accepted' ? 'confirmed' : 'cancelled'} by #{actor.name}.",
+        link: "/bookings", tag: "booking-#{booking.id}")
+    end
+
+    # Web push (PushNotifications): queued, never blocks or fails the request. `link` is role-neutral
+    # or already carries the workspace; the payload url is the recipient's own page. Never carries
+    # message text.
+    def push(user, category, title:, body:, link:, tag: nil)
+      return unless user
+
+      PushNotifications.notify(user, category, title:, body:, url: NotificationEmail.in_workspace(link, user), tag:)
     end
 
     def notify(user, **attributes)

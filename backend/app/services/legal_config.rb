@@ -48,4 +48,45 @@ class LegalConfig
       configured: { legalName: flag["business.legal_name"], businessAddress: flag["business.address"], businessState: flag["business.state"],
                     grievanceOfficer: { name: flag["grievance_officer.name"], email: flag["grievance_officer.email"], address: flag["grievance_officer.address"] } } }
   end
+
+  # --- Invoice seller details (TaxInvoiceGenerator, the invoice page, the admin warning) ---
+
+  def self.gst_registered? = business[:gst_registered] == true
+  # A missing flag means prices include GST, which is how the plan prices are quoted today.
+  def self.prices_include_gst? = business[:prices_include_gst] != false
+  def self.sac_code = business[:sac_code].to_s.strip
+  def self.invoice_prefix = business[:invoice_prefix].to_s.strip.presence || "VRS"
+
+  # The seller's two-digit GST state code: the configured one, else the GSTIN's, else looked up
+  # from the state name. nil while none of these is filled in.
+  def self.seller_state_code
+    configured = business[:state_code].to_s.strip
+    return configured if IndianStates.valid?(configured)
+    return Gstin.state_code(gstin) if Gstin.valid?(gstin) && configured?(gstin)
+
+    IndianStates.code_for_name(business_state) if configured?(business_state)
+  end
+
+  # Fields still to be filled before an invoice may be issued, as "business.<key>".
+  def self.invoice_pending_fields
+    pending = []
+    pending << "business.legal_name" unless configured?(legal_name)
+    pending << "business.address" unless configured?(business_address)
+    pending << "business.state_code" unless seller_state_code
+    pending << "business.pan" unless configured?(business[:pan])
+    pending << "business.sac_code" unless configured?(sac_code)
+    pending << "business.gstin" if gst_registered? && !Gstin.valid?(gstin)
+    pending
+  end
+
+  def self.invoice_seller_pending? = invoice_pending_fields.any?
+
+  # The seller block copied onto each invoice when it is issued. Placeholders and a missing GSTIN
+  # come out blank, never invented.
+  def self.invoice_seller
+    value = ->(raw) { configured?(raw) ? raw.to_s.strip : "" }
+    { legalName: value[legal_name], address: value[business_address], state: seller_state_code ? IndianStates.name(seller_state_code) : "",
+      stateCode: seller_state_code.to_s, gstin: gst_registered? ? Gstin.normalize(gstin) : "", pan: value[business[:pan]],
+      sacCode: sac_code, gstRegistered: gst_registered?, pricesIncludeGst: prices_include_gst?, pending: invoice_seller_pending? }
+  end
 end

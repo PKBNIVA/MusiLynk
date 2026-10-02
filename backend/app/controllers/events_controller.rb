@@ -20,7 +20,17 @@ class EventsController < ApplicationController
     route_change
     profile_view
     share_card_download share_whatsapp
+    share_clicked
   ].freeze
+
+  SECRET_PATH = %r{/invites/[^/?#\s]+}i
+
+  # Invite links carry their secret in the path. The current client redacts before sending; this
+  # covers older clients, so the token never reaches product_events.
+  def self.redact_secrets(value) = value.gsub(SECRET_PATH, "/invites/:token")
+
+  # A tracked path never keeps a query string or fragment (verify/reset/unsubscribe tokens live there).
+  def self.redact_path(value) = redact_secrets(value.split(/[?#]/).first.to_s)
 
   def create
     return unless throttle!("events", limit: RATE_LIMIT_PER_MINUTE, period: 1.minute)
@@ -68,7 +78,7 @@ class EventsController < ApplicationController
     props = event["props"].is_a?(Hash) ? scrub_props(event["props"]) : {}
     row = {
       id: "prod_#{SecureRandom.uuid}", user_id: current_user&.id, anon_id: anon_id.first(100), name:,
-      props:, page: event["page"].to_s.first(300).presence, referrer: event["referrer"].to_s.first(300).presence,
+      props:, page: self.class.redact_path(event["page"].to_s).first(300).presence, referrer: self.class.redact_secrets(event["referrer"].to_s).first(300).presence,
       city: event["city"].to_s.first(100).presence, created_at: Time.current
     }
     return nil if row.to_json.bytesize > MAX_EVENT_BYTES
@@ -85,7 +95,7 @@ class EventsController < ApplicationController
       next if key.blank? || key.match?(EMAIL_LIKE)
 
       out[key] = case value
-      when String then value.first(200)
+      when String then (key == "path" ? self.class.redact_path(value) : self.class.redact_secrets(value)).first(200)
       when Numeric, TrueClass, FalseClass then value
       end
     end.compact

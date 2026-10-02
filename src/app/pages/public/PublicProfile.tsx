@@ -10,6 +10,8 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { apiGet, apiPost } from '../../lib/api';
 import { trackProfileView } from '../../lib/analytics';
+import { ShareMenu } from '../../components/ShareMenu';
+import { shareCopy } from '../../lib/share';
 import { mentionsPlace, personLines } from '../../lib/personLine';
 import { MapPin, MessageSquare, Pencil, ShieldCheck, Star, Flag, Zap } from 'lucide-react';
 import { MediaTile } from '../../components/showcase/MediaTile';
@@ -245,6 +247,17 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
                 </div>
               </div>
             </header>
+            <div className="mt-4">
+              <ShareMenu
+                surface="professional"
+                path={`/professionals/${c.id}`}
+                compose={(url) => shareCopy.professional(c.name, c.headline, url, own)}
+                title={`${c.name} on Verse`}
+                label={own ? 'Share my profile' : 'Share profile'}
+                demo={c.demo}
+                testId="share-profile"
+              />
+            </div>
             {c.bio && (
               <section className="mt-8">
                 <p

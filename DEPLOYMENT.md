@@ -245,6 +245,25 @@ the admin console (`ADMIN_ORIGIN`, else `FRONTEND_URL`, plus `/admin?tab=queue|v
 - Needs the worker running with cron on (`GOOD_JOB_ENABLE_CRON`, default on in production).
 - Preview without sending: `bin/rails "reports:founder[preview]"`; send now: `bin/rails reports:founder`.
 
+### Problem reports ("Report a problem")
+
+People (signed in, or signed out with an email) send problems from the account menu, the app
+error screen and the landing footer to `POST /api/problem-reports`; the founder triages them in
+the admin console's **Problem reports** tab and sees the count in the Monday report.
+
+- Founder email: one email per report with a link to the admin console (never the report text or
+  the screenshot). Recipients: `FOUNDER_REPORT_TO` (optional, comma-separated) if set, else
+  `ADMIN_EMAIL` (the Railway variable that seeds the admin account). With neither set, or no email
+  provider, nothing is sent and the report is still stored. Capped at 30 emails an hour.
+- Screenshots are stored through Active Storage on the same storage as uploads (`AWS_BUCKET`, or
+  `PERSISTENT_UPLOADS=true` on a volume). Without durable storage the report is kept and the
+  screenshot is dropped (the dialog says so). Admins view a screenshot through a 5-minute signed
+  link and each view is audit-logged (`admin.problem_report.screenshot`).
+- Limits: signed in 10 an hour; signed out 3 an hour and 8 a day per IP, 3 a day per email
+  address, 100 a day site-wide; screenshots are PNG/JPEG/WebP up to 4 MB (checked by file
+  contents). The request body limit for this one endpoint is 5 MB.
+- No new environment variables.
+
 ### Admin site and `ADMIN_ORIGIN`
 
 The admin panel is meant to run as its own Vercel project (a second build of this repo with

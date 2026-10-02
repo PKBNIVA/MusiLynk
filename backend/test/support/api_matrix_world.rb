@@ -69,11 +69,15 @@ module ApiMatrixWorld
       refs[:alert] = JobAlert.create!(user: owner, name: "Alert #{actor}", query: "mix", frequency: "weekly").id
       refs[:portfolio] = PortfolioItem.create!(user: owner, kind: "audio", title: "Sample #{actor}", url: "https://example.com/#{actor}.mp3", visibility: "public").id
       refs[:notification] = Notification.create!(user: owner, kind: "system", title: "Hello #{actor}", body: "Body").id
+      refs[:tax_invoice] = TaxInvoice.create!(user: owner, invoice_number: "VRS/matrix/#{actor}-#{SecureRandom.hex(3)}", financial_year: "matrix-#{SecureRandom.hex(2)}", sequence_number: 1,
+        document_type: "bill_of_supply", issued_at: Time.current, provider_payment_id: "pay_matrix_#{actor}_#{SecureRandom.hex(3)}", buyer: { "name" => owner.name },
+        seller: {}, line_items: [], taxable_paise: 249_900, total_paise: 249_900).id
       refs[:availability] = AvailabilityWindow.create!(user: owner, start_at: 2.days.from_now, end_at: 3.days.from_now, status: "available", city: "Mumbai").id
       act = Act.create!(owner:, name: "Act #{actor}", act_type: "band", status: "active", currency: "INR", fee_basis: "event", city: "Mumbai", genres: ["Jazz"])
       act.act_members.create!(user: owner, display_name: owner.name, role_name: "Leader", is_leader: true, member_status: "confirmed")
       refs[:act] = act.id
       refs[:act_member] = act.act_members.create!(display_name: "Session Drummer", role_name: "Drums", is_leader: false, member_status: "confirmed").id
+      refs[:act_invite] = ActInvite.create!(act:, inviter: owner, kind: "link", role_name: "Keys", token_digest: ActInvite.digest(SecureRandom.hex(8)), expires_at: 7.days.from_now).id
       refs[:inactive_act] = Act.create!(owner:, name: "Hidden act #{actor}", act_type: "duo", status: "inactive", currency: "INR", fee_basis: "event").id
       refs[:urgent] = UrgentRequest.create!(requester: owner, title: "Urgent #{actor}", role_name: "Drummer", city: "Mumbai", start_at: 1.day.from_now, currency: "INR", status: "open").id
       folder = TalentFolder.create!(owner:, name: "Folder #{actor}")
@@ -159,7 +163,7 @@ module ApiMatrixWorld
       portfolio: world.refs[:js][:portfolio], folio: world.refs[:js][:folio], folio_slug: world.refs[:js][:folio_slug],
       private_folio_slug: world.refs[:js][:private_folio_slug], resume: world.refs[:js][:resume],
       career_entry: world.refs[:js][:career_entry], suggestion: world.refs[:js][:suggestion], notification: world.refs[:js][:notification],
-      availability: world.refs[:js][:availability], act_member: world.refs[:js][:act_member],
+      availability: world.refs[:js][:availability], act_member: world.refs[:js][:act_member], act_invite: world.refs[:js][:act_invite],
       my_application: world.refs[:js][:my_application], received_application: world.refs[:emp][:received_application],
       other_job: world.refs[:emp][:job], self: admin.id,
       user: u[:js].id, review: review.id,
@@ -167,7 +171,7 @@ module ApiMatrixWorld
       report: Report.create!(reporter: u[:js], entity_type: "job", entity_id: world.refs[:emp][:job], reason: "spam", status: "open").id,
       billing_attempt: BillingAttempt.create!(user: u[:emp], operation: "subscription_create", provider: "razorpay",
         idempotency_key: "matrix-#{SecureRandom.hex(4)}", state: "pending").id,
-      refund: world.refs[:js][:refund], invoice: world.refs[:js][:invoice]
+      refund: world.refs[:js][:refund], invoice: world.refs[:js][:invoice], tax_invoice: world.refs[:js][:tax_invoice]
     )
     world.refs[:admin][:notification] = Notification.create!(user: admin, kind: "system", title: "Admin note", body: "x").id
     world.refs[:admin][:auth_connection] = AuthConnection.create!(owner: admin, provider: "google", provider_uid: "matrix-admin-google", email_verified: true).id

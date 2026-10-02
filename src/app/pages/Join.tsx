@@ -97,7 +97,9 @@ export default function Join() {
     }
     const requested = (location.state as { from?: unknown } | null)?.from ?? consumeReturnTo();
     const home = created.role === 'employer' ? 'employer' : 'jobseeker';
-    const allowed = typeof requested === 'string' && requested.startsWith(`/${home}`);
+    // A bandmate invite link is role-neutral, so signing up from one lands back on the invite.
+    const allowed =
+      typeof requested === 'string' && (requested.startsWith(`/${home}`) || /^\/invites\/[\w-]+$/.test(requested));
     navigate(allowed ? requested : `/${home}?welcome=1`, { replace: true });
   };
   const onStart = () => {

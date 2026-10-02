@@ -444,6 +444,56 @@ export interface Act {
   demo: boolean;
 }
 
+/** ActInvite#owner_json: what the act owner sees (never the token or the full email). */
+export interface ActInviteOwner {
+  id: string;
+  actId: string;
+  kind: 'user' | 'email' | 'link';
+  status: 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired';
+  roleName: string;
+  instrument?: string | null;
+  inviteeName?: string | null;
+  inviteeEmail?: string | null;
+  expiresAt: string;
+  createdAt: string;
+  lastSentAt?: string | null;
+  canResend: boolean;
+}
+
+/** ActInvite#invitee_json: what the invited musician sees. `addressed` is false for a shared link. */
+export interface ActInviteForMe {
+  id: string;
+  actId: string;
+  actName: string;
+  actType?: string | null;
+  city?: string | null;
+  inviterName: string;
+  roleName: string;
+  instrument?: string | null;
+  status: 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired';
+  expiresAt: string;
+  createdAt: string;
+  addressed?: boolean;
+}
+
+/** ActInvitesController#search: public profile details only. */
+export interface InvitableMusician {
+  id: string;
+  name: string;
+  headline?: string | null;
+  location?: string | null;
+  roles: string[];
+  verified: boolean;
+}
+
+/** An act the signed-in musician plays in but does not own (GET /acts/me `memberships`). */
+export interface ActMembership {
+  actId: string;
+  actName: string;
+  roleName?: string | null;
+  instrument?: string | null;
+}
+
 /** BookingsController#booking_json's latestQuote. Fees are whole currency units. */
 export interface BookingQuote {
   id: string;
@@ -813,6 +863,33 @@ export interface UrgentRequest {
   conversationId?: string | null;
 }
 
+export type ProblemReportStatus = 'new' | 'triaged' | 'resolved';
+
+/** Admin::ProblemReportsController#index / #show row. The screenshot is fetched separately (a short-lived signed link). */
+export interface AdminProblemReport {
+  id: string;
+  status: ProblemReportStatus;
+  description: string;
+  expected: string | null;
+  page: string | null;
+  context: {
+    release?: string;
+    browser?: string;
+    os?: string;
+    language?: string;
+    viewport?: { width: number; height: number };
+    role?: string;
+    errors?: string[];
+  };
+  email: string | null;
+  hasScreenshot: boolean;
+  adminNote: string | null;
+  createdAt: string;
+  handledAt: string | null;
+  handledByName: string | null;
+  user: { id: string; name: string; email: string; role: string } | null;
+}
+
 /** Admin::UrgentRequestsController#index row: the above plus founder-facing fields. */
 export interface AdminUrgentRequest extends UrgentRequest {
   ageMinutes: number;
@@ -1068,6 +1145,7 @@ export interface AdminStats {
   pendingReviews: number;
   verificationQueue: number;
   openReports: number;
+  newProblemReports?: number;
   messages: number;
   flaggedMessages: number;
   acts: number;

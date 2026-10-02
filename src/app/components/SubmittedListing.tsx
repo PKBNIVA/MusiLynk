@@ -1,6 +1,8 @@
 import { Link } from 'react-router';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from './ui/button';
+import { ShareMenu } from './ShareMenu';
+import { shareCopy } from '../lib/share';
 
 const STEPS = [
   'We review it within 24 hours.',
@@ -10,11 +12,13 @@ const STEPS = [
 
 /** Shown after an opportunity is submitted: what happens next, instead of dropping the poster on a dashboard (J-12). */
 export function SubmittedListing({
+  id,
   title,
   viewPath,
   dashboardPath,
   onAnother,
 }: {
+  id?: string;
   title: string;
   viewPath: string;
   dashboardPath: string;
@@ -42,6 +46,22 @@ export function SubmittedListing({
           </li>
         ))}
       </ol>
+      {id && (
+        <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.03] p-4">
+          <p className="text-sm text-slate-200">Know musicians who would be right for this? Share it on WhatsApp.</p>
+          <p className="mt-1 text-xs text-slate-400">The link starts working as soon as we approve it.</p>
+          <div className="mt-3">
+            <ShareMenu
+              surface="hirer_opportunity_posted"
+              path={`/opportunities/${id}`}
+              compose={(url) => shareCopy.hirerOpportunity(title || 'a new opportunity', null, url)}
+              title={title}
+              label="Share opportunity"
+              testId="share-posted"
+            />
+          </div>
+        </div>
+      )}
       <div className="mt-7 flex flex-col gap-3 sm:flex-row">
         <Button asChild>
           <Link to={viewPath}>View my opportunity</Link>

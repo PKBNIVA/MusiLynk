@@ -112,7 +112,7 @@ test('an owner can make a one-use link to share on WhatsApp', async ({ page }) =
         status: 201,
         body: {
           invite: { ...pendingUserInvite, id: 'inv2', kind: 'link', inviteeName: null },
-          link: 'https://verse.example/invites/tok123',
+          link: 'https://musilynk.example/invites/tok123',
         },
       },
     },
@@ -124,7 +124,7 @@ test('an owner can make a one-use link to share on WhatsApp', async ({ page }) =
   await dialog.getByRole('tab', { name: 'Share a link' }).click();
   await dialog.getByLabel('Role in the act').fill('Keys');
   await dialog.getByRole('button', { name: 'Create link' }).click();
-  await expect(dialog.getByLabel('Invite link')).toHaveValue('https://verse.example/invites/tok123');
+  await expect(dialog.getByLabel('Invite link')).toHaveValue('https://musilynk.example/invites/tok123');
   await expect(dialog.getByRole('link', { name: 'Share on WhatsApp' })).toHaveAttribute(
     'href',
     /^https:\/\/wa\.me\/\?text=.*tok123/,

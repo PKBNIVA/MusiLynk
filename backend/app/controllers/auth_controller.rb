@@ -53,7 +53,7 @@ class AuthController < ApplicationController
   #   "off": emergency disable only; every such sign-in is audited.
   # Outside production the on-screen debugCode counts as delivery. With an email
   # address, a suppressed (bounced or complained) address or one on a reserved domain
-  # (admin@verse.local) counts as undeliverable, so auto mode never sends the code nowhere.
+  # (admin@musilynk.local) counts as undeliverable, so auto mode never sends the code nowhere.
   # Returns :enforced, :unavailable (required but undeliverable), :skipped or :off.
   def self.admin_second_factor_state(email = nil)
     mode = ENV.fetch("ADMIN_SECOND_FACTOR", "auto").strip.downcase

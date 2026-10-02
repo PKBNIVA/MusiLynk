@@ -45,7 +45,7 @@ export function StageTeaser() {
           {posts.map((post) => (
             <li
               key={post.id}
-              className="verse-surface flex flex-col gap-2 rounded-2xl p-4"
+              className="musilynk-surface flex flex-col gap-2 rounded-2xl p-4"
               data-testid="stage-teaser-post"
             >
               <p className="leading-7 text-slate-100">{post.body}</p>

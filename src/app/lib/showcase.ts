@@ -609,7 +609,7 @@ export function entryMatches(entry: CareerEntry, rules: Rules | null | undefined
 }
 
 /** Fired on window after anything that can change the "Review changes" count. */
-export const SUGGESTIONS_CHANGED_EVENT = 'verse:suggestions-changed';
+export const SUGGESTIONS_CHANGED_EVENT = 'musilynk:suggestions-changed';
 export function announceSuggestionsChanged() {
   window.dispatchEvent(new Event(SUGGESTIONS_CHANGED_EVENT));
 }

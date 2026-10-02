@@ -21,7 +21,7 @@ export default function NotFoundPublic() {
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
       <main className="mx-auto max-w-3xl px-5 py-16 text-center md:py-24">
-        <p aria-hidden="true" className="verse-gradient-text text-7xl font-black md:text-9xl">
+        <p aria-hidden="true" className="musilynk-gradient-text text-7xl font-black md:text-9xl">
           404
         </p>
         <h1 className="mt-2 text-3xl font-bold md:text-4xl">Page not found</h1>
@@ -52,7 +52,7 @@ export default function NotFoundPublic() {
             <li key={to}>
               <Link
                 to={to}
-                className="verse-surface flex h-full flex-col gap-1 rounded-2xl p-4 hover:bg-white/[.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
+                className="musilynk-surface flex h-full flex-col gap-1 rounded-2xl p-4 hover:bg-white/[.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
               >
                 <Icon aria-hidden="true" size={20} className="text-violet-300" />
                 <span className="mt-1 font-bold">{title}</span>

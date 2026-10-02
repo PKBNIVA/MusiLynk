@@ -1,6 +1,6 @@
 # Addresses the email provider reported as undeliverable (hard bounce, blocked), as
 # complaining (marked spam), or as unsubscribed. EmailDelivery and NotificationEmail
-# consult it before sending, so Verse stops emailing an address that would hurt the
+# consult it before sending, so MusiLynk stops emailing an address that would hurt the
 # sending domain's reputation.
 #
 # Lock profile: a new, empty table plus its indexes; nothing existing is locked except

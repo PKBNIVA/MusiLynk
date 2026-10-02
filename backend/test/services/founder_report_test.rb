@@ -175,8 +175,8 @@ class FounderReportTest < ActiveJob::TestCase
 
   test "the admin links fall back to the public site when no admin site is configured" do
     ENV.delete("ADMIN_ORIGIN")
-    ENV["FRONTEND_URL"] = "https://verse.example.test/"
-    assert_equal "https://verse.example.test/admin?tab=queue", FounderReport.admin_url("queue")
+    ENV["FRONTEND_URL"] = "https://musilynk.example.test/"
+    assert_equal "https://musilynk.example.test/admin?tab=queue", FounderReport.admin_url("queue")
   end
 
   test "html escapes what people typed" do
@@ -208,7 +208,7 @@ class FounderReportTest < ActiveJob::TestCase
     end
     job = enqueued_jobs.find { _1["job_class"] == "FounderReportDeliveryJob" }
     assert_equal "a@example.com", job["arguments"][0]
-    assert_match(/\AVerse week 21–27 Sep 2026/, job["arguments"][1])
+    assert_match(/\AMusiLynk week 21–27 Sep 2026/, job["arguments"][1])
   end
 
   test "the job does nothing, and says so, when there is nobody to send to" do

@@ -4,7 +4,7 @@
 # the manifest exists, and row counts match.
 #
 #   SCRATCH_DATABASE_URL=postgres://... BACKUP_PASSPHRASE=... \
-#     scripts/db/restore-verify.sh OUT_DIR/verse-<stamp>.dump.gpg
+#     scripts/db/restore-verify.sh OUT_DIR/musilynk-<stamp>.dump.gpg
 #
 # Never point SCRATCH_DATABASE_URL at production: the restore uses --clean.
 set -euo pipefail

@@ -21,7 +21,7 @@ const MIN_SHOWN = 3;
  * each with an avatar (their photo, or generated art for a demo account; never a stock face), name,
  * role, "from ₹" and one play chip. Renders nothing on failure or under three people.
  */
-export function NowOnVerse({ city }: { city: string }) {
+export function NowOnMusiLynk({ city }: { city: string }) {
   const [people, setPeople] = useState<Person[] | null>(null);
   useEffect(() => {
     let live = true;
@@ -38,7 +38,7 @@ export function NowOnVerse({ city }: { city: string }) {
 
   if (people && people.length < MIN_SHOWN) return null;
   return (
-    <section aria-labelledby="now-title" className="px-4 pb-4 pt-2 sm:px-6" data-testid="now-on-verse">
+    <section aria-labelledby="now-title" className="px-4 pb-4 pt-2 sm:px-6" data-testid="now-on-musilynk">
       <div className="mx-auto max-w-6xl">
         <h2 id="now-title" className="text-xl font-black md:text-2xl">
           Now on MusiLynk in {city}
@@ -63,7 +63,7 @@ function PersonCard({ person }: { person: Person }) {
   const line = personLines(person);
   const from = fromRateText(person);
   return (
-    <li className="verse-surface flex flex-col gap-3 rounded-2xl p-4" data-testid="now-card">
+    <li className="musilynk-surface flex flex-col gap-3 rounded-2xl p-4" data-testid="now-card">
       <Link
         to={`/professionals/${person.id}`}
         className="group flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"

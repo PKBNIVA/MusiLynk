@@ -10,7 +10,7 @@ module MailCatalog
   Email = Struct.new(:id, :template, :group, :recipient, :subject, :html, :text, :headers, keyword_init: true)
   Note = Struct.new(:id, :kind, :link, :recipient, :title, :body, :source, keyword_init: true)
 
-  FRONT = "https://verse.example"
+  FRONT = "https://musilynk.example"
 
   # Notification.create! calls that live in controllers. Each is listed with the link it writes
   # (the helper-built ones for both workspaces) so the link check covers them.

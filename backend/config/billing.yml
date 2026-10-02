@@ -8,7 +8,7 @@ default: &default
     days: 90
   # Code generator: `{N}` is N random characters from `alphabet` (no 0/O/1/I lookalikes).
   codes:
-    format: "VERSE-{6}"
+    format: "MUSILYNK-{6}"
     alphabet: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
   # Referral programme. The referee's discount is applied through a single Razorpay Offer
   # (Dashboard -> Offers), whose id goes in RAZORPAY_REFERRAL_OFFER_ID (or `razorpay_offer_id`

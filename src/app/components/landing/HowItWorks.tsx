@@ -63,7 +63,7 @@ function Steps({ steps }: { steps: Step[] }) {
   return (
     <ol className="grid gap-4 md:grid-cols-3">
       {steps.map(([Icon, title], index) => (
-        <li key={title} className="verse-surface flex items-center gap-4 rounded-2xl p-5">
+        <li key={title} className="musilynk-surface flex items-center gap-4 rounded-2xl p-5">
           <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-violet-500/15 text-violet-200">
             <Icon aria-hidden="true" size={22} />
           </span>

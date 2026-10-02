@@ -10,8 +10,8 @@ const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
   'base64',
 );
-const bucket = 'https://bucket.verse-upload.test';
-const publicUrl = 'https://media.verse.test/uploads/cover.png';
+const bucket = 'https://bucket.musilynk-upload.test';
+const publicUrl = 'https://media.musilynk.test/uploads/cover.png';
 
 test('upload shows progress, reports a refused or dropped upload, and works when the file is chosen again', async ({
   page,

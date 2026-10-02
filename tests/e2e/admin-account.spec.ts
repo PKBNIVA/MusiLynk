@@ -8,7 +8,7 @@ test.skip(Boolean(process.env.QA_BASE_URL) || process.env.QA_INTEGRATION === 'tr
 const admin = {
   id: 'qa-admin',
   name: 'QA Admin',
-  email: 'admin@verse.local',
+  email: 'admin@musilynk.local',
   role: 'admin',
   status: 'active',
   profileComplete: true,
@@ -129,7 +129,7 @@ test('changing the admin email: refused addresses are explained, then the emaile
   const calls = await openAccount(page);
   const field = page.getByLabel('New email address');
 
-  await field.fill('admin@verse.local');
+  await field.fill('admin@musilynk.local');
   await page.getByRole('button', { name: 'Email me a code' }).click();
   await expect(page.getByRole('alert')).toHaveText('That address can never receive email. Use a real mailbox.');
   await expect(field).toBeFocused();
@@ -159,7 +159,7 @@ test('changing the admin email: refused addresses are explained, then the emaile
   await expect(page.getByText('Can receive email', { exact: true })).toBeVisible();
   await expect(banner(page)).toHaveCount(0);
   expect(calls.requests).toEqual([
-    { email: 'admin@verse.local' },
+    { email: 'admin@musilynk.local' },
     { email: 'taken@example.com' },
     { email: 'ops@example.com' },
   ]);

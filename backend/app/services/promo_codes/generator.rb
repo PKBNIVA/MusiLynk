@@ -1,9 +1,9 @@
 module PromoCodes
   # Turns a format string into a code. `{N}` is N random characters from an unambiguous
   # alphabet (BillingConfig.code_alphabet); `{NAMEN}` is the first N letters of a person's name,
-  # upper-cased and padded with X (used for referral codes: "VERSE-{NAME4}{4}").
+  # upper-cased and padded with X (used for referral codes: "MUSILYNK-{NAME4}{4}").
   class Generator
-    REFERRAL_FORMAT = "VERSE-{NAME4}{4}".freeze
+    REFERRAL_FORMAT = "MUSILYNK-{NAME4}{4}".freeze
     TOKEN = /\{(NAME)?(\d+)\}/
     MAX_ATTEMPTS = 12
 

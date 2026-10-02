@@ -33,7 +33,7 @@ class TrackMirrorTest < ActiveSupport::TestCase
       assert_equal [@tracks[0], @tracks[2]].map { "demo/showcase/#{_1.fetch('id')}.mp3" }, put.map { _1.fetch(:key) }
       assert_equal ["audio/mpeg"], put.map { _1.fetch(:content_type) }.uniq
       assert_match(/immutable/, put.first.fetch(:cache_control))
-      assert_equal "https://media.verse.test/demo/showcase/#{@tracks[0].fetch('id')}.mp3", SyntheticQa::TrackMirror.url_for(@tracks[0])
+      assert_equal "https://media.musilynk.test/demo/showcase/#{@tracks[0].fetch('id')}.mp3", SyntheticQa::TrackMirror.url_for(@tracks[0])
     end
   end
 
@@ -78,8 +78,8 @@ class TrackMirrorTest < ActiveSupport::TestCase
   end
 
   def with_bucket
-    ENV.update("AWS_BUCKET" => "verse-test", "AWS_ACCESS_KEY_ID" => "id", "AWS_SECRET_ACCESS_KEY" => "secret", "AWS_REGION" => "auto",
-      "AWS_ENDPOINT_URL_S3" => "https://acct.r2.cloudflarestorage.com", "AWS_PUBLIC_BASE_URL" => "https://media.verse.test")
+    ENV.update("AWS_BUCKET" => "musilynk-test", "AWS_ACCESS_KEY_ID" => "id", "AWS_SECRET_ACCESS_KEY" => "secret", "AWS_REGION" => "auto",
+      "AWS_ENDPOINT_URL_S3" => "https://acct.r2.cloudflarestorage.com", "AWS_PUBLIC_BASE_URL" => "https://media.musilynk.test")
     client = Aws::S3::Client.new(stub_responses: true, region: "auto")
     UploadStorage.stub(:client, client) { yield client }
   end

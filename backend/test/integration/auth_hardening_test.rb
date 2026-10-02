@@ -112,7 +112,7 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
   end
 
   test "registration queues the verification email and reports it as queued" do
-    with_env(PROVIDER_ENV.merge("FRONTEND_URL" => "https://verse.example//")) do
+    with_env(PROVIDER_ENV.merge("FRONTEND_URL" => "https://musilynk.example//")) do
       assert_enqueued_jobs 1, only: EmailDeliveryJob do
         post "/api/auth/register", params: { name: "Queued", email: "queued@example.com", password: PASSWORD, role: "jobseeker" }, as: :json
       end
@@ -125,7 +125,7 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
     assert_equal User.find_by!(email: "queued@example.com").id, user_id
     assert_equal "verify_email", template
     link = EmailDeliveryJob.unseal(sealed)
-    assert_match %r{\Ahttps://verse\.example/verify-email\?token=.+}, link
+    assert_match %r{\Ahttps://musilynk\.example/verify-email\?token=.+}, link
     token = Rack::Utils.parse_query(URI.parse(link).query).fetch("token")
     assert_not_includes job[:args].to_json, token
     assert_not_includes job[:args].to_json, "queued@example.com"
@@ -134,13 +134,13 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
   test "verification request keeps debugLink outside production and reports unconfigured delivery" do
     token = login_token(@user.email)
     @user.update_columns(email_verified: false) # signed in, address not yet confirmed
-    with_env(NO_PROVIDER_ENV.merge("FRONTEND_URL" => "https://verse.example/")) do
+    with_env(NO_PROVIDER_ENV.merge("FRONTEND_URL" => "https://musilynk.example/")) do
       assert_no_enqueued_jobs do
         post "/api/auth/request-email-verification", params: {}, headers: auth(token), as: :json
       end
     end
     assert_response :success
-    assert_match %r{\Ahttps://verse\.example/verify-email\?token=}, response.parsed_body.fetch("debugLink")
+    assert_match %r{\Ahttps://musilynk\.example/verify-email\?token=}, response.parsed_body.fetch("debugLink")
     assert_equal({ "queued" => false, "delivered" => false, "reason" => "Email provider not configured" }, response.parsed_body["delivery"])
   end
 
@@ -198,8 +198,8 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
     end
     assert_includes log, "frontend_url_missing"
 
-    with_env("FRONTEND_URL" => "https://app.verse.example///") do
-      Rails.stub(:env, production) { assert_equal "https://app.verse.example", controller.send(:frontend_url) }
+    with_env("FRONTEND_URL" => "https://app.musilynk.example///") do
+      Rails.stub(:env, production) { assert_equal "https://app.musilynk.example", controller.send(:frontend_url) }
     end
     with_env("FRONTEND_URL" => nil) { assert_equal "http://localhost:5173", controller.send(:frontend_url) }
   end

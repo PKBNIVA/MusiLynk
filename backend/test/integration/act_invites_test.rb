@@ -10,7 +10,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
   setup do
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
-    ENV["FRONTEND_URL"] = "https://verse.example"
+    ENV["FRONTEND_URL"] = "https://musilynk.example"
     @owner = make_user("Olive Owner", "ai-owner@example.com", "jobseeker")
     @rohan = make_user("Rohan Tabla", "ai-rohan@example.com", "jobseeker", headline: "Tabla player", roles: ["Tabla"], location: "Pune")
     @asha = make_user("Asha Vocals", "ai-asha@example.com", "jobseeker")
@@ -223,7 +223,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
     data = sent.first.fetch("data")
     assert_equal ["act_invite", "reach@example.com"], [sent.first["template"], sent.first["to"]]
     assert_equal ["Olive Owner", "The Night Owls", "Keys"], data.values_at("name", "act", "role")
-    assert_match(%r{\Ahttps://verse\.example/invites/[\w-]+\z}, data["link"])
+    assert_match(%r{\Ahttps://musilynk\.example/invites/[\w-]+\z}, data["link"])
     assert_equal last_invite, ActInvite.find_by_token(data["link"].split("/").last)
   ensure
     ENV.delete("EMAIL_DELIVERY_WEBHOOK")
@@ -260,7 +260,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
     invite!({ kind: "link", roleName: "Keys", instrument: "Piano" })
     assert_response :created
     token = link_token(response.parsed_body)
-    assert_equal "https://verse.example/invites/#{token}", response.parsed_body["link"]
+    assert_equal "https://musilynk.example/invites/#{token}", response.parsed_body["link"]
     invite = last_invite
     assert_not_equal token, invite.token_digest
     assert_equal ActInvite.digest(token), invite.token_digest

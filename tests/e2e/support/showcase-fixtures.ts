@@ -19,7 +19,7 @@ export const item = (id: string, over: Record<string, unknown>) => ({
   kind: 'audio',
   type: 'audio',
   title: id,
-  url: `https://media.verse.test/${id}.mp3`,
+  url: `https://media.musilynk.test/${id}.mp3`,
   visibility: 'public',
   tags: [],
   genres: [],
@@ -36,7 +36,7 @@ export function library() {
       title: 'Blue in green (trio take)',
       type: 'video',
       kind: 'video',
-      url: 'https://media.verse.test/blue.png',
+      url: 'https://media.musilynk.test/blue.png',
       mediaMetadata: { contentType: 'image/png' },
       genres: ['Jazz'],
       roles: ['Keyboardist'],
@@ -50,7 +50,7 @@ export function library() {
       title: 'Live at NH7 Weekender',
       type: 'live',
       kind: 'live',
-      url: 'https://media.verse.test/nh7.png',
+      url: 'https://media.musilynk.test/nh7.png',
       mediaMetadata: { contentType: 'image/png' },
       genres: ['Rock', 'Indie'],
       roles: ['Keyboardist'],
@@ -61,7 +61,7 @@ export function library() {
       title: 'Monsoon — OTT film cue',
       type: 'composition',
       kind: 'composition',
-      url: 'https://media.verse.test/score.png',
+      url: 'https://media.musilynk.test/score.png',
       mediaMetadata: { contentType: 'image/png' },
       genres: ['Film score'],
       roles: ['Composer'],
@@ -251,7 +251,7 @@ export async function signInShowcase(
     localStorage.setItem('verse_access_token', 'qa-token');
     localStorage.setItem(`verse-tour-v2-${r}`, 'done');
   }, role);
-  await page.route('https://media.verse.test/**', (route) => {
+  await page.route('https://media.musilynk.test/**', (route) => {
     const name = new URL(route.request().url()).pathname.slice(1);
     return MEDIA[name]
       ? route.fulfill({ contentType: 'image/svg+xml', body: MEDIA[name] })

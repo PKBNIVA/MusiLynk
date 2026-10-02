@@ -72,7 +72,7 @@ function trackSentryTraffic(page: Page) {
  */
 async function runPage(browser: Browser) {
   const runId = `qa_run_${randomUUID().replaceAll('-', '')}`;
-  const context = await browser.newContext({ userAgent: `Mozilla/5.0 VerseQA/${runId}` });
+  const context = await browser.newContext({ userAgent: `Mozilla/5.0 MusilynkQA/${runId}` });
   return { runId, page: await context.newPage() };
 }
 
@@ -91,7 +91,7 @@ test('without a DSN Sentry is never downloaded or contacted, even when a route c
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(2_500); // longer than the idle-load delay a DSN build would use
   expect(sentryTraffic).toEqual([]);
-  expect(await page.locator('meta[name="verse-release"]').getAttribute('content')).toBeTruthy();
+  expect(await page.locator('meta[name="musilynk-release"]').getAttribute('content')).toBeTruthy();
 });
 
 test('with a DSN a crashing route is reported, without the access token or email', async ({ browser, request }) => {

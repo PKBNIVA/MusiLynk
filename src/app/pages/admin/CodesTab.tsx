@@ -60,7 +60,7 @@ export function effectText(c: AdminPromoCode, programme?: AdminPromoProgramme | 
   }
 }
 
-/** A sample code built from the configured format, e.g. VERSE-{6} -> VERSE-K7M2QP. */
+/** A sample code built from the configured format, e.g. MUSILYNK-{6} -> MUSILYNK-K7M2QP. */
 export function previewCode(format: string, alphabet: string) {
   let offset = 3;
   return format.replace(/\{(?:NAME)?(\d+)\}/g, (_m, count: string) =>

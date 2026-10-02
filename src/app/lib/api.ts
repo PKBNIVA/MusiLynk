@@ -17,7 +17,7 @@ const ACT_AS_KEY = 'verse_act_as';
 /** The header the API reads the "acting as" identity from (see ActingAs on the backend). */
 export const ACT_AS_HEADER = 'X-Verse-Act-As';
 /** Fired on window (detail: the new key or null) when the acting-as identity changes. */
-export const ACTING_AS_EVENT = 'verse:acting-as';
+export const ACTING_AS_EVENT = 'musilynk:acting-as';
 type StoreKind = 'local' | 'session';
 // The access token lives in localStorage so new tabs, email links and browser
 // restarts keep the session; the return-to path stays per tab in sessionStorage.
@@ -95,7 +95,7 @@ export type ApiOptions = RequestInit & {
 
 // Server-enforced plan limits (402). Pages still show their own error; the app-level
 // PlanLimitPrompt listens for this event and offers the upgrade path.
-export const PLAN_LIMIT_EVENT = 'verse:plan-limit';
+export const PLAN_LIMIT_EVENT = 'musilynk:plan-limit';
 const PLAN_LIMIT_CODES = new Set(['PLAN_LIMIT_REACHED', 'PLAN_LIMIT']);
 function announcePlanLimit(message?: string) {
   try {

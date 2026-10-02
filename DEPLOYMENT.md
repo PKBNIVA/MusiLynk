@@ -291,7 +291,7 @@ When set, per request (no restart beyond the redeploy Railway does for a variabl
 Health: `GET /api/readiness` and `/api/admin/health` carry `adminOrigin {ok, locked}` (not
 blocking, `ok` in production only when set); `/admin/tester` has an "Admin site origin" row.
 
-**Admin email and password.** The seeded admin address (`admin@verse.local`) cannot receive
+**Admin email and password.** The seeded admin address (`admin@musilynk.local`) cannot receive
 mail, so the second sign-in step is skipped for it (see above). The admin changes their own
 address from the admin site's Account page: `POST /api/admin/account/email/request {email}`
 sends a code to the **new** address; `POST /api/admin/account/email/confirm {changeToken,
@@ -627,7 +627,7 @@ initialises Sentry and the web app never downloads it (zero requests to Sentry).
 | Vercel | `VITE_SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.05` once `VITE_SENTRY_DSN` is set; `0` turns tracing off. Core Web Vitals are sent as metrics either way (see docs/PERFORMANCE.md) |
 
 Releases are automatic: the API reports `RAILWAY_GIT_COMMIT_SHA` and the web build uses
-`VERCEL_GIT_COMMIT_SHA` (exposed as `<meta name="verse-release">`). `VITE_*` values are read
+`VERCEL_GIT_COMMIT_SHA` (exposed as `<meta name="musilynk-release">`). `VITE_*` values are read
 at build time, so **redeploy Vercel after changing them**. Railway restarts on variable changes.
 
 What is sent, and what is not:
@@ -678,7 +678,7 @@ expected 4xx are dropped. Set a spike-protection/quota limit per project in Sent
 2. **Send server test error** calls `POST /api/admin/health/sentry-test` (admin only,
    audited as `admin.sentry_test`). It answers `captured: true` with an event id when
    `SENTRY_DSN` is set, `captured: false` when it is not. The event appears in `verse-api`
-   as `Admin::HealthController::SentryTestError`, tagged `verse_test=true`.
+   as `Admin::HealthController::SentryTestError`, tagged `musilynk_test=true`.
 3. **Send test error** (shown only when the build has `VITE_SENTRY_DSN`) sends a tagged client
    error to `verse-web`.
 4. Confirm the "new issue" alert emails arrive, then resolve both test issues.
@@ -702,9 +702,9 @@ After merging to `production`, run **Actions → MusiLynk QA Agent → Run workf
 `production` branch. For manual runs the live job sets `QA_EXPECTED_RELEASE` to the
 workflow's commit, and `tests/e2e/api-health.spec.ts` polls for up to 5 minutes until
 `GET /api/health` reports that commit (first 12 characters) and the web app's
-`<meta name="verse-release">` matches it. A red run means Railway or Vercel did not deploy
+`<meta name="musilynk-release">` matches it. A red run means Railway or Vercel did not deploy
 that commit. Scheduled runs skip this check because they may legitimately test an older
-deploy. `window.__VERSE_RELEASE__` in the browser console shows the running web build.
+deploy. `window.__MUSILYNK_RELEASE__` in the browser console shows the running web build.
 
 ### 8. Operations view (`/admin` → Operations)
 
@@ -799,7 +799,7 @@ Restoring for real (into a new Railway Postgres, never over the live one until v
 ```bash
 # Download and unzip the artifact from the chosen run, then:
 SCRATCH_DATABASE_URL=<new database URL> BACKUP_PASSPHRASE=<passphrase> \
-  scripts/db/restore-verify.sh verse-<stamp>.dump.gpg
+  scripts/db/restore-verify.sh musilynk-<stamp>.dump.gpg
 ```
 
 Point the Rails service's `DATABASE_URL` at the restored database only after that check passes.

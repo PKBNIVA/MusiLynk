@@ -1,5 +1,5 @@
 # Linked third-party sign-in / API identities (Google today; YouTube, Spotify, Instagram
-# later) for a Verse owner. The owner is polymorphic so a Page (Organization, Act) can hold
+# later) for a MusiLynk owner. The owner is polymorphic so a Page (Organization, Act) can hold
 # its own connections in the future, not only a User. See AuthConnection and GoogleOAuth.
 class CreateAuthConnections < ActiveRecord::Migration[8.1]
   def change

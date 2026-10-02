@@ -16,12 +16,12 @@ process.env.VITE_RELEASE = release;
 const appTarget = process.env.VITE_APP_TARGET === 'admin' ? 'admin' : 'public';
 process.env.VITE_APP_TARGET = appTarget;
 
-// <meta name="verse-release"> lets the live QA run confirm which commit Vercel is serving.
+// <meta name="musilynk-release"> lets the live QA run confirm which commit Vercel is serving.
 // The admin build also gets its own title and is kept out of search engines.
 function releaseMeta(): Plugin {
   const releaseTag = {
     tag: 'meta',
-    attrs: { name: 'verse-release', content: release || 'unknown' },
+    attrs: { name: 'musilynk-release', content: release || 'unknown' },
     injectTo: 'head' as const,
   };
   // Google Search Console's HTML-tag ownership verification, public build only. Empty/unset
@@ -39,7 +39,7 @@ function releaseMeta(): Plugin {
           },
         ];
   return {
-    name: 'verse-release-meta',
+    name: 'musilynk-release-meta',
     transformIndexHtml: (html) =>
       appTarget === 'admin'
         ? {

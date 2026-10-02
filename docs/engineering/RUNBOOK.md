@@ -94,7 +94,7 @@ statement timeout plus the configuration checks. Signed in as an admin,
   `/api/*` is answered by the SPA. Fix the variable and **redeploy Vercel** (`VITE_*` values
   are read at build time).
 - Release mismatch: compare `release` in `/api/health` with
-  `<meta name="verse-release">` on the web app (or `window.__VERSE_RELEASE__`). Running
+  `<meta name="musilynk-release">` on the web app (or `window.__MUSILYNK_RELEASE__`). Running
   **Actions → MusiLynk QA Agent → Run workflow** on `production` fails if either side is not
   serving the latest commit.
 
@@ -205,7 +205,7 @@ the server's (`psql "$DATABASE_PUBLIC_URL" -XAtc "show server_version"`).
    checked by `scripts/db/restore-verify.sh`. Download its artifact `verse-db-<run id>`:
    ```bash
    gh run download <run id> --repo PKBNIVA/verse-music-platform --name verse-db-<run id> --dir restore
-   ls restore   # verse-<stamp>.dump.gpg, .dump.sha256, .manifest.tsv
+   ls restore   # musilynk-<stamp>.dump.gpg, .dump.sha256, .manifest.tsv
    ```
    If there is no green run in the last 30 days, there is no backup to restore; stop and
    escalate.
@@ -215,7 +215,7 @@ the server's (`psql "$DATABASE_PUBLIC_URL" -XAtc "show server_version"`).
 4. **Restore and verify (10–20 min).**
    ```bash
    SCRATCH_DATABASE_URL='<new database public URL>' BACKUP_PASSPHRASE='<passphrase>' \
-     scripts/db/restore-verify.sh restore/verse-<stamp>.dump.gpg
+     scripts/db/restore-verify.sh restore/musilynk-<stamp>.dump.gpg
    ```
    It decrypts, checks the SHA-256, runs `pg_restore --clean --exit-on-error`, then checks
    every table in the manifest. It exits non-zero if any table is missing; row-count

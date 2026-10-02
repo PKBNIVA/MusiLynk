@@ -8,7 +8,7 @@ vi.mock('../../../lib/api', async () => {
   return { ...actual, apiGet: vi.fn() };
 });
 import { apiGet } from '../../../lib/api';
-import { NowOnVerse } from '../NowOnVerse';
+import { NowOnMusiLynk } from '../NowOnMusiLynk';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let host: HTMLDivElement;
@@ -40,13 +40,13 @@ async function show(city = 'Mumbai') {
   await act(async () =>
     root.render(
       <MemoryRouter>
-        <NowOnVerse city={city} />
+        <NowOnMusiLynk city={city} />
       </MemoryRouter>,
     ),
   );
 }
 
-describe('NowOnVerse', () => {
+describe('NowOnMusiLynk', () => {
   it('shows up to six cards: art for demo people, initials for the rest, "from" price, verified and demo chips', async () => {
     const talent = Array.from({ length: 8 }, (_, i) => person(i));
     talent[0] = person(0, { demo: true, verified: true, verificationTier: 'verified' });
@@ -76,9 +76,9 @@ describe('NowOnVerse', () => {
   it('renders nothing under three people or when the request fails', async () => {
     vi.mocked(apiGet).mockResolvedValue({ talent: [person(1), person(2)] });
     await show();
-    expect(host.querySelector('[data-testid=now-on-verse]')).toBeNull();
+    expect(host.querySelector('[data-testid=now-on-musilynk]')).toBeNull();
     vi.mocked(apiGet).mockRejectedValue(new Error('down'));
     await show('Pune');
-    expect(host.querySelector('[data-testid=now-on-verse]')).toBeNull();
+    expect(host.querySelector('[data-testid=now-on-musilynk]')).toBeNull();
   });
 });

@@ -9,7 +9,7 @@ function loadWorker({ windows = [] } = {}) {
   const shown = [];
   const opened = [];
   const self = {
-    location: { origin: 'https://verse.example' },
+    location: { origin: 'https://musilynk.example' },
     skipWaiting: () => {},
     registration: { showNotification: (title, options) => (shown.push({ title, options }), Promise.resolve()) },
     clients: {
@@ -44,7 +44,7 @@ describe('public/sw.js', () => {
     expect(shown[0].options).toMatchObject({
       body: 'Tomorrow, 7 pm',
       tag: 'urgent-1',
-      data: { url: 'https://verse.example/jobseeker/urgent' },
+      data: { url: 'https://musilynk.example/jobseeker/urgent' },
     });
   });
 
@@ -59,13 +59,13 @@ describe('public/sw.js', () => {
     });
     await fire('push', pushEvent({ title: 'Hi', url: 'https://evil.example/phish' }));
     expect(shown[0].title).toBe('MusiLynk');
-    expect(shown[1].options.data.url).toBe('https://verse.example/');
+    expect(shown[1].options.data.url).toBe('https://musilynk.example/');
   });
 
   it('focuses and navigates an open MusiLynk window on click', async () => {
     const calls = [];
     const window = {
-      url: 'https://verse.example/jobseeker',
+      url: 'https://musilynk.example/jobseeker',
       navigate: async (u) => (calls.push(['navigate', u]), window),
       focus: async () => calls.push(['focus']),
     };
@@ -73,18 +73,18 @@ describe('public/sw.js', () => {
     await fire('notificationclick', {
       notification: {
         close: () => calls.push(['close']),
-        data: { url: 'https://verse.example/employer/messages?c=1' },
+        data: { url: 'https://musilynk.example/employer/messages?c=1' },
       },
     });
-    expect(calls).toEqual([['close'], ['navigate', 'https://verse.example/employer/messages?c=1'], ['focus']]);
+    expect(calls).toEqual([['close'], ['navigate', 'https://musilynk.example/employer/messages?c=1'], ['focus']]);
     expect(opened).toEqual([]);
   });
 
   it('opens a new window on click when none is open', async () => {
     const { fire, opened } = loadWorker();
     await fire('notificationclick', {
-      notification: { close: () => {}, data: { url: 'https://verse.example/jobseeker/urgent' } },
+      notification: { close: () => {}, data: { url: 'https://musilynk.example/jobseeker/urgent' } },
     });
-    expect(opened).toEqual(['https://verse.example/jobseeker/urgent']);
+    expect(opened).toEqual(['https://musilynk.example/jobseeker/urgent']);
   });
 });

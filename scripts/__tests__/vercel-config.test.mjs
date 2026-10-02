@@ -182,12 +182,12 @@ describe('public/robots.txt and the web manifest', () => {
 // (VITE_APP_TARGET=admin). Build each for real and resolve URLs the way Vercel does: a file in the output
 // wins, then the first matching rewrite whose destination exists, otherwise 404.html with status 404.
 describe('built output resolved through vercel.json', () => {
-  const sandbox = mkdtempSync(join(tmpdir(), 'verse-vercel-'));
+  const sandbox = mkdtempSync(join(tmpdir(), 'musilynk-vercel-'));
   afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
   function build(target) {
     const out = join(sandbox, target);
-    const env = { ...process.env, VITE_APP_TARGET: target, VITE_PUBLIC_URL: 'https://verse.example' };
+    const env = { ...process.env, VITE_APP_TARGET: target, VITE_PUBLIC_URL: 'https://musilynk.example' };
     execFileSync(
       process.execPath,
       [

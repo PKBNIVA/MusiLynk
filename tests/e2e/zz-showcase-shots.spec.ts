@@ -39,7 +39,7 @@ for (const [label, size] of [
       await shot(page, `library-${label}`);
       await page.getByRole('button', { name: 'Add work' }).click();
       await page.getByLabel(/^Title/).fill('Late set at Blue Frog');
-      await page.getByLabel(/^Link/).fill('https://media.verse.test/late.mp3');
+      await page.getByLabel(/^Link/).fill('https://media.musilynk.test/late.mp3');
       await page.getByRole('button', { name: /Next: what you did/ }).click();
       await page.getByRole('combobox', { name: 'Genres' }).fill('Jazz');
       await page.getByRole('combobox', { name: 'Genres' }).press('Enter');

@@ -29,10 +29,10 @@ describe('build target', () => {
   });
 
   it('links absolute to the public site on the admin build, and relative everywhere else', async () => {
-    const admin = await load('admin', 'https://verse.example.app/');
-    expect(admin.toPublicUrl('/opportunities/1')).toBe('https://verse.example.app/opportunities/1');
+    const admin = await load('admin', 'https://musilynk.example.app/');
+    expect(admin.toPublicUrl('/opportunities/1')).toBe('https://musilynk.example.app/opportunities/1');
 
-    const publicSite = await load('public', 'https://verse.example.app');
+    const publicSite = await load('public', 'https://musilynk.example.app');
     expect(publicSite.toPublicUrl('/opportunities/1')).toBe('/opportunities/1');
 
     const noConfig = await load('admin', '');

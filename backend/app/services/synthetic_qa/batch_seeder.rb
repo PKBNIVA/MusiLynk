@@ -110,7 +110,7 @@ module SyntheticQa
         currency: "INR", day_rate: 5_000 + (index % 10) * 1_000, session_rate: 3_000 + (index % 6) * 500, show_rate: 12_000 + (index % 8) * 2_000,
         website: "https://example.com/#{batch}/artist/#{index + 1}")
       user.portfolio_items.create!(kind: "video", title: demo? ? "#{genre} live session" : "QA work sample #{index + 1}",
-        url: "https://www.youtube.com/watch?v=verseDemo#{format('%03d', index % 1000)}", visibility: "public", featured: true,
+        url: "https://www.youtube.com/watch?v=musilynkDemo#{format('%03d', index % 1000)}", visibility: "public", featured: true,
         description: "Placeholder video link for demo data.", credited_as: role_name, year: 2020 + (index % 6),
         tags: [role_name, "Live"], genres: [genre], roles: [role_name])
       # No audio file is bundled with demo/synthetic data, and example.com never actually serves one
@@ -118,7 +118,7 @@ module SyntheticQa
       # "project" work item instead of an unplayable audio one; the video sample above still
       # demonstrates a playable work sample.
       user.portfolio_items.create!(kind: "project", title: demo? ? "#{second_genre} studio demo" : "QA audio sample #{index + 1}",
-        url: "https://verse.example/#{batch}/portfolio/#{index + 1}", visibility: "public", sort_order: 1,
+        url: "https://musilynk.example/#{batch}/portfolio/#{index + 1}", visibility: "public", sort_order: 1,
         description: "Placeholder project write-up for demo data — no audio file is bundled with synthetic data.",
         credited_as: second_role, year: 2021 + (index % 5), tags: [second_role], genres: [second_genre], roles: [second_role])
       user.availability_windows.create!(start_at: 2.weeks.from_now + index.hours, end_at: 2.weeks.from_now + index.hours + 4.hours,

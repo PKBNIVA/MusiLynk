@@ -147,7 +147,7 @@ function JoinShell({
       <main className="mx-auto max-w-2xl px-4 pb-16 pt-2 sm:px-6 sm:pt-6">
         <h1 className="text-3xl font-black tracking-tight sm:text-4xl">{title}</h1>
         <p className="mt-2 text-slate-300">{intro}</p>
-        <div className="verse-surface mt-6 rounded-3xl p-5 sm:p-7">{children}</div>
+        <div className="musilynk-surface mt-6 rounded-3xl p-5 sm:p-7">{children}</div>
         <p className="mt-6 text-center text-sm text-slate-400">{other}</p>
       </main>
     </div>

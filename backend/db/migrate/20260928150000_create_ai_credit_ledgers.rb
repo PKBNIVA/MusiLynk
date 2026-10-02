@@ -1,4 +1,4 @@
-# Verse AI as a paid product: a single append-only ledger of every credit grant and spend.
+# MusiLynk AI as a paid product: a single append-only ledger of every credit grant and spend.
 # Balance for an account+period is the sum of its rows; nothing here is ever updated in place
 # except by a new offsetting row (refund), which keeps the history auditable.
 #

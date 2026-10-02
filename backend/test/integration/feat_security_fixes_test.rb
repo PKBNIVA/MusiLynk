@@ -239,7 +239,7 @@ class FeatSecurityFixesTest < ActionDispatch::IntegrationTest
   end
 
   test "a referrer carrying an invite token is stored redacted" do
-    post "/api/events", params: { events: [{ name: "route_change", anonId: "r", page: "/stage", referrer: "https://verse.example/invites/SECRETTOKEN123?x=1" }] }, as: :json
+    post "/api/events", params: { events: [{ name: "route_change", anonId: "r", page: "/stage", referrer: "https://musilynk.example/invites/SECRETTOKEN123?x=1" }] }, as: :json
     assert_response :success
     row = ProductEvent.order(:created_at).last
     assert row, "event stored"

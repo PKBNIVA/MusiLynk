@@ -37,7 +37,7 @@ describe('sanitizePageUrl', () => {
   });
 
   it('never keeps a host', () => {
-    expect(sanitizePageUrl('https://verse.example/pricing?token=1')).toBe('/pricing');
+    expect(sanitizePageUrl('https://musilynk.example/pricing?token=1')).toBe('/pricing');
   });
 });
 
@@ -154,9 +154,9 @@ describe('collectContext', () => {
     expect(typeof context.os).toBe('string');
   });
   it('falls back to the global release marker', () => {
-    (window as Window & { __VERSE_RELEASE__?: string }).__VERSE_RELEASE__ = 'abc123';
+    (window as Window & { __MUSILYNK_RELEASE__?: string }).__MUSILYNK_RELEASE__ = 'abc123';
     expect(collectContext([]).release).toBeTruthy();
-    delete (window as Window & { __VERSE_RELEASE__?: string }).__VERSE_RELEASE__;
+    delete (window as Window & { __MUSILYNK_RELEASE__?: string }).__MUSILYNK_RELEASE__;
   });
 });
 

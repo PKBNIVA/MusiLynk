@@ -36,7 +36,7 @@ export class AppErrorBoundary extends React.Component<React.PropsWithChildren, {
     if (!this.state.failed) return this.props.children;
     return (
       <div className="min-h-screen bg-slate-950 text-white grid place-items-center px-5">
-        <div className="verse-surface max-w-lg rounded-3xl p-8 text-center">
+        <div className="musilynk-surface max-w-lg rounded-3xl p-8 text-center">
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-rose-500/15 text-rose-300">
             <AlertTriangle />
           </span>

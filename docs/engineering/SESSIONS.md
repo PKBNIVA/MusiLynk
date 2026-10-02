@@ -41,14 +41,14 @@ Safari blocks and Chrome is restricting, so the API must first become same-origi
    Vercel Edge Middleware matches, and fall back to `remote_ip` otherwise. Without this the
    login and code throttles would lock out everyone at once.
 3. **Cookie sessions behind a flag.** With `SESSION_COOKIE=true`, sign-in also sets
-   `__Host-verse_session` (`HttpOnly; Secure; SameSite=Lax; Path=/`) and returns no token in
+   `__Host-musilynk_session` (`HttpOnly; Secure; SameSite=Lax; Path=/`) and returns no token in
    the body; `current_user` reads the cookie when there is no `Authorization` header, so
    bearer tokens keep working during migration. Logout clears the cookie.
 4. **CSRF.** SameSite=Lax blocks POSTs from other sites, but sibling subdomains of the same
    registrable domain count as the same site (not a concern on `vercel.app`, which is on the
    public suffix list, but it would be on a custom domain). Cookie-authenticated mutations must
    therefore also carry a CSRF token: a
-   non-HttpOnly `verse_csrf` cookie echoed in an `X-CSRF-Token` header, compared in constant
+   non-HttpOnly `musilynk_csrf` cookie echoed in an `X-CSRF-Token` header, compared in constant
    time; bearer-authenticated requests skip the check (they are not ambient credentials).
 5. **Frontend.** `api.ts` sends `credentials: 'same-origin'` and the CSRF header, stops
    storing the token, and "am I signed in" comes from `GET /me` instead of the stored token;

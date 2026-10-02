@@ -229,11 +229,11 @@ describe('useSubmitOnce', () => {
 
 describe('value checks', () => {
   it('accepts only absolute http(s) URLs without credentials', () => {
-    expect(isHttpUrl('https://verse.example/about')).toBe(true);
+    expect(isHttpUrl('https://musilynk.example/about')).toBe(true);
     expect(isHttpUrl('  http://studio.example  ')).toBe(true);
-    expect(isHttpUrl('verse.example')).toBe(false);
+    expect(isHttpUrl('musilynk.example')).toBe(false);
     expect(isHttpUrl('javascript:void(0)')).toBe(false);
-    expect(isHttpUrl('https://user:pw@verse.example')).toBe(false);
+    expect(isHttpUrl('https://user:pw@musilynk.example')).toBe(false);
     expect(isHttpUrl('')).toBe(false);
   });
 

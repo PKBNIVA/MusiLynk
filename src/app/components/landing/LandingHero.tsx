@@ -62,7 +62,7 @@ export function LandingHero({ city, onCityChange }: { city: string; onCityChange
             className="mt-4 text-[2.1rem] font-black leading-[1.07] tracking-[-.035em] sm:text-5xl lg:text-[3.6rem]"
           >
             Hire a verified musician for your session or gig,{' '}
-            <span className="verse-gradient-text">within 24 hours.</span>
+            <span className="musilynk-gradient-text">within 24 hours.</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
             Singers, session players, DJs and sound crew in {city}: hear their work, then book.

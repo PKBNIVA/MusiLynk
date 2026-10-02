@@ -96,7 +96,7 @@ describe('describePromo', () => {
 
 describe('the code kept across sign-in', () => {
   it('normalises, stores and clears it', () => {
-    expect(normaliseCode('  verse-abc123 ')).toBe('VERSE-ABC123');
+    expect(normaliseCode('  musilynk-abc123 ')).toBe('MUSILYNK-ABC123');
     expect(normaliseCode('x'.repeat(60))).toHaveLength(40);
     expect(storedCode()).toBe('');
     storeCode('MUMBAI50');
@@ -118,10 +118,10 @@ describe('the code kept across sign-in', () => {
 
 describe('whatsappShareUrl', () => {
   it('builds the wa.me share text', () => {
-    const url = whatsappShareUrl('VERSE-ABCD1234', 'https://verse.example/pricing?code=VERSE-ABCD1234');
+    const url = whatsappShareUrl('MUSILYNK-ABCD1234', 'https://musilynk.example/pricing?code=MUSILYNK-ABCD1234');
     expect(url.startsWith('https://wa.me/?text=')).toBe(true);
     expect(decodeURIComponent(url.split('text=')[1])).toBe(
-      'Join me on MusiLynk — hirers get 20% off with my code VERSE-ABCD1234: https://verse.example/pricing?code=VERSE-ABCD1234',
+      'Join me on MusiLynk — hirers get 20% off with my code MUSILYNK-ABCD1234: https://musilynk.example/pricing?code=MUSILYNK-ABCD1234',
     );
     expect(decodeURIComponent(whatsappShareUrl('C', 'u', 15).split('text=')[1])).toContain('15% off');
   });

@@ -3,7 +3,7 @@ require "test_helper"
 class ErrorScrubberTest < ActiveSupport::TestCase
   test "strings lose email addresses, bearer tokens and secret query parameters" do
     raw = "user jane.doe+tag@example.co.uk sent Authorization: Bearer abc.DEF-123_xyz= to " \
-      "https://verse.test/reset-password?token=s3cr3t&page=2&code=123456#frag and /x?reset_token=zz"
+      "https://musilynk.test/reset-password?token=s3cr3t&page=2&code=123456#frag and /x?reset_token=zz"
     clean = ErrorScrubber.scrub_string(raw)
 
     assert_no_match(/jane\.doe|example\.co\.uk|abc\.DEF|s3cr3t|123456|=zz/, clean)
@@ -52,7 +52,7 @@ class ErrorScrubberTest < ActiveSupport::TestCase
     event.user = { id: 3, role: "jobseeker", email: "jane@example.com" }
     event.add_exception_interface(RuntimeError.new("token=zzz for jane@example.com"), mechanism: Sentry::Mechanism.new)
     event.rack_env = (Rack::MockRequest.env_for(
-      "https://api.verse.test/api/auth/verify-email?token=s3cr3t",
+      "https://api.musilynk.test/api/auth/verify-email?token=s3cr3t",
       "HTTP_AUTHORIZATION" => "Bearer live-token", "HTTP_COOKIE" => "session=abc", "REMOTE_ADDR" => "203.0.113.9"
     ))
     event.breadcrumbs = Sentry::BreadcrumbBuffer.new

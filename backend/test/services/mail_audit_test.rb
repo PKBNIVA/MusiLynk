@@ -4,7 +4,7 @@ require_relative "../support/frontend_routes"
 
 # The email and notification audit as tests: every email template and every in-app notification
 # kind is built from realistic data (test/support/mail_catalog.rb) and checked for links that land
-# on real pages, copy rules (docs/VERSE_PLAN.md 5.1.6), opt-out footers and plain text.
+# on real pages, copy rules (docs/MUSILYNK_PLAN.md 5.1.6), opt-out footers and plain text.
 class MailAuditTest < ActiveSupport::TestCase
   setup do
     # MailCatalog sets a provider and the frontend origin; put the environment back afterwards.
@@ -47,7 +47,7 @@ class MailAuditTest < ActiveSupport::TestCase
       assert_equal urls.sort, email.text.scan(%r{https://\S+}).sort.select { |u| urls.include?(u) || true }.select { |u| urls.include?(u) }.sort, "#{email.id}: every link also appears in plain text" unless urls.empty?
       urls.each do |url|
         uri = URI.parse(url)
-        assert_equal "https://verse.example", "#{uri.scheme}://#{uri.host}", "#{email.id}: #{url} must use FRONTEND_URL"
+        assert_equal "https://musilynk.example", "#{uri.scheme}://#{uri.host}", "#{email.id}: #{url} must use FRONTEND_URL"
         # The founder's problem-report email opens the admin console, which is not a marketplace page.
         if email.id == "problem_report"
           assert_equal "/admin", uri.path, "#{email.id}: the link opens the admin console"
@@ -63,7 +63,7 @@ class MailAuditTest < ActiveSupport::TestCase
   test "workspace links in an email match the recipient's role" do
     @catalog[:emails].select { _1.recipient.is_a?(User) }.each do |email|
       wrong = email.recipient.role == "employer" ? "/jobseeker" : "/employer"
-      hrefs(email.html).each { |url| assert_no_match %r{\Ahttps://verse\.example#{wrong}(/|\z)}, url, "#{email.id}: #{url} is the other workspace" }
+      hrefs(email.html).each { |url| assert_no_match %r{\Ahttps://musilynk\.example#{wrong}(/|\z)}, url, "#{email.id}: #{url} is the other workspace" }
     end
   end
 
@@ -103,7 +103,7 @@ class MailAuditTest < ActiveSupport::TestCase
       buttons = email.html.scan("display:inline-block;margin-top:18px;padding:13px 20px").size
       code_email = %w[sign_in_code admin_email_change account_email_change admin_email_changed account_email_changed account_password_set account_password_removed].include?(email.id)
       assert_equal(code_email ? 0 : 1, buttons, "#{email.id}: button count")
-      assert_match(/\AVerse\n\n/, email.text, "#{email.id}: text starts with the brand")
+      assert_match(/\AMusiLynk\n\n/, email.text, "#{email.id}: text starts with the brand")
       assert_no_match(/<[a-z]+[ >]/, email.text, "#{email.id}: no HTML in plain text")
     end
   end
@@ -179,7 +179,7 @@ class MailAuditTest < ActiveSupport::TestCase
 
   test "the digest links to the musician's or hirer's own workspace and never to a missing page" do
     digest = @catalog[:emails].find { _1.id == "digest_hirer" }
-    assert_includes hrefs(digest.html), "https://verse.example/employer"
+    assert_includes hrefs(digest.html), "https://musilynk.example/employer"
     assert_empty hrefs(digest.html).reject { |u| u.include?("/unsubscribe") || FrontendRoutes.exist?(URI.parse(u).path) }
   end
 
@@ -191,6 +191,6 @@ class MailAuditTest < ActiveSupport::TestCase
 
   test "google sign-in link goes to the workspace settings page" do
     email = @catalog[:emails].find { _1.id == "google_connected" }
-    assert_includes hrefs(email.html), "https://verse.example/jobseeker/settings"
+    assert_includes hrefs(email.html), "https://musilynk.example/jobseeker/settings"
   end
 end

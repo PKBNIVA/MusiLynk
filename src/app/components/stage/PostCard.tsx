@@ -185,7 +185,7 @@ export function PostCard({ post, onChanged, onDeleted }: PostCardProps) {
   return (
     <article
       aria-labelledby={`stage-post-${post.id}-author`}
-      className="verse-surface rounded-2xl border border-white/10 bg-white/[.035] p-4 md:p-5"
+      className="musilynk-surface rounded-2xl border border-white/10 bg-white/[.035] p-4 md:p-5"
     >
       {post.pinned && (
         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-violet-300">

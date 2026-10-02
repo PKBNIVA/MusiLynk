@@ -216,7 +216,7 @@ export async function sendClientTestError(): Promise<string | null> {
   if (!(await whenMonitoringReady()) || !client) return null;
   return (
     client.captureError(new Error('MusiLynk Sentry client test error (triggered by an admin; safe to resolve)'), {
-      tags: { source: 'admin_sentry_test', verse_test: 'true' },
+      tags: { source: 'admin_sentry_test', musilynk_test: 'true' },
     }) || null
   );
 }

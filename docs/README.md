@@ -5,7 +5,7 @@ everything else lives here.
 
 ## The plan
 
-- [VERSE_PLAN.md](VERSE_PLAN.md): **the only planning document** — thesis, production facts, market benchmark, findings register, design direction, the showcase demo data, execution briefs, owner actions and roadmap. Every change of direction edits this file.
+- [MUSILYNK_PLAN.md](MUSILYNK_PLAN.md): **the only planning document** — thesis, production facts, market benchmark, findings register, design direction, the showcase demo data, execution briefs, owner actions and roadmap. Every change of direction edits this file.
 
 ## Root
 

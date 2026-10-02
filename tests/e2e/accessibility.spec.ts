@@ -149,7 +149,7 @@ test.describe('Phase 3 UX regressions', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ ok: true, debugLink: 'https://verse.local/reset/qa-fixture' }),
+        body: JSON.stringify({ ok: true, debugLink: 'https://musilynk.local/reset/qa-fixture' }),
       }),
     );
     await page.getByLabel('Email').fill('qa+demo-ux1000-professional-0001@example.invalid');

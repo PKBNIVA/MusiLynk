@@ -196,14 +196,14 @@ class AuthAndJobsTest < ActionDispatch::IntegrationTest
     get "/api/live"
     assert_response :success
     assert_equal true, response.parsed_body["ok"]
-    assert_equal "verse-rails", response.parsed_body["service"]
+    assert_equal "musilynk-api", response.parsed_body["service"]
     assert response.parsed_body["release"].present?
     assert response.parsed_body["time"].present?
     assert_not response.parsed_body.key?("checks")
 
     get "/api/health"
     assert_response :success
-    assert_equal "verse-rails", response.parsed_body["service"]
+    assert_equal "musilynk-api", response.parsed_body["service"]
   end
 
   test "public readiness is minimal and does not expose deployment configuration" do
@@ -212,7 +212,7 @@ class AuthAndJobsTest < ActionDispatch::IntegrationTest
     assert_response :service_unavailable
     body = response.parsed_body
     assert_equal false, body["ok"]
-    assert_equal "verse-rails", body["service"]
+    assert_equal "musilynk-api", body["service"]
     assert_not body.key?("checks")
     assert_not body.key?("environment")
     assert_not body.key?("integrationsReady")

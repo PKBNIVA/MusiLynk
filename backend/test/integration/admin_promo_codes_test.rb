@@ -69,7 +69,7 @@ class AdminPromoCodesTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
     assert_equal 12, body["codes"].size
     assert_equal 12, body["codes"].pluck("code").uniq.size
-    assert(body["codes"].all? { _1["code"].match?(/\AVERSE-[A-HJ-NP-Z2-9]{6}\z/) && _1["batchId"] == body["batchId"] })
+    assert(body["codes"].all? { _1["code"].match?(/\AMUSILYNK-[A-HJ-NP-Z2-9]{6}\z/) && _1["batchId"] == body["batchId"] })
     assert AuditLog.exists?(action: "admin.promo_code.generate")
   end
 
@@ -131,7 +131,7 @@ class AdminPromoCodesTest < ActionDispatch::IntegrationTest
     assert_equal true, body.dig("programme", "offerRequired")
     assert_equal({ "enabled" => true, "refereePercentOff" => 20, "refereeDurationPeriods" => 3, "referrerRewardDays" => 30, "referrerRewardCap" => 6, "offerConfigured" => false },
       body.dig("programme", "referral"))
-    assert_equal "VERSE-{6}", body.dig("programme", "codeFormat")
+    assert_equal "MUSILYNK-{6}", body.dig("programme", "codeFormat")
     assert_match(/billing\.yml/, body.dig("programme", "editNote"))
 
     get "/api/admin/promo-codes", headers: admin_headers

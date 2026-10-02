@@ -1,5 +1,5 @@
 # Bandmate invites: joining an act's lineup needs the musician's own consent. An invite is addressed to
-# a Verse user (invitee_user_id), to an email address (invitee_email), or to nobody in particular (a
+# a MusiLynk user (invitee_user_id), to an email address (invitee_email), or to nobody in particular (a
 # shareable link). Only a digest of the secret token is stored.
 class CreateActInvites < ActiveRecord::Migration[8.1]
   def change

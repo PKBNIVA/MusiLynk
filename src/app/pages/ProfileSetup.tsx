@@ -618,7 +618,7 @@ export default function ProfileSetup() {
       // Going to the whole-profile button saves everything in one request instead.
       if (loaded && !event.currentTarget.contains(to) && !to?.closest('[data-profile-save]')) void saveSection(s.id);
     },
-    className: 'verse-surface scroll-mt-40 rounded-3xl p-5 md:p-8',
+    className: 'musilynk-surface scroll-mt-40 rounded-3xl p-5 md:p-8',
   });
   const heading = (s: SectionDef) => (
     <div className="mb-5">

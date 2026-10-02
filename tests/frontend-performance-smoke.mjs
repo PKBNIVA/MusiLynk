@@ -143,7 +143,7 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 }
 
 // --- Bundle budget script ---------------------------------------------------------------
-const dir = mkdtempSync(join(tmpdir(), 'verse-budget-'));
+const dir = mkdtempSync(join(tmpdir(), 'musilynk-budget-'));
 try {
   mkdirSync(join(dir, 'dist', 'assets'), { recursive: true });
   writeFileSync(

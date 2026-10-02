@@ -107,7 +107,7 @@ class ProblemReportsTest < ActionDispatch::IntegrationTest
   test "the page keeps the path but drops token, code and other secret query parameters and the fragment" do
     cases = {
       "/reset-password?token=abc123&tab=security" => "/reset-password?tab=security",
-      "https://verse.example/urgent/action?t=eyJhbGciOi&city=Mumbai#frag" => "/urgent/action?city=Mumbai",
+      "https://musilynk.example/urgent/action?t=eyJhbGciOi&city=Mumbai#frag" => "/urgent/action?city=Mumbai",
       "/auth/callback?code=xyz&state=s&auth=google" => "/auth/callback",
       "/billing/cancel?access_token=1&Reset_Token=2&email=a%40b.in&q=drums" => "/billing/cancel?q=drums",
       "/join/musician?vouch=vch_abc&ref=friend" => "/join/musician?ref=friend",
@@ -268,7 +268,7 @@ class ProblemReportsTest < ActionDispatch::IntegrationTest
   test "the founder is emailed a link to the admin console, with no report text, when FOUNDER_REPORT_TO is set" do
     ENV["EMAIL_DELIVERY_WEBHOOK"] = "https://email-hook.example.invalid/send"
     ENV["FOUNDER_REPORT_TO"] = "founder@example.com, second@example.com"
-    ENV["FRONTEND_URL"] = "https://verse.example"
+    ENV["FRONTEND_URL"] = "https://musilynk.example"
     assert_enqueued_jobs 2, only: EmailDeliveryJob do
       submit({ description: "My secret complaint" }, headers: auth(@musician))
     end
@@ -276,7 +276,7 @@ class ProblemReportsTest < ActionDispatch::IntegrationTest
     sealed = enqueued_jobs.map { _1["arguments"].inspect }.join
     assert_no_match(/secret complaint/, sealed)
     link = ProblemReportNotifier.link(ProblemReport.last)
-    assert_match %r{\Ahttps://verse\.example/admin\?tab=problems&report=prob_}, link
+    assert_match %r{\Ahttps://musilynk\.example/admin\?tab=problems&report=prob_}, link
   end
 
   test "ADMIN_EMAIL is the fallback and nothing is sent, silently, when neither is set" do

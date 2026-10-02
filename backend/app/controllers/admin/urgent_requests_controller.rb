@@ -1,6 +1,6 @@
 module Admin
   # Hand-matching screen for the "need someone by tomorrow" wedge: the founder works this list
-  # during the beta (see docs/VERSE_PLAN.md). Every action here is audited (BaseController + audit!).
+  # during the beta (see docs/MUSILYNK_PLAN.md). Every action here is audited (BaseController + audit!).
   class UrgentRequestsController < BaseController
     include AdminPagination
     STATUSES = UrgentRequest::STATUSES

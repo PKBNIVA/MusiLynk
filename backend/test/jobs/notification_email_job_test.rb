@@ -14,7 +14,7 @@ class NotificationEmailJobTest < ActiveJob::TestCase
 
   test "renders escaped content with a workspace link and posts it to the configured provider" do
     sent = []
-    with_env("EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send", "FRONTEND_URL" => "https://verse.example/") do
+    with_env("EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send", "FRONTEND_URL" => "https://musilynk.example/") do
       Faraday.stub(:post, capture(sent)) do
         NotificationEmailJob.perform_now(@user.id, "new_message", { "name" => "<b>Mallory</b>", "path" => "/messages?c=abc" })
       end
@@ -27,14 +27,14 @@ class NotificationEmailJobTest < ActiveJob::TestCase
     assert_equal "New message from <b>Mallory</b> on MusiLynk", data["subject"]
     assert_includes data["html"], "&lt;b&gt;Mallory&lt;/b&gt;"
     assert_not_includes data["html"], "<b>Mallory"
-    assert_includes data["html"], "https://verse.example/employer/messages?c=abc"
-    assert_includes data["text"], "https://verse.example/employer/messages?c=abc"
+    assert_includes data["html"], "https://musilynk.example/employer/messages?c=abc"
+    assert_includes data["text"], "https://musilynk.example/employer/messages?c=abc"
   end
 
   test "uses Brevo when configured and never logs content" do
     sent = []
     logs = capture_logs do
-      with_env("BREVO_API_KEY" => "brevo-key", "BREVO_SENDER_EMAIL" => "hello@verse.example") do
+      with_env("BREVO_API_KEY" => "brevo-key", "BREVO_SENDER_EMAIL" => "hello@musilynk.example") do
         Faraday.stub(:post, capture(sent, status: 400)) do
           NotificationEmailJob.perform_now(@user.id, "booking_enquiry", { "act" => "Night Owls", "name" => "Planner" })
         end
@@ -67,22 +67,22 @@ class NotificationEmailJobTest < ActiveJob::TestCase
 
   test "every notification email carries an unsubscribe link and List-Unsubscribe headers for each provider" do
     token_for = ->(url) { CGI.unescape(url[/token=([^>&"\s]+)/, 1]) }
-    api = { "API_HOST" => "https://api.verse.example", "FRONTEND_URL" => "https://verse.example" }
+    api = { "API_HOST" => "https://api.musilynk.example", "FRONTEND_URL" => "https://musilynk.example" }
 
     sent = []
-    with_env(api.merge("BREVO_API_KEY" => "k", "BREVO_SENDER_EMAIL" => "hello@verse.example")) do
+    with_env(api.merge("BREVO_API_KEY" => "k", "BREVO_SENDER_EMAIL" => "hello@musilynk.example")) do
       Faraday.stub(:post, capture(sent)) { NotificationEmailJob.perform_now(@user.id, "new_message", { "name" => "A" }) }
     end
     _url, body = sent.sole
     assert_equal "List-Unsubscribe=One-Click", body.dig("headers", "List-Unsubscribe-Post")
     header = body.dig("headers", "List-Unsubscribe")
-    assert_match %r{\A<https://api\.verse\.example/api/notifications/unsubscribe\?token=[^>]+>\z}, header
+    assert_match %r{\A<https://api\.musilynk\.example/api/notifications/unsubscribe\?token=[^>]+>\z}, header
     assert_equal @user, NotificationEmail.user_for_unsubscribe_token(token_for.call(header))
-    assert_includes body["htmlContent"], "https://verse.example/unsubscribe?token="
-    assert_includes body["textContent"], "Turn off these emails: https://verse.example/unsubscribe?token="
+    assert_includes body["htmlContent"], "https://musilynk.example/unsubscribe?token="
+    assert_includes body["textContent"], "Turn off these emails: https://musilynk.example/unsubscribe?token="
 
     sent.clear
-    with_env(api.merge("RESEND_API_KEY" => "r", "EMAIL_FROM" => "MusiLynk <hello@verse.example>")) do
+    with_env(api.merge("RESEND_API_KEY" => "r", "EMAIL_FROM" => "MusiLynk <hello@musilynk.example>")) do
       Faraday.stub(:post, capture(sent)) { NotificationEmailJob.perform_now(@user.id, "booking_status", { "act" => "A", "status" => "viewed" }) }
     end
     url, body = sent.sole
@@ -91,11 +91,11 @@ class NotificationEmailJobTest < ActiveJob::TestCase
 
     # Without API_HOST there is no POST endpoint to advertise: only the web page.
     sent.clear
-    with_env("EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send", "API_HOST" => nil, "FRONTEND_URL" => "https://verse.example") do
+    with_env("EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send", "API_HOST" => nil, "FRONTEND_URL" => "https://musilynk.example") do
       Faraday.stub(:post, capture(sent)) { NotificationEmailJob.perform_now(@user.id, "application_status", { "job" => "Gig", "status" => "Offer" }) }
     end
     headers = sent.sole.last.dig("data", "headers")
-    assert_match %r{\A<https://verse\.example/unsubscribe\?token=}, headers["List-Unsubscribe"]
+    assert_match %r{\A<https://musilynk\.example/unsubscribe\?token=}, headers["List-Unsubscribe"]
     assert_nil headers["List-Unsubscribe-Post"]
   end
 
@@ -106,7 +106,7 @@ class NotificationEmailJobTest < ActiveJob::TestCase
       Faraday.stub(:post, capture(sent)) do
         NotificationEmailJob.perform_now(@user.id, "new_message", { "name" => "A" })
         assert_empty sent
-        EmailDeliveryJob.perform_now(@user.id, "reset_password", EmailDeliveryJob.seal("https://verse.example/reset-password?token=t"))
+        EmailDeliveryJob.perform_now(@user.id, "reset_password", EmailDeliveryJob.seal("https://musilynk.example/reset-password?token=t"))
       end
     end
     assert_equal ["reset_password"], sent.map { _2["template"] }

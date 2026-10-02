@@ -69,7 +69,7 @@ export default function AdminTester() {
           {monitoringEnabled()
             ? 'Client error tracking is configured for this build.'
             : 'Client error tracking is off (VITE_SENTRY_DSN not set for this build).'}{' '}
-          Test errors are tagged verse_test and safe to resolve.
+          Test errors are tagged musilynk_test and safe to resolve.
         </p>
         <div className="flex flex-wrap gap-3 mt-4">
           {monitoringEnabled() && (

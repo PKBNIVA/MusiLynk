@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 // http/https only — never linkify javascript:, data: or other schemes. A trailing character that
 // is very unlikely to belong to a URL (closing punctuation, a sentence's full stop) is left as
-// plain text so "See https://verse.example.com." doesn't swallow the period into the link.
+// plain text so "See https://musilynk.example.com." doesn't swallow the period into the link.
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/g;
 const TRAILING_PUNCTUATION = /[).,!?;:'"”’]+$/;
 

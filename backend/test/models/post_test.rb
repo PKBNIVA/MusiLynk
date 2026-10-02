@@ -12,7 +12,7 @@ class PostTest < ActiveSupport::TestCase
     assert_nil post.created_by_user_id
     assert_equal "MusiLynk", post.author_name
     assert_equal false, post.author_verified?
-    assert_equal "/verse-mark.svg", post.api_json[:author][:avatar]
+    assert_equal "/musilynk-mark.svg", post.api_json[:author][:avatar]
     assert post.api_json[:author][:system]
   end
 

@@ -57,7 +57,7 @@ export default function StageFeed() {
         {loading && (
           <ul className="space-y-4" aria-hidden="true">
             {[0, 1, 2].map((i) => (
-              <li key={i} className="verse-surface rounded-2xl border border-white/10 bg-white/[.03] p-4">
+              <li key={i} className="musilynk-surface rounded-2xl border border-white/10 bg-white/[.03] p-4">
                 <div className="flex items-center gap-3">
                   <Skeleton className="size-10 rounded-full" />
                   <div className="flex-1 space-y-2">

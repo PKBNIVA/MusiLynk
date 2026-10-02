@@ -61,7 +61,7 @@ describe('share helpers', () => {
   });
 
   it('keeps the booking message free of money and contact details', () => {
-    const text = shareCopy.booking('The Night Owls', '12 Nov 2026', 'Pune', 'https://verse.test/jobseeker/bookings');
+    const text = shareCopy.booking('The Night Owls', '12 Nov 2026', 'Pune', 'https://musilynk.test/jobseeker/bookings');
     expect(text).toContain('Pune');
     expect(text).not.toMatch(/₹|fee|@|\d{10}/);
   });

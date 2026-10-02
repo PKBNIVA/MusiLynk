@@ -7,7 +7,7 @@ class AuthJobsTest < ActiveJob::TestCase
   end
 
   FakeRequest = Struct.new(:headers, :body, :options)
-  LINK = "https://verse.example/reset-password?token=secret-reset-token".freeze
+  LINK = "https://musilynk.example/reset-password?token=secret-reset-token".freeze
 
   setup do
     @user = User.create!(name: "Mail Recipient", email: "mail-recipient@example.com", password: "StrongPass123!", role: "jobseeker", status: "active")

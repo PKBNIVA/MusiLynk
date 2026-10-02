@@ -167,7 +167,7 @@ export function Composer({ onPosted, prefill, reshareOf, compact }: ComposerProp
   return (
     <section
       aria-label={isShare ? 'Add a comment and share' : 'Create a post'}
-      className={`verse-surface rounded-2xl border border-white/10 bg-white/[.04] p-4 ${compact ? '' : 'md:p-5'}`}
+      className={`musilynk-surface rounded-2xl border border-white/10 bg-white/[.04] p-4 ${compact ? '' : 'md:p-5'}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-slate-400">

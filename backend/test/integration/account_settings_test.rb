@@ -84,7 +84,7 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
   test "reserved, suppressed, taken and unchanged addresses are refused and send nothing" do
     EmailSuppression.create!(email: "bounced@example.com", scope: "all", reason: "hard_bounce", last_event: "hard_bounce", last_event_at: Time.current, suppressed_at: Time.current)
     refusals = {
-      "member@verse.local" => [422, "EMAIL_UNDELIVERABLE"],
+      "member@musilynk.local" => [422, "EMAIL_UNDELIVERABLE"],
       "bounced@example.com" => [422, "EMAIL_SUPPRESSED"],
       "Other@example.com" => [409, "EMAIL_TAKEN"],
       "maya@example.com" => [422, "EMAIL_UNCHANGED"],

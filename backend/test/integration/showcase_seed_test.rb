@@ -42,8 +42,8 @@ class ShowcaseSeedTest < ActionDispatch::IntegrationTest
   test "with a bucket the samples play from the app's own copies of the tracks, not from ccMixter" do
     keys = %w[AWS_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION AWS_ENDPOINT_URL_S3 AWS_PUBLIC_BASE_URL]
     saved = keys.to_h { [_1, ENV.delete(_1)] }
-    ENV.update("AWS_BUCKET" => "verse-test", "AWS_ACCESS_KEY_ID" => "id", "AWS_SECRET_ACCESS_KEY" => "secret", "AWS_REGION" => "auto",
-      "AWS_ENDPOINT_URL_S3" => "https://acct.r2.cloudflarestorage.com", "AWS_PUBLIC_BASE_URL" => "https://media.verse.test")
+    ENV.update("AWS_BUCKET" => "musilynk-test", "AWS_ACCESS_KEY_ID" => "id", "AWS_SECRET_ACCESS_KEY" => "secret", "AWS_REGION" => "auto",
+      "AWS_ENDPOINT_URL_S3" => "https://acct.r2.cloudflarestorage.com", "AWS_PUBLIC_BASE_URL" => "https://media.musilynk.test")
     client = Aws::S3::Client.new(stub_responses: true, region: "auto")
     client.stub_responses(:head_object, "NotFound")
     copied = []
@@ -57,7 +57,7 @@ class ShowcaseSeedTest < ActionDispatch::IntegrationTest
     assert_equal 40, copied.uniq.size, "every curated track is copied before the first account exists"
     items = PortfolioItem.where(user_id: User.synthetic(BATCH).select(:id))
     assert_operator items.count, :>=, 110
-    assert(items.pluck(:url).all? { _1.match?(%r{\Ahttps://media\.verse\.test/demo/showcase/\d+\.mp3\z}) })
+    assert(items.pluck(:url).all? { _1.match?(%r{\Ahttps://media\.musilynk\.test/demo/showcase/\d+\.mp3\z}) })
     assert(items.pluck(:url).none? { _1.include?("ccmixter.org") })
   ensure
     keys.each { |name| saved[name].nil? ? ENV.delete(name) : ENV[name] = saved[name] }
@@ -159,7 +159,7 @@ class ShowcaseSeedTest < ActionDispatch::IntegrationTest
       assert_includes item.credited_as, track.fetch("license")
       assert_includes item.description, track.fetch("license_url")
       assert_equal track.fetch("peaks"), item.media_metadata.fetch("waveform")
-      assert_no_match(/youtube|example\.com|verse\.example/, item.attributes.values.join(" "))
+      assert_no_match(/youtube|example\.com|musilynk\.example/, item.attributes.values.join(" "))
     end
     assert_operator items.distinct.count(:url), :>=, 35, "the forty tracks are spread across the musicians"
     assert_equal 0, ShowcaseSuggestion.count

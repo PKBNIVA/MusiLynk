@@ -5,7 +5,7 @@
 # Backfill: existing approved requests predate this and were all reviewed against the evidence
 # link, so they are backfilled with checks: ["work_links"] — the closest honest description of
 # what was actually checked at the time — rather than left blank (which the UI would otherwise
-# render as "Verified by Verse" with no detail).
+# render as "Verified by MusiLynk" with no detail).
 #
 # Lock profile: additive column; the backfill UPDATE only touches already-approved rows.
 class AddChecksToVerificationRequests < ActiveRecord::Migration[8.1]

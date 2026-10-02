@@ -42,7 +42,7 @@ async function signIn(page: Page, handler: (request: Request, pathname: string) 
 test('download my data saves the export as a JSON file', async ({ page }) => {
   const errors = await signIn(page, (_r, path) =>
     path === '/api/account/export'
-      ? { body: { format: 'verse-account-export', account: { email: me.email } } }
+      ? { body: { format: 'musilynk-account-export', account: { email: me.email } } }
       : undefined,
   );
   await page.goto('/jobseeker/account');

@@ -5,14 +5,14 @@ import { LiveProof } from './LiveProof';
 import { TrustStrip } from './TrustStrip';
 import { RoleTiles } from './RoleTiles';
 import { UrgentBand } from './UrgentBand';
-import { NowOnVerse } from './NowOnVerse';
+import { NowOnMusiLynk } from './NowOnMusiLynk';
 import { StageTeaser } from './StageTeaser';
 
 /** Everything under the hero, loaded as its own chunk after the first paint. */
 export default function LandingBelowFold({ city }: { city: string }) {
   return (
     <>
-      <NowOnVerse city={city} />
+      <NowOnMusiLynk city={city} />
       <LiveProof />
       <HowItWorks />
       <RoleTiles city={city} />

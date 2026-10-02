@@ -14,7 +14,7 @@ class AccountExport
 
   def as_json(*)
     {
-      format: "verse-account-export",
+      format: "musilynk-account-export",
       version: FORMAT_VERSION,
       exportedAt: Time.current.iso8601,
       account: row(@user).except("synthetic_batch"),

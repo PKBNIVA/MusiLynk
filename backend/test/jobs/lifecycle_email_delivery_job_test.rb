@@ -15,7 +15,7 @@ class LifecycleEmailDeliveryJobTest < ActiveJob::TestCase
 
   test "renders a step with a Manage emails link, escaping and dynamic copy" do
     sent = []
-    with_env("EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send", "FRONTEND_URL" => "https://verse.example") do
+    with_env("EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send", "FRONTEND_URL" => "https://musilynk.example") do
       Faraday.stub(:post, capture(sent)) do
         LifecycleEmailDeliveryJob.perform_now(@user.id, "musician_day21_inactive_requests", { "count" => 3, "city" => "Chennai" })
       end
@@ -24,8 +24,8 @@ class LifecycleEmailDeliveryJobTest < ActiveJob::TestCase
     data = body.fetch("data")
     assert_equal "3 new requests near you this week", data["subject"]
     assert_includes data["html"], "Manage emails"
-    assert_includes data["html"], "https://verse.example/unsubscribe?token="
-    assert_includes data["text"], "Manage which MusiLynk emails you get: https://verse.example/unsubscribe?token="
+    assert_includes data["html"], "https://musilynk.example/unsubscribe?token="
+    assert_includes data["text"], "Manage which MusiLynk emails you get: https://musilynk.example/unsubscribe?token="
   end
 
   test "stamps delivered_at on the claimed row once the provider accepts the message, and not when it rejects" do

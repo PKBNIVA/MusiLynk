@@ -8,7 +8,7 @@ class AdminPaymentsOpenEmailsTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
 
   LIVE = { "RAZORPAY_KEY_ID" => "rzp_test_followups", "RAZORPAY_KEY_SECRET" => "secret-for-tests",
-           "EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send", "FRONTEND_URL" => "https://verse.example" }.freeze
+           "EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send", "FRONTEND_URL" => "https://musilynk.example" }.freeze
   OFF = { "RAZORPAY_KEY_ID" => nil, "RAZORPAY_KEY_SECRET" => nil, "EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send" }.freeze
 
   setup do
@@ -69,7 +69,7 @@ class AdminPaymentsOpenEmailsTest < ActionDispatch::IntegrationTest
     assert_equal 0, PaymentsOpenEmails.waiting
     assert_equal 2, AuditLog.where(action: "admin.payments_open_emails.queue").count
     payload = sent.first.last.to_s
-    assert_includes payload, "https://verse.example/pricing"
+    assert_includes payload, "https://musilynk.example/pricing"
     assert_not_includes payload, "/jobseeker/pricing"
   end
 
@@ -102,10 +102,10 @@ class AdminPaymentsOpenEmailsTest < ActionDispatch::IntegrationTest
   end
 
   test "the email is short, says what changed and has one link to pricing" do
-    content = NotificationEmail.render("payments_open", { "path" => "https://verse.example/pricing" }, @waiting.first)
+    content = NotificationEmail.render("payments_open", { "path" => "https://musilynk.example/pricing" }, @waiting.first)
     assert_equal "Payments are now open on MusiLynk", content[:subject]
-    assert_equal 1, content[:text].scan("https://verse.example/pricing").size
-    assert_includes content[:text], "See pricing: https://verse.example/pricing"
+    assert_equal 1, content[:text].scan("https://musilynk.example/pricing").size
+    assert_includes content[:text], "See pricing: https://musilynk.example/pricing"
   end
 
   private

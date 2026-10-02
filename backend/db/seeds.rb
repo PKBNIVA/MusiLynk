@@ -2,7 +2,7 @@ if Rails.env.production? && (ENV["ADMIN_EMAIL"].blank? || ENV.fetch("ADMIN_PASSW
   raise "Production requires ADMIN_EMAIL and an ADMIN_PASSWORD of at least 14 characters"
 end
 
-admin = User.find_or_initialize_by(email: ENV.fetch("ADMIN_EMAIL", "admin@verse.local").downcase)
+admin = User.find_or_initialize_by(email: ENV.fetch("ADMIN_EMAIL", "admin@musilynk.local").downcase)
 admin.assign_attributes(name: "MusiLynk Admin", role: "admin", status: "active", profile_complete: true)
 admin.password = ENV.fetch("ADMIN_PASSWORD", "Admin@12345") if admin.new_record? || ENV["ADMIN_PASSWORD"].present?
 admin.skip_password_strength = true
@@ -10,12 +10,12 @@ admin.save!
 admin.create_profile! unless admin.profile
 
 unless Rails.env.production? || ENV["SEED_DEMO_DATA"] == "false"
-  employer = User.find_or_initialize_by(email: "studio@verse.local")
+  employer = User.find_or_initialize_by(email: "studio@musilynk.local")
   employer.assign_attributes(name: "YRF Studios", role: "employer", status: "active", profile_complete: true, password: "Employer@123", skip_password_strength: true)
   employer.save!
   employer.create_profile!(company_name: "YRF Studios", company_description: "Film and music production studio", verified: true, location: "Mumbai, Maharashtra") unless employer.profile
 
-  artist = User.find_or_initialize_by(email: "artist@verse.local")
+  artist = User.find_or_initialize_by(email: "artist@musilynk.local")
   artist.assign_attributes(name: "Aditya Sharma", role: "jobseeker", status: "active", profile_complete: true, password: "Artist@123", skip_password_strength: true)
   artist.save!
   artist.create_profile!(headline: "Playback Singer", bio: "Versatile vocalist with studio and live experience.", location: "Mumbai, Maharashtra", skills: ["Playback Singing", "Studio Recording", "Hindi"], genres: ["Bollywood", "Pop"], instruments: ["Vocals"]) unless artist.profile

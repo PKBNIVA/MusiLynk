@@ -9,7 +9,7 @@ module Admin
 
       render json: {
         ok: core_ready,
-        service: "verse-rails",
+        service: "musilynk-api",
         release: RELEASE.first(12),
         time: Time.current.iso8601,
         environment: Rails.env,
@@ -29,7 +29,7 @@ module Admin
       event = begin
         raise SentryTestError, "MusiLynk Sentry test error (triggered by an admin; safe to resolve)"
       rescue SentryTestError => error
-        ErrorReporter.capture(error, tags: { source: "admin_sentry_test", verse_test: "true" }, level: :error)
+        ErrorReporter.capture(error, tags: { source: "admin_sentry_test", musilynk_test: "true" }, level: :error)
       end
       captured = event.present?
       audit!("admin.sentry_test", nil, { captured: })

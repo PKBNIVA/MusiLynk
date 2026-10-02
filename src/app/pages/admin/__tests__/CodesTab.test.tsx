@@ -51,7 +51,7 @@ const PROGRAMME: AdminPromoProgramme = {
     referrerRewardCap: 6,
     offerConfigured: false,
   },
-  codeFormat: 'VERSE-{6}',
+  codeFormat: 'MUSILYNK-{6}',
   codeAlphabet: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
   earlyAccess: { days: 90, seats: 50, granted: 12 },
   offerRequired: true,
@@ -103,7 +103,7 @@ const LIST = [
     expiresAt: '2027-01-01T00:00:00Z',
     intervals: ['annual'],
   }),
-  code({ id: 'prom_4', code: 'VERSE-MEERA2K7', kind: 'referral', percentOff: null, durationPeriods: null }),
+  code({ id: 'prom_4', code: 'MUSILYNK-MEERA2K7', kind: 'referral', percentOff: null, durationPeriods: null }),
 ];
 
 let container: HTMLDivElement;
@@ -380,8 +380,8 @@ describe('creating a code', () => {
     await pick(dialog().querySelector<HTMLSelectElement>('#code-mode')!, 'batch');
     expect(input('code-value')).toBeNull();
     const preview = dialog().querySelector('[data-testid="format-preview"]')!.textContent!;
-    expect(preview).toContain('Format VERSE-{6}');
-    expect(preview).toMatch(/for example VERSE-[A-HJ-NP-Z2-9]{6}\./);
+    expect(preview).toContain('Format MUSILYNK-{6}');
+    expect(preview).toMatch(/for example MUSILYNK-[A-HJ-NP-Z2-9]{6}\./);
     await fill(input('code-generate'), '25');
     await act(async () => btn(dialog(), 'Generate codes').click());
     await flush();
@@ -481,7 +481,7 @@ describe('helpers', () => {
     expect(effectText(code({ durationPeriods: null }))).toBe('20% off forever');
     expect(effectText(code({ kind: 'referral' }))).toBe('Referral discount');
     expect(effectText(code({ kind: 'early_access' }))).toBe('Early Access Pro');
-    expect(previewCode('VERSE-{6}', 'ABCDEFGH')).toMatch(/^VERSE-[A-H]{6}$/);
-    expect(previewCode('VERSE-{NAME4}{4}', 'ABCDEFGH')).toMatch(/^VERSE-[A-H]{8}$/);
+    expect(previewCode('MUSILYNK-{6}', 'ABCDEFGH')).toMatch(/^MUSILYNK-[A-H]{6}$/);
+    expect(previewCode('MUSILYNK-{NAME4}{4}', 'ABCDEFGH')).toMatch(/^MUSILYNK-[A-H]{8}$/);
   });
 });

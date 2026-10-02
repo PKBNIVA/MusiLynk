@@ -30,7 +30,7 @@ import {
 // UX sweep: a screenshot of every screen of the marketplace in every meaningful combination, for review.
 //
 //   UX_SWEEP=1 QA_BASE_URL=http://127.0.0.1:4600 QA_PORT_BASE=4900 \
-//     flock /tmp/verse-playwright.lock npx playwright test tests/e2e/zz-ux-sweep.spec.ts \
+//     flock /tmp/musilynk-playwright.lock npx playwright test tests/e2e/zz-ux-sweep.spec.ts \
 //     --project=chromium-desktop --workers=3
 //
 // Needs the local production-mode stack (see /home/user/ux-shots/STACK.md): the API on :3300, the public
@@ -327,7 +327,7 @@ async function autofill(page: Page) {
     } else if (type === 'datetime-local') value = '2026-12-12T19:30';
     else if (type === 'date') value = '2026-12-12';
     else if (type === 'time') value = '19:30';
-    else if (type === 'email' || /email/.test(hint)) value = 'ux.sweep.wizard@verse.local';
+    else if (type === 'email' || /email/.test(hint)) value = 'ux.sweep.wizard@musilynk.local';
     else if (type === 'password' || /password/.test(hint)) value = 'UxSweepPass123!';
     else if (type === 'tel' || /phone|mobile|whatsapp/.test(hint)) value = '9876543210';
     else if (type === 'url' || /url|link|website|http/.test(hint))
@@ -567,7 +567,7 @@ async function wizards(s: Session) {
     await visit(s, '/auth/jobseeker');
     const codeEmail = s.page.getByLabel(/email/i).first();
     if (await codeEmail.isVisible().catch(() => false)) {
-      await codeEmail.fill('nobody.here@verse.local');
+      await codeEmail.fill('nobody.here@musilynk.local');
       await s.page
         .getByRole('button', { name: /email me.*code/i })
         .first()
@@ -596,7 +596,7 @@ async function wizards(s: Session) {
     const email = s.page.getByLabel(/email/i).first();
     const password = s.page.getByLabel(/password/i).first();
     if ((await email.isVisible().catch(() => false)) && (await password.isVisible().catch(() => false))) {
-      await email.fill('nobody.here@verse.local');
+      await email.fill('nobody.here@musilynk.local');
       await password.fill('Wrong-password-1');
       await s.page
         .getByRole('button', { name: /^sign in/i })

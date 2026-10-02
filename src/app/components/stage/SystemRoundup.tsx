@@ -12,7 +12,7 @@ export function SystemRoundup({ posts }: { posts: StagePost[] }) {
     <article
       aria-labelledby="stage-roundup"
       data-testid="system-roundup"
-      className="verse-surface rounded-2xl border border-white/10 bg-white/[.03] p-4"
+      className="musilynk-surface rounded-2xl border border-white/10 bg-white/[.03] p-4"
     >
       <h2 id="stage-roundup" className="flex items-center gap-2 text-sm font-semibold text-white">
         <Sparkles aria-hidden="true" size={15} className="text-violet-300" />

@@ -60,7 +60,7 @@ describe('AccountSettings password card', () => {
     const input = container.querySelector('#settings-new-password') as HTMLInputElement;
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
     act(() => {
-      setter.call(input, 'Tabla-Raag-2026-Verse');
+      setter.call(input, 'Tabla-Raag-2026-MusiLynk');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
     const submit = Array.from(container.querySelectorAll('button')).find((b) =>
@@ -70,7 +70,7 @@ describe('AccountSettings password card', () => {
     await act(async () => {
       submit.click();
     });
-    expect(apiPost).toHaveBeenCalledWith('/account/password', { newPassword: 'Tabla-Raag-2026-Verse' });
+    expect(apiPost).toHaveBeenCalledWith('/account/password', { newPassword: 'Tabla-Raag-2026-MusiLynk' });
     expect(setUser).toHaveBeenCalledWith(expect.objectContaining({ passwordSet: true }));
   });
 });

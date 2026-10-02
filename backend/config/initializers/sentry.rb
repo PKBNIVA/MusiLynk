@@ -11,7 +11,7 @@
 #   SENTRY_TRACES_SAMPLE_RATE   0.0..1.0, default 0.02 (2% of requests traced for performance
 #                               data; tracing costs quota, 0 turns it off)
 #   RAILWAY_GIT_COMMIT_SHA      set by Railway; used as the release
-module VerseSentry
+module MusilynkSentry
   # Expected client errors: rescue_from turns these into 4xx responses. They are listed so a
   # manual ErrorReporter.capture (or an exception's cause chain) never reports them either.
   EXPECTED_CLIENT_ERRORS = %w[
@@ -41,14 +41,14 @@ module VerseSentry
     def send_data(data)
       super
     rescue Sentry::ExternalError => error
-      VerseSentry.log_delivery_failure(error)
+      MusilynkSentry.log_delivery_failure(error)
       nil
     end
 
     def flush
       super
     rescue Sentry::ExternalError => error
-      VerseSentry.log_delivery_failure(error)
+      MusilynkSentry.log_delivery_failure(error)
       nil
     end
   end
@@ -109,6 +109,6 @@ module VerseSentry
   end
 end
 
-if VerseSentry.enabled_by_env?
-  Sentry.init { |config| VerseSentry.configure(config) }
+if MusilynkSentry.enabled_by_env?
+  Sentry.init { |config| MusilynkSentry.configure(config) }
 end

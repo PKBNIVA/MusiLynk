@@ -1,4 +1,4 @@
-# The Stage gets a system author ("Verse") plus meetup/event posts:
+# The Stage gets a system author ("MusiLynk") plus meetup/event posts:
 #  - system_kind: which recurring event a system post represents (nil for ordinary posts).
 #  - system_ref: a unique idempotency key so StageSystemPostsJob never posts the same event twice.
 #  - pinned_until: admin (or the weekly system job) can pin a post to the top of the feed until

@@ -57,7 +57,7 @@ test.describe('live signed-in smoke (dedicated test account)', () => {
       const name = `${SMOKE_ALERT_PREFIX} ${new Date().toISOString()}`;
       const create = await request.post(`${apiBase}/job-alerts`, {
         headers,
-        data: { name, query: 'verse-qa-smoke', frequency: 'saved', active: false },
+        data: { name, query: 'musilynk-qa-smoke', frequency: 'saved', active: false },
       });
       expect(create.status(), 'POST /job-alerts').toBe(201);
       const { id } = await create.json();

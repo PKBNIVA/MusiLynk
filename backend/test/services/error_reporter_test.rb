@@ -25,15 +25,15 @@ class ErrorReporterTest < ActiveSupport::TestCase
   test "the initializer is inert in tests and without a DSN" do
     refute Sentry.initialized?
     refute ErrorReporter.enabled?
-    refute VerseSentry.enabled_by_env?({}, ActiveSupport::EnvironmentInquirer.new("production"))
-    refute VerseSentry.enabled_by_env?({ "SENTRY_DSN" => "  " }, ActiveSupport::EnvironmentInquirer.new("production"))
-    refute VerseSentry.enabled_by_env?({ "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN }, ActiveSupport::EnvironmentInquirer.new("test"))
-    assert VerseSentry.enabled_by_env?({ "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN }, ActiveSupport::EnvironmentInquirer.new("production"))
+    refute MusilynkSentry.enabled_by_env?({}, ActiveSupport::EnvironmentInquirer.new("production"))
+    refute MusilynkSentry.enabled_by_env?({ "SENTRY_DSN" => "  " }, ActiveSupport::EnvironmentInquirer.new("production"))
+    refute MusilynkSentry.enabled_by_env?({ "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN }, ActiveSupport::EnvironmentInquirer.new("test"))
+    assert MusilynkSentry.enabled_by_env?({ "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN }, ActiveSupport::EnvironmentInquirer.new("production"))
   end
 
   test "configuration reads environment, release and a bounded trace rate, and keeps PII collection off" do
     config = Sentry::Configuration.new
-    VerseSentry.configure(config, env: {
+    MusilynkSentry.configure(config, env: {
       "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN, "SENTRY_ENVIRONMENT" => "staging",
       "RAILWAY_GIT_COMMIT_SHA" => "0123456789abcdef", "SENTRY_TRACES_SAMPLE_RATE" => "0.25"
     })
@@ -48,13 +48,13 @@ class ErrorReporterTest < ActiveSupport::TestCase
       assert_includes config.excluded_exceptions, name
     end
 
-    assert_in_delta 0.02, VerseSentry.traces_sample_rate(nil), 1e-9, "a small default sample once a DSN is set"
-    assert_in_delta 0.02, VerseSentry.traces_sample_rate("  "), 1e-9
-    assert_in_delta 0.02, VerseSentry.traces_sample_rate("lots"), 1e-9
-    assert_equal 0.0, VerseSentry.traces_sample_rate("0"), "an explicit 0 turns tracing off"
-    assert_equal 1.0, VerseSentry.traces_sample_rate("7")
+    assert_in_delta 0.02, MusilynkSentry.traces_sample_rate(nil), 1e-9, "a small default sample once a DSN is set"
+    assert_in_delta 0.02, MusilynkSentry.traces_sample_rate("  "), 1e-9
+    assert_in_delta 0.02, MusilynkSentry.traces_sample_rate("lots"), 1e-9
+    assert_equal 0.0, MusilynkSentry.traces_sample_rate("0"), "an explicit 0 turns tracing off"
+    assert_equal 1.0, MusilynkSentry.traces_sample_rate("7")
     default = Sentry::Configuration.new
-    VerseSentry.configure(default, env: { "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN })
+    MusilynkSentry.configure(default, env: { "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN })
     assert_equal Rails.env.to_s, default.environment
     assert_in_delta 0.02, default.traces_sample_rate, 1e-9
   end
@@ -67,13 +67,13 @@ class ErrorReporterTest < ActiveSupport::TestCase
   test "capture sends the exception with scrubbed tags and context" do
     with_sentry do
       event = ErrorReporter.capture(RuntimeError.new("delivery to jane@example.com failed"), tags: { source: "email_delivery_failed", template: "verify_email" },
-        link: "https://verse.test/verify-email?token=abc123", recipientEmail: "jane@example.com", attempt: 2)
+        link: "https://musilynk.test/verify-email?token=abc123", recipientEmail: "jane@example.com", attempt: 2)
       assert event
       assert_equal 1, sentry_events.size
       payload = sentry_payloads.first
       assert_equal "email_delivery_failed", payload.dig("tags", "source")
       assert_equal "verify_email", payload.dig("tags", "template")
-      assert_equal "https://verse.test/verify-email?token=[Filtered]", payload.dig("extra", "link")
+      assert_equal "https://musilynk.test/verify-email?token=[Filtered]", payload.dig("extra", "link")
       assert_equal "[Filtered]", payload.dig("extra", "recipientEmail")
       assert_equal 2, payload.dig("extra", "attempt")
       assert_match(/\Adelivery to \[email\] failed/, payload.dig("exception", "values", 0, "value"))
@@ -145,7 +145,7 @@ class ErrorReporterTest < ActiveSupport::TestCase
     server = TCPServer.new("127.0.0.1", 0)
     port = server.addr[1]
     Thread.new { loop { c = server.accept; (c.readpartial(65_536) rescue nil); c.write("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"); c.close } }
-    Sentry.init { |config| VerseSentry.configure(config, env: { "SENTRY_DSN" => "http://pub@127.0.0.1:#{port}/1", "SENTRY_TRACES_SAMPLE_RATE" => "0" }) }
+    Sentry.init { |config| MusilynkSentry.configure(config, env: { "SENTRY_DSN" => "http://pub@127.0.0.1:#{port}/1", "SENTRY_TRACES_SAMPLE_RATE" => "0" }) }
     Sentry.capture_message("task finished")
     # A failed send leaves a client report that the SDK's at_exit hook flushes (this is what raised).
     Sentry.get_current_client.transport.record_lost_event(:network_error, "error")
@@ -154,8 +154,8 @@ class ErrorReporterTest < ActiveSupport::TestCase
 
   test "the SDK is configured with a transport that logs delivery failures instead of raising" do
     config = Sentry::Configuration.new
-    VerseSentry.configure(config, env: { "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN })
-    assert_equal VerseSentry::Transport, config.transport.transport_class
+    MusilynkSentry.configure(config, env: { "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN })
+    assert_equal MusilynkSentry::Transport, config.transport.transport_class
   end
 
   test "a rejected DSN (403) is logged, not raised, from send_data and flush" do
@@ -172,7 +172,7 @@ class ErrorReporterTest < ActiveSupport::TestCase
     config = Sentry::Configuration.new
     config.dsn = "http://pub@127.0.0.1:#{port}/1"
     config.sdk_logger = ::Logger.new(nil)
-    transport = VerseSentry::Transport.new(config)
+    transport = MusilynkSentry::Transport.new(config)
     io = StringIO.new
     original = Rails.logger
     Rails.logger = ActiveSupport::Logger.new(io)

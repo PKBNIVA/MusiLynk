@@ -119,10 +119,13 @@ class EmailDelivery
   # LifecycleMailer) carry an unsubscribe / manage-emails link.
   SERVICE_NOTE = "This is a service email about your MusiLynk account, so it cannot be turned off.".freeze
 
-  # The brand header every email starts with: the V mark and the name. Inline styles only;
-  # mail clients ignore style sheets.
+  # The brand header every email starts with: the MusiLynk mark (public/email-mark-64.png, served from
+  # the frontend origin, shown at 32px) and the name as live text. If a mail client blocks images,
+  # the alt text and the img's own background still paint a violet square with an "M", so the header
+  # keeps its shape. Inline styles only; mail clients ignore style sheets.
   def self.brand_header_html
-    %(<div style="font-size:0;line-height:0"><span style="display:inline-block;width:32px;height:32px;line-height:32px;border-radius:10px;background:#7c3aed;color:#ffffff;text-align:center;font-size:18px;font-weight:800;vertical-align:middle">V</span><span style="display:inline-block;margin-left:10px;font-size:22px;line-height:32px;font-weight:800;color:#a78bfa;vertical-align:middle">MusiLynk</span></div>)
+    mark = "#{ERB::Util.html_escape(FrontendUrl.base)}/email-mark-64.png"
+    %(<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td style="width:32px;height:32px;padding:0;vertical-align:middle"><img src="#{mark}" width="32" height="32" alt="M" style="display:block;width:32px;height:32px;border:0;border-radius:8px;background:#7c3aed;color:#ffffff;font:800 18px/32px Arial,Helvetica,sans-serif;text-align:center"></td><td style="padding:0 0 0 10px;vertical-align:middle;font:800 22px/32px Arial,Helvetica,sans-serif;letter-spacing:-0.3px;color:#ffffff">#{Brand::NAME}</td></tr></table>)
   end
 
   # The opening of <head> every email shares: charset and a mobile viewport, so 375px phones
@@ -174,7 +177,7 @@ class EmailDelivery
   def self.configured? = provider.present?
 
   # Top-level domains reserved by RFC 2606/6761 plus common internal ones: mail sent there
-  # can never arrive (the seeded admin@verse.local, synthetic qa+…@example.invalid accounts).
+  # can never arrive (the seeded admin@musilynk.local, synthetic qa+…@example.invalid accounts).
   RESERVED_TLDS = %w[local localhost invalid test example internal].freeze
 
   def self.reserved_address?(email)

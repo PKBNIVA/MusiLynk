@@ -46,7 +46,7 @@ function fromBooking(id: string, b: BookingInvoiceDetail): InvoiceDocumentData {
     buyer: { name: b.payerName },
     lineItems: [
       { description: `Booking deposit, ${b.actName}`, taxableValuePaise: paise(b.depositAmount) },
-      { description: 'Verse platform fee', taxableValuePaise: paise(b.feeAmount) },
+      { description: 'MusiLynk platform fee', taxableValuePaise: paise(b.feeAmount) },
       { description: 'GST on platform fee', taxableValuePaise: paise(b.gstAmount) },
     ],
     taxableValuePaise: paise(b.totalAmount),

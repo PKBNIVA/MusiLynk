@@ -10,7 +10,7 @@ Rails.application.routes.draw do
   get "share/acts/:id", to: "share_pages#act"
   get "share/p/:slug", to: "share_pages#portfolio"
 
-  # Public "I'm verified on Verse" story/landscape cards for Instagram/WhatsApp sharing
+  # Public "I'm verified on MusiLynk" story/landscape cards for Instagram/WhatsApp sharing
   # (ShareCardsController). Served without the /api scope like the other crawler/share pages,
   # cached at the edge for 24h, and rendered as SVG — see ShareCard for why (no headless
   # browser or ImageMagick at runtime).

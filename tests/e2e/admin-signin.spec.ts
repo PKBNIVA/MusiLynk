@@ -95,7 +95,7 @@ test('the admin site is titled, kept out of search engines and offers only passw
   await mockApi(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
-  await expect(page).toHaveTitle(/Verse Admin/);
+  await expect(page).toHaveTitle(/MusiLynk Admin/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
   await expect(page.getByRole('button', { name: /code instead|create .* account/i })).toHaveCount(0);
   await expect(page.getByRole('link')).toHaveCount(0);
@@ -182,7 +182,7 @@ test('an unavailable second step is explained inline and no session starts', asy
 test('a non-admin account is signed out again and told this site is for admins', async ({ page }) => {
   const calls = await mockApi(page, { loginReply: { status: 200, body: { user: jobseeker, accessToken: 'qa-js' } } });
   await submitPassword(page);
-  await expect(page.getByRole('alert')).toContainText('This site is only for Verse admins.');
+  await expect(page.getByRole('alert')).toContainText('This site is only for MusiLynk admins.');
   await expect.poll(() => calls.logouts).toBe(1);
   expect(await token(page)).toBeNull();
 });

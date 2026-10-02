@@ -9,7 +9,7 @@
 # `.call(item, portfolios:)` signature and return shape; this class never depends on it existing.
 class AiPortfolioItemClassifier
   SYSTEM_PROMPT = <<~PROMPT.freeze
-    You classify a music portfolio item for Verse, a hiring marketplace for India's music
+    You classify a music portfolio item for MusiLynk, a hiring marketplace for India's music
     industry. Reply with strict JSON only: {"tags": [string], "roles": [string], "genres":
     [string], "instruments": [string], "suggestedPortfolioIds": [string], "reasons": [string]}.
     Use only the taxonomy values and portfolio ids given to you. No other text.

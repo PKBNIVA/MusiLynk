@@ -109,7 +109,7 @@ export function PushSettingsCard() {
         <div>
           {support === 'needs-install' ? (
             <p className="text-sm text-slate-300">
-              Add Verse to your home screen to get alerts on this iPhone or iPad.
+              Add MusiLynk to your home screen to get alerts on this iPhone or iPad.
             </p>
           ) : support === 'unsupported' ? (
             <p className="text-sm text-slate-300">This browser can’t show push notifications.</p>
@@ -119,7 +119,7 @@ export function PushSettingsCard() {
                 {here
                   ? 'Alerts are on for this device.'
                   : support === 'blocked'
-                    ? 'Notifications are blocked for Verse in this browser. Allow them in your browser’s site settings.'
+                    ? 'Notifications are blocked for MusiLynk in this browser. Allow them in your browser’s site settings.'
                     : 'Alerts are off for this device.'}
               </p>
               {support !== 'blocked' && (

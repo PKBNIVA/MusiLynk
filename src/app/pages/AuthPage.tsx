@@ -21,7 +21,7 @@ import { usePageMeta } from '../components/PageMeta';
 const ADMIN_SITE_MESSAGE = 'Admins sign in at the admin site.';
 
 export default function AuthPage() {
-  usePageMeta('Sign in', 'Sign in to your Verse account.', { noindex: true });
+  usePageMeta('Sign in', 'Sign in to your MusiLynk account.', { noindex: true });
   const { userType = 'jobseeker' } = useParams();
   const role = userType === 'employer' ? 'employer' : 'jobseeker';
   const navigate = useNavigate();
@@ -208,7 +208,7 @@ export default function AuthPage() {
     setLoading(true);
     try {
       const r = await apiPost<{ ok?: boolean; message?: string }>('/auth/resend-verification', { email });
-      setLinkNote(r?.message || 'If this email can be used on Verse, a confirmation link is on its way.');
+      setLinkNote(r?.message || 'If this email can be used on MusiLynk, a confirmation link is on its way.');
     } catch (e: unknown) {
       setLinkNote(errorMessage(e, 'Could not send the link. Try again.'));
     } finally {
@@ -333,7 +333,7 @@ export default function AuthPage() {
             </>
           ) : (
             <>
-              If <span className="font-semibold text-white">{email}</span> can be used on Verse, a 6-digit code is on
+              If <span className="font-semibold text-white">{email}</span> can be used on MusiLynk, a 6-digit code is on
               its way. It expires in 10 minutes.
             </>
           )
@@ -424,12 +424,12 @@ export default function AuthPage() {
   if (registering) return <Navigate to={joinPath} state={location.state} replace />;
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 px-5 py-8 text-white">
-      <div className="verse-grid absolute inset-0" />
-      <div className="verse-orb absolute -left-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-fuchsia-500/45" />
-      <div className="verse-orb absolute -bottom-40 -right-20 h-[34rem] w-[34rem] rounded-full bg-cyan-400/25" />
+      <div className="musilynk-grid absolute inset-0" />
+      <div className="musilynk-orb absolute -left-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-fuchsia-500/45" />
+      <div className="musilynk-orb absolute -bottom-40 -right-20 h-[34rem] w-[34rem] rounded-full bg-cyan-400/25" />
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col">
         <header className="flex items-center justify-between">
-          <Link to="/" aria-label="Verse home" className="inline-flex min-h-11 items-center">
+          <Link to="/" aria-label="MusiLynk home" className="inline-flex min-h-11 items-center">
             <BrandMark />
           </Link>
           <Link to="/" className="-my-2 inline-flex min-h-11 items-center py-2 text-sm text-slate-300 hover:text-white">
@@ -444,7 +444,7 @@ export default function AuthPage() {
               Your account and work stay protected
             </div>
             <h1 className="mt-6 max-w-xl text-6xl font-black leading-[1] tracking-[-.05em]">
-              One login. Your whole <span className="verse-gradient-text">music world.</span>
+              One login. Your whole <span className="musilynk-gradient-text">music world.</span>
             </h1>
             <p className="mt-5 max-w-lg text-lg leading-8 text-slate-300">
               Discover work, prove your craft, build teams and manage every conversation in one place.
@@ -452,7 +452,7 @@ export default function AuthPage() {
           </div>
           {/* A CSS fade-in (the global reduced-motion rule shortens it); the motion library cost ~42 kB gzip for this alone. */}
           <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
-            <Card className="verse-surface border-white/15 bg-transparent shadow-2xl">
+            <Card className="musilynk-surface border-white/15 bg-transparent shadow-2xl">
               <CardHeader className="text-center">
                 <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-500/30 to-violet-500/25 text-violet-200">
                   {role === 'employer' ? <Briefcase /> : <Users />}
@@ -516,7 +516,7 @@ export default function AuthPage() {
                     state={location.state}
                     className="mt-3 flex min-h-11 w-full items-center justify-center text-sm font-semibold text-violet-200 hover:text-white"
                   >
-                    New to Verse? Join in two minutes
+                    New to MusiLynk? Join in two minutes
                   </Link>
                 )}
               </CardContent>

@@ -4,7 +4,7 @@ module SyntheticQa
   # Where the demo work samples play from.
   #
   # ccMixter refuses its MP3s (HTTP 403) to any page that is not on ccmixter.org: with no Referer or with
-  # Verse's Referer the browser gets an HTML error page, so a plain <audio src> pointing at ccmixter.org
+  # MusiLynk's Referer the browser gets an HTML error page, so a plain <audio src> pointing at ccmixter.org
   # never plays. CC BY allows redistribution with attribution (the credit travels with every sample in
   # `credited_as` and the description), so when the app has object storage (AWS_BUCKET, i.e. Cloudflare R2
   # in production) the seeder copies the forty tracks once into the bucket under demo/showcase/ and the
@@ -63,7 +63,7 @@ module SyntheticQa
       raise Error, "#{url} is not a ccMixter HTTPS link." unless uri.is_a?(URI::HTTPS) && uri.host == "ccmixter.org"
 
       response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 60) do |http|
-        http.request(Net::HTTP::Get.new(uri, "Referer" => REFERER, "User-Agent" => "Verse demo seeder"))
+        http.request(Net::HTTP::Get.new(uri, "Referer" => REFERER, "User-Agent" => "MusiLynk demo seeder"))
       end
       raise Error, "ccMixter answered #{response.code} for #{url}." unless response.is_a?(Net::HTTPSuccess)
 

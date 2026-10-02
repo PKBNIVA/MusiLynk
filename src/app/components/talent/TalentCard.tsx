@@ -67,7 +67,7 @@ export function TalentCard({ person: c, index, to, aside, footer }: Props) {
       data-list-item={index}
       data-testid="talent-card"
       tabIndex={-1}
-      className="verse-lift relative h-full min-w-0 border-white/10 bg-white/[.055] hover:bg-white/[.075] focus-within:ring-2 focus-within:ring-violet-400"
+      className="musilynk-lift relative h-full min-w-0 border-white/10 bg-white/[.055] hover:bg-white/[.075] focus-within:ring-2 focus-within:ring-violet-400"
     >
       <CardContent className="flex h-full flex-col p-5">
         <div className="flex items-start gap-3">

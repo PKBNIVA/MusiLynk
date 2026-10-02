@@ -26,7 +26,7 @@ module ActInvites
 
   # Returns [invite, raw_token]. `invitee` is a User for kind "user"; `email` a String for kind "email".
   def create!(act:, inviter:, kind:, role_name:, instrument: nil, invitee: nil, email: nil)
-    raise Refused.new("Choose how to invite: a Verse musician, an email address or a link.", :unprocessable_content, "VALIDATION_FAILED") unless ActInvite::KINDS.include?(kind)
+    raise Refused.new("Choose how to invite: a MusiLynk musician, an email address or a link.", :unprocessable_content, "VALIDATION_FAILED") unless ActInvite::KINDS.include?(kind)
     if kind == "email" && !inviter.email_verified?
       raise Refused.new("Verify your email address before inviting people by email.", :forbidden, "EMAIL_NOT_VERIFIED")
     end
@@ -82,7 +82,7 @@ module ActInvites
     end
   end
 
-  # An existing, deliverable Verse musician hears in the app and by notification email (no token in the job
+  # An existing, deliverable MusiLynk musician hears in the app and by notification email (no token in the job
   # row); anyone else gets the sealed link email.
   def deliver!(invite, token)
     return if invite.kind == "link"

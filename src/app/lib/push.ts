@@ -48,7 +48,7 @@ async function registration() {
   return existing ?? navigator.serviceWorker.register('/sw.js', { scope: '/' });
 }
 
-/** True when this browser already has a push subscription for Verse. */
+/** True when this browser already has a push subscription for MusiLynk. */
 export async function isSubscribedHere(): Promise<boolean> {
   if (!hasPushApis()) return false;
   try {

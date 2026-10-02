@@ -1,4 +1,4 @@
-class CreateVerseSchema < ActiveRecord::Migration[7.2]
+class CreateMusilynkSchema < ActiveRecord::Migration[7.2]
   def change
     enable_extension "pgcrypto"
     enable_extension "citext"

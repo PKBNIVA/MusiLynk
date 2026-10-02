@@ -12,7 +12,7 @@ const draftJob = {
   id: 'job-draft',
   employer_id: 'qa-employer',
   title: 'Session guitarist',
-  company: 'Verse Studio',
+  company: 'MusiLynk Studio',
   location: '',
   kind: 'Contract',
   type: 'Contract',

@@ -1,6 +1,6 @@
-# Verse Rails API
+# MusiLynk Rails API
 
-Ruby on Rails API for the Verse marketplace. PostgreSQL is the system of record and Active Storage provides direct uploads to any S3-compatible object store.
+Ruby on Rails API for the MusiLynk marketplace. PostgreSQL is the system of record and Active Storage provides direct uploads to any S3-compatible object store.
 
 ## Local setup
 

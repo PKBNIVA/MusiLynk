@@ -275,7 +275,7 @@ export default function Bookings() {
       cancelled: [
         b.status === 'accepted' ? 'Cancel this booking?' : 'Cancel this enquiry?',
         b.depositPaid
-          ? `Your deposit is handled under Verse's cancellation policy: ${b.bookingPolicy?.plainEnglish.slice(1, 4).join(' ') || "the act's cancellation terms."} This cannot be undone.`
+          ? `Your deposit is handled under MusiLynk's cancellation policy: ${b.bookingPolicy?.plainEnglish.slice(1, 4).join(' ') || "the act's cancellation terms."} This cannot be undone.`
           : 'The act is notified and the enquiry closes. This cannot be undone.',
         b.status === 'accepted' ? 'Cancel booking' : 'Cancel enquiry',
         true,
@@ -301,13 +301,13 @@ export default function Bookings() {
               ? noShow === 'musician'
                 ? 'The deposit is fully refunded and the platform fee is waived, per the cancellation policy.'
                 : 'The deposit is kept, per the cancellation policy.'
-              : 'The booking moves to dispute so the Verse team can review it.',
+              : 'The booking moves to dispute so the MusiLynk team can review it.',
             noShow === 'musician' ? 'Report musician no-show' : 'Report hirer no-show',
             true,
           ]
         : [
             'Report a problem with this booking?',
-            'The booking moves to dispute so the Verse team can review it.',
+            'The booking moves to dispute so the MusiLynk team can review it.',
             'Report problem',
             true,
           ],
@@ -406,7 +406,7 @@ export default function Bookings() {
                         {hint && <p className="text-sm text-violet-200 mt-2">{hint}</p>}
                         {b.status === 'accepted' && (
                           <p className="text-xs text-slate-500 mt-2">
-                            If the act cancels, tell us and we'll help you find a replacement through Verse's{' '}
+                            If the act cancels, tell us and we'll help you find a replacement through MusiLynk's{' '}
                             <Link to="/urgent" className="text-violet-300 underline">
                               urgent requests
                             </Link>

@@ -393,7 +393,7 @@ export default function JobDetails() {
                   <b className="text-slate-400">Trust note:</b>{' '}
                   {asSeeker
                     ? 'Never pay an application/audition fee through private channels. Use Report if the terms change materially or feel unsafe.'
-                    : 'Only publish terms your organization is prepared to honor, and keep applicant communication on Verse.'}
+                    : 'Only publish terms your organization is prepared to honor, and keep applicant communication on MusiLynk.'}
                 </div>
               </CardContent>
             </Card>

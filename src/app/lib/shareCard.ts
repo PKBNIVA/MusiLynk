@@ -8,7 +8,7 @@ export const CARD_SIZES = {
 
 export type CardVariant = keyof typeof CARD_SIZES;
 
-export const cardFilename = (slug: string) => `verse-verified-${slug.replace(/[^A-Za-z0-9_-]/g, '-')}.png`;
+export const cardFilename = (slug: string) => `musilynk-verified-${slug.replace(/[^A-Za-z0-9_-]/g, '-')}.png`;
 
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -44,7 +44,7 @@ export async function rasteriseCard(svgUrl: string, variant: CardVariant): Promi
 
 const isIos = () => /iP(hone|ad|od)/.test(navigator.userAgent);
 
-/** Rasterises and downloads `verse-verified-<slug>.png`; on iOS opens it in a new tab instead. */
+/** Rasterises and downloads `musilynk-verified-<slug>.png`; on iOS opens it in a new tab instead. */
 export async function downloadCardPng(
   svgUrl: string,
   variant: CardVariant,

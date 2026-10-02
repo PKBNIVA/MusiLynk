@@ -1,6 +1,6 @@
 # Performance
 
-How Verse keeps pages fast, how to see when they are not, and the latest load-test numbers.
+How MusiLynk keeps pages fast, how to see when they are not, and the latest load-test numbers.
 
 ## Guardrails at a glance
 
@@ -100,7 +100,7 @@ documentation-range IP addresses so the per-IP search limit does not skew the nu
 # 1. A production-mode API on a scratch database with a realistic volume of demo data
 cd backend
 export RAILS_ENV=production SECRET_KEY_BASE=local-only ALLOWED_ORIGINS=http://localhost \
-       DATABASE_URL=postgres://postgres:postgres@localhost:5432/verse_perf_load
+       DATABASE_URL=postgres://postgres:postgres@localhost:5432/musilynk_perf_load
 bin/rails db:prepare
 RAILS_ENV=development bin/rails synthetic_qa:seed BATCH=demo-load JOBSEEKERS=1000 EMPLOYERS=300 \
   SYNTHETIC_QA_PASSWORD='LoadTestPass123!'

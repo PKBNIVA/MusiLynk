@@ -48,7 +48,7 @@ async function mockApi(
       return json({
         job: {
           id: 'job-1',
-          company: 'Verse Studio',
+          company: 'MusiLynk Studio',
           location: 'Mumbai',
           kind: 'Contract',
           skills: [],

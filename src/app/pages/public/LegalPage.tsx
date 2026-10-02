@@ -44,25 +44,25 @@ const EFFECTIVE_DATE = '25 September 2026';
 
 const sections: Record<string, { title: string; intro: string; items: [string, string][] }> = {
   about: {
-    title: 'About Verse',
+    title: 'About MusiLynk',
     intro:
-      'Verse is an operating network for the music industry: careers, hiring, band building, talent discovery, live-act booking and music-production staffing.',
+      'MusiLynk is an operating network for the music industry: careers, hiring, band building, talent discovery, live-act booking and music-production staffing.',
     items: [
       [
-        'What Verse does',
-        'Verse helps musicians show proof of work, discover opportunities, build teams, book talent and manage working relationships without forcing every use case into a generic job board.',
+        'What MusiLynk does',
+        'MusiLynk helps musicians show proof of work, discover opportunities, build teams, book talent and manage working relationships without forcing every use case into a generic job board.',
       ],
       [
         'Who it is for',
         'Performers, composers, producers, engineers, touring crews, managers, labels, studios, agencies, venues, festivals, production companies and other legitimate music-industry participants.',
       ],
-      ['Operator', 'Verse is operated by Alien Brains Private Limited.'],
+      ['Operator', 'MusiLynk is operated by Alien Brains Private Limited.'],
     ],
   },
   terms: {
     title: 'Terms of Use',
     intro:
-      'These terms govern access to and use of Verse. By creating an account or using the service, you agree to follow them.',
+      'These terms govern access to and use of MusiLynk. By creating an account or using the service, you agree to follow them.',
     items: [
       [
         'Accounts and identity',
@@ -74,7 +74,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Bookings and payments',
-        'A booking is confirmed only when its status in Verse says so. Quotes, deposits, balances, cancellation terms and refund rules remain part of the booking record.',
+        'A booking is confirmed only when its status in MusiLynk says so. Quotes, deposits, balances, cancellation terms and refund rules remain part of the booking record.',
       ],
       [
         'Content and rights',
@@ -82,7 +82,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Platform enforcement',
-        'Verse may moderate, restrict, suspend or remove accounts or content that create safety, fraud, payment, abuse or legal risks.',
+        'MusiLynk may moderate, restrict, suspend or remove accounts or content that create safety, fraud, payment, abuse or legal risks.',
       ],
       ['Questions', `Questions about these terms can be sent to ${SUPPORT_EMAIL}.`],
     ],
@@ -90,7 +90,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
   privacy: {
     title: 'Privacy Policy',
     intro:
-      'Verse processes account and marketplace information needed to provide profiles, hiring, booking, communication, billing, trust and safety functions.',
+      'MusiLynk processes account and marketplace information needed to provide profiles, hiring, booking, communication, billing, trust and safety functions.',
     items: [
       [
         'Data we process',
@@ -110,18 +110,18 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Retention and other requests',
-        `Payment and invoice records are kept for as long as Indian tax and company law requires, even after an account is deleted. Other records are kept only while needed to operate Verse, resolve disputes and prevent abuse. To correct data, or for any request the account page does not cover, email ${SUPPORT_EMAIL}.`,
+        `Payment and invoice records are kept for as long as Indian tax and company law requires, even after an account is deleted. Other records are kept only while needed to operate MusiLynk, resolve disputes and prevent abuse. To correct data, or for any request the account page does not cover, email ${SUPPORT_EMAIL}.`,
       ],
       [
         'Service providers',
-        'Hosting, email, storage, analytics and payment providers may process limited data for Verse under their own security and contractual controls.',
+        'Hosting, email, storage, analytics and payment providers may process limited data for MusiLynk under their own security and contractual controls.',
       ],
     ],
   },
   safety: {
     title: 'Trust & Safety',
     intro:
-      'Music work often moves quickly and informally. Verse is designed to make important terms more explicit and reportable.',
+      'Music work often moves quickly and informally. MusiLynk is designed to make important terms more explicit and reportable.',
     items: [
       [
         'Avoid application fees',
@@ -143,11 +143,11 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
   },
   cookies: {
     title: 'Browser Storage & Session Notice',
-    intro: 'Verse uses essential browser storage to authenticate accounts and remember product preferences.',
+    intro: 'MusiLynk uses essential browser storage to authenticate accounts and remember product preferences.',
     items: [
       [
         'Authenticated sessions',
-        'After sign-in, Verse stores an access credential in your browser’s local storage and sends it to the Verse API over HTTPS, so you stay signed in across tabs and browser restarts until the session expires (at most 30 days). Signing out removes it from every open Verse tab.',
+        'After sign-in, MusiLynk stores an access credential in your browser’s local storage and sends it to the MusiLynk API over HTTPS, so you stay signed in across tabs and browser restarts until the session expires (at most 30 days). Signing out removes it from every open MusiLynk tab.',
       ],
       [
         'Local preferences',
@@ -155,7 +155,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Optional analytics',
-        'Verse will disclose and, where required, request consent before enabling non-essential analytics or advertising storage.',
+        'MusiLynk will disclose and, where required, request consent before enabling non-essential analytics or advertising storage.',
       ],
     ],
   },
@@ -173,13 +173,14 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Disputes',
-        `Verse does not promise escrow or guaranteed refunds unless that protection is explicitly shown during checkout. For a payment or cancellation issue, contact ${SUPPORT_EMAIL} with the relevant booking or transaction reference.`,
+        `MusiLynk does not promise escrow or guaranteed refunds unless that protection is explicitly shown during checkout. For a payment or cancellation issue, contact ${SUPPORT_EMAIL} with the relevant booking or transaction reference.`,
       ],
     ],
   },
   community: {
     title: 'Community conduct',
-    intro: 'Verse is a marketplace. Treat other participants as collaborators and counterparties, not content targets.',
+    intro:
+      'MusiLynk is a marketplace. Treat other participants as collaborators and counterparties, not content targets.',
     items: [
       ['Respect', 'No harassment, threats, hate, sexual solicitation, spam or repeated unwanted contact.'],
       [
@@ -188,7 +189,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'No scams or fee requests',
-        'Never ask talent to pay to be considered: no “registration”, audition, portfolio, joining or security fees and no “advance” from the person being hired. Do not share UPI IDs or bank details to collect such money, and do not push people to WhatsApp or Telegram before terms are agreed. Verse flags these patterns in messages and moderators act on reports.',
+        'Never ask talent to pay to be considered: no “registration”, audition, portfolio, joining or security fees and no “advance” from the person being hired. Do not share UPI IDs or bank details to collect such money, and do not push people to WhatsApp or Telegram before terms are agreed. MusiLynk flags these patterns in messages and moderators act on reports.',
       ],
       [
         'Be honest',
@@ -207,7 +208,7 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
   accessibility: {
     title: 'Accessibility',
     intro:
-      'Verse aims to make core hiring, booking and profile workflows usable with keyboards, different screen sizes and assistive technologies.',
+      'MusiLynk aims to make core hiring, booking and profile workflows usable with keyboards, different screen sizes and assistive technologies.',
     items: [
       [
         'Product approach',
@@ -215,22 +216,22 @@ const sections: Record<string, { title: string; intro: string; items: [string, s
       ],
       [
         'Accessibility support',
-        `If you encounter an accessibility barrier, email ${SUPPORT_EMAIL}. Describe the screen and task, and Verse support will provide an alternate route where possible and record the issue for remediation.`,
+        `If you encounter an accessibility barrier, email ${SUPPORT_EMAIL}. Describe the screen and task, and MusiLynk support will provide an alternate route where possible and record the issue for remediation.`,
       ],
     ],
   },
   contact: {
     title: 'Contact & Grievance Support',
-    intro: 'Contact Verse for account, booking, billing, safety, privacy and accessibility support.',
+    intro: 'Contact MusiLynk for account, booking, billing, safety, privacy and accessibility support.',
     items: [
-      ['Operator', 'Verse is operated by Alien Brains Private Limited.'],
+      ['Operator', 'MusiLynk is operated by Alien Brains Private Limited.'],
       [
         'Support and grievances',
         `Email ${SUPPORT_EMAIL}. Include your account email and any relevant opportunity, booking or transaction reference, but never send a password, one-time code or full payment-card details.`,
       ],
       [
         'Response and escalation',
-        'Verse will acknowledge the request and route it to the appropriate account, safety, privacy or billing owner. Urgent safety reports should be clearly marked “Urgent safety” in the subject line.',
+        'MusiLynk will acknowledge the request and route it to the appropriate account, safety, privacy or billing owner. Urgent safety reports should be clearly marked “Urgent safety” in the subject line.',
       ],
     ],
   },
@@ -268,7 +269,7 @@ function dynamicItems(key: string, policy: LegalPolicy | null): [string, string]
     return [
       [
         'Data Protection (DPDP Act, 2023) — Draft, pending legal review',
-        'What we collect: account and contact details, musician profile and portfolio data, booking and payment records, and device/session logs. Purpose: to provide the service, process bookings and payments, prevent abuse and meet legal obligations. Consent: creating an account and using booking/payment features is your consent to this processing for those purposes; where a feature asks for separate consent (e.g. optional analytics), it is requested there. Withdrawal: you can withdraw consent for optional processing at any time from account settings, and delete your account entirely (see "Your data and your account" above) — Verse then deletes what the law allows it to delete and keeps only what tax and company law requires.',
+        'What we collect: account and contact details, musician profile and portfolio data, booking and payment records, and device/session logs. Purpose: to provide the service, process bookings and payments, prevent abuse and meet legal obligations. Consent: creating an account and using booking/payment features is your consent to this processing for those purposes; where a feature asks for separate consent (e.g. optional analytics), it is requested there. Withdrawal: you can withdraw consent for optional processing at any time from account settings, and delete your account entirely (see "Your data and your account" above) — MusiLynk then deletes what the law allows it to delete and keeps only what tax and company law requires.',
       ],
       grievanceOfficerItem(policy.legal),
     ];
@@ -277,7 +278,7 @@ function dynamicItems(key: string, policy: LegalPolicy | null): [string, string]
     return [
       [
         'Booking fee, cancellation & no-shows — Draft, pending legal review',
-        `${policy.booking.plainEnglish.join(' ')} (Policy version ${policy.booking.policyVersion}.) These rules are generated from Verse's live configuration, so they always match what the booking flow actually charges and refunds.`,
+        `${policy.booking.plainEnglish.join(' ')} (Policy version ${policy.booking.policyVersion}.) These rules are generated from MusiLynk's live configuration, so they always match what the booking flow actually charges and refunds.`,
       ],
     ];
   }
@@ -320,7 +321,7 @@ export default function LegalPage() {
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />
       <main className="max-w-5xl mx-auto px-5 py-10 md:py-14">
-        <PhotoHeader photo={PHOTOS[key] ?? 'sarod-mumbai'} eyebrow="Verse information" title={content.title}>
+        <PhotoHeader photo={PHOTOS[key] ?? 'sarod-mumbai'} eyebrow="MusiLynk information" title={content.title}>
           <p className="text-lg leading-8">{content.intro}</p>
         </PhotoHeader>
         <div className="mt-9 lg:grid lg:grid-cols-[13rem_1fr] lg:gap-10">
@@ -351,7 +352,7 @@ export default function LegalPage() {
                     className="inline-block mt-3 text-violet-300 hover:text-violet-200 underline underline-offset-4"
                     href={`mailto:${SUPPORT_EMAIL}`}
                   >
-                    Email Verse support
+                    Email MusiLynk support
                   </a>
                 )}
               </section>

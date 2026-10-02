@@ -19,13 +19,13 @@ default: &default
     # Services Accounting Code printed on each line. 998314 is the usual choice for a software
     # platform subscription; the CA confirms it.
     sac_code: "998314"
-    # false = Verse is not GST-registered yet: every document is a "Bill of supply" with no GST.
+    # false = MusiLynk is not GST-registered yet: every document is a "Bill of supply" with no GST.
     gst_registered: true
     # true = plan prices already include 18% GST (the taxable value is backed out of the amount
     # charged). false = prices are before GST; Razorpay plan amounts must then hold the GST-added
     # price, because the invoice always splits what was actually collected.
     prices_include_gst: true
-    invoice_prefix: "VRS"
+    invoice_prefix: "MLK"
 
   # DPDP Act, 2023 grievance officer. Shown on the Privacy Policy page.
   grievance_officer:

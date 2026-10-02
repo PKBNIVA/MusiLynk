@@ -28,15 +28,15 @@ const clip = (value: string, max: number) => (value.length > max ? `${value.slic
 export const shareCopy = {
   professional: (name: string, headline: string | null | undefined, url: string, own: boolean) =>
     own
-      ? `Here is my profile on Verse. See my work and rates, and book or message me directly: ${url}`
-      : `Check out ${clip(name, 60)}${headline ? ` (${clip(headline, 60)})` : ''} on Verse. Do have a look at the work and rates: ${url}`,
+      ? `Here is my profile on MusiLynk. See my work and rates, and book or message me directly: ${url}`
+      : `Check out ${clip(name, 60)}${headline ? ` (${clip(headline, 60)})` : ''} on MusiLynk. Do have a look at the work and rates: ${url}`,
   opportunity: (title: string, company: string | null | undefined, place: string | null | undefined, url: string) =>
-    `${clip(title, 80)}${company ? ` at ${clip(company, 50)}` : ''}${place ? `, ${clip(place, 40)}` : ''}. Interested musicians can apply on Verse: ${url}`,
-  act: (name: string, url: string) => `${clip(name, 80)} is on Verse. See the lineup and request a quote: ${url}`,
+    `${clip(title, 80)}${company ? ` at ${clip(company, 50)}` : ''}${place ? `, ${clip(place, 40)}` : ''}. Interested musicians can apply on MusiLynk: ${url}`,
+  act: (name: string, url: string) => `${clip(name, 80)} is on MusiLynk. See the lineup and request a quote: ${url}`,
   hirerOpportunity: (title: string, place: string | null | undefined, url: string) =>
-    `We are hiring on Verse: ${clip(title, 80)}${place ? `, ${clip(place, 40)}` : ''}. Please apply, or forward this to musicians you know: ${url}`,
+    `We are hiring on MusiLynk: ${clip(title, 80)}${place ? `, ${clip(place, 40)}` : ''}. Please apply, or forward this to musicians you know: ${url}`,
   // Deliberately no fee, phone number, email or street address: just enough for the other side
   // to recognise the booking, plus a link that needs a sign-in.
   booking: (act: string, date: string, city: string | null | undefined, url: string) =>
-    `Booking confirmed on Verse: ${clip(act, 60)}, ${date}${city ? `, ${clip(city, 40)}` : ''}. Sign in to see the details: ${url}`,
+    `Booking confirmed on MusiLynk: ${clip(act, 60)}, ${date}${city ? `, ${clip(city, 40)}` : ''}. Sign in to see the details: ${url}`,
 };

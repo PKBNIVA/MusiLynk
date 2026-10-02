@@ -4,7 +4,7 @@
 #
 #   DATABASE_URL=postgres://... BACKUP_PASSPHRASE=... scripts/db/backup.sh OUT_DIR
 #
-# Writes OUT_DIR/verse-<UTC timestamp>.dump.gpg, .dump.sha256 and .manifest.tsv.
+# Writes OUT_DIR/musilynk-<UTC timestamp>.dump.gpg, .dump.sha256 and .manifest.tsv.
 # The plaintext dump is deleted once it is encrypted.
 set -euo pipefail
 
@@ -14,7 +14,7 @@ out_dir=${1:?usage: backup.sh OUT_DIR}
 
 mkdir -p "$out_dir"
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
-base="$out_dir/verse-$stamp"
+base="$out_dir/musilynk-$stamp"
 
 server_version=$(psql "$DATABASE_URL" -XAtc "show server_version")
 echo "Source server: PostgreSQL $server_version; pg_dump: $(pg_dump --version)"

@@ -168,8 +168,8 @@ function ReferralCard() {
         <div>
           <h2 className="font-semibold">Your referral code</h2>
           <p className="text-sm text-slate-300 mt-1">
-            Friends who hire on Verse get {referral.refereePercentOff ?? 20}% off with your code, and you earn free days
-            when they pay.
+            Friends who hire on MusiLynk get {referral.refereePercentOff ?? 20}% off with your code, and you earn free
+            days when they pay.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <code

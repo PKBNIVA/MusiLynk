@@ -1,4 +1,4 @@
-// Self-hosted funnel analytics. No third-party analytics: every event goes to Verse's own
+// Self-hosted funnel analytics. No third-party analytics: every event goes to MusiLynk's own
 // POST /api/events (EventsController), which only stores allow-listed event names.
 //
 // track(name, props) queues an event and flushes the queue every FLUSH_INTERVAL_MS or when the

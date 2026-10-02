@@ -38,7 +38,7 @@ class ErrorAlertingTest < ActionDispatch::IntegrationTest
 
       payload = sentry_payloads.last
       assert_equal "Admin::HealthController::SentryTestError", payload.dig("exception", "values", 0, "type")
-      assert_equal "true", payload.dig("tags", "verse_test")
+      assert_equal "true", payload.dig("tags", "musilynk_test")
       assert_equal({ "id" => @admin.id, "role" => "admin" }, payload["user"])
       assert_no_match(/alert-admin@example\.com|#{Regexp.escape(@admin_token)}/, payload.to_json)
       assert_equal({ "captured" => true }, AuditLog.find_by!(action: "admin.sentry_test").metadata)

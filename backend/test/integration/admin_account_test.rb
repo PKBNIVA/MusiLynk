@@ -13,7 +13,7 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
   setup do
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
-    @admin = User.create!(name: "Owner Admin", email: "admin@verse.local", password: PASSWORD, role: "admin", status: "active")
+    @admin = User.create!(name: "Owner Admin", email: "admin@musilynk.local", password: PASSWORD, role: "admin", status: "active")
     @other_admin = User.create!(name: "Second Admin", email: "second-admin@example.com", password: PASSWORD, role: "admin", status: "active")
     @member = User.create!(name: "Plain Member", email: "member@example.com", password: PASSWORD, role: "employer", status: "active")
     @token = session_for(@admin)
@@ -27,7 +27,7 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
   test "the account view reports the address, its deliverability, the second step and the origin lock" do
     with_env(PROVIDER_ENV) { get "/api/admin/account", headers: bearer(@token) }
     assert_response :success
-    assert_equal({ "email" => "admin@verse.local", "emailDeliverable" => false, "secondFactor" => "skipped", "adminOrigin" => false }, response.parsed_body)
+    assert_equal({ "email" => "admin@musilynk.local", "emailDeliverable" => false, "secondFactor" => "skipped", "adminOrigin" => false }, response.parsed_body)
 
     with_env(PROVIDER_ENV.merge("ADMIN_ORIGIN" => "https://admin.example.com")) do
       get "/api/admin/account", headers: bearer(session_for(@other_admin)).merge("Origin" => "https://admin.example.com")
@@ -55,7 +55,7 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
     end
     assert_equal %w[changeToken expiresIn message], challenge.keys.sort
     assert_equal 600, challenge["expiresIn"]
-    assert_equal "admin@verse.local", @admin.reload.email, "nothing changes until the code is entered"
+    assert_equal "admin@musilynk.local", @admin.reload.email, "nothing changes until the code is entered"
     requested = AuditLog.where(action: "admin.account.email_requested").sole
     assert_equal [@admin.id, @admin.id, { "email" => "owner@example.com" }], [requested.actor_id, requested.entity_id, requested.metadata]
 
@@ -81,7 +81,7 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
     assert_equal "owner@example.com", @admin.reload.email
     assert @admin.email_verified?
     changed = AuditLog.where(action: "admin.account.email_changed").sole
-    assert_equal({ "from" => "admin@verse.local", "to" => "owner@example.com" }, changed.metadata)
+    assert_equal({ "from" => "admin@musilynk.local", "to" => "owner@example.com" }, changed.metadata)
     assert_equal @admin.id, changed.actor_id
 
     get "/api/me", headers: bearer(@token)
@@ -133,12 +133,12 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
         EmailDelivery.call(to: "a@example.com", template: "admin_email_change", data: { code: "042917" })
         EmailDelivery.call(to: "a@example.com", template: "admin_email_changed", data: { detail: "new@example.com" })
       end
-      change = bodies.fetch("Confirm your new Verse admin email")
+      change = bodies.fetch("Confirm your new MusiLynk admin email")
       assert_includes change["textContent"], "042917"
       assert_includes change["htmlContent"], "042917"
       assert_includes change["htmlContent"], "change your admin password now"
       assert_not_includes change["htmlContent"], "href="
-      notice = bodies.fetch("Your Verse admin email was changed")
+      notice = bodies.fetch("Your MusiLynk admin email was changed")
       assert_includes notice["textContent"], "new@example.com"
       assert_includes notice["htmlContent"], "new@example.com"
       assert_includes notice["htmlContent"], "change your password"
@@ -150,10 +150,10 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
   test "reserved, suppressed, taken, unchanged and malformed addresses are refused and send nothing" do
     EmailSuppression.create!(email: "bounced@example.com", scope: "all", reason: "hard_bounce", last_event: "hard_bounce", last_event_at: Time.current, suppressed_at: Time.current)
     refusals = {
-      "root@verse.local" => [422, "EMAIL_UNDELIVERABLE"], "qa@example.invalid" => [422, "EMAIL_UNDELIVERABLE"],
+      "root@musilynk.local" => [422, "EMAIL_UNDELIVERABLE"], "qa@example.invalid" => [422, "EMAIL_UNDELIVERABLE"],
       "bounced@example.com" => [422, "EMAIL_SUPPRESSED"],
       "member@example.com" => [409, "EMAIL_TAKEN"], "Second-Admin@example.com" => [409, "EMAIL_TAKEN"],
-      "admin@verse.local" => [422, "EMAIL_UNCHANGED"],
+      "admin@musilynk.local" => [422, "EMAIL_UNCHANGED"],
       "not-an-email" => [422, "INVALID_EMAIL"], "" => [422, "INVALID_EMAIL"], "#{'a' * 250}@example.com" => [422, "INVALID_EMAIL"]
     }
     with_env(PROVIDER_ENV) do
@@ -195,7 +195,7 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
     end
     confirm(token, code)
     assert_response :unprocessable_content, "the right code no longer works once attempts are spent"
-    assert_equal "admin@verse.local", @admin.reload.email
+    assert_equal "admin@musilynk.local", @admin.reload.email
     assert_equal 3, @admin.sessions.count, "a failed change signs nobody out"
 
     Rails.cache.clear
@@ -233,7 +233,7 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_content
       assert_equal "EMAIL_CHANGE_EXPIRED", response.parsed_body["code"]
     end
-    assert_equal "admin@verse.local", @admin.reload.email
+    assert_equal "admin@musilynk.local", @admin.reload.email
   end
 
   test "an address taken between the request and the code is refused at confirmation" do
@@ -242,7 +242,7 @@ class AdminAccountTest < ActionDispatch::IntegrationTest
     confirm(token, code)
     assert_response :conflict
     assert_equal "EMAIL_TAKEN", response.parsed_body["code"]
-    assert_equal "admin@verse.local", @admin.reload.email
+    assert_equal "admin@musilynk.local", @admin.reload.email
   end
 
   test "production without an email provider refuses to start a change instead of promising a code" do

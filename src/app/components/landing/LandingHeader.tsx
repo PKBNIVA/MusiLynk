@@ -17,7 +17,7 @@ export function LandingHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070813]/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-        <Link to="/" aria-label="Verse home" className="inline-flex min-h-11 shrink-0 items-center rounded-xl">
+        <Link to="/" aria-label="MusiLynk home" className="inline-flex min-h-11 shrink-0 items-center rounded-xl">
           <BrandMark />
         </Link>
         <nav className="flex items-center gap-1" aria-label="Primary navigation">
@@ -53,7 +53,7 @@ export function LandingHeader() {
 export function LandingFooter() {
   useEffect(watchClientErrors, []);
   const links = [
-    ['How Verse works', '/guide'],
+    ['How MusiLynk works', '/guide'],
     ['Pricing', '/pricing'],
     ['Musician rates in Mumbai', '/rates/mumbai'],
     ['Safety', '/safety'],

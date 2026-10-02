@@ -55,7 +55,7 @@ export function HelpCallout({ id, title, steps }: { id: string; title: string; s
         <section
           aria-label={title}
           data-help-callout={id}
-          className="verse-help absolute right-0 top-full z-30 mt-2 hidden w-[min(92vw,52rem)] rounded-2xl border border-violet-400/20 bg-slate-950 p-5 shadow-2xl md:block md:p-6"
+          className="musilynk-help absolute right-0 top-full z-30 mt-2 hidden w-[min(92vw,52rem)] rounded-2xl border border-violet-400/20 bg-slate-950 p-5 shadow-2xl md:block md:p-6"
         >
           <div className="mb-4 flex items-start justify-between gap-3">
             <p className="flex items-center gap-2 font-semibold text-white">

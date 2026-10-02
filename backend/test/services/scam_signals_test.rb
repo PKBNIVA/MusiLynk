@@ -32,7 +32,7 @@ class ScamSignalsTest < ActiveSupport::TestCase
     "Advance payment ka kya scene hai? Hum 50% advance dete hain.",
     "I'll send the advance tomorrow once the contract is signed.",
     "Share your UPI and I'll transfer the advance tonight.",
-    "Let's keep chatting here on Verse.",
+    "Let's keep chatting here on MusiLynk.",
     "I'll share my WhatsApp after we finalise the date.",
     "Call me on the studio landline tomorrow.",
     "Call time is 9876 hours? No, 9 am sharp."

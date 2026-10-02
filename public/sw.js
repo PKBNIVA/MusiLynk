@@ -1,4 +1,4 @@
-/* Verse service worker: web push only. It has no fetch handler and caches nothing, so it can
+/* MusiLynk service worker: web push only. It has no fetch handler and caches nothing, so it can
  * never serve a stale page. Registered from the site root by src/app/lib/push.ts, and only
  * after someone opts in to alerts. */
 
@@ -22,7 +22,7 @@ self.addEventListener('push', (event) => {
   } catch {
     data = {};
   }
-  const title = typeof data.title === 'string' && data.title ? data.title : 'Verse';
+  const title = typeof data.title === 'string' && data.title ? data.title : 'MusiLynk';
   event.waitUntil(
     self.registration.showNotification(title, {
       body: typeof data.body === 'string' ? data.body : '',

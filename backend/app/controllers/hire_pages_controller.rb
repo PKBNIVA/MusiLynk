@@ -79,10 +79,10 @@ class HirePagesController < ApplicationController
     [
       { question: "How much does a session #{role} in #{city_name} charge?", answer: rate_answer(role, rates) },
       { question: "How fast can I book a #{role} in #{city_name}?",
-        answer: "Most urgent requests on Verse get a first response within hours. Posting an urgent request reaches every " \
+        answer: "Most urgent requests on MusiLynk get a first response within hours. Posting an urgent request reaches every " \
           "available #{role} in #{city_name} at once, instead of waiting on one message at a time." },
-      { question: "Are #{role}s on Verse in #{city_name} verified?",
-        answer: "Every profile shows real, reviewable work. A verified badge means Verse has confirmed that musician's " \
+      { question: "Are #{role}s on MusiLynk in #{city_name} verified?",
+        answer: "Every profile shows real, reviewable work. A verified badge means MusiLynk has confirmed that musician's " \
           "identity and track record — filter to verified #{role}s in #{city_name} to hire with more confidence." },
       { question: "What does it cost to hire a #{role} for a gig or event in #{city_name}?",
         answer: "Rates depend on the event, the musician's experience and how far ahead you book. See what verified and " \
@@ -94,10 +94,10 @@ class HirePagesController < ApplicationController
     if rates.hasData && rates.sessionRate
       low = rates.sessionRate[:p25].round
       high = rates.sessionRate[:p75].round
-      "Session #{role} rates reported on Verse typically run from #{format_inr(low)} to #{format_inr(high)} per session " \
-        "(based on #{rates.sessionRate[:n]} profiles). Rates vary by experience and event; ask for a quote through Verse."
+      "Session #{role} rates reported on MusiLynk typically run from #{format_inr(low)} to #{format_inr(high)} per session " \
+        "(based on #{rates.sessionRate[:n]} profiles). Rates vary by experience and event; ask for a quote through MusiLynk."
     else
-      "Rates vary by experience and event; ask for a quote through Verse."
+      "Rates vary by experience and event; ask for a quote through MusiLynk."
     end
   end
 

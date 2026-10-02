@@ -224,7 +224,7 @@ export interface EmployerApplication extends Application {
   jobTitle: string;
   candidateId: string;
   candidateName: string;
-  /** Being removed from the API: hirers contact applicants through Verse messages. Never render it. */
+  /** Being removed from the API: hirers contact applicants through MusiLynk messages. Never render it. */
   candidateEmail?: string;
   headline?: string | null;
   candidateLocation?: string | null;

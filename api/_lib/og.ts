@@ -92,7 +92,7 @@ export function professionalCard(id: string, person: Json): Card | null {
   return {
     kicker: clip(['Musician', location].filter(Boolean).join(' · '), 48),
     title: clip(name, 48),
-    subtitle: clip(str(person.headline) || roles.join(', ') || 'Music professional on Verse', 90),
+    subtitle: clip(str(person.headline) || roles.join(', ') || 'Music professional on MusiLynk', 90),
     chips: chips.slice(0, 3),
     seed: id,
     genres: [...genres, ...roles],
@@ -120,7 +120,7 @@ export function opportunityCard(id: string, job: Json): Card | null {
   return {
     kicker: clip(['Opportunity', kind].filter(Boolean).join(' · '), 48),
     title: clip(title, 70),
-    subtitle: clip(company || 'Hiring on Verse', 90),
+    subtitle: clip(company || 'Hiring on MusiLynk', 90),
     chips: [str(job.location), pay, job.employerVerified === true ? 'Verified hirer' : ''].filter(Boolean).slice(0, 3),
     seed: id,
     kind,
@@ -146,7 +146,7 @@ export function actCard(id: string, act: Json): Card | null {
   return {
     kicker: clip(['Live act', str(act.city)].filter(Boolean).join(' · '), 48),
     title: clip(name, 48),
-    subtitle: clip(str(act.tagline) || str(act.act_type) || 'Bookable on Verse', 90),
+    subtitle: clip(str(act.tagline) || str(act.act_type) || 'Bookable on MusiLynk', 90),
     chips: chips.slice(0, 3),
     seed: id,
     kind: str(act.act_type),
@@ -160,13 +160,13 @@ export function actCard(id: string, act: Json): Card | null {
 /** The card when there is nothing to show about: the site's own promise. */
 export function defaultCard(): Card {
   return {
-    kicker: 'Verse · Mumbai',
+    kicker: 'MusiLynk · Mumbai',
     title: 'Hire a verified musician for your session or gig',
     subtitle: 'Within 24 hours. Free to post; musicians never pay.',
-    chips: ['Verified by the Verse team', 'Reply within 2 hours'],
-    seed: 'verse',
+    chips: ['Verified by the MusiLynk team', 'Reply within 2 hours'],
+    seed: 'musilynk',
     genres: [],
-    monogram: 'V',
+    monogram: 'M',
     shape: 'square',
   };
 }
@@ -182,9 +182,9 @@ const h = (type: string, style: Record<string, unknown>, children?: unknown, ext
 const INK = '#070813';
 const FLEX = { display: 'flex' } as const;
 
-/** The V of public/verse-mark.svg on its dark tile, as a data URI Satori can draw. */
+/** public/musilynk-mark.svg (the "Signal M" tile), as a data URI Satori can draw. */
 const MARK_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0a0a0a"/><path d="M14 18l18 30 18-30" fill="none" stroke="#6747e8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset=".5" stop-color="#7c3aed"/><stop offset="1" stop-color="#c026d3"/></linearGradient></defs><g transform="translate(0 0) scale(1)"><rect width="100" height="100" rx="23" fill="url(#g1)"/><g transform="translate(50 50) scale(0.86) translate(-50 -50)"><path d="M15 72H22C28 72 30 22 36.5 22C43 22 44.5 58 50 58C55.5 58 57 31 63.5 31C70 31 72 72 78 72H85" fill="none" stroke="#fff" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="15" cy="72" r="9" fill="#f0abfc"/><circle cx="85" cy="72" r="9" fill="#f0abfc"/></g></g></svg>';
 const MARK_URI = `data:image/svg+xml;base64,${btoa(MARK_SVG)}`;
 
 function titleSize(title: string) {
@@ -327,7 +327,7 @@ export function cardTree(card: Card, photoDataUrl?: string): El {
         [
           h('div', { ...FLEX, alignItems: 'center', gap: 16 }, [
             h('img', { width: 52, height: 52, borderRadius: 12 }, undefined, { src: MARK_URI, width: 52, height: 52 }),
-            h('div', { ...FLEX, fontSize: 36 }, 'Verse'),
+            h('div', { ...FLEX, fontSize: 36 }, 'MusiLynk'),
           ]),
           h('div', { ...FLEX, flexDirection: 'column' }, [
             h(

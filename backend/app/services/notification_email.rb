@@ -19,7 +19,7 @@ class NotificationEmail
       heading: ->(_) { "Your booking was updated" },
       copy: ->(p) {
         base = "The booking for #{p['act']} is now #{p['status'].to_s.downcase.tr('_', ' ')}."
-        p["status"] == "accepted" ? "#{base} If the act cancels, tell us and we'll help you find a replacement through Verse's urgent requests." : base
+        p["status"] == "accepted" ? "#{base} If the act cancels, tell us and we'll help you find a replacement through MusiLynk's urgent requests." : base
       },
       action: "View bookings", path: "/bookings"
     },
@@ -30,7 +30,7 @@ class NotificationEmail
       action: "View applications", path: "/applications"
     },
     "new_message" => {
-      subject: ->(p) { "New message from #{p['name']} on Verse" },
+      subject: ->(p) { "New message from #{p['name']} on MusiLynk" },
       heading: ->(_) { "You have a new message" },
       copy: ->(p) { p["job"].present? ? "#{p['name']} sent you a message about #{p['job']}." : "#{p['name']} sent you a message." },
       action: "Read and reply", path: "/messages"
@@ -49,11 +49,11 @@ class NotificationEmail
     "early_access_granted" => {
       subject: ->(p) { "Your Early Access Pro is active until #{p['until']}" },
       heading: ->(_) { "Your Early Access Pro is active" },
-      copy: ->(p) { "No card needed. Pro features are unlocked on Verse until #{p['until']}. We'll email you 7 days and 1 day before it ends." },
+      copy: ->(p) { "No card needed. Pro features are unlocked on MusiLynk until #{p['until']}. We'll email you 7 days and 1 day before it ends." },
       action: "Open your billing page", path: "/billing"
     },
     "invoice_issued" => {
-      subject: ->(p) { "Your Verse #{p['kind'] || 'invoice'} #{p['number']}" },
+      subject: ->(p) { "Your MusiLynk #{p['kind'] || 'invoice'} #{p['number']}" },
       heading: ->(_) { "Your invoice is ready" },
       copy: ->(p) { "We received your payment of #{p['amount']}. Your #{p['kind'] || 'invoice'} #{p['number']} is ready to view, print or save as a PDF." },
       action: "View your invoice", path: "/billing"
@@ -67,7 +67,7 @@ class NotificationEmail
       action: "Manage your plan"
     },
     "plan_renewing_soon" => {
-      subject: ->(_) { "Your Verse plan renews in 3 days" },
+      subject: ->(_) { "Your MusiLynk plan renews in 3 days" },
       heading: ->(_) { "Your plan renews in 3 days" },
       copy: ->(p) do
         credit = p["creditDays"].to_i.positive? ? " Your #{p['creditDays']} bonus days from referrals are recorded on your account." : ""
@@ -78,7 +78,7 @@ class NotificationEmail
     "early_access_ending" => {
       subject: ->(p) { "Your Early Access Pro ends in #{p['days']}" },
       heading: ->(p) { "Your Early Access Pro ends in #{p['days']}" },
-      copy: ->(p) { "Your free run of Pro on Verse ends on #{p['endsOn']}. After that your account moves to the Free plan unless you subscribe." },
+      copy: ->(p) { "Your free run of Pro on MusiLynk ends on #{p['endsOn']}. After that your account moves to the Free plan unless you subscribe." },
       action: "Manage your plan"
     },
     "urgent_request_expiry_warning" => {
@@ -91,7 +91,7 @@ class NotificationEmail
     "urgent_request_expired" => {
       subject: ->(p) { "#{p['title']} has expired" },
       heading: ->(_) { "This request has expired" },
-      copy: ->(p) { "\"#{p['title']}\" has expired. The hirer did not confirm a booking through Verse." },
+      copy: ->(p) { "\"#{p['title']}\" has expired. The hirer did not confirm a booking through MusiLynk." },
       action: "See urgent requests", path: "/urgent"
     },
     "verification_more_proof" => {
@@ -110,16 +110,16 @@ class NotificationEmail
       subject: ->(p) { p["reminder"] == "true" ? "Still time to review #{p['name']}" : "How did it go with #{p['name']}?" },
       heading: ->(p) { p["reminder"] == "true" ? "A quick reminder" : (p["path"].to_s.include?("/reviews") ? "Leave a review" : "How did it go?") },
       # Only musicians have a review form; a hirer's link is their dashboard, so the button says so.
-      copy: ->(p) { p["path"].to_s.include?("/reviews") ? "Leave a quick review for #{p['name']}. It helps other musicians and hirers on Verse." : "Your work with #{p['name']} is done. Open your dashboard to see how it went and what to do next." },
+      copy: ->(p) { p["path"].to_s.include?("/reviews") ? "Leave a quick review for #{p['name']}. It helps other musicians and hirers on MusiLynk." : "Your work with #{p['name']} is done. Open your dashboard to see how it went and what to do next." },
       action: ->(p) { p["path"].to_s.include?("/reviews") ? "Write a review" : "Open your dashboard" }, path: "/reviews"
     },
     # PaymentsOpenEmails: one email to each member who ticked "Email me when payments open". Its
     # `path` is the full /pricing URL (it is the same page for musicians and hirers, so it must
     # not get a workspace prefix).
     "payments_open" => {
-      subject: ->(_) { "Payments are now open on Verse" },
-      heading: ->(_) { "Payments are now open on Verse" },
-      copy: ->(_) { "You asked us to tell you when payments open. You can now pay and get paid safely through Verse. See the plans and what each one costs." },
+      subject: ->(_) { "Payments are now open on MusiLynk" },
+      heading: ->(_) { "Payments are now open on MusiLynk" },
+      copy: ->(_) { "You asked us to tell you when payments open. You can now pay and get paid safely through MusiLynk. See the plans and what each one costs." },
       action: "See pricing"
     },
     "act_invite" => {
@@ -129,8 +129,8 @@ class NotificationEmail
       action: "See your invites", path: "/acts?tab=invites"
     },
     "verification_approved" => {
-      subject: ->(_) { "You're verified on Verse" },
-      heading: ->(_) { "You're verified on Verse" },
+      subject: ->(_) { "You're verified on MusiLynk" },
+      heading: ->(_) { "You're verified on MusiLynk" },
       copy: ->(_) { "Your profile now shows the Verified badge. Share your profile on Instagram or WhatsApp to reach more hirers." },
       action: "Share your badge", path: "/profile"
     }
@@ -171,7 +171,7 @@ class NotificationEmail
     secondary_text = links.map { |label, url| "#{label}: #{url}" }.join("\n")
     {
       subject:, html: html(heading:, copy:, action:, link:, unsubscribe: unsubscribe_page, links:),
-      text: ["Verse", heading, copy, "#{action}: #{link}", secondary_text.presence, "Turn off these emails: #{unsubscribe_page}"].compact.join("\n\n"),
+      text: [Brand::NAME, heading, copy, "#{action}: #{link}", secondary_text.presence, "Turn off these emails: #{unsubscribe_page}"].compact.join("\n\n"),
       headers: unsubscribe_headers(token, unsubscribe_page)
     }
   end
@@ -219,7 +219,7 @@ class NotificationEmail
     extra = links.map { |label, url| %(<a href="#{h.call(url)}" style="color:#a78bfa">#{h.call(label)}</a>) }.join(" · ")
     extra = %(<p style="margin:16px 0 0;font-size:14px">#{extra}</p>) if extra.present?
     <<~HTML.squish
-      #{EmailDelivery.head_html(copy)}<div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:26px;margin:28px 0 12px">#{h.call(heading)}</h1><p style="color:#cbd5e1;line-height:1.6">#{h.call(copy)}</p>#{EmailDelivery.button_html(action, link)}#{extra}<p style="margin-top:28px;color:#94a3b8;font-size:13px">You are receiving this because of activity on your Verse account. <a href="#{h.call(unsubscribe)}" style="color:#a78bfa">Turn off these emails</a>.</p></div></body></html>
+      #{EmailDelivery.head_html(copy)}<div style="max-width:560px;margin:0 auto;padding:40px 24px">#{EmailDelivery.brand_header_html}<h1 style="font-size:26px;margin:28px 0 12px">#{h.call(heading)}</h1><p style="color:#cbd5e1;line-height:1.6">#{h.call(copy)}</p>#{EmailDelivery.button_html(action, link)}#{extra}<p style="margin-top:28px;color:#94a3b8;font-size:13px">You are receiving this because of activity on your MusiLynk account. <a href="#{h.call(unsubscribe)}" style="color:#a78bfa">Turn off these emails</a>.</p></div></body></html>
     HTML
   end
 

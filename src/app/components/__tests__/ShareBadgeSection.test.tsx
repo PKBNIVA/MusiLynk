@@ -42,7 +42,7 @@ describe('ShareBadgeSection', () => {
     const whatsapp = Array.from(container.querySelectorAll('a')).find((a) =>
       a.href.includes('wa.me'),
     ) as HTMLAnchorElement;
-    expect(decodeURIComponent(whatsapp.href)).toContain("I'm verified on Verse");
+    expect(decodeURIComponent(whatsapp.href)).toContain("I'm verified on MusiLynk");
     act(() => whatsapp.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
     expect(trackMock).toHaveBeenCalledWith('share_whatsapp');
 

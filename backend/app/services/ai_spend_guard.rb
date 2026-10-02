@@ -2,7 +2,7 @@
 # credits. Checked before AiCredits.charge! and before any model call.
 #
 # - free_tier_monthly_budget_inr reached: free-tier usage (accounts with no paid plan and no
-#   Verse AI Plus) pauses with 402 AI_FREE_PAUSED; paid/plan credits keep working.
+#   MusiLynk AI Plus) pauses with 402 AI_FREE_PAUSED; paid/plan credits keep working.
 # - hard_monthly_budget_inr reached: everything stops except admin-initiated calls.
 #
 # Spend is read straight from ai_credit_ledgers.cost_inr for the current calendar month — the

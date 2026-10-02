@@ -34,7 +34,7 @@ export function initSentry(options: InitOptions) {
     dsn: options.dsn,
     release: options.release || undefined,
     environment: options.environment,
-    // No IP address or user agent inferred for the reporter on ingest (errors, metrics); Verse never sends either.
+    // No IP address or user agent inferred for the reporter on ingest (errors, metrics); MusiLynk never sends either.
     // Sentry 11 replaced sendDefaultPii with this.
     dataCollection: { userInfo: false },
     tracesSampleRate: options.tracesSampleRate,

@@ -29,7 +29,7 @@ describe('sanitizePageUrl', () => {
     expect(sanitizePageUrl('/join?vouch=vch_1&email=a%40b.in&ref=friend')).toBe('/join?ref=friend');
   });
 
-  it('replaces credential-looking path segments but keeps Verse record ids', () => {
+  it('replaces credential-looking path segments but keeps MusiLynk record ids', () => {
     expect(sanitizePageUrl(`/x/${'a1'.repeat(20)}/y`)).toBe('/x/:token/y');
     expect(sanitizePageUrl('/opportunities/job_0f8e6c1a-2b4d-4c7e-9a31-5d6e7f8a9b0c')).toBe(
       '/opportunities/job_0f8e6c1a-2b4d-4c7e-9a31-5d6e7f8a9b0c',
@@ -37,7 +37,7 @@ describe('sanitizePageUrl', () => {
   });
 
   it('never keeps a host', () => {
-    expect(sanitizePageUrl('https://verse.example/pricing?token=1')).toBe('/pricing');
+    expect(sanitizePageUrl('https://musilynk.example/pricing?token=1')).toBe('/pricing');
   });
 });
 
@@ -154,9 +154,9 @@ describe('collectContext', () => {
     expect(typeof context.os).toBe('string');
   });
   it('falls back to the global release marker', () => {
-    (window as Window & { __VERSE_RELEASE__?: string }).__VERSE_RELEASE__ = 'abc123';
+    (window as Window & { __MUSILYNK_RELEASE__?: string }).__MUSILYNK_RELEASE__ = 'abc123';
     expect(collectContext([]).release).toBeTruthy();
-    delete (window as Window & { __VERSE_RELEASE__?: string }).__VERSE_RELEASE__;
+    delete (window as Window & { __MUSILYNK_RELEASE__?: string }).__MUSILYNK_RELEASE__;
   });
 });
 

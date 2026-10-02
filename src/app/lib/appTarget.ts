@@ -12,7 +12,7 @@ export const signInPath = (role: string) => (IS_ADMIN_SITE ? '/' : `/auth/${role
 export const PROTECTED_AREA = IS_ADMIN_SITE ? /^\/(admin|account)(\/|$)/ : /^\/(jobseeker|employer|stage)(\/|$)/;
 
 /**
- * The public marketplace's own origin (VITE_PUBLIC_URL, e.g. https://verse.example.app), with any
+ * The public marketplace's own origin (VITE_PUBLIC_URL, e.g. https://musilynk.example.app), with any
  * trailing slash removed. The admin bundle never mounts the public routes, so anything that needs
  * to reach one — a link to a listing, a profile, an act — must build an absolute URL to this site
  * instead of a relative path. Empty on the public site itself (relative paths there), and empty if

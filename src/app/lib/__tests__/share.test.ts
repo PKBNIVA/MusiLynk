@@ -13,24 +13,24 @@ describe('share helpers', () => {
   it('builds professional copy for others and for the owner', () => {
     const long = 'N'.repeat(100);
     expect(shareCopy.professional('Asha', 'Sitarist', 'U', false)).toBe(
-      'Check out Asha (Sitarist) on Verse. Do have a look at the work and rates: U',
+      'Check out Asha (Sitarist) on MusiLynk. Do have a look at the work and rates: U',
     );
     expect(shareCopy.professional('Asha', null, 'U', false)).not.toContain('(');
     expect(shareCopy.professional(long, undefined, 'U', false)).toContain(`${'N'.repeat(59)}…`);
-    expect(shareCopy.professional('Asha', 'x', 'U', true)).toMatch(/^Here is my profile on Verse/);
+    expect(shareCopy.professional('Asha', 'x', 'U', true)).toMatch(/^Here is my profile on MusiLynk/);
   });
 
   it('builds opportunity and hirer copy with optional company and place', () => {
     expect(shareCopy.opportunity('Drummer', 'Blue Note', 'Pune', 'U')).toBe(
-      'Drummer at Blue Note, Pune. Interested musicians can apply on Verse: U',
+      'Drummer at Blue Note, Pune. Interested musicians can apply on MusiLynk: U',
     );
     expect(shareCopy.opportunity('Drummer', null, null, 'U')).toBe(
-      'Drummer. Interested musicians can apply on Verse: U',
+      'Drummer. Interested musicians can apply on MusiLynk: U',
     );
     expect(shareCopy.hirerOpportunity('Keys', 'Goa', 'U')).toContain('Keys, Goa.');
     expect(shareCopy.hirerOpportunity('Keys', null, 'U')).toContain('Keys.');
     expect(shareCopy.act('The Night Owls', 'U')).toBe(
-      'The Night Owls is on Verse. See the lineup and request a quote: U',
+      'The Night Owls is on MusiLynk. See the lineup and request a quote: U',
     );
   });
 
@@ -40,7 +40,7 @@ describe('share helpers', () => {
 
   it('leaves the city out of the booking text when unknown', () => {
     expect(shareCopy.booking('Act', '1 Jan', null, 'U')).toBe(
-      'Booking confirmed on Verse: Act, 1 Jan. Sign in to see the details: U',
+      'Booking confirmed on MusiLynk: Act, 1 Jan. Sign in to see the details: U',
     );
   });
 
@@ -61,7 +61,7 @@ describe('share helpers', () => {
   });
 
   it('keeps the booking message free of money and contact details', () => {
-    const text = shareCopy.booking('The Night Owls', '12 Nov 2026', 'Pune', 'https://verse.test/jobseeker/bookings');
+    const text = shareCopy.booking('The Night Owls', '12 Nov 2026', 'Pune', 'https://musilynk.test/jobseeker/bookings');
     expect(text).toContain('Pune');
     expect(text).not.toMatch(/₹|fee|@|\d{10}/);
   });

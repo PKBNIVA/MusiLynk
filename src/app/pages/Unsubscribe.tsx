@@ -31,7 +31,7 @@ type Preferences = Record<Category, boolean>;
  * the older "Turn off these emails" link in transactional emails. No sign-in required: the
  * signed token (same one NotificationEmail issues) names the account. */
 export default function Unsubscribe() {
-  usePageMeta('Unsubscribe', 'Turn off Verse notification emails.', { noindex: true });
+  usePageMeta('Unsubscribe', 'Turn off MusiLynk notification emails.', { noindex: true });
   const [search] = useSearchParams();
   const token = search.get('token') || '';
   const [state, setState] = useState<State>(token ? 'loading' : 'invalid');
@@ -109,7 +109,7 @@ export default function Unsubscribe() {
       <main className="max-w-lg mx-auto px-5 py-24">
         <div className="text-center">
           <MailX className="mx-auto text-violet-300" size={36} aria-hidden="true" />
-          <h1 className="text-3xl font-bold mt-4">Manage your Verse emails</h1>
+          <h1 className="text-3xl font-bold mt-4">Manage your MusiLynk emails</h1>
         </div>
         <div
           className="mt-4 text-slate-300 text-center"
@@ -130,7 +130,7 @@ export default function Unsubscribe() {
           <div className="mt-8 space-y-5">
             <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-800 p-4">
               <div>
-                <div className="font-semibold">All Verse emails</div>
+                <div className="font-semibold">All MusiLynk emails</div>
                 <div className="text-sm text-slate-400">
                   Turn this off to stop every category below. Sign-in codes, verification and security emails still
                   arrive.
@@ -140,7 +140,7 @@ export default function Unsubscribe() {
                 checked={master}
                 disabled={saving === 'master'}
                 onCheckedChange={(value) => void saveMaster(value)}
-                aria-label="All Verse emails"
+                aria-label="All MusiLynk emails"
                 data-testid="toggle-master"
               />
             </div>
@@ -166,7 +166,7 @@ export default function Unsubscribe() {
         )}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Button variant="outline" asChild>
-            <Link to="/auth/jobseeker">Sign in to Verse</Link>
+            <Link to="/auth/jobseeker">Sign in to MusiLynk</Link>
           </Button>
         </div>
       </main>

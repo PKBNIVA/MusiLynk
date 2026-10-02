@@ -12,7 +12,7 @@ module AiAssist::Tasks
   end
 
   COMMON_SYSTEM_PROMPT = <<~PROMPT.freeze
-    You are the writing assistant inside Verse, a professional network and hiring marketplace for
+    You are the writing assistant inside MusiLynk, a professional network and hiring marketplace for
     India's music industry (musicians, engineers, crew, studios, labels, venues and event
     companies). Write for that Indian market. Match the user's language when it is evident from
     the context provided; otherwise write in clear English. Use only the facts given in the
@@ -478,7 +478,7 @@ module AiAssist::Tasks
   # POST /api/ai/suggest: it is left out of PUBLIC_TASKS). Its own INR budget line lives in
   # config/ai_pricing.yml (`verification_summary_monthly_budget_inr`).
   VERIFICATION_SUMMARY_PROMPT = <<~PROMPT.squish.freeze
-    You write a short summary of verification evidence for a Verse admin deciding whether to
+    You write a short summary of verification evidence for a MusiLynk admin deciding whether to
     verify a musician. Use only the facts provided. Do not infer or invent. Reply in plain text:
     at most 3 short lines, factual, no markdown, no preamble.
   PROMPT

@@ -43,15 +43,15 @@ describe('share card rasterising', () => {
     expect([canvas.width, canvas.height]).toEqual([1200, 630]);
   });
 
-  it('downloads as verse-verified-<slug>.png', async () => {
+  it('downloads as musilynk-verified-<slug>.png', async () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     let name = '';
     click.mockImplementation(function (this: HTMLAnchorElement) {
       name = this.download;
     });
     await expect(downloadCardPng('/c.svg', 'story', 'user_1')).resolves.toBe('downloaded');
-    expect(name).toBe('verse-verified-user_1.png');
-    expect(cardFilename('a b/c')).toBe('verse-verified-a-b-c.png');
+    expect(name).toBe('musilynk-verified-user_1.png');
+    expect(cardFilename('a b/c')).toBe('musilynk-verified-a-b-c.png');
   });
 
   it('opens the PNG in a new tab on iOS', async () => {

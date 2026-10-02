@@ -195,7 +195,7 @@ describe('with a DSN', () => {
     const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });
     expect(await monitoring.sendClientTestError()).toBe('event-1');
     expect(sentry.captureError).toHaveBeenCalledWith(expect.any(Error), {
-      tags: { source: 'admin_sentry_test', verse_test: 'true' },
+      tags: { source: 'admin_sentry_test', musilynk_test: 'true' },
     });
     sentry.captureError.mockReturnValue('');
     expect(await monitoring.sendClientTestError()).toBeNull();

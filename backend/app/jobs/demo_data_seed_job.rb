@@ -1,6 +1,6 @@
 # Seeds one publicly visible demo batch (see SyntheticQa::Demo). Enqueued by
 # Admin::DemoDataController; progress is recorded through SyntheticQa::DemoJobs. The "showcase" size
-# builds the hand-written Verse showcase (SyntheticQa::Showcase, batch demo-showcase, idempotent);
+# builds the hand-written MusiLynk showcase (SyntheticQa::Showcase, batch demo-showcase, idempotent);
 # the other sizes build generated batches (SyntheticQa::BatchSeeder).
 class DemoDataSeedJob < ApplicationJob
   queue_as :default

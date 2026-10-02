@@ -10,7 +10,7 @@ module MailCatalog
   Email = Struct.new(:id, :template, :group, :recipient, :subject, :html, :text, :headers, keyword_init: true)
   Note = Struct.new(:id, :kind, :link, :recipient, :title, :body, :source, keyword_init: true)
 
-  FRONT = "https://verse.example"
+  FRONT = "https://musilynk.example"
 
   # Notification.create! calls that live in controllers. Each is listed with the link it writes
   # (the helper-built ones for both workspaces) so the link check covers them.
@@ -133,7 +133,7 @@ module MailCatalog
     Subscription.create!(user: @other_hirer, plan_code: "pro", provider: "razorpay", status: "active", interval: "annual", current_period_end: at.(3))
     Subscription.create!(user: @musician, plan_code: "pro", provider: "internal", status: "early_access", early_access: true, trial_ends_at: at.(7))
     capture_jobs { BillingRemindersJob.perform_now(today) }
-    invoice = TaxInvoice.create!(user: @hirer, subscription: Subscription.find_by(user: @hirer), invoice_number: "VRS/2026-27/000123", financial_year: "2026-27", sequence_number: 123,
+    invoice = TaxInvoice.create!(user: @hirer, subscription: Subscription.find_by(user: @hirer), invoice_number: "MLK/2026-27/000123", financial_year: "2026-27", sequence_number: 123,
       document_type: "tax_invoice", issued_at: at.(0), provider_payment_id: "pay_catalog_invoice", buyer: { "name" => @hirer.name }, seller: {}, line_items: [],
       taxable_paise: 211_780, cgst_paise: 19_060, sgst_paise: 19_060, total_paise: 249_900)
     capture("invoice_issued", @hirer) { Notifier.invoice_issued(invoice) }

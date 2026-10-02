@@ -26,7 +26,7 @@ jobs:
       # Railway Postgres service -> Variables -> DATABASE_PUBLIC_URL (the TCP proxy URL).
       DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
       BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
-      SCRATCH_DATABASE_URL: postgres://postgres:scratch@localhost:5439/verse_restore
+      SCRATCH_DATABASE_URL: postgres://postgres:scratch@localhost:5439/musilynk_restore
       # Optional off-GitHub copy (Cloudflare R2 or any S3-compatible store). All unset = skipped.
       BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
       BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
@@ -80,7 +80,7 @@ jobs:
       - name: Start scratch PostgreSQL
         run: |
           docker run -d --name scratch -p 5439:5432 \
-            -e POSTGRES_PASSWORD=scratch -e POSTGRES_DB=verse_restore "postgres:$PG_MAJOR"
+            -e POSTGRES_PASSWORD=scratch -e POSTGRES_DB=musilynk_restore "postgres:$PG_MAJOR"
           for _ in $(seq 30); do pg_isready -q -h localhost -p 5439 && exit 0; sleep 2; done
           exit 1
 
@@ -166,7 +166,7 @@ jobs:
       - name: Post to alert webhook
         if: needs.backup.result != 'success' && env.ALERT_WEBHOOK_URL != ''
         run: |
-          payload=$(jq -n --arg text "Verse database backup ${RESULT}: ${RUN_URL}" --arg result "$RESULT" --arg url "$RUN_URL" --arg repo "$GH_REPO" \
+          payload=$(jq -n --arg text "MusiLynk database backup ${RESULT}: ${RUN_URL}" --arg result "$RESULT" --arg url "$RUN_URL" --arg repo "$GH_REPO" \
             '{text: $text, content: $text, event: "backup_failure", result: $result, runUrl: $url, repository: $repo}')
           curl -fsS --max-time 20 --retry 2 -H "Content-Type: application/json" -d "$payload" "$ALERT_WEBHOOK_URL" > /dev/null \
             || echo "::warning::Alert webhook POST failed; the GitHub issue is still the primary alert"

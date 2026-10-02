@@ -592,7 +592,7 @@ function SignInMethodsCard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Disconnect Google?</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
-              You will no longer be able to sign in to Verse with this Google account.
+              You will no longer be able to sign in to MusiLynk with this Google account.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

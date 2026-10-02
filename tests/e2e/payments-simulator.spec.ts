@@ -40,7 +40,7 @@ test.describe('payments against the Razorpay simulator', () => {
   // (never called against production, where that field is absent and email delivery is real).
   async function adminLogin(request: APIRequestContext) {
     const login = await request.post(`${api()}/auth/login`, {
-      data: { email: 'admin@verse.local', password: 'Admin@12345' },
+      data: { email: 'admin@musilynk.local', password: 'Admin@12345' },
     });
     const body = await login.json();
     if (login.status() === 200) return body.accessToken as string;
@@ -193,7 +193,7 @@ test.describe('payments against the Razorpay simulator', () => {
     await page.goto('/employer/workspace');
     const workspace = page.getByRole('button', { name: /Limit QA Studio/ });
     if (await workspace.count()) await workspace.first().click();
-    await page.getByPlaceholder('Existing Verse user email').fill(teammate.email);
+    await page.getByPlaceholder('Existing MusiLynk user email').fill(teammate.email);
     await page.getByRole('button', { name: 'Add team member' }).click();
     const prompt = page.getByRole('alertdialog', { name: 'Plan limit reached' });
     await expect(prompt).toContainText('Workspace seat limit reached.');

@@ -68,7 +68,7 @@ describe('admin account calls', () => {
       jsonResponse({ error: 'That address cannot receive email.', code: 'EMAIL_UNDELIVERABLE' }, 422),
     );
     const { requestAdminEmailChange } = await load();
-    await expect(requestAdminEmailChange('ops@verse.local')).rejects.toMatchObject({
+    await expect(requestAdminEmailChange('ops@musilynk.local')).rejects.toMatchObject({
       status: 422,
       code: 'EMAIL_UNDELIVERABLE',
     });

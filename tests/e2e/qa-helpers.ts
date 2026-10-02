@@ -457,7 +457,7 @@ export async function openSettledPage(page: Page, path: string) {
   const response = await page.goto(path, { waitUntil: 'domcontentloaded' });
   expect(response, `No document response for ${path}`).not.toBeNull();
   expect(response!.status(), `Document request failed for ${path}`).toBeLessThan(400);
-  await expect(page.locator('body')).not.toContainText('Loading Verse…', { timeout: 12_000 });
+  await expect(page.locator('body')).not.toContainText('Loading MusiLynk…', { timeout: 12_000 });
   await page.waitForTimeout(150);
 }
 

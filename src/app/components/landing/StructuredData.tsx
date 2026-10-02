@@ -1,3 +1,5 @@
+import { BRAND_NAME } from '../../lib/brand';
+
 /** Organization and WebSite structured data for search engines (schema.org JSON-LD). */
 export function StructuredData({ description }: { description: string }) {
   const origin = window.location.origin;
@@ -5,7 +7,7 @@ export function StructuredData({ description }: { description: string }) {
     {
       '@context': 'https://schema.org',
       '@type': 'Organization',
-      name: 'Verse',
+      name: BRAND_NAME,
       url: `${origin}/`,
       description,
       areaServed: { '@type': 'City', name: 'Mumbai' },
@@ -13,7 +15,7 @@ export function StructuredData({ description }: { description: string }) {
     {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
-      name: 'Verse',
+      name: BRAND_NAME,
       url: `${origin}/`,
       potentialAction: {
         '@type': 'SearchAction',

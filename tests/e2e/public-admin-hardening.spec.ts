@@ -135,9 +135,9 @@ test.describe('public funnel', () => {
     ]) {
       await page.goto(path);
       await expect(page.locator('h1').first()).toBeVisible();
-      await expect(page).not.toHaveTitle('Verse — Music Careers, Hiring & Booking');
+      await expect(page).not.toHaveTitle('MusiLynk — Music Careers, Hiring & Booking');
       const title = await page.title();
-      expect(title, path).toMatch(/Verse/);
+      expect(title, path).toMatch(/MusiLynk/);
       expect(seen.has(title), `${path} reuses title "${title}"`).toBe(false);
       seen.add(title);
       expect(await page.locator('meta[name="description"]').getAttribute('content'), path).toBeTruthy();

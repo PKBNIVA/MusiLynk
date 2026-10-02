@@ -35,13 +35,13 @@ const HIRE_PAGE_RESPONSE = {
   faq: [
     {
       question: 'How much does a session drummer in Mumbai charge?',
-      answer: 'Rates vary by experience and event; ask for a quote through Verse.',
+      answer: 'Rates vary by experience and event; ask for a quote through MusiLynk.',
     },
     {
       question: 'How fast can I book a drummer in Mumbai?',
       answer: 'Most urgent requests get a first response within hours.',
     },
-    { question: 'Are drummers on Verse in Mumbai verified?', answer: 'Every profile shows real, reviewable work.' },
+    { question: 'Are drummers on MusiLynk in Mumbai verified?', answer: 'Every profile shows real, reviewable work.' },
     { question: 'What does it cost to hire a drummer for a gig in Mumbai?', answer: 'See rates at /rates/mumbai.' },
   ],
 };

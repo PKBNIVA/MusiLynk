@@ -245,7 +245,7 @@ class BillingCodesTest < ActionDispatch::IntegrationTest
     get "/api/me/referral-code", headers: bearer(@token)
     assert_response :success
     body = response.parsed_body
-    assert_match(/\AVERSE-CODE[A-Z2-9]{4}\z/, body["code"])
+    assert_match(/\AMUSILYNK-CODE[A-Z2-9]{4}\z/, body["code"])
     assert_equal "#{FrontendUrl.base}/pricing?code=#{body['code']}", body["shareUrl"]
     assert_equal [0, 0], body.values_at("redemptions", "rewardsEarned")
 

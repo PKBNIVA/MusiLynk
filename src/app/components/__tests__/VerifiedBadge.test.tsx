@@ -7,30 +7,30 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 describe('verifiedBadgeCopy', () => {
   it('falls back to a plain label when nothing was recorded', () => {
-    expect(verifiedBadgeCopy(null)).toBe('Verified by Verse');
-    expect(verifiedBadgeCopy(undefined)).toBe('Verified by Verse');
+    expect(verifiedBadgeCopy(null)).toBe('Verified by MusiLynk');
+    expect(verifiedBadgeCopy(undefined)).toBe('Verified by MusiLynk');
   });
 
   it('lists the checks and the month/year it was verified', () => {
     const copy = verifiedBadgeCopy({ checks: ['identity', 'work_links'], verifiedAt: '2026-03-15T00:00:00Z' });
-    expect(copy).toBe('Verified by Verse: identity, work links · Mar 2026');
+    expect(copy).toBe('Verified by MusiLynk: identity, work links · Mar 2026');
   });
 
   it('omits the date when verifiedAt is missing', () => {
-    expect(verifiedBadgeCopy({ checks: ['credits'] })).toBe('Verified by Verse: credits');
+    expect(verifiedBadgeCopy({ checks: ['credits'] })).toBe('Verified by MusiLynk: credits');
   });
 
-  it('uses a short month, e.g. "Verified by Verse: identity, work links · Sep 2026"', () => {
+  it('uses a short month, e.g. "Verified by MusiLynk: identity, work links · Sep 2026"', () => {
     expect(verifiedBadgeCopy({ checks: ['identity', 'work_links'], verifiedAt: '2026-09-10T00:00:00Z' })).toBe(
-      'Verified by Verse: identity, work links · Sep 2026',
+      'Verified by MusiLynk: identity, work links · Sep 2026',
     );
   });
 
   it('adds the Verified Pro line only for the pro tier', () => {
     const v = { checks: ['identity'], verifiedAt: '2026-09-10T00:00:00Z' };
-    expect(verifiedBadgeCopy(v, 'verified')).toBe('Verified by Verse: identity · Sep 2026');
+    expect(verifiedBadgeCopy(v, 'verified')).toBe('Verified by MusiLynk: identity · Sep 2026');
     expect(verifiedBadgeCopy(v, 'verified_pro')).toBe(
-      'Verified Pro: 3+ completed jobs on Verse with reviews. Verified by Verse: identity · Sep 2026',
+      'Verified Pro: 3+ completed jobs on MusiLynk with reviews. Verified by MusiLynk: identity · Sep 2026',
     );
   });
 });

@@ -106,7 +106,7 @@ class OtpAuthTest < ActionDispatch::IntegrationTest
       Faraday.stub(:post, transport) do
         EmailDelivery.call(to: "a@example.com", template: "sign_in_code", data: { code: "042917" })
       end
-      assert_equal "Your Verse sign-in code", body["subject"]
+      assert_equal "Your MusiLynk sign-in code", body["subject"]
       assert_includes body["textContent"], "042917"
       assert_includes body["htmlContent"], "042917"
       assert_not_includes body["htmlContent"], "href="

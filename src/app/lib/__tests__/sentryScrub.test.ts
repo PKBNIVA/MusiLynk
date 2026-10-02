@@ -94,12 +94,12 @@ describe('scrubEvent', () => {
     const event = {
       message: 'Failed for bob@example.com',
       user: { id: 'u1', role: 'employer', ip_address: '1.2.3.4', username: 'bob' },
-      request: { url: 'https://verse.app/auth?code=999', cookies: 'a=b', data: '{"password":"x"}' },
+      request: { url: 'https://musilynk.app/auth?code=999', cookies: 'a=b', data: '{"password":"x"}' },
     };
     const clean = scrubEvent(event, []);
     expect(clean.message).toBe('Failed for [email]');
     expect(clean.user).toEqual({ id: 'u1', role: 'employer' });
-    expect(clean.request).toEqual({ url: `https://verse.app/auth?code=${FILTERED}` });
+    expect(clean.request).toEqual({ url: `https://musilynk.app/auth?code=${FILTERED}` });
   });
 
   it('drops a user with neither id nor role and keeps partial users', () => {

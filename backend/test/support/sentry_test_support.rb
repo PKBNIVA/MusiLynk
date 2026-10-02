@@ -1,6 +1,6 @@
 require "sentry/test_helper"
 
-# Runs a block with the real Sentry SDK initialised through VerseSentry.configure, but
+# Runs a block with the real Sentry SDK initialised through MusilynkSentry.configure, but
 # with a DummyTransport: events are kept in memory and nothing leaves the process.
 # Tracing is off unless a test passes SENTRY_TRACES_SAMPLE_RATE: with the production default
 # (a small sample rate) a randomly sampled transaction could land after the event a test
@@ -10,7 +10,7 @@ module SentryTestSupport
 
   def with_sentry(env = {})
     Sentry.init do |config|
-      VerseSentry.configure(config, env: { "SENTRY_DSN" => DUMMY_DSN, "SENTRY_ENVIRONMENT" => "test", "SENTRY_TRACES_SAMPLE_RATE" => "0" }.merge(env))
+      MusilynkSentry.configure(config, env: { "SENTRY_DSN" => DUMMY_DSN, "SENTRY_ENVIRONMENT" => "test", "SENTRY_TRACES_SAMPLE_RATE" => "0" }.merge(env))
       config.transport.transport_class = Sentry::DummyTransport
       config.background_worker_threads = 0
       config.auto_session_tracking = false

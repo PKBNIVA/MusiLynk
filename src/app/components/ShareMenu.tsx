@@ -35,7 +35,7 @@ export function ShareMenu({
   path,
   compose,
   plainUrl,
-  title = 'Verse',
+  title = 'MusiLynk',
   label = 'Share',
   demo,
   channels = ALL,

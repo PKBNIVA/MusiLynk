@@ -2,7 +2,7 @@
 module SellerConfig
   FILLED = {
     legal_name: "Alien Brains Private Limited", gstin: "27AAPFU0939F1ZV", address: "12 Linking Road, Bandra West, Mumbai 400050", state: "Maharashtra",
-    state_code: "27", pan: "AAPFU0939F", sac_code: "998314", gst_registered: true, prices_include_gst: true, invoice_prefix: "VRS"
+    state_code: "27", pan: "AAPFU0939F", sac_code: "998314", gst_registered: true, prices_include_gst: true, invoice_prefix: "MLK"
   }.freeze
 
   def with_seller(**overrides)

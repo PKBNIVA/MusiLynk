@@ -51,7 +51,7 @@ export function ActCard({ act: a, index, to, nameSuffix, footer }: Props) {
       data-list-item={index}
       data-testid="act-card"
       tabIndex={-1}
-      className="verse-lift relative h-full min-w-0 gap-0 overflow-hidden border-white/10 bg-white/[.055] p-0 hover:bg-white/[.075] focus-within:ring-2 focus-within:ring-violet-400"
+      className="musilynk-lift relative h-full min-w-0 gap-0 overflow-hidden border-white/10 bg-white/[.055] p-0 hover:bg-white/[.075] focus-within:ring-2 focus-within:ring-violet-400"
     >
       <ActCover act={a} height={112} />
       <div className="flex flex-1 flex-col p-5">

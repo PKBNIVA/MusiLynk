@@ -56,7 +56,7 @@ export function WelcomeNextStep({ role }: { role: 'jobseeker' | 'employer' }) {
         <X aria-hidden="true" size={18} />
       </button>
       <h2 id="welcome-title" className="pr-10 text-2xl font-black md:text-3xl">
-        {first ? `You’re on Verse, ${first}.` : 'You’re on Verse.'}
+        {first ? `You’re on MusiLynk, ${first}.` : 'You’re on MusiLynk.'}
       </h2>
       {role === 'jobseeker' ? <MusicianWelcome items={items} /> : <HirerWelcome />}
     </section>

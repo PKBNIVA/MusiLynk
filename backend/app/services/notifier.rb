@@ -66,7 +66,7 @@ class Notifier
       LifecycleEmailDeliveryJob.perform_later(user.id, "milestone_musician_first_response", minutes:)
     end
 
-    # Milestone: a hirer's 5th urgent request filled through Verse.
+    # Milestone: a hirer's 5th urgent request filled through MusiLynk.
     def milestone_5th_filled_request(requester)
       return unless requester && requester.urgent_requests.where(status: "filled").count == 5
       return unless LifecycleSequences.claim(requester, "milestone_hirer_5th_filled_request")
@@ -131,8 +131,8 @@ class Notifier
 
     # A moderator's warning after a report. In-app only; links to the rules that apply.
     def moderation_warning(user, note = nil)
-      notify(user, kind: "moderation_warning", title: "A warning from Verse moderation", link: "/community-guidelines",
-        body: note || "We received a report about your activity on Verse. Please review the community guidelines; repeated or serious breaches lead to suspension.")
+      notify(user, kind: "moderation_warning", title: "A warning from MusiLynk moderation", link: "/community-guidelines",
+        body: note || "We received a report about your activity on MusiLynk. Please review the community guidelines; repeated or serious breaches lead to suspension.")
     end
 
     def message_link(conversation) = "/messages?c=#{conversation.id}"
@@ -220,7 +220,7 @@ class Notifier
     # At expiry: tell every musician who responded, since the hirer never confirmed a booking.
     def urgent_request_expired(urgent_request, recipient)
       notify(recipient, kind: "urgent_expired", title: "This request has expired",
-        link: "/jobseeker/urgent", body: "\"#{urgent_request.title}\" has expired. The hirer didn't confirm a booking through Verse.")
+        link: "/jobseeker/urgent", body: "\"#{urgent_request.title}\" has expired. The hirer didn't confirm a booking through MusiLynk.")
       email(recipient, "urgent_request_expired", title: urgent_request.title)
     end
 
@@ -233,7 +233,7 @@ class Notifier
     end
 
     JOB_REVIEW_WORDS = {
-      "published" => "is now live on Verse.", "rejected" => "was not approved. Open it, make the changes and submit it again.",
+      "published" => "is now live on MusiLynk.", "rejected" => "was not approved. Open it, make the changes and submit it again.",
       "closed" => "was closed.", "pending" => "is waiting for review. We will update you within 24 hours."
     }.freeze
 
@@ -243,7 +243,7 @@ class Notifier
         body: "#{job.title} #{JOB_REVIEW_WORDS.fetch(job.status, "was updated.")}")
     end
 
-    # "<Name> vouched for you on Verse": sent to the invitee's email, whether or not they have
+    # "<Name> vouched for you on MusiLynk": sent to the invitee's email, whether or not they have
     # an account yet.
     def vouch_invite(vouch, join_link:)
       return unless EmailDelivery.configured?
@@ -262,7 +262,7 @@ class Notifier
       email(user, "act_invite", name: inviter, act:, role: invite.role_name) if email
     end
 
-    # The same invite to an address with no (verified) Verse account behind it: a sealed link email.
+    # The same invite to an address with no (verified) MusiLynk account behind it: a sealed link email.
     def act_invite_email(invite, link:)
       return unless EmailDelivery.configured?
       EmailDeliveryJob.enqueue_act_invite(link:, email: invite.invitee_email, inviter: invite.inviter.name, act: invite.act.name, role: invite.role_name)
@@ -280,7 +280,7 @@ class Notifier
     def early_access_granted(subscription)
       until_date = IndianFormat.date(subscription.trial_ends_at)
       notify(subscription.user, kind: "early_access_granted", title: "Your Early Access Pro is active",
-        link: "/employer/billing", body: "No card needed. Pro features are unlocked on Verse until #{until_date}.")
+        link: "/employer/billing", body: "No card needed. Pro features are unlocked on MusiLynk until #{until_date}.")
       email(subscription.user, "early_access_granted", until: until_date)
     end
 
@@ -308,14 +308,14 @@ class Notifier
       title = reminder ? "Still time to review #{prompt.counterpart_name}" : "How did it go with #{prompt.counterpart_name}?"
       link = review_prompt_link(prompt)
       notify(prompt.user, kind: "review_prompt", title:, link:,
-        body: "Leave a quick review for #{prompt.counterpart_name} — it helps other musicians and hirers on Verse.")
+        body: "Leave a quick review for #{prompt.counterpart_name} — it helps other musicians and hirers on MusiLynk.")
       email(prompt.user, "review_prompt", name: prompt.counterpart_name, path: link, reminder: reminder.to_s)
     end
 
     # The "share your badge" nudge, sent alongside the existing verification-approved
     # notification once the profile is verified (Admin::VerificationsController#update).
     def verification_approved(user)
-      notify(user, kind: "verification", title: "You're verified on Verse",
+      notify(user, kind: "verification", title: "You're verified on MusiLynk",
         link: "/profile", body: "Your profile now shows the Verified badge. Share it on Instagram or WhatsApp to reach more work.")
       email(user, "verification_approved", profileUrl: "#{FrontendUrl.base}/professionals/#{user.id}")
     end

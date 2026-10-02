@@ -243,7 +243,7 @@ test('a used-up AI usage cap (402) shows a friendly notice with no purchase offe
   await page.goto('/jobseeker/profile');
   await page.getByRole('button', { name: 'Write with AI' }).first().click();
   await expect(page.getByRole('dialog', { name: 'AI help is used up for now' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Verse AI Plus/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /MusiLynk AI Plus/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Top up/ })).toHaveCount(0);
   const paywallAxe = await new AxeBuilder({ page })
     .include('[role="dialog"]')

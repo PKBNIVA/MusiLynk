@@ -19,8 +19,8 @@ class Post < ApplicationRecord
   HASHTAG_PATTERN = /#([\p{L}\p{M}\p{N}_]{2,50})/
   TRENDING_WINDOW = 72.hours
   SYSTEM_AUTHOR_ID = "verse".freeze
-  SYSTEM_AUTHOR_NAME = "Verse".freeze
-  SYSTEM_AVATAR = "/verse-mark.svg".freeze
+  SYSTEM_AUTHOR_NAME = Brand::NAME.freeze
+  SYSTEM_AVATAR = "/musilynk-mark.svg".freeze
 
   belongs_to :created_by, class_name: "User", foreign_key: :created_by_user_id, optional: true
   belongs_to :shared_portfolio_item, class_name: "PortfolioItem", foreign_key: :shared_portfolio_item_id, optional: true
@@ -172,8 +172,8 @@ class Post < ApplicationRecord
     dtstamp = created_at.utc.strftime("%Y%m%dT%H%M%SZ")
     dtstart = event_starts_at.utc.strftime("%Y%m%dT%H%M%SZ")
     lines = [
-      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Verse//Stage Events//EN", "BEGIN:VEVENT",
-      "UID:#{id}@verse", "DTSTAMP:#{dtstamp}", "DTSTART:#{dtstart}",
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//MusiLynk//Stage Events//EN", "BEGIN:VEVENT",
+      "UID:#{id}@musilynk", "DTSTAMP:#{dtstamp}", "DTSTART:#{dtstart}",
       "SUMMARY:#{ics_escape(event_title)}", "LOCATION:#{ics_escape([event_venue, city].compact.join(', '))}"
     ]
     lines << "DESCRIPTION:#{ics_escape(body)}" if body.present?

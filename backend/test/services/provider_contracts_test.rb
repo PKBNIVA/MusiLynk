@@ -7,7 +7,7 @@ class ProviderContractsTest < ActiveSupport::TestCase
   end
 
   test "Brevo receives the intended recipient and reset link without leaking its key into the body" do
-    with_env("BREVO_API_KEY" => "test-api-key", "BREVO_SENDER_EMAIL" => "sender@example.invalid", "BREVO_SENDER_NAME" => "Verse") do
+    with_env("BREVO_API_KEY" => "test-api-key", "BREVO_SENDER_EMAIL" => "sender@example.invalid", "BREVO_SENDER_NAME" => "MusiLynk") do
       transport = lambda do |url, &configure|
         assert_equal "https://api.brevo.com/v3/smtp/email", url
         request = fake_request
@@ -16,14 +16,14 @@ class ProviderContractsTest < ActiveSupport::TestCase
         message = JSON.parse(request.body)
         assert_equal [{ "email" => "recipient@example.com" }], message.fetch("to")
         assert_equal "sender@example.invalid", message.dig("sender", "email")
-        assert_includes message.fetch("textContent"), "https://verse.example/reset-password?token=test"
+        assert_includes message.fetch("textContent"), "https://musilynk.example/reset-password?token=test"
         assert_not_includes request.body, "test-api-key"
         Response.new(201, "{}")
       end
 
       Faraday.stub(:post, transport) do
         result = EmailDelivery.call(to: "recipient@example.com", template: "reset_password",
-          data: { link: "https://verse.example/reset-password?token=test" })
+          data: { link: "https://musilynk.example/reset-password?token=test" })
         assert_equal({ delivered: true, status: 201, provider: "brevo" }, result)
       end
     end
@@ -33,7 +33,7 @@ class ProviderContractsTest < ActiveSupport::TestCase
     with_env("BREVO_API_KEY" => "test-api-key", "BREVO_SENDER_EMAIL" => "sender@example.invalid") do
       Faraday.stub(:post, response_transport(403)) do
         result = EmailDelivery.call(to: "recipient@example.com", template: "verify_email",
-          data: { link: "https://verse.example/verify-email?token=test" })
+          data: { link: "https://musilynk.example/verify-email?token=test" })
         assert_equal false, result.fetch(:delivered)
         assert_equal 403, result.fetch(:status)
       end
@@ -60,7 +60,7 @@ class ProviderContractsTest < ActiveSupport::TestCase
   end
 
   test "real providers are never asked to send to a reserved domain; the local webhook still is" do
-    assert EmailDelivery.reserved_address?("admin@verse.local")
+    assert EmailDelivery.reserved_address?("admin@musilynk.local")
     assert EmailDelivery.reserved_address?("qa+demo-0001@example.invalid")
     assert EmailDelivery.reserved_address?("Someone@Host.TEST.")
     assert_not EmailDelivery.reserved_address?("owner@notify.alienbrains.in")
@@ -69,7 +69,7 @@ class ProviderContractsTest < ActiveSupport::TestCase
 
     with_env("BREVO_API_KEY" => "test-api-key", "BREVO_SENDER_EMAIL" => "sender@example.invalid") do
       Faraday.stub(:post, ->(*) { flunk "Brevo must not be called for a reserved address" }) do
-        result = EmailDelivery.call(to: "admin@verse.local", template: "sign_in_code", data: { code: "123456" })
+        result = EmailDelivery.call(to: "admin@musilynk.local", template: "sign_in_code", data: { code: "123456" })
         assert_equal({ delivered: false, reason: "Reserved address" }, result)
       end
     end

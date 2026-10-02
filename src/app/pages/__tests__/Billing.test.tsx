@@ -43,8 +43,8 @@ const PLANS = [
   },
 ];
 const REFERRAL = {
-  code: 'VERSE-MEERA2K7',
-  shareUrl: 'https://verse.example/pricing?code=VERSE-MEERA2K7',
+  code: 'MUSILYNK-MEERA2K7',
+  shareUrl: 'https://musilynk.example/pricing?code=MUSILYNK-MEERA2K7',
   redemptions: 3,
   rewardsEarned: 2,
   refereePercentOff: 20,
@@ -128,13 +128,13 @@ const activeAnnual = {
 describe('referral card', () => {
   it('shows the code, counters and a WhatsApp share link', async () => {
     await render();
-    expect(byTestId('referral-code')?.textContent).toBe('VERSE-MEERA2K7');
+    expect(byTestId('referral-code')?.textContent).toBe('MUSILYNK-MEERA2K7');
     expect(byTestId('referral-redemptions')?.textContent).toBe('3');
     expect(byTestId('referral-rewards')?.textContent).toBe('2');
     const link = Array.from(container.querySelectorAll('a')).find((a) => a.textContent?.includes('WhatsApp'))!;
     expect(link.href.startsWith('https://wa.me/?text=')).toBe(true);
     expect(decodeURIComponent(link.href.split('text=')[1])).toBe(
-      'Join me on Verse — hirers get 20% off with my code VERSE-MEERA2K7: https://verse.example/pricing?code=VERSE-MEERA2K7',
+      'Join me on MusiLynk — hirers get 20% off with my code MUSILYNK-MEERA2K7: https://musilynk.example/pricing?code=MUSILYNK-MEERA2K7',
     );
     expect(link.getAttribute('rel')).toContain('noopener');
   });
@@ -144,7 +144,7 @@ describe('referral card', () => {
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
     await render();
     await act(async () => button('Copy').click());
-    expect(writeText).toHaveBeenCalledWith('VERSE-MEERA2K7');
+    expect(writeText).toHaveBeenCalledWith('MUSILYNK-MEERA2K7');
     expect(toast.success).toHaveBeenCalledWith('Referral code copied');
   });
 
@@ -155,7 +155,7 @@ describe('referral card', () => {
     });
     await render();
     await act(async () => button('Copy').click());
-    expect(toast.error).toHaveBeenCalledWith('Copy failed. Your code is VERSE-MEERA2K7.');
+    expect(toast.error).toHaveBeenCalledWith('Copy failed. Your code is MUSILYNK-MEERA2K7.');
   });
 
   it('uses the programme percentage and defaults to 20', async () => {

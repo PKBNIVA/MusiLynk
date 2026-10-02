@@ -42,13 +42,13 @@ async function signIn(page: Page, handler: (request: Request, pathname: string) 
 test('download my data saves the export as a JSON file', async ({ page }) => {
   const errors = await signIn(page, (_r, path) =>
     path === '/api/account/export'
-      ? { body: { format: 'verse-account-export', account: { email: me.email } } }
+      ? { body: { format: 'musilynk-account-export', account: { email: me.email } } }
       : undefined,
   );
   await page.goto('/jobseeker/account');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download my data' }).click();
-  expect((await download).suggestedFilename()).toMatch(/^verse-data-\d{4}-\d{2}-\d{2}\.json$/);
+  expect((await download).suggestedFilename()).toMatch(/^musilynk-data-\d{4}-\d{2}-\d{2}\.json$/);
   expect(errors).toEqual([]);
 });
 

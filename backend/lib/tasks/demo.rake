@@ -1,5 +1,5 @@
 namespace :demo do
-  desc "Seed the Verse showcase: 110 musicians and 40 hirers with their activity (batch demo-showcase). A no-op when the batch already exists."
+  desc "Seed the MusiLynk showcase: 110 musicians and 40 hirers with their activity (batch demo-showcase). A no-op when the batch already exists."
   task showcase: :environment do
     # Safe in production: needs no ALLOW_SYNTHETIC_QA, only touches the demo-* batch it names, and refuses
     # to grow the demo population past SyntheticQa::Demo::MAX_USERS. Remove it again from Admin -> Demo data.

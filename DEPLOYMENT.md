@@ -1,4 +1,4 @@
-# Verse production deployment
+# MusiLynk production deployment
 
 ## Source of truth
 
@@ -21,8 +21,8 @@ Configure the repository root as a Vite project:
 - Production branch: `production`
 - Build command: `npm run build`
 - Output directory: `dist`
-- `VITE_API_URL=https://verse-music-platform-production.up.railway.app/api`
-- `VITE_PUBLIC_URL=https://verse-music-platform.vercel.app`
+- `VITE_API_URL=https://musilynk-api-production.up.railway.app/api`
+- `VITE_PUBLIC_URL=https://musilynk.vercel.app`
 
 `vercel.json` provides SPA routing, immutable asset caching, and browser security headers.
 
@@ -42,7 +42,7 @@ code, and the admin build has no public pages. `npm run check:split` builds the 
   `/admin` console, `/admin/tester`, `/account` (the admin's email and password). Every signed-in
   page shows a warning while the admin's address cannot receive email or the second step is not
   enforced (`GET /api/admin/account`), linking to `/account`, where the address is changed by
-  confirming a code sent to the new mailbox. The page title is "Verse Admin" and
+  confirming a code sent to the new mailbox. The page title is "MusiLynk Admin" and
   `<meta name="robots" content="noindex, nofollow">` keeps it out of search results.
 - The admin site's exact origin (for example `https://verse-admin-xxxx.vercel.app`) is the
   API's `ADMIN_ORIGIN` (see "Admin site and `ADMIN_ORIGIN`" below for what that locks). Its URL is
@@ -116,7 +116,7 @@ in production without `AWS_BUCKET` (override: `WORKER_ALLOW_DISK_UPLOADS=true`, 
 upload cleanup jobs delete rows but leave their files on the web volume).
 
 1. **Create the service.** Railway project → New → GitHub Repo → this repository, name it
-   e.g. `verse-worker`. In its Settings: Source branch `production`; Config-as-code →
+   e.g. `musilynk-worker`. In its Settings: Source branch `production`; Config-as-code →
    Railway config file path `railway.worker.toml`. That file builds the same Dockerfile and
    starts `gosu rails bin/worker`, with no healthcheck and no public domain (do not generate
    one). `bin/worker` waits up to `WORKER_MIGRATION_WAIT_SECONDS` (default 600) for the web
@@ -205,7 +205,7 @@ and `/api/auth/otp/request` answers 503 `OTP_UNAVAILABLE` (identical for every a
 issued). Adding `BREVO_API_KEY` switches the page back to codes on the next deploy.
 
 Current production sender (set 2026-09-27): `BREVO_SENDER_EMAIL=no-reply@notify.alienbrains.in`,
-`BREVO_SENDER_NAME=Verse`. DNS verified the same day: SPF `include:spf.brevo.com`, DKIM
+`BREVO_SENDER_NAME=MusiLynk`. DNS verified the same day: SPF `include:spf.brevo.com`, DKIM
 `brevo1`/`brevo2._domainkey` CNAMEs to Brevo, DMARC `p=none` with Brevo reporting.
 `BREVO_API_KEY` is still to be added (Brevo → SMTP & API → API keys → Generate).
 
@@ -291,7 +291,7 @@ When set, per request (no restart beyond the redeploy Railway does for a variabl
 Health: `GET /api/readiness` and `/api/admin/health` carry `adminOrigin {ok, locked}` (not
 blocking, `ok` in production only when set); `/admin/tester` has an "Admin site origin" row.
 
-**Admin email and password.** The seeded admin address (`admin@verse.local`) cannot receive
+**Admin email and password.** The seeded admin address (`admin@musilynk.local`) cannot receive
 mail, so the second sign-in step is skipped for it (see above). The admin changes their own
 address from the admin site's Account page: `POST /api/admin/account/email/request {email}`
 sends a code to the **new** address; `POST /api/admin/account/email/confirm {changeToken,
@@ -313,7 +313,7 @@ without a code change).
 ### Brevo bounce and complaint webhook
 
 Brevo reports hard bounces, soft bounces, spam complaints, blocks and unsubscribes to
-`POST /api/email/webhook/brevo`. Verse records each address in `email_suppressions`:
+`POST /api/email/webhook/brevo`. MusiLynk records each address in `email_suppressions`:
 
 | Brevo event | Effect |
 | --- | --- |
@@ -333,7 +333,7 @@ Owner setup, once:
 1. Generate a secret: `openssl rand -hex 32`. Set it in Railway (Rails service) as
    `BREVO_WEBHOOK_SECRET`. Without it the endpoint answers 503 to everything.
 2. Brevo → Transactional → Settings → Webhook → **Add a new webhook**:
-   - URL: `https://verse-music-platform-production.up.railway.app/api/email/webhook/brevo`
+   - URL: `https://musilynk-api-production.up.railway.app/api/email/webhook/brevo`
    - Authentication: choose **Token** (sent as `Authorization: Bearer <secret>`) or **Basic**
      (any username, the secret as the password). If your Brevo screen has no authentication
      option, append `?token=<secret>` to the URL instead (the header is preferred because URLs
@@ -355,7 +355,7 @@ of each controlled test before declaring an integration operational.
 
 | Provider | Railway environment names | Controlled verification |
 | --- | --- | --- |
-| Razorpay | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `RAZORPAY_PLAN_PRO`, `RAZORPAY_PLAN_STUDIO` | Follow the **Payments (Razorpay) go-live checklist** below: dashboard field mapping, webhook URL `https://verse-music-platform-production.up.railway.app/api/billing/webhook/razorpay` and events, automatic capture, test-mode rehearsal, then live switch. Keep test and live credentials separate. |
+| Razorpay | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `RAZORPAY_PLAN_PRO`, `RAZORPAY_PLAN_STUDIO` | Follow the **Payments (Razorpay) go-live checklist** below: dashboard field mapping, webhook URL `https://musilynk-api-production.up.railway.app/api/billing/webhook/razorpay` and events, automatic capture, test-mode rehearsal, then live switch. Keep test and live credentials separate. |
 | Brevo | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `BREVO_WEBHOOK_SECRET` | Verify the sending domain and sender in Brevo, then deliver a verification and reset email to controlled addresses. Check provider acceptance, inbox receipt, bounce status, and the resulting links. |
 | S3-compatible storage | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_BUCKET`, `AWS_ENDPOINT_URL_S3`, `AWS_PUBLIC_BASE_URL`, optional `AWS_UPLOAD_METHOD` (see "Object storage — Cloudflare R2") | Upload, read, and delete a controlled image and audio file through the browser. Verify object durability, access policy, MIME/size rejection, CORS, and cleanup. |
 
@@ -404,7 +404,7 @@ Checklist:
    ```json
    [
      {
-       "AllowedOrigins": ["https://verse-music-platform.vercel.app"],
+       "AllowedOrigins": ["https://musilynk.vercel.app"],
        "AllowedMethods": ["PUT", "POST", "GET", "HEAD"],
        "AllowedHeaders": ["content-type"],
        "ExposeHeaders": ["ETag"],
@@ -470,7 +470,7 @@ webhooks are separate objects in Razorpay: create each in both modes.
 
 Account & Settings → Webhooks → Add New Webhook (in each mode):
 
-- Webhook URL: `https://verse-music-platform-production.up.railway.app/api/billing/webhook/razorpay`
+- Webhook URL: `https://musilynk-api-production.up.railway.app/api/billing/webhook/razorpay`
 - Secret: the value of `RAZORPAY_WEBHOOK_SECRET`
 - Active events: `subscription.authenticated`, `subscription.activated`, `subscription.charged`,
   `subscription.pending`, `subscription.halted`, `subscription.paused`, `subscription.resumed`,
@@ -568,7 +568,7 @@ Coverage floors: `bin/rails test` measures line and branch coverage with SimpleC
 `npm run test:unit -- --coverage` does the same for `src/app/lib` with the thresholds in
 `vitest.config.ts`. Raise a floor when coverage goes up; never lower it to get a build green.
 
-Signed-in live smoke: the scheduled and manual `Verse QA Agent` live run also signs in as a
+Signed-in live smoke: the scheduled and manual `MusiLynk QA Agent` live run also signs in as a
 dedicated jobseeker test account, saves and deletes a job alert, and signs out
 (`tests/e2e/live-account-smoke.spec.ts`). It skips itself until the `QA_SMOKE_EMAIL` and
 `QA_SMOKE_PASSWORD` repository secrets are set. Use an account created only for this, with
@@ -627,7 +627,7 @@ initialises Sentry and the web app never downloads it (zero requests to Sentry).
 | Vercel | `VITE_SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.05` once `VITE_SENTRY_DSN` is set; `0` turns tracing off. Core Web Vitals are sent as metrics either way (see docs/PERFORMANCE.md) |
 
 Releases are automatic: the API reports `RAILWAY_GIT_COMMIT_SHA` and the web build uses
-`VERCEL_GIT_COMMIT_SHA` (exposed as `<meta name="verse-release">`). `VITE_*` values are read
+`VERCEL_GIT_COMMIT_SHA` (exposed as `<meta name="musilynk-release">`). `VITE_*` values are read
 at build time, so **redeploy Vercel after changing them**. Railway restarts on variable changes.
 
 What is sent, and what is not:
@@ -651,7 +651,7 @@ What is sent, and what is not:
 
 1. **New issue** — "A new issue is created" → email the owner (and the team, if any).
    This also covers billing mismatches: when the half-hourly reconciliation job finds an
-   attempt whose Razorpay order or subscription disagrees with Verse (wrong amount or
+   attempt whose Razorpay order or subscription disagrees with MusiLynk (wrong amount or
    currency, or the local payment was already released), it reports one
    `BillingReconciliationJob::Mismatch` event per run tagged
    `source=billing_reconciliation_mismatch` with the fixed fingerprint
@@ -678,7 +678,7 @@ expected 4xx are dropped. Set a spike-protection/quota limit per project in Sent
 2. **Send server test error** calls `POST /api/admin/health/sentry-test` (admin only,
    audited as `admin.sentry_test`). It answers `captured: true` with an event id when
    `SENTRY_DSN` is set, `captured: false` when it is not. The event appears in `verse-api`
-   as `Admin::HealthController::SentryTestError`, tagged `verse_test=true`.
+   as `Admin::HealthController::SentryTestError`, tagged `musilynk_test=true`.
 3. **Send test error** (shown only when the build has `VITE_SENTRY_DSN`) sends a tagged client
    error to `verse-web`.
 4. Confirm the "new issue" alert emails arrive, then resolve both test issues.
@@ -689,8 +689,8 @@ Use UptimeRobot (free: 50 monitors, 5-minute interval) or Better Stack Uptime (f
 
 | Monitor | URL | Check |
 | --- | --- | --- |
-| Verse API | `https://verse-music-platform-production.up.railway.app/api/health` | HTTP 200, keyword `"ok":true` |
-| Verse web | `https://verse-music-platform.vercel.app` | HTTP 200 |
+| MusiLynk API | `https://musilynk-api-production.up.railway.app/api/health` | HTTP 200, keyword `"ok":true` |
+| MusiLynk web | `https://musilynk.vercel.app` | HTTP 200 |
 
 Interval 5 minutes, alert contact = owner email, alert after 2 consecutive failures to avoid
 noise from a single cold start. (`/api/readiness` answers 503 while a core dependency is down;
@@ -698,13 +698,13 @@ add it as a third monitor if you want database outages to page separately.)
 
 ### 7. Deploy verification without opening Railway
 
-After merging to `production`, run **Actions → Verse QA Agent → Run workflow** on the
+After merging to `production`, run **Actions → MusiLynk QA Agent → Run workflow** on the
 `production` branch. For manual runs the live job sets `QA_EXPECTED_RELEASE` to the
 workflow's commit, and `tests/e2e/api-health.spec.ts` polls for up to 5 minutes until
 `GET /api/health` reports that commit (first 12 characters) and the web app's
-`<meta name="verse-release">` matches it. A red run means Railway or Vercel did not deploy
+`<meta name="musilynk-release">` matches it. A red run means Railway or Vercel did not deploy
 that commit. Scheduled runs skip this check because they may legitimately test an older
-deploy. `window.__VERSE_RELEASE__` in the browser console shows the running web build.
+deploy. `window.__MUSILYNK_RELEASE__` in the browser console shows the running web build.
 
 ### 8. Operations view (`/admin` → Operations)
 
@@ -799,7 +799,7 @@ Restoring for real (into a new Railway Postgres, never over the live one until v
 ```bash
 # Download and unzip the artifact from the chosen run, then:
 SCRATCH_DATABASE_URL=<new database URL> BACKUP_PASSPHRASE=<passphrase> \
-  scripts/db/restore-verify.sh verse-<stamp>.dump.gpg
+  scripts/db/restore-verify.sh musilynk-<stamp>.dump.gpg
 ```
 
 Point the Rails service's `DATABASE_URL` at the restored database only after that check passes.

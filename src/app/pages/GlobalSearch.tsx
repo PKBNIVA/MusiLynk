@@ -41,8 +41,8 @@ export default function GlobalSearch() {
   const rawType = sp.get('type') || 'all';
   const selectedType = isType(rawType) ? rawType : 'all';
   usePageMeta(
-    query.trim() ? `Search: ${query.trim().slice(0, 60)}` : 'Search Verse',
-    'Search opportunities, musicians, bookable acts and work samples across the Verse network.',
+    query.trim() ? `Search: ${query.trim().slice(0, 60)}` : 'Search MusiLynk',
+    'Search opportunities, musicians, bookable acts and work samples across the MusiLynk network.',
     { noindex: true },
   );
   const [q, setQ] = useState(query);
@@ -103,7 +103,7 @@ export default function GlobalSearch() {
             One search. The whole music network.
           </div>
           <h1 className="text-4xl font-black tracking-tight md:text-5xl">
-            Find the people and work that <span className="verse-gradient-text">move music forward.</span>
+            Find the people and work that <span className="musilynk-gradient-text">move music forward.</span>
           </h1>
           <p className="mt-3 text-lg text-slate-300">
             Explore opportunities, musicians, bookable acts and real work samples.
@@ -111,12 +111,12 @@ export default function GlobalSearch() {
         </div>
         <form
           onSubmit={submit}
-          className="verse-surface mt-8 flex flex-col gap-3 rounded-2xl p-3 md:flex-row"
+          className="musilynk-surface mt-8 flex flex-col gap-3 rounded-2xl p-3 md:flex-row"
           role="search"
         >
           <div className="relative flex-1">
             <label htmlFor="network-search" className="sr-only">
-              Search Verse
+              Search MusiLynk
             </label>
             <Search className="absolute left-3.5 top-3.5 text-slate-400" size={18} />
             <Input
@@ -185,7 +185,7 @@ export default function GlobalSearch() {
         )}
         <div className="mt-8 grid grid-cols-1 gap-3" aria-live="polite">
           {!searched || loading || error ? null : results.length === 0 ? (
-            <div className="verse-surface rounded-2xl">
+            <div className="musilynk-surface rounded-2xl">
               <NoResults
                 noun="results"
                 query={query.trim()}
@@ -223,7 +223,7 @@ export default function GlobalSearch() {
                     </div>
                   )}
                   <Link to={r.url} className="group" data-list-item={index}>
-                    <Card className="verse-card-lift border-white/15 bg-white/[.045]">
+                    <Card className="musilynk-card-lift border-white/15 bg-white/[.045]">
                       <CardContent className="flex gap-4 p-5">
                         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-500/25 to-cyan-400/10">
                           <Icon size={19} className="text-violet-200" />

@@ -1,15 +1,15 @@
-# Verse documentation
+# MusiLynk documentation
 
 Start with the [repository README](../README.md). Operational documents stay at the root;
 everything else lives here.
 
 ## The plan
 
-- [VERSE_PLAN.md](VERSE_PLAN.md): **the only planning document** — thesis, production facts, market benchmark, findings register, design direction, the showcase demo data, execution briefs, owner actions and roadmap. Every change of direction edits this file.
+- [MUSILYNK_PLAN.md](MUSILYNK_PLAN.md): **the only planning document** — thesis, production facts, market benchmark, findings register, design direction, the showcase demo data, execution briefs, owner actions and roadmap. Every change of direction edits this file.
 
 ## Root
 
-- [README.md](../README.md): what Verse is, local setup, tests.
+- [README.md](../README.md): what MusiLynk is, local setup, tests.
 - [DEPLOYMENT.md](../DEPLOYMENT.md): Vercel/Railway configuration, environment variables, provider go-live checklists, release gate, backups.
 - [ARCHITECTURE.md](../ARCHITECTURE.md): system layout, security boundary, domain model.
 - [SECURITY.md](../SECURITY.md): security controls in place and still missing.

@@ -26,15 +26,15 @@ class EmailCopyTest < ActiveSupport::TestCase
     NotificationEmail::TEMPLATES.each_key do |template|
       params = { "act" => "The Night Owls", "name" => "Asha", "job" => "Wedding set", "status" => "Under Review", "title" => "Wedding set",
                  "role" => "Drummer", "city" => "Mumbai", "until" => "5 Oct 2026", "endsOn" => "5 Oct 2026", "renewsOn" => "5 Oct 2026",
-                 "planName" => "Pro", "amount" => "₹2,499", "days" => "7 days", "tips" => "a link", "filledLink" => "https://verse.example/f",
-                 "closeLink" => "https://verse.example/c", "path" => "https://verse.example/cancel" }
+                 "planName" => "Pro", "amount" => "₹2,499", "days" => "7 days", "tips" => "a link", "filledLink" => "https://musilynk.example/f",
+                 "closeLink" => "https://musilynk.example/c", "path" => "https://musilynk.example/cancel" }
       content = NotificationEmail.render(template, params, @musician)
       html = content[:html]
-      assert_includes html, ">V</span>", "#{template}: brand mark"
-      assert_includes html, ">Verse</span>", "#{template}: brand name"
+      assert_includes html, %(src="#{FrontendUrl.base}/email-mark-64.png" width="32" height="32" alt="M"), "#{template}: brand mark"
+      assert_includes html, ">MusiLynk</td>", "#{template}: brand name"
       assert_equal 1, html.scan(BUTTON).size, "#{template}: one primary button"
       assert_includes html, "/unsubscribe?token=", "#{template}: unsubscribe link"
-      assert_match(/^Verse\n\n/, content[:text])
+      assert_match(/^MusiLynk\n\n/, content[:text])
       assert_includes content[:text], "Turn off these emails:"
     end
   end
@@ -44,7 +44,7 @@ class EmailCopyTest < ActiveSupport::TestCase
     assert_includes musician[:text], "/jobseeker/urgent"
     assert_no_match %r{/jobseeker/jobseeker}, musician[:text]
 
-    hirer = NotificationEmail.render("urgent_request_expiry_warning", { "title" => "Gig", "filledLink" => "https://verse.example/f", "closeLink" => "https://verse.example/c" }, @hirer)
+    hirer = NotificationEmail.render("urgent_request_expiry_warning", { "title" => "Gig", "filledLink" => "https://musilynk.example/f", "closeLink" => "https://musilynk.example/c" }, @hirer)
     assert_includes hirer[:text], "/employer/urgent"
     assert_no_match %r{/employer/jobseeker}, hirer[:text]
 
@@ -64,11 +64,11 @@ class EmailCopyTest < ActiveSupport::TestCase
 
   test "the expiry warning keeps one button and shows the one-tap actions as plain links" do
     content = NotificationEmail.render("urgent_request_expiry_warning",
-      { "title" => "Gig", "filledLink" => "https://verse.example/f", "closeLink" => "https://verse.example/c" }, @hirer)
+      { "title" => "Gig", "filledLink" => "https://musilynk.example/f", "closeLink" => "https://musilynk.example/c" }, @hirer)
     assert_equal 1, content[:html].scan(BUTTON).size
-    assert_includes content[:html], %(href="https://verse.example/f")
+    assert_includes content[:html], %(href="https://musilynk.example/f")
     assert_includes content[:html], "Mark it filled"
-    assert_includes content[:text], "Close it: https://verse.example/c"
+    assert_includes content[:text], "Close it: https://musilynk.example/c"
   end
 
   test "an urgent alert says when in Indian time, and statuses read as words" do
@@ -91,7 +91,7 @@ class EmailCopyTest < ActiveSupport::TestCase
     LifecycleMailer::STEPS.each_key do |key|
       content = LifecycleMailer.render_step(key, { "count" => 2, "city" => "Mumbai", "role" => "Drummer", "title" => "Wedding set", "hours" => 2, "candidate" => "A", "job" => "J", "minutes" => 5 }, @hirer)
       assert_no_match(/listing/i, content[:html], key)
-      assert_includes content[:html], ">V</span>"
+      assert_includes content[:html], "/email-mark-64.png"
       assert_equal 1, content[:html].scan(BUTTON).size, key
       assert_includes content[:html], "Manage emails"
     end
@@ -99,9 +99,9 @@ class EmailCopyTest < ActiveSupport::TestCase
 
   test "account emails have the brand header, one button at most, and say why they have no unsubscribe link" do
     EmailDelivery::TEMPLATES.each do |name, content|
-      data = { link: "https://verse.example/x", code: "123456", detail: "a@example.com", name: "Asha" }
+      data = { link: "https://musilynk.example/x", code: "123456", detail: "a@example.com", name: "Asha" }
       html = EmailDelivery.send(:email_html, content:, data:)
-      assert_includes html, ">V</span>", name
+      assert_includes html, "/email-mark-64.png", name
       assert_operator html.scan(BUTTON).size, :<=, 1, name
       assert_equal content[:action] ? 1 : 0, html.scan(BUTTON).size, name
       if content[:service_note] == false
@@ -109,9 +109,9 @@ class EmailCopyTest < ActiveSupport::TestCase
       else
         assert_includes html, EmailDelivery::SERVICE_NOTE, name
       end
-      assert_no_match(/VERSE/, html, name)
+      assert_no_match(/MUSILYNK/, html, name)
       text = EmailDelivery.send(:email_text, content:, data:)
-      assert_match(/^Verse\n\n/, text)
+      assert_match(/^MusiLynk\n\n/, text)
     end
   end
 

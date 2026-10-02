@@ -32,7 +32,7 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
       upload = Upload.find(body.fetch("id"))
       assert_equal ["pending", @user.id, "audio/mpeg", MP3.bytesize], [upload.status, upload.user_id, upload.content_type, upload.byte_size]
       assert_match %r{\Auploads/#{@user.id}/[0-9a-f-]{36}/My_Song_.mp3\z}, upload.key
-      assert_equal "https://verse-test.s3.ap-south-1.amazonaws.com/#{upload.key}", body.fetch("publicUrl")
+      assert_equal "https://musilynk-test.s3.ap-south-1.amazonaws.com/#{upload.key}", body.fetch("publicUrl")
 
       policy = JSON.parse(Base64.decode64(body.dig("fields", "policy")))
       conditions = policy.fetch("conditions")
@@ -58,7 +58,7 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
       body = response.parsed_body
       assert_equal "PUT", body["method"]
       assert_match(/X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost/, body["uploadUrl"])
-      assert body["uploadUrl"].start_with?("https://acct.r2.cloudflarestorage.com/verse-test/uploads/")
+      assert body["uploadUrl"].start_with?("https://acct.r2.cloudflarestorage.com/musilynk-test/uploads/")
       assert_equal "https://media.example.test/#{Upload.last.key}", body["publicUrl"]
     end
   end
@@ -108,7 +108,7 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
       post "/api/portfolio", params: { type: "audio", title: "Stolen", url: pending.public_url }, headers: other_auth, as: :json
       assert_response :unprocessable_content
 
-      assert_rejected_sample("https://verse-test.s3.ap-south-1.amazonaws.com/uploads/someone/else.mp3", /own completed uploads/)
+      assert_rejected_sample("https://musilynk-test.s3.ap-south-1.amazonaws.com/uploads/someone/else.mp3", /own completed uploads/)
       assert_rejected_sample("http://example.com/track", /HTTPS/)
 
       %w[https://youtu.be/dQw4w9WgXcQ https://open.spotify.com/track/abc https://soundcloud.com/a/b].each do |url|
@@ -153,7 +153,7 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
       @objects["uploads/legacy/orphan.mp3"] = { body: MP3, type: "audio/mpeg", at: 3.days.ago }
       @objects["uploads/legacy/linked.mp3"] = { body: MP3, type: "audio/mpeg", at: 3.days.ago }
       @objects["uploads/legacy/recent.mp3"] = { body: MP3, type: "audio/mpeg", at: 1.hour.ago }
-      legacy = @user.portfolio_items.new(kind: "audio", title: "Legacy", url: "https://verse-test.s3.ap-south-1.amazonaws.com/uploads/legacy/linked.mp3")
+      legacy = @user.portfolio_items.new(kind: "audio", title: "Legacy", url: "https://musilynk-test.s3.ap-south-1.amazonaws.com/uploads/legacy/linked.mp3")
       legacy.save!(validate: false)
 
       counts = UploadSweepJob.perform_now
@@ -170,7 +170,7 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
       storage = ReadinessChecks.new.call.fetch(:storage)
       assert_equal false, storage[:ok]
       assert_equal %w[missing_credentials missing_public_base_url], storage[:problems]
-      refute_match(/acct|verse-test|test-access/, storage.to_json)
+      refute_match(/acct|musilynk-test|test-access/, storage.to_json)
     end
   end
 
@@ -207,7 +207,7 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
   private
 
   def with_bucket(endpoint: nil, public_base: nil)
-    ENV.update("AWS_BUCKET" => "verse-test", "AWS_ACCESS_KEY_ID" => "test-access", "AWS_SECRET_ACCESS_KEY" => "test-secret")
+    ENV.update("AWS_BUCKET" => "musilynk-test", "AWS_ACCESS_KEY_ID" => "test-access", "AWS_SECRET_ACCESS_KEY" => "test-secret")
     endpoint ? ENV["AWS_ENDPOINT_URL_S3"] = endpoint : ENV.delete("AWS_ENDPOINT_URL_S3")
     public_base ? ENV["AWS_PUBLIC_BASE_URL"] = public_base : ENV.delete("AWS_PUBLIC_BASE_URL")
     UploadStorage.stub(:client, fake_client(endpoint)) { yield }

@@ -61,7 +61,7 @@ class TaxInvoiceGenerator
     issued_at = payment["created_at"].to_s.match?(/\A\d+\z/) ? Time.at(payment["created_at"].to_i).utc : Time.current
     financial_year = TaxInvoice.financial_year_at(issued_at)
     plan_name = Billing::BillingController::PLANS.dig(subscription.plan_code, :name) || subscription.plan_code.to_s.titleize
-    line = { description: "Verse #{plan_name} plan, #{subscription.annual? ? 'annual' : 'monthly'} subscription", sacCode: seller[:sacCode],
+    line = { description: "MusiLynk #{plan_name} plan, #{subscription.annual? ? 'annual' : 'monthly'} subscription", sacCode: seller[:sacCode],
              quantity: 1, taxableValuePaise: tax.taxable_paise,
              periodStart: subscription.current_period_start&.iso8601, periodEnd: subscription.current_period_end&.iso8601 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 /** Fired after the viewer reads messages or notifications so badges refresh without waiting for the next poll. */
-export const UNREAD_CHANGED_EVENT = 'verse:unread-changed';
+export const UNREAD_CHANGED_EVENT = 'musilynk:unread-changed';
 export const announceUnreadChanged = () => {
   try {
     window.dispatchEvent(new Event(UNREAD_CHANGED_EVENT));

@@ -9,8 +9,8 @@ def make_user(email, name, role, complete: false)
 end
 
 # (a) brand-new musician, empty profile; (c) brand-new hirer, nothing
-a = make_user("ux.new.musician@verse.local", "Nina Newcomer", "jobseeker")
-c = make_user("ux.new.hirer@verse.local", "Harsh Newhirer", "employer")
+a = make_user("ux.new.musician@musilynk.local", "Nina Newcomer", "jobseeker")
+c = make_user("ux.new.hirer@musilynk.local", "Harsh Newhirer", "employer")
 
 # (b) populated musician: showcase professional 0001 gets a known password
 b = User.find_by!(email: "qa+demo-showcase-professional-0001@example.invalid")

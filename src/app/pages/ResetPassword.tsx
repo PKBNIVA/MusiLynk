@@ -18,7 +18,7 @@ type CheckState = 'checking' | 'valid' | 'invalid';
  * already-used link says so immediately, with a form to request a new one right there.
  * A successful reset signs the person straight in and sends them to their role's home. */
 export default function ResetPassword() {
-  usePageMeta('Choose a new password', 'Set a new password for your Verse account using the link from your email.', {
+  usePageMeta('Choose a new password', 'Set a new password for your MusiLynk account using the link from your email.', {
     noindex: true,
   });
   const [sp] = useSearchParams();

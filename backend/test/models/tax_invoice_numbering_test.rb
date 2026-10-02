@@ -3,7 +3,7 @@ require_relative "../support/seller_config"
 
 class TaxInvoiceNumberingTest < ActiveSupport::TestCase
   test "numbers are formatted per series and financial year" do
-    assert_equal "VRS/2026-27/000123", TaxInvoice.number_for("VRS", "2026-27", 123)
+    assert_equal "MLK/2026-27/000123", TaxInvoice.number_for("MLK", "2026-27", 123)
   end
 
   test "financial year follows IST, not UTC" do
@@ -12,21 +12,21 @@ class TaxInvoiceNumberingTest < ActiveSupport::TestCase
   end
 
   test "sequence starts at 1 per financial year and counts up without gaps" do
-    assert_equal [1, 2, 3], Array.new(3) { TaxInvoice.transaction { TaxInvoice.next_sequence!("VRS", "2026-27") } }
-    assert_equal 1, TaxInvoice.transaction { TaxInvoice.next_sequence!("VRS", "2027-28") }
+    assert_equal [1, 2, 3], Array.new(3) { TaxInvoice.transaction { TaxInvoice.next_sequence!("MLK", "2026-27") } }
+    assert_equal 1, TaxInvoice.transaction { TaxInvoice.next_sequence!("MLK", "2027-28") }
     assert_equal 1, TaxInvoice.transaction { TaxInvoice.next_sequence!("OTHER", "2026-27") }
-    assert_equal 4, TaxInvoice.transaction { TaxInvoice.next_sequence!("VRS", "2026-27") }
+    assert_equal 4, TaxInvoice.transaction { TaxInvoice.next_sequence!("MLK", "2026-27") }
   end
 
   test "a rolled back issue does not use up a number" do
-    assert_equal 1, TaxInvoice.transaction { TaxInvoice.next_sequence!("VRS", "2026-27") }
+    assert_equal 1, TaxInvoice.transaction { TaxInvoice.next_sequence!("MLK", "2026-27") }
     assert_raises(RuntimeError) do
       TaxInvoice.transaction(requires_new: true) do
-        TaxInvoice.next_sequence!("VRS", "2026-27")
+        TaxInvoice.next_sequence!("MLK", "2026-27")
         raise "payment failed after numbering"
       end
     end
-    assert_equal 2, TaxInvoice.transaction { TaxInvoice.next_sequence!("VRS", "2026-27") }
+    assert_equal 2, TaxInvoice.transaction { TaxInvoice.next_sequence!("MLK", "2026-27") }
   end
 
 end
@@ -51,7 +51,7 @@ class TaxInvoiceConcurrencyTest < ActiveSupport::TestCase
   end
 
   module InvoiceCounterCleaner
-    def self.run = ActiveRecord::Base.lease_connection.execute("DELETE FROM invoice_counters WHERE series = 'VRS'")
+    def self.run = ActiveRecord::Base.lease_connection.execute("DELETE FROM invoice_counters WHERE series = 'MLK'")
   end
 
   test "parallel charges get distinct, gap-free numbers" do
@@ -72,7 +72,7 @@ class TaxInvoiceConcurrencyTest < ActiveSupport::TestCase
 
     numbers = TaxInvoice.where(user_id: @ids).order(:sequence_number).pluck(:invoice_number)
     assert_equal 8, numbers.size
-    assert_equal (1..8).map { TaxInvoice.number_for("VRS", "2026-27", _1) }, numbers
+    assert_equal (1..8).map { TaxInvoice.number_for("MLK", "2026-27", _1) }, numbers
   end
 
   test "the same payment racing in twice is invoiced once" do

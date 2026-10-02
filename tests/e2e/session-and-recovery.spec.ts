@@ -14,7 +14,7 @@ const jobseeker = {
 const job = {
   id: 'job-1',
   title: 'Session Guitarist',
-  company: 'Verse Studio',
+  company: 'MusiLynk Studio',
   location: 'Mumbai',
   opportunity_kind: 'Contract',
   description: 'Record guitar parts for a film score.',
@@ -149,7 +149,7 @@ test('a stale lazy chunk after a redeploy reloads once and recovers', async ({ p
   await page.goto('/pricing');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.locator('body')).not.toContainText('Unexpected Application Error');
-  await expect(page.getByText('Verse has been updated.')).toBeHidden();
+  await expect(page.getByText('MusiLynk has been updated.')).toBeHidden();
   expect(chunkRequests).toBe(2);
 });
 
@@ -168,7 +168,7 @@ test('a chunk that keeps failing shows a branded error instead of reloading fore
 
   await page.goto('/pricing');
   const alert = page.getByRole('alert');
-  await expect(alert.getByRole('heading', { name: 'Verse has been updated.' })).toBeVisible();
+  await expect(alert.getByRole('heading', { name: 'MusiLynk has been updated.' })).toBeVisible();
   await expect(alert.getByRole('button', { name: 'Go home' })).toBeVisible();
   await expect(page.locator('body')).not.toContainText('Unexpected Application Error');
   // One automatic reload at most, then the page settles on the recovery screen.
@@ -295,8 +295,8 @@ test('signing in, then a full page load on the public jobs list shows the signed
   // the header settles on the signed-in variant.
   await page.goto('/music-jobs');
   // Viewport-independent: the desktop account menu is hidden on phones, so assert through the
-  // apply CTA and the absence of the signed-out "Join Verse" control.
+  // apply CTA and the absence of the signed-out "Join MusiLynk" control.
   await expect(page.getByRole('link', { name: 'Apply' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Join Verse' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Join MusiLynk' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Sign in to apply' })).toHaveCount(0);
 });

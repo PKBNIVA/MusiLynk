@@ -153,7 +153,7 @@ describe('Pricing page copy (V-flat-fee-note)', () => {
     const note = container.querySelector('[data-testid="flat-fee-note"]');
     expect(note).not.toBeNull();
     expect(note?.textContent).toContain(
-      'One flat fee. No commission on your bookings. A ₹5 lakh wedding band booked through a commission agency costs ₹75,000–₹1,00,000 in fees; on Verse it costs your monthly plan.',
+      'One flat fee. No commission on your bookings. A ₹5 lakh wedding band booked through a commission agency costs ₹75,000–₹1,00,000 in fees; on MusiLynk it costs your monthly plan.',
     );
     expect(note?.textContent).toContain(
       'Cancel any time. We email you three days before your trial ends and before every renewal.',
@@ -305,11 +305,11 @@ describe('"Have a code?"', () => {
 
   it('prefills from ?code= and validates it, again when the interval changes', async () => {
     vi.mocked(apiPost).mockResolvedValue(good({ percentOff: 20, durationPeriods: 3 }));
-    await render('/pricing?code=verse-abc123');
-    expect(input().value).toBe('VERSE-ABC123');
+    await render('/pricing?code=musilynk-abc123');
+    expect(input().value).toBe('MUSILYNK-ABC123');
     expect(apiPost).toHaveBeenCalledWith(
       '/billing/codes/validate',
-      { code: 'VERSE-ABC123', planCode: 'pro', interval: 'monthly' },
+      { code: 'MUSILYNK-ABC123', planCode: 'pro', interval: 'monthly' },
       { skipAuthRedirect: true },
     );
     expect(result()).toContain('Pro at ₹1,999/month for 3 months');
@@ -318,7 +318,7 @@ describe('"Have a code?"', () => {
     await flush();
     expect(apiPost).toHaveBeenCalledWith(
       '/billing/codes/validate',
-      { code: 'VERSE-ABC123', planCode: 'pro', interval: 'annual' },
+      { code: 'MUSILYNK-ABC123', planCode: 'pro', interval: 'annual' },
       { skipAuthRedirect: true },
     );
     expect(result()).toContain('Pro at ₹19,992/year for 3 years');

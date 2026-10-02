@@ -28,7 +28,7 @@ module LinkImport
     READ_TIMEOUT = 5
     MAX_REDIRECTS = 3
     MAX_BODY_BYTES = 1_048_576
-    USER_AGENT = "VerseLinkBot/1.0 (+https://#{ENV.fetch('FRONTEND_URL', 'verse.app').sub(%r{\Ahttps?://}, '')}/about)".freeze
+    USER_AGENT = "MusiLynkLinkBot/1.0 (+https://#{ENV.fetch('FRONTEND_URL', 'musilynk.app').sub(%r{\Ahttps?://}, '')}/about)".freeze
 
     # Loopback, private, link-local, shared (CGNAT), benchmarking, documentation, multicast and
     # reserved IPv4; and the IPv6 equivalents plus the ranges that embed an IPv4 address

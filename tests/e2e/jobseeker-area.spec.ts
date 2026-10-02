@@ -16,7 +16,7 @@ const me = {
 const job = (id: string, extra: Record<string, unknown> = {}) => ({
   id,
   title: `Session Guitarist ${id}`,
-  company: 'Verse Studio',
+  company: 'MusiLynk Studio',
   location: 'Mumbai',
   workplace: 'onsite',
   type: 'Contract',

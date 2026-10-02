@@ -55,7 +55,7 @@ class LegalConfig
   # A missing flag means prices include GST, which is how the plan prices are quoted today.
   def self.prices_include_gst? = business[:prices_include_gst] != false
   def self.sac_code = business[:sac_code].to_s.strip
-  def self.invoice_prefix = business[:invoice_prefix].to_s.strip.presence || "VRS"
+  def self.invoice_prefix = business[:invoice_prefix].to_s.strip.presence || "MLK"
 
   # The seller's two-digit GST state code: the configured one, else the GSTIN's, else looked up
   # from the state name. nil while none of these is filled in.

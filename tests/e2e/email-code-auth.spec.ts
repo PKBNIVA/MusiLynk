@@ -21,7 +21,7 @@ const employer = {
 };
 const GENERIC = {
   ok: true,
-  message: 'If this email can be used on Verse, a 6-digit code is on its way.',
+  message: 'If this email can be used on MusiLynk, a 6-digit code is on its way.',
   expiresIn: 600,
 };
 
@@ -146,7 +146,7 @@ test('resend waits 60 seconds and sending shows a busy state', async ({ page }) 
 test('sign-up by code (on /join) sends name, role and consent and lands on the dashboard', async ({ page }) => {
   const calls = await mockApi(page, { user: employer });
   await page.goto('/auth/employer');
-  await page.getByRole('link', { name: 'New to Verse? Join in two minutes' }).click();
+  await page.getByRole('link', { name: 'New to MusiLynk? Join in two minutes' }).click();
   await expect(page).toHaveURL(/\/join\/hiring$/);
   await page.getByLabel('Studio sessions').check();
   await page.getByLabel('Organisation or team name').fill('QA Studio Co');

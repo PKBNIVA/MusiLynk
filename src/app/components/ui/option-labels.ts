@@ -45,7 +45,7 @@ export const OPTION_COPY: Record<string, OptionCopy> = {
   weekly: { label: 'Weekly' },
   saved: { label: 'Saved only' },
   // Visibility
-  public: { label: 'Public', description: 'Anyone on Verse can see it' },
+  public: { label: 'Public', description: 'Anyone on MusiLynk can see it' },
   private: { label: 'Private', description: 'Only you can see it' },
   // Currencies
   INR: { label: '₹ · Indian rupee' },

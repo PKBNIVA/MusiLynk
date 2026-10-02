@@ -14,7 +14,7 @@ class FounderReport
   end
 
   STEP_LABELS = {
-    "landing_view" => "visited Verse",
+    "landing_view" => "visited MusiLynk",
     "path_chosen" => "chose musician or hirer",
     "signup_completed" => "signed up",
     "first_action" => "took a first action",

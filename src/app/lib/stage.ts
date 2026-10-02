@@ -14,7 +14,7 @@ export interface StageAuthor {
   name: string;
   avatar?: string | null;
   verified?: boolean;
-  /** True for the platform's own "Verse" author (StageSystemPostsJob, FastResponderWeekJob). */
+  /** True for the platform's own "MusiLynk" author (StageSystemPostsJob, FastResponderWeekJob). */
   system?: boolean;
   /** Demo/showcase account: drawn as generated art rather than initials. */
   demo?: boolean;
@@ -324,8 +324,8 @@ export type FeedEntry = { kind: 'post'; post: StagePost } | { kind: 'system'; po
 export const isSystemPost = (post: StagePost) => post.kind === 'system' || Boolean(post.author.system);
 
 /**
- * The feed as render entries: a run of two or more consecutive Verse system posts ("X joined",
- * "N urgent requests filled") becomes one "This week on Verse" entry instead of a wall of
+ * The feed as render entries: a run of two or more consecutive MusiLynk system posts ("X joined",
+ * "N urgent requests filled") becomes one "This week on MusiLynk" entry instead of a wall of
  * near-identical cards; every other post stays as it is.
  */
 export function groupFeed(posts: StagePost[]): FeedEntry[] {
@@ -370,7 +370,7 @@ export const POST_KIND_LABEL: Record<PostKind, string> = {
   looking_for: 'Looking for',
   job_share: 'Job',
   portfolio_share: 'Portfolio',
-  system: 'Verse',
+  system: 'MusiLynk',
   event: 'Event',
 };
 

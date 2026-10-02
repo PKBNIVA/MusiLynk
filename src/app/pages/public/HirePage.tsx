@@ -54,7 +54,9 @@ export default function HirePage() {
     };
   }, [role, city]);
 
-  const title = data ? `Hire a verified ${roleNoun(data.role.label)} in ${data.city.name} | Verse` : 'Hire on Verse';
+  const title = data
+    ? `Hire a verified ${roleNoun(data.role.label)} in ${data.city.name} | MusiLynk`
+    : 'Hire on MusiLynk';
   const description = data
     ? `Browse verified ${roleNoun(data.role.label)}s in ${data.city.name} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`
     : undefined;
@@ -73,7 +75,7 @@ export default function HirePage() {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Verse', item: absoluteUrl('/') },
+            { '@type': 'ListItem', position: 1, name: 'MusiLynk', item: absoluteUrl('/') },
             { '@type': 'ListItem', position: 2, name: 'Musicians', item: absoluteUrl('/music-professionals') },
             {
               '@type': 'ListItem',
@@ -133,8 +135,8 @@ function HirePageContent({ data }: { data: HirePageData }) {
         title={hireHeading(role.label, city.name)}
       >
         <p className="max-w-2xl">
-          Every profile on Verse shows real work you can review. Browse verified {roleNoun(role.label)}s in {city.name},
-          filter by availability, or post an urgent request and hear back within hours.
+          Every profile on MusiLynk shows real work you can review. Browse verified {roleNoun(role.label)}s in{' '}
+          {city.name}, filter by availability, or post an urgent request and hear back within hours.
         </p>
       </PhotoHeader>
 

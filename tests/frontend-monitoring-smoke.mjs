@@ -7,7 +7,7 @@ const monitoring = await import('../src/app/lib/monitoring.ts');
 // --- Scrubbing ------------------------------------------------------------------------
 const token = 'vat_4f9a8b7c6d5e4f3a2b1c';
 const text = scrub.scrubString(
-  `Crash for jane.doe@example.com at https://verse.test/reset-password?token=abc123&step=2 ` +
+  `Crash for jane.doe@example.com at https://musilynk.test/reset-password?token=abc123&step=2 ` +
     `/verify-email?token=v1 /unsubscribe?token=u1 Authorization: Bearer ${token} raw ${token}`,
   [token],
 );
@@ -25,8 +25,8 @@ const event = scrub.scrubEvent(
     message: 'failed for a@b.io',
     user: { id: 7, role: 'admin', email: 'a@b.io', ip_address: '1.2.3.4' },
     request: {
-      url: 'https://verse.test/verify-email?token=secret-link',
-      headers: { Referer: 'https://verse.test/unsubscribe?token=zz', Authorization: 'Bearer x' },
+      url: 'https://musilynk.test/verify-email?token=secret-link',
+      headers: { Referer: 'https://musilynk.test/unsubscribe?token=zz', Authorization: 'Bearer x' },
       cookies: { a: 'b' },
     },
     extra: { verse_access_token: token, nested: [{ note: `token ${token}` }] },

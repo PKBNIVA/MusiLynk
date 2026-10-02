@@ -49,7 +49,7 @@ describe('usePageMeta', () => {
     expect(meta('name', 'description')?.content).toBe('World');
     expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toMatch(/\/hello$/);
     expect(meta('property', 'og:title')?.content).toBe('Hello');
-    expect(meta('property', 'og:site_name')?.content).toBe('Verse');
+    expect(meta('property', 'og:site_name')?.content).toBe('MusiLynk');
     expect(meta('name', 'twitter:card')?.content).toBe('summary_large_image');
   });
 

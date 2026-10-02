@@ -1,64 +1,64 @@
 class EmailDelivery
   TEMPLATES = {
     "reset_password" => {
-      subject: "Reset your Verse password",
+      subject: "Reset your MusiLynk password",
       heading: "Reset your password",
       copy: "Use the secure link below to choose a new password. The link expires in two hours.",
       action: "Reset password"
     },
     "verify_email" => {
-      subject: "Verify your Verse email",
+      subject: "Verify your MusiLynk email",
       heading: "Verify your email",
-      copy: "Confirm this email address to secure your Verse account.",
+      copy: "Confirm this email address to secure your MusiLynk account.",
       action: "Verify email"
     },
     # data: { code: }. Deliberately no link: a code-only email cannot be used
     # by link scanners or from a forwarded message preview.
     "sign_in_code" => {
-      subject: "Your Verse sign-in code",
+      subject: "Your MusiLynk sign-in code",
       heading: "Your sign-in code",
-      copy: "Enter this code on Verse to continue. It expires in 10 minutes and can be used once. Verse will never ask you for this code by phone or chat.",
+      copy: "Enter this code on MusiLynk to continue. It expires in 10 minutes and can be used once. MusiLynk will never ask you for this code by phone or chat.",
       action: nil
     },
     # data: { code: }. Sent to the address an admin wants to switch their account to.
     "admin_email_change" => {
-      subject: "Confirm your new Verse admin email",
+      subject: "Confirm your new MusiLynk admin email",
       heading: "Confirm your new admin email",
-      copy: "Enter this code on the Verse admin site to move your admin account to this address. It expires in 10 minutes and can be used once.",
+      copy: "Enter this code on the MusiLynk admin site to move your admin account to this address. It expires in 10 minutes and can be used once.",
       action: nil,
-      footer: "If you didn't request this, ignore this email: nothing changes without the code. If you are a Verse admin and did not start this, change your admin password now."
+      footer: "If you didn't request this, ignore this email: nothing changes without the code. If you are a MusiLynk admin and did not start this, change your admin password now."
     },
     # data: { detail: new address }. Sent to the previous address once the change is done.
     "admin_email_changed" => {
-      subject: "Your Verse admin email was changed",
+      subject: "Your MusiLynk admin email was changed",
       heading: "Admin email changed",
-      copy: "The email address for your Verse admin account was just changed to:",
+      copy: "The email address for your MusiLynk admin account was just changed to:",
       action: nil,
       notice: true,
       footer: "If you made this change, nothing else is needed. If you did not, sign in at the admin site right away and change your password, or contact the site owner."
     },
     # data: { code: }. Sent to the address an account holder wants to switch their account to.
     "account_email_change" => {
-      subject: "Confirm your new Verse email",
+      subject: "Confirm your new MusiLynk email",
       heading: "Confirm your new email",
-      copy: "Enter this code on Verse to move your account to this address. It expires in 10 minutes and can be used once.",
+      copy: "Enter this code on MusiLynk to move your account to this address. It expires in 10 minutes and can be used once.",
       action: nil,
-      footer: "If you didn't request this, ignore this email: nothing changes without the code. If you did not start this, change your Verse password now."
+      footer: "If you didn't request this, ignore this email: nothing changes without the code. If you did not start this, change your MusiLynk password now."
     },
     # data: { link: sign-in methods page }. Sent when Google sign-in is linked to an
     # existing account by matching a verified email (GoogleSignIn#signin!).
     "google_connected" => {
-      subject: "Google sign-in was added to your Verse account",
+      subject: "Google sign-in was added to your MusiLynk account",
       heading: "Google sign-in was added",
-      copy: "You can now sign in to Verse with Google. Manage your sign-in methods any time from your account settings.",
+      copy: "You can now sign in to MusiLynk with Google. Manage your sign-in methods any time from your account settings.",
       action: "Manage sign-in methods",
       footer: "If you did not do this, sign in and remove it from your sign-in methods, or contact support."
     },
     # data: { detail: new address }. Sent to the previous address once the change is done.
     "account_email_changed" => {
-      subject: "Your Verse email was changed",
+      subject: "Your MusiLynk email was changed",
       heading: "Email changed",
-      copy: "The email address for your Verse account was just changed to:",
+      copy: "The email address for your MusiLynk account was just changed to:",
       action: nil,
       notice: true,
       footer: "If you made this change, nothing else is needed. If you did not, sign in right away and change your password, or contact support."
@@ -66,9 +66,9 @@ class EmailDelivery
     # data: { detail: the account email }. Sent when a code-only or Google account sets its first
     # password (AccountController#change_password).
     "account_password_set" => {
-      subject: "A password was added to your Verse account",
+      subject: "A password was added to your MusiLynk account",
       heading: "Password added",
-      copy: "A password was just added to your Verse account, so you can now also sign in with it. The account is:",
+      copy: "A password was just added to your MusiLynk account, so you can now also sign in with it. The account is:",
       action: nil,
       notice: true,
       footer: "If you made this change, nothing else is needed. If you did not, sign in right away with an emailed code and change your password, or contact support."
@@ -76,40 +76,40 @@ class EmailDelivery
     # data: { detail: the account email }. Sent when the password set before the address was confirmed
     # is removed (User#reclaim_unverified_credentials!).
     "account_password_removed" => {
-      subject: "We removed a password from your Verse account",
+      subject: "We removed a password from your MusiLynk account",
       heading: "Password removed",
       copy: "For your security we removed the password that was set before you confirmed this address. You can set a new one any time from Settings, or sign in with an emailed code. The account is:",
       action: nil,
       notice: true,
-      footer: "If you did not just sign in to Verse, contact support."
+      footer: "If you did not just sign in to MusiLynk, contact support."
     },
-    # data: { link:, name: }. Sent to the invitee's address; they may not have a Verse account yet.
+    # data: { link:, name: }. Sent to the invitee's address; they may not have a MusiLynk account yet.
     "vouch_invite" => {
-      subject: "You were vouched for on Verse",
-      heading: ->(d) { "#{d[:name]} vouched for you on Verse" },
-      copy: ->(d) { "#{d[:name]} vouched for you on Verse. A vouch helps hirers trust your profile. Use the button below to join." },
-      action: "Join Verse",
-      # The invitee may have no account, so "your Verse account" and "cannot be turned off" do not apply.
-      footer: "You are getting this one email because someone you know named you on Verse. If you do not know them, you can safely ignore it: nothing happens unless you join.",
+      subject: "You were vouched for on MusiLynk",
+      heading: ->(d) { "#{d[:name]} vouched for you on MusiLynk" },
+      copy: ->(d) { "#{d[:name]} vouched for you on MusiLynk. A vouch helps hirers trust your profile. Use the button below to join." },
+      action: "Join MusiLynk",
+      # The invitee may have no account, so "your MusiLynk account" and "cannot be turned off" do not apply.
+      footer: "You are getting this one email because someone you know named you on MusiLynk. If you do not know them, you can safely ignore it: nothing happens unless you join.",
       service_note: false
     },
-    # data: { link:, name: (inviter), act:, role: }. Sent to an address that may have no Verse account yet.
+    # data: { link:, name: (inviter), act:, role: }. Sent to an address that may have no MusiLynk account yet.
     "act_invite" => {
-      subject: "You were invited to join a band on Verse",
+      subject: "You were invited to join a band on MusiLynk",
       heading: ->(d) { "#{d[:name]} invited you to join #{d[:act]}" },
-      copy: ->(d) { "#{d[:name]} invited you to join #{d[:act]} as #{d[:role]}. Use the button to see the invite, sign in or join Verse, and accept or decline. The link works once and expires in 7 days." },
+      copy: ->(d) { "#{d[:name]} invited you to join #{d[:act]} as #{d[:role]}. Use the button to see the invite, sign in or join MusiLynk, and accept or decline. The link works once and expires in 7 days." },
       action: "See the invite",
-      footer: "You are getting this one email because someone invited you to their band on Verse. If you do not know them, ignore it: you are only added if you accept.",
+      footer: "You are getting this one email because someone invited you to their band on MusiLynk. If you do not know them, ignore it: you are only added if you accept.",
       service_note: false
     },
     # data: { link: the report in the admin console, name: who sent it }. Sent to the founder when a
     # problem report arrives (ProblemReportNotifier). No report text: it stays in the admin console.
     "problem_report" => {
-      subject: "New problem report on Verse",
+      subject: "New problem report on MusiLynk",
       heading: ->(d) { "New problem report from #{d[:name]}" },
       copy: "Someone sent a problem report from the app. Open it in the admin console to read it and see the screenshot, if they added one.",
       action: "Open the report",
-      footer: "You are getting this because you receive Verse founder emails. Reports are also listed under Problem reports in the admin console.",
+      footer: "You are getting this because you receive MusiLynk founder emails. Reports are also listed under Problem reports in the admin console.",
       service_note: false
     }
   }.freeze
@@ -117,12 +117,15 @@ class EmailDelivery
   # Security and account emails cannot be switched off, so they carry no unsubscribe link; they
   # say why instead. The notification, lifecycle and digest emails (NotificationEmail,
   # LifecycleMailer) carry an unsubscribe / manage-emails link.
-  SERVICE_NOTE = "This is a service email about your Verse account, so it cannot be turned off.".freeze
+  SERVICE_NOTE = "This is a service email about your MusiLynk account, so it cannot be turned off.".freeze
 
-  # The brand header every email starts with: the V mark and the name. Inline styles only;
-  # mail clients ignore style sheets.
+  # The brand header every email starts with: the MusiLynk mark (public/email-mark-64.png, served from
+  # the frontend origin, shown at 32px) and the name as live text. If a mail client blocks images,
+  # the alt text and the img's own background still paint a violet square with an "M", so the header
+  # keeps its shape. Inline styles only; mail clients ignore style sheets.
   def self.brand_header_html
-    %(<div style="font-size:0;line-height:0"><span style="display:inline-block;width:32px;height:32px;line-height:32px;border-radius:10px;background:#7c3aed;color:#ffffff;text-align:center;font-size:18px;font-weight:800;vertical-align:middle">V</span><span style="display:inline-block;margin-left:10px;font-size:22px;line-height:32px;font-weight:800;color:#a78bfa;vertical-align:middle">Verse</span></div>)
+    mark = "#{ERB::Util.html_escape(FrontendUrl.base)}/email-mark-64.png"
+    %(<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td style="width:32px;height:32px;padding:0;vertical-align:middle"><img src="#{mark}" width="32" height="32" alt="M" style="display:block;width:32px;height:32px;border:0;border-radius:8px;background:#7c3aed;color:#ffffff;font:800 18px/32px Arial,Helvetica,sans-serif;text-align:center"></td><td style="padding:0 0 0 10px;vertical-align:middle;font:800 22px/32px Arial,Helvetica,sans-serif;letter-spacing:-0.3px;color:#ffffff">#{Brand::NAME}</td></tr></table>)
   end
 
   # The opening of <head> every email shares: charset and a mobile viewport, so 375px phones
@@ -174,7 +177,7 @@ class EmailDelivery
   def self.configured? = provider.present?
 
   # Top-level domains reserved by RFC 2606/6761 plus common internal ones: mail sent there
-  # can never arrive (the seeded admin@verse.local, synthetic qa+…@example.invalid accounts).
+  # can never arrive (the seeded admin@musilynk.local, synthetic qa+…@example.invalid accounts).
   RESERVED_TLDS = %w[local localhost invalid test example internal].freeze
 
   def self.reserved_address?(email)
@@ -198,7 +201,7 @@ class EmailDelivery
       request.headers["Accept"] = "application/json"
       request.headers["api-key"] = ENV.fetch("BREVO_API_KEY")
       request.body = {
-        sender: { name: ENV.fetch("BREVO_SENDER_NAME", "Verse"), email: ENV.fetch("BREVO_SENDER_EMAIL") },
+        sender: { name: ENV.fetch("BREVO_SENDER_NAME", Brand::NAME), email: ENV.fetch("BREVO_SENDER_EMAIL") },
         to: [{ email: to }], subject: content[:subject],
         htmlContent: email_html(content:, data:),
         textContent: email_text(content:, data:)
@@ -261,7 +264,7 @@ class EmailDelivery
   def self.email_text(content:, data:)
     value = email_body_value(content:, data:)
     value = "#{content[:action]}: #{value}" if content[:action]
-    ["Verse", render_value(content[:heading], data), render_value(content[:copy], data), value, [content[:footer] || DEFAULT_FOOTER, (SERVICE_NOTE unless content[:service_note] == false)].compact.join("\n")].join("\n\n")
+    [Brand::NAME, render_value(content[:heading], data), render_value(content[:copy], data), value, [content[:footer] || DEFAULT_FOOTER, (SERVICE_NOTE unless content[:service_note] == false)].compact.join("\n")].join("\n\n")
   end
 
   def self.email_html(content:, data:)
@@ -300,7 +303,7 @@ class EmailDelivery
       case provider_name
       when "brevo"
         request.headers["api-key"] = ENV.fetch("BREVO_API_KEY")
-        request.body = { sender: { name: ENV.fetch("BREVO_SENDER_NAME", "Verse"), email: ENV.fetch("BREVO_SENDER_EMAIL") },
+        request.body = { sender: { name: ENV.fetch("BREVO_SENDER_NAME", Brand::NAME), email: ENV.fetch("BREVO_SENDER_EMAIL") },
           to: [{ email: to }], subject:, htmlContent: html, textContent: text, headers: headers.presence }.compact.to_json
       when "resend"
         request.headers["Authorization"] = "Bearer #{ENV.fetch('RESEND_API_KEY')}"

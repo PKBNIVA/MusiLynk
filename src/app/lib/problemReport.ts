@@ -22,7 +22,7 @@ const RECORD_ID = /^([a-z]{2,6}_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4
 export function sanitizePageUrl(href: string): string {
   let url: URL;
   try {
-    url = new URL(href, 'https://verse.invalid');
+    url = new URL(href, 'https://musilynk.invalid');
   } catch {
     return '/';
   }
@@ -82,7 +82,7 @@ export function collectContext(errors: string[]): ReportContext {
   const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent;
   return {
     page: sanitizePageUrl(`${window.location.pathname}${window.location.search}`),
-    release: RELEASE || (window as Window & { __VERSE_RELEASE__?: string }).__VERSE_RELEASE__ || 'unknown',
+    release: RELEASE || (window as Window & { __MUSILYNK_RELEASE__?: string }).__MUSILYNK_RELEASE__ || 'unknown',
     browser: describeBrowser(ua),
     os: describeOs(ua),
     viewport: { width: window.innerWidth, height: window.innerHeight },

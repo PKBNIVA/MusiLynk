@@ -1,4 +1,4 @@
-# Weekly: builds and sends "This week on Verse" to every active, email-eligible user
+# Weekly: builds and sends "This week on MusiLynk" to every active, email-eligible user
 # (WeeklyDigest builds the sections). Idempotent per user per ISO week via the
 # lifecycle_emails table (key "digest:<ISO week>"), so a retried or re-triggered run never
 # double-sends. Runs Tuesday 09:30 IST (04:00 UTC) — see config/initializers/good_job.rb.

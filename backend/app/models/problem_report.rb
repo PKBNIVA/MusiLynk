@@ -38,7 +38,7 @@ class ProblemReport < ApplicationRecord
   SENSITIVE_PARAM = /\A(t|k|s|sig|code|state|auth|ticket|otp|jwt)\z|token|secret|signature|password|passwd|email|key|session|credential|reset|invite|vouch|unsubscribe/i
   # A path segment that looks like a credential (long, mixed letters and digits) instead of a slug.
   CREDENTIAL_SEGMENT = /\A(?=.*\d)(?=.*[A-Za-z])[A-Za-z0-9_\-]{24,}\z/
-  # Verse's own ids (job_<uuid>, a bare uuid) are not credentials and help us find the page.
+  # MusiLynk's own ids (job_<uuid>, a bare uuid) are not credentials and help us find the page.
   RECORD_ID = /\A([a-z]{2,6}_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/
 
   # The page path to store: path and harmless query parameters only, never a host, fragment,

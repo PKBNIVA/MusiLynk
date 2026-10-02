@@ -1,6 +1,6 @@
 # The GST split of one charge, in whole paise, so every figure adds up to the total exactly.
 #
-#   inclusive: `amount_paise` is what the customer paid, GST included (the default for Verse plan
+#   inclusive: `amount_paise` is what the customer paid, GST included (the default for MusiLynk plan
 #              prices). The taxable value is backed out of it and the total stays the amount paid.
 #   exclusive: `amount_paise` is the price before GST; the tax is added on top.
 #

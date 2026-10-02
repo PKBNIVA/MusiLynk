@@ -20,7 +20,7 @@ test.describe('live API health and latency', () => {
       const response = await request.get(`${apiBase}/health`);
       timings.push(Date.now() - startedAt);
       expect(response.status()).toBe(200);
-      expect(await response.json()).toMatchObject({ ok: true, service: 'verse-rails' });
+      expect(await response.json()).toMatchObject({ ok: true, service: 'musilynk-api' });
     }
 
     timings.sort((a, b) => a - b);
@@ -54,9 +54,9 @@ test.describe('live API health and latency', () => {
             .get(`${webBase}/`, { failOnStatusCode: false, timeout: 15_000 })
             .catch(() => null);
           const html = response?.ok() ? await response.text() : '';
-          return (html.match(/<meta\s+name="verse-release"\s+content="([^"]*)"/i)?.[1] || '').slice(0, 12);
+          return (html.match(/<meta\s+name="musilynk-release"\s+content="([^"]*)"/i)?.[1] || '').slice(0, 12);
         },
-        { message: 'web <meta name="verse-release"> release', timeout: releaseWaitMs, intervals: [5_000, 15_000] },
+        { message: 'web <meta name="musilynk-release"> release', timeout: releaseWaitMs, intervals: [5_000, 15_000] },
       )
       .toBe(expectedRelease);
   });
@@ -65,7 +65,7 @@ test.describe('live API health and latency', () => {
     const response = await request.get(`${apiBase}/readiness`);
     expect([200, 503]).toContain(response.status());
     const body = await response.json();
-    expect(body).toMatchObject({ service: 'verse-rails' });
+    expect(body).toMatchObject({ service: 'musilynk-api' });
     expect(body).not.toHaveProperty('environment');
     expect(body).not.toHaveProperty('checks');
     expect(JSON.stringify(body)).not.toMatch(/secret|password|access[_-]?key|provider/i);

@@ -1,4 +1,4 @@
-# Verse API contract
+# MusiLynk API contract
 
 Rails 8.1 API in `backend/`, served under `/api`. The contract below is enforced by
 `backend/test/integration/api_matrix_test.rb` (every route x every role),
@@ -186,7 +186,7 @@ Every `q` (global search, jobs, talent, candidates, acts) goes through `Search::
 | GET | `/acts/me` | talent | — | `{acts}` **unbounded** |
 | POST | `/acts` | talent | `name, actType, tagline, bio, city, lineupSize, minFee, maxFee, currency, feeBasis, …, status, genres[]` | 201 `{id, act}`; `verified` ignored |
 | PATCH/PUT/DELETE | `/acts/:id` | talent (owner) | as create | `{act}` / `{ok}` (DELETE deactivates) |
-| POST | `/acts/:id/members` | talent (owner) | `displayName, roleName, instrument` adds a named member who is not on Verse; with `userId` (active jobseeker) it sends an invite instead of adding them | 201 `{id}` (with `userId`: `{id, invited: true, invite}`); 400 status; 404 user; 409 already in lineup or invited |
+| POST | `/acts/:id/members` | talent (owner) | `displayName, roleName, instrument` adds a named member who is not on MusiLynk; with `userId` (active jobseeker) it sends an invite instead of adding them | 201 `{id}` (with `userId`: `{id, invited: true, invite}`); 400 status; 404 user; 409 already in lineup or invited |
 | DELETE | `/acts/:id/members/:memberId` | talent (owner) | — | `{ok}`; 409 leader |
 | POST | `/acts/:id/leave` | talent (member) | — | `{ok}`; 404 not in the lineup; 409 leader |
 | GET | `/acts/:id/invitees?q=` | talent (owner) | name, role or city (2+ letters) | `{musicians: [{id, name, headline, location, roles, verified}]}` (never an email); 60/hour |

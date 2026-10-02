@@ -1,4 +1,4 @@
-# Verse SaaS Billing Architecture
+# MusiLynk SaaS Billing Architecture
 
 ## Commercial model
 - Candidate/professional core: free profile, discovery and applications.
@@ -44,16 +44,16 @@ Server creates subscriptions. Browser receives only checkout-safe identifiers (`
 Booking deposits use server-created Orders, not subscription objects. Order receipts are `dep_<payment uuid>` (Razorpay's 40-character limit). The server verifies checkout signatures and the captured payment with Razorpay, and also reconciles payment webhooks. Confirmation is idempotent: when the `payment.captured` webhook wins the race, the checkout confirmation of the same verified payment succeeds instead of reporting a conflict. Booking payments have their own ledger.
 
 ## Reconciliation
-`BillingReconciliationJob` (every 30 minutes) resolves attempts left `pending`/`ambiguous` by crashes, timeouts and 5xx responses. With a provider id it fetches the resource; without one it looks the resource up by what Verse sent (`notes.attempt_id` on subscriptions, the receipt on orders) and attaches it. Attempts confirmed absent at Razorpay are failed after 30 minutes and release their local reservation. Admins can reconcile one attempt with `POST /api/admin/billing-attempts/:id/reconcile`.
+`BillingReconciliationJob` (every 30 minutes) resolves attempts left `pending`/`ambiguous` by crashes, timeouts and 5xx responses. With a provider id it fetches the resource; without one it looks the resource up by what MusiLynk sent (`notes.attempt_id` on subscriptions, the receipt on orders) and attaches it. Attempts confirmed absent at Razorpay are failed after 30 minutes and release their local reservation. Admins can reconcile one attempt with `POST /api/admin/billing-attempts/:id/reconcile`.
 
 ## Cancellation and plan-change safety
-A Verse cancellation is not merely a local flag. For a live Razorpay subscription the backend calls the provider cancellation endpoint:
+A MusiLynk cancellation is not merely a local flag. For a live Razorpay subscription the backend calls the provider cancellation endpoint:
 
 - **active** paid plan: cancelled at cycle end; access continues until `current_period_end`, then `subscription.cancelled`/`completed` ends it.
 - **trialing** or **past_due**: cancelled immediately (nothing is owed for the current period); paid features stop at once. The confirmation dialog says so.
 - **pending** (never authorised) mandates: cancelled immediately.
 
-Verse blocks creation of a different paid plan while another recurring mandate is active/pending so a customer is not accidentally charged twice (`PLAN_CHANGE_REQUIRES_CANCELLATION`).
+MusiLynk blocks creation of a different paid plan while another recurring mandate is active/pending so a customer is not accidentally charged twice (`PLAN_CHANGE_REQUIRES_CANCELLATION`).
 
 Pending authorization does not unlock paid entitlements. A customer can resume the same pending checkout ("Complete setup") instead of creating another subscription. The first eligible paid plan can receive its configured free trial; subsequent paid subscriptions do not automatically receive another trial.
 

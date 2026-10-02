@@ -28,7 +28,7 @@ export function SubmittedListing({
     <section
       aria-labelledby="submitted-title"
       data-testid="submitted-card"
-      className="verse-surface rounded-3xl p-6 md:p-8"
+      className="musilynk-surface rounded-3xl p-6 md:p-8"
     >
       <CheckCircle2 aria-hidden="true" className="size-9 text-emerald-300" />
       <h2 id="submitted-title" className="mt-4 text-2xl font-bold">

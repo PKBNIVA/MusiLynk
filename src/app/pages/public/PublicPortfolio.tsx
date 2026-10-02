@@ -63,7 +63,7 @@ export default function PublicPortfolio() {
   const p = portfolio;
   usePageMeta(
     p ? `${p.ownerName || p.title} — ${p.headline || p.title}` : undefined,
-    p ? p.bio || `${p.title} by ${p.ownerName} on Verse${p.city ? `, ${p.city}` : ''}.` : undefined,
+    p ? p.bio || `${p.title} by ${p.ownerName} on MusiLynk${p.city ? `, ${p.city}` : ''}.` : undefined,
     {
       canonicalPath: `/p/${slug}`,
       type: 'website',

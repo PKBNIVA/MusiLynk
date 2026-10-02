@@ -55,7 +55,7 @@ export async function signInWithDialogFixtures(page: Page, role: 'jobseeker' | '
         job: {
           id: REPORT_JOB_ID,
           title: 'Session Guitarist',
-          company: 'Verse Studio',
+          company: 'MusiLynk Studio',
           location: 'Mumbai',
           workplace: 'onsite',
           type: 'Contract',

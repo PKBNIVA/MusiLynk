@@ -17,7 +17,7 @@ class WeeklyDigest
   def self.subject_for(sections)
     largest = sections.select { _1[:noun].present? }.max_by { Array(_1[:items]).size }
     count = Array(largest&.dig(:items)).size
-    return "This week on Verse" unless count.positive?
+    return "This week on MusiLynk" unless count.positive?
 
     "#{count} #{largest[:noun].pluralize(count)} #{largest[:where]} this week"
   end
@@ -46,7 +46,7 @@ class WeeklyDigest
       section("New opportunities matching your roles", matching_jobs(profile), noun: "new opportunity", where: "matching your roles"),
       { heading: "Your profile", items: [], footnote: profile_views_footnote },
       { heading: "New in your city", items: [], footnote: newly_verified_footnote(profile) },
-      { heading: "Across Verse", items: [], footnote: community_footnote }
+      { heading: "Across MusiLynk", items: [], footnote: community_footnote }
     ]
   end
 
@@ -88,7 +88,7 @@ class WeeklyDigest
     count = ResponseTimeStats.organic_requests.where(status: "filled", updated_at: since..until_time).count
     return nil if count.zero?
 
-    "#{count} #{'request'.pluralize(count)} #{count == 1 ? 'was' : 'were'} filled through Verse this week."
+    "#{count} #{'request'.pluralize(count)} #{count == 1 ? 'was' : 'were'} filled through MusiLynk this week."
   end
 
   # --- Hirer digest ----------------------------------------------------------------

@@ -19,14 +19,24 @@ const builds = {
 const forbidden = {
   public: {
     chunks: /^(Admin|SignInDoctor|OperationsPanel|DemoDataPanel|ReportReview)/,
-    text: ['Sign-in doctor', 'admin-user-filter', 'Marketplace health', 'Live Tester', '/admin/account', 'Verse Admin'],
+    text: [
+      'Sign-in doctor',
+      'admin-user-filter',
+      'Marketplace health',
+      'Live Tester',
+      '/admin/account',
+      'MusiLynk Admin',
+    ],
   },
   admin: {
     chunks: /^(LandingPage|AuthPage|JobSearch|PostJob|Pricing|PublicJobs|PublicTalent|SiteMapPage|Messages)/,
     text: ['One login. Your whole', 'Find work and build a career', '/music-professionals', 'Hire music talent'],
   },
 };
-const robots = { public: /<meta name="robots" content="index/, admin: /<meta name="robots" content="noindex, nofollow"/ };
+const robots = {
+  public: /<meta name="robots" content="index/,
+  admin: /<meta name="robots" content="noindex, nofollow"/,
+};
 
 let failed = false;
 const fail = (message) => {
@@ -41,7 +51,8 @@ for (const [target, dist] of Object.entries(builds)) {
   }
   const html = readFileSync(join(dist, 'index.html'), 'utf8');
   if (!robots[target].test(html)) fail(`index.html has the wrong robots meta for the ${target} site`);
-  if (target === 'admin' && !html.includes('<title>Verse Admin</title>')) fail('index.html title is not "Verse Admin"');
+  if (target === 'admin' && !html.includes('<title>MusiLynk Admin</title>'))
+    fail('index.html title is not "MusiLynk Admin"');
   const assets = readdirSync(join(dist, 'assets'));
   const chunks = assets.filter((name) => forbidden[target].chunks.test(name));
   if (chunks.length) fail(`contains the other site's chunks: ${chunks.join(', ')}`);

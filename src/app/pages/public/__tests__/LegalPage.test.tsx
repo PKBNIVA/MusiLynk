@@ -81,8 +81,8 @@ describe('LegalPage', () => {
   });
 
   it('prints the grievance officer once every field is configured', async () => {
-    await open('/privacy', policy({ name: 'Asha Rao', email: 'grievance@verse.example', address: 'Mumbai' }, true));
-    expect(container.textContent).toContain('Name: Asha Rao · Email: grievance@verse.example · Address: Mumbai');
+    await open('/privacy', policy({ name: 'Asha Rao', email: 'grievance@musilynk.example', address: 'Mumbai' }, true));
+    expect(container.textContent).toContain('Name: Asha Rao · Email: grievance@musilynk.example · Address: Mumbai');
     expect(container.textContent).not.toContain('published before launch');
   });
 

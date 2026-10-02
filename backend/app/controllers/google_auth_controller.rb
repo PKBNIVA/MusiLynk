@@ -20,7 +20,7 @@ class GoogleAuthController < ApplicationController
   STATE_TTL = 10.minutes
   # Binds the OAuth state to the browser that started the flow (login CSRF): /start sets this
   # signed cookie holding the state's nonce, /callback only accepts a state whose nonce it carries.
-  STATE_COOKIE = "verse_oauth_state".freeze
+  STATE_COOKIE = "musilynk_oauth_state".freeze
   STATE_COOKIE_PURPOSE = :google_oauth_state_cookie
   DEFAULT_RETURN_TO = { "jobseeker" => "/jobseeker", "employer" => "/employer" }.freeze
   JOIN_PATH = { "jobseeker" => "/join/musician", "employer" => "/join/hiring" }.freeze

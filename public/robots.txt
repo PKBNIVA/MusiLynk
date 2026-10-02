@@ -14,4 +14,4 @@ Disallow: /forgot-password
 Disallow: /app-shell.html
 Disallow: /404.html
 
-Sitemap: https://verse-music-platform.vercel.app/sitemap.xml
+Sitemap: https://musilynk.vercel.app/sitemap.xml

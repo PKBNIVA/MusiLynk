@@ -10,7 +10,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
   setup do
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
-    ENV["FRONTEND_URL"] = "https://verse.example"
+    ENV["FRONTEND_URL"] = "https://musilynk.example"
     @owner = make_user("Olive Owner", "ai-owner@example.com", "jobseeker")
     @rohan = make_user("Rohan Tabla", "ai-rohan@example.com", "jobseeker", headline: "Tabla player", roles: ["Tabla"], location: "Pune")
     @asha = make_user("Asha Vocals", "ai-asha@example.com", "jobseeker")
@@ -103,7 +103,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
   end
 
   # --- consent ---------------------------------------------------------------------------------
-  test "inviting a Verse musician adds nobody until they accept, and notifies them" do
+  test "inviting a MusiLynk musician adds nobody until they accept, and notifies them" do
     assert_difference -> { Notification.where(user: @rohan, kind: "act_invite").count }, 1 do
       invite!({ userId: @rohan.id, roleName: "Tabla", instrument: "Tabla" })
     end
@@ -161,7 +161,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
     assert_equal 1, ActInvite.count
   end
 
-  test "add_member without a userId still names a bandmate who is not on Verse, and existing members are untouched" do
+  test "add_member without a userId still names a bandmate who is not on MusiLynk, and existing members are untouched" do
     post "/api/acts/#{@act.id}/members", params: { displayName: "Session Dhol", roleName: "Dhol" }, headers: auth(@owner), as: :json
     assert_response :created
     member = @act.act_members.find(response.parsed_body.fetch("id"))
@@ -173,7 +173,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
   end
 
   # --- email invites ----------------------------------------------------------------------------
-  test "an email invite to someone off Verse queues a sealed link email and only the matching verified address can accept" do
+  test "an email invite to someone off MusiLynk queues a sealed link email and only the matching verified address can accept" do
     ENV["EMAIL_DELIVERY_WEBHOOK"] = "https://email-hook.example.invalid/send"
     assert_enqueued_with(job: EmailDeliveryJob) { invite!({ kind: "email", email: "  New.Person@Example.com ", roleName: "Keys" }) }
     assert_response :created
@@ -223,7 +223,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
     data = sent.first.fetch("data")
     assert_equal ["act_invite", "reach@example.com"], [sent.first["template"], sent.first["to"]]
     assert_equal ["Olive Owner", "The Night Owls", "Keys"], data.values_at("name", "act", "role")
-    assert_match(%r{\Ahttps://verse\.example/invites/[\w-]+\z}, data["link"])
+    assert_match(%r{\Ahttps://musilynk\.example/invites/[\w-]+\z}, data["link"])
     assert_equal last_invite, ActInvite.find_by_token(data["link"].split("/").last)
   ensure
     ENV.delete("EMAIL_DELIVERY_WEBHOOK")
@@ -260,7 +260,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
     invite!({ kind: "link", roleName: "Keys", instrument: "Piano" })
     assert_response :created
     token = link_token(response.parsed_body)
-    assert_equal "https://verse.example/invites/#{token}", response.parsed_body["link"]
+    assert_equal "https://musilynk.example/invites/#{token}", response.parsed_body["link"]
     invite = last_invite
     assert_not_equal token, invite.token_digest
     assert_equal ActInvite.digest(token), invite.token_digest

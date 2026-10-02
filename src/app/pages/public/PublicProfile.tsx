@@ -82,7 +82,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
   const jsonLd = useMemo(() => (p ? personJsonLd(p, id) : undefined), [p, id]);
   usePageMeta(
     p?.name && `${p.name}${p.headline ? ` — ${p.headline}` : ''}`,
-    p ? p.bio || `${p.name} on Verse${p.location ? `, ${p.location}` : ''}.` : undefined,
+    p ? p.bio || `${p.name} on MusiLynk${p.location ? `, ${p.location}` : ''}.` : undefined,
     { canonicalPath: `/professionals/${id}`, type: 'profile', jsonLd },
   );
   if (loading || error || !p)
@@ -252,7 +252,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
                 surface="professional"
                 path={`/professionals/${c.id}`}
                 compose={(url) => shareCopy.professional(c.name, c.headline, url, own)}
-                title={`${c.name} on Verse`}
+                title={`${c.name} on MusiLynk`}
                 label={own ? 'Share my profile' : 'Share profile'}
                 demo={c.demo}
                 testId="share-profile"

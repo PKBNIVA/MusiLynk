@@ -59,7 +59,7 @@ export default function PublicAct({ shell }: { shell?: 'public' | 'workspace' } 
   }, [load]);
   usePageMeta(
     a?.name && `${a.name} — book ${a.act_type || 'live act'}`,
-    a ? [a.tagline, a.bio].filter(Boolean).join(' ') || `Request a quote from ${a.name} on Verse.` : undefined,
+    a ? [a.tagline, a.bio].filter(Boolean).join(' ') || `Request a quote from ${a.name} on MusiLynk.` : undefined,
     { canonicalPath: `/acts/${id}`, type: 'website', jsonLd: a ? musicGroupJsonLd(a, id) : undefined },
   );
   if (loading || error || !a)
@@ -152,7 +152,7 @@ export default function PublicAct({ shell }: { shell?: 'public' | 'workspace' } 
                 surface="act"
                 path={`/acts/${a.id ?? id}`}
                 compose={(url) => shareCopy.act(a.name, url)}
-                title={`${a.name} on Verse`}
+                title={`${a.name} on MusiLynk`}
                 label="Share act"
                 demo={a.demo}
                 testId="share-act"

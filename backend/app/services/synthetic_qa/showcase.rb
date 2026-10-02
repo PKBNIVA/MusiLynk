@@ -1,5 +1,5 @@
 module SyntheticQa
-  # The "Verse showcase": 150 clearly badged demo accounts (110 musicians, 40 hirers) and the activity
+  # The "MusiLynk showcase": 150 clearly badged demo accounts (110 musicians, 40 hirers) and the activity
   # around them, so a new marketplace looks and behaves like a live Mumbai one on day one. Everything is
   # written by hand in config/demo/*.yml (see ShowcaseContent); this class only places it.
   #

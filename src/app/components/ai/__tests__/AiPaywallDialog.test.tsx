@@ -30,7 +30,7 @@ describe('AiPaywallDialog', () => {
     act(() => root.render(<AiPaywallDialog error={error} onClose={() => {}} />));
 
     expect(document.body.textContent).toContain('AI help is used up for now');
-    expect(document.body.textContent).not.toContain('Verse AI Plus');
+    expect(document.body.textContent).not.toContain('MusiLynk AI Plus');
     expect(document.body.textContent).not.toContain('Top up');
     expect(document.body.textContent).not.toContain('credit');
   });
@@ -49,7 +49,7 @@ describe('AiPaywallDialog', () => {
     const error = new AiPaywallError('Resting.', 'AI_FREE_PAUSED', {});
     act(() => root.render(<AiPaywallDialog error={error} onClose={() => {}} />));
     expect(document.body.textContent).toContain('AI help is resting this month. Everything else works as usual.');
-    expect(document.body.textContent).not.toContain('Verse AI Plus');
+    expect(document.body.textContent).not.toContain('MusiLynk AI Plus');
   });
 
   it('calls onClose from the Close button', () => {

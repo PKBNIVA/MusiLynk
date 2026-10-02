@@ -133,7 +133,7 @@ function billingReturnPath(plan: string, interval: BillingInterval, code: string
 export default function Pricing() {
   usePageMeta(
     'Pricing',
-    'Verse plans for music hiring and booking teams. Musicians build profiles and apply free; paid plans add capacity, seats and trials.',
+    'MusiLynk plans for music hiring and booking teams. Musicians build profiles and apply free; paid plans add capacity, seats and trials.',
     { canonicalPath: '/pricing' },
   );
   const [plans, setPlans] = useState<ApiPlan[]>(FALLBACK_PLANS);
@@ -173,7 +173,7 @@ export default function Pricing() {
       <main className="max-w-7xl mx-auto px-5 md:px-6 py-16">
         <PhotoHeader photo="college-fest" title="Pay for operating capacity, not the right to apply">
           <p className="text-lg">
-            Musicians can build a profile and apply without a subscription. Paid plans are for teams using Verse to
+            Musicians can build a profile and apply without a subscription. Paid plans are for teams using MusiLynk to
             recruit, source, book and manage talent at higher volume.
           </p>
         </PhotoHeader>
@@ -248,7 +248,7 @@ export default function Pricing() {
           <CardContent className="p-6 text-sm text-slate-300 space-y-2">
             <p>
               One flat fee. No commission on your bookings. A ₹5 lakh wedding band booked through a commission agency
-              costs ₹75,000–₹1,00,000 in fees; on Verse it costs your monthly plan.
+              costs ₹75,000–₹1,00,000 in fees; on MusiLynk it costs your monthly plan.
             </p>
             <p>Cancel any time. We email you three days before your trial ends and before every renewal.</p>
           </CardContent>

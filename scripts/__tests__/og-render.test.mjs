@@ -80,7 +80,7 @@ describe('share image with a real photo', () => {
     expect(res.headers.get('content-type')).toBe('image/png');
     expect(pngSize(new Uint8Array(await res.arrayBuffer()))).toEqual({ width: 1200, height: 630 });
     expect(trees).toHaveLength(1);
-    expect(trees[0]).not.toMatch(/data:image\/(jpeg|png|webp)/); // only the Verse mark (svg) is embedded
+    expect(trees[0]).not.toMatch(/data:image\/(jpeg|png|webp)/); // only the MusiLynk mark (svg) is embedded
     expect(trees[0]).toContain('"MI"'); // the monogram art is drawn instead
   });
 

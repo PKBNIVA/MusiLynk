@@ -1268,7 +1268,7 @@ export default function PostJob() {
               />
             </section>
           )}
-          <form onSubmit={(e) => submit(e)} className="verse-surface rounded-3xl p-5 md:p-8" noValidate>
+          <form onSubmit={(e) => submit(e)} className="musilynk-surface rounded-3xl p-5 md:p-8" noValidate>
             <StepForm steps={steps} current={step} reached={reached} onStepChange={goTo} />
             <FormError message={form.formError} className="mt-5" />
             {reviewEdited && (

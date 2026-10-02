@@ -1,4 +1,4 @@
-# Verse incident runbook
+# MusiLynk incident runbook
 
 What to do when something breaks in production. Every step uses something the code or
 [DEPLOYMENT.md](../../DEPLOYMENT.md) actually provides. Steps marked **[owner]** need the
@@ -6,8 +6,8 @@ owner's Railway, Vercel, GitHub, Razorpay or Brevo account; nobody else can do t
 
 | Thing | Where |
 | --- | --- |
-| Web app | https://verse-music-platform.vercel.app (Vercel project, branch `production`) |
-| API | https://verse-music-platform-production.up.railway.app/api (Railway service from `backend/Dockerfile`) |
+| Web app | https://musilynk.vercel.app (Vercel project, branch `production`) |
+| API | https://musilynk-api-production.up.railway.app/api (Railway service from `backend/Dockerfile`) |
 | Database | Railway PostgreSQL (`DATABASE_URL` on the API service; `DATABASE_PUBLIC_URL` on the Postgres service for access from outside Railway) |
 | Background jobs | GoodJob inside the API process (`GOOD_JOB_EXECUTION_MODE=async`), cron in `backend/config/initializers/good_job.rb` |
 | Backups | GitHub Actions → **Database backup** (`.github/workflows/db-backup.yml`), artifacts kept 30 days |
@@ -27,9 +27,9 @@ database). Improve the RPO with Railway's paid backups or point-in-time recovery
 Run these from any machine:
 
 ```bash
-curl -sS -o /dev/null -w "web %{http_code}\n" https://verse-music-platform.vercel.app/
-curl -sS -w "\nlive %{http_code}\n"      https://verse-music-platform-production.up.railway.app/api/live
-curl -sS -w "\nreadiness %{http_code}\n" https://verse-music-platform-production.up.railway.app/api/readiness
+curl -sS -o /dev/null -w "web %{http_code}\n" https://musilynk.vercel.app/
+curl -sS -w "\nlive %{http_code}\n"      https://musilynk-api-production.up.railway.app/api/live
+curl -sS -w "\nreadiness %{http_code}\n" https://musilynk-api-production.up.railway.app/api/readiness
 ```
 
 | Result | Meaning | Go to |
@@ -89,13 +89,13 @@ statement timeout plus the configuration checks. Signed in as an admin,
 ### 1.5 Frontend up, API calls failing
 
 - Browser console shows CORS errors: `ALLOWED_ORIGINS` on Railway must list the exact web
-  origin (`https://verse-music-platform.vercel.app`, plus any custom domain).
+  origin (`https://musilynk.vercel.app`, plus any custom domain).
 - The app says the API returned a web page: `VITE_API_URL` on Vercel is missing or wrong, so
   `/api/*` is answered by the SPA. Fix the variable and **redeploy Vercel** (`VITE_*` values
   are read at build time).
 - Release mismatch: compare `release` in `/api/health` with
-  `<meta name="verse-release">` on the web app (or `window.__VERSE_RELEASE__`). Running
-  **Actions → Verse QA Agent → Run workflow** on `production` fails if either side is not
+  `<meta name="musilynk-release">` on the web app (or `window.__MUSILYNK_RELEASE__`). Running
+  **Actions → MusiLynk QA Agent → Run workflow** on `production` fails if either side is not
   serving the latest commit.
 
 ### 1.6 Roll back
@@ -130,14 +130,14 @@ orders; only signed webhooks (`POST /api/billing/webhook/razorpay`) change subsc
 2. **Is Razorpay up?** https://status.razorpay.com. Gateway errors reach the user as HTTP 502
    and, with Sentry on, as `verse-api` issues.
 3. **Are webhooks arriving? [owner]** Razorpay Dashboard → Account & Settings → Webhooks →
-   the Verse webhook: check it is **Active**, the URL is
-   `https://verse-music-platform-production.up.railway.app/api/billing/webhook/razorpay`, and
+   the MusiLynk webhook: check it is **Active**, the URL is
+   `https://musilynk-api-production.up.railway.app/api/billing/webhook/razorpay`, and
    look at recent deliveries. A `401` response means `RAZORPAY_WEBHOOK_SECRET` on Railway does
    not match the dashboard secret; a `503` means the secret is not set. Razorpay retries
    failed deliveries for a limited time and can disable a webhook that keeps failing; after
    fixing the cause, re-enable it. Replayed or duplicate events are safe: they are
    de-duplicated by `X-Razorpay-Event-Id` and older events are recorded as `stale`.
-4. **What did Verse record?** Admin dashboard (`/admin`) → **Commerce** tab, or:
+4. **What did MusiLynk record?** Admin dashboard (`/admin`) → **Commerce** tab, or:
    - `GET /api/admin/billing-events` (and `/:id`): every webhook with its `processingResult`
      (`applied`, `stale`, `invalid_transition`, `subscription_not_found`, `ignored`, …; a
      duplicate delivery is acknowledged and not stored again).
@@ -205,7 +205,7 @@ the server's (`psql "$DATABASE_PUBLIC_URL" -XAtc "show server_version"`).
    checked by `scripts/db/restore-verify.sh`. Download its artifact `verse-db-<run id>`:
    ```bash
    gh run download <run id> --repo PKBNIVA/verse-music-platform --name verse-db-<run id> --dir restore
-   ls restore   # verse-<stamp>.dump.gpg, .dump.sha256, .manifest.tsv
+   ls restore   # musilynk-<stamp>.dump.gpg, .dump.sha256, .manifest.tsv
    ```
    If there is no green run in the last 30 days, there is no backup to restore; stop and
    escalate.
@@ -215,7 +215,7 @@ the server's (`psql "$DATABASE_PUBLIC_URL" -XAtc "show server_version"`).
 4. **Restore and verify (10–20 min).**
    ```bash
    SCRATCH_DATABASE_URL='<new database public URL>' BACKUP_PASSPHRASE='<passphrase>' \
-     scripts/db/restore-verify.sh restore/verse-<stamp>.dump.gpg
+     scripts/db/restore-verify.sh restore/musilynk-<stamp>.dump.gpg
    ```
    It decrypts, checks the SHA-256, runs `pg_restore --clean --exit-on-error`, then checks
    every table in the manifest. It exits non-zero if any table is missing; row-count
@@ -231,7 +231,7 @@ the server's (`psql "$DATABASE_PUBLIC_URL" -XAtc "show server_version"`).
    spot-check recent users, jobs and bookings.
 7. **Recover the gap.** Everything after the backup's timestamp is gone. Then:
    - Payments: open `/api/admin/billing-attempts` and the Razorpay dashboard for the lost
-     window; reconcile attempts and re-grant plans for payments Razorpay has but Verse lost
+     window; reconcile attempts and re-grant plans for payments Razorpay has but MusiLynk lost
      (section 2).
    - Sessions created after the backup no longer exist; those users simply sign in again.
    - Uploads in R2/S3 made after the backup are orphans; the daily `upload_sweep` removes

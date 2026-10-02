@@ -4,25 +4,25 @@ require "minitest/mock"
 class PromoCodesGeneratorTest < ActiveSupport::TestCase
   ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".freeze
 
-  test "the configured format renders VERSE-XXXXXX from the unambiguous alphabet" do
+  test "the configured format renders MUSILYNK-XXXXXX from the unambiguous alphabet" do
     50.times do
       code = PromoCodes::Generator.render
-      assert_match(/\AVERSE-[#{ALPHABET}]{6}\z/, code)
-      assert_no_match(/[01OI]/, code.delete_prefix("VERSE-"))
+      assert_match(/\AMUSILYNK-[#{ALPHABET}]{6}\z/, code)
+      assert_no_match(/[01OI]/, code.delete_prefix("MUSILYNK-"))
     end
   end
 
   test "billing.yml carries the generator settings" do
-    assert_equal "VERSE-{6}", BillingConfig.code_format
+    assert_equal "MUSILYNK-{6}", BillingConfig.code_format
     assert_equal ALPHABET, BillingConfig.code_alphabet
   end
 
   test "custom formats mix literals, random runs and name letters padded with X" do
     assert_match(/\AX-[AB]{3}\z/, PromoCodes::Generator.render(format: "X-{3}", alphabet: "AB"))
-    assert_match(/\AVERSE-AN[X]{2}[#{ALPHABET}]{4}\z/, PromoCodes::Generator.render(format: PromoCodes::Generator::REFERRAL_FORMAT, name: "An"))
-    assert_match(/\AVERSE-PRIY[#{ALPHABET}]{4}\z/, PromoCodes::Generator.render(format: PromoCodes::Generator::REFERRAL_FORMAT, name: "Priya Sharma"))
-    assert_match(/\AVERSE-JOSE/, PromoCodes::Generator.render(format: PromoCodes::Generator::REFERRAL_FORMAT, name: "José 99"))
-    assert_match(/\AVERSE-XXXX/, PromoCodes::Generator.render(format: PromoCodes::Generator::REFERRAL_FORMAT, name: "1234"))
+    assert_match(/\AMUSILYNK-AN[X]{2}[#{ALPHABET}]{4}\z/, PromoCodes::Generator.render(format: PromoCodes::Generator::REFERRAL_FORMAT, name: "An"))
+    assert_match(/\AMUSILYNK-PRIY[#{ALPHABET}]{4}\z/, PromoCodes::Generator.render(format: PromoCodes::Generator::REFERRAL_FORMAT, name: "Priya Sharma"))
+    assert_match(/\AMUSILYNK-JOSE/, PromoCodes::Generator.render(format: PromoCodes::Generator::REFERRAL_FORMAT, name: "José 99"))
+    assert_match(/\AMUSILYNK-XXXX/, PromoCodes::Generator.render(format: PromoCodes::Generator::REFERRAL_FORMAT, name: "1234"))
   end
 
   test "bad tokens and alphabets are refused" do
@@ -71,7 +71,7 @@ class PromoCodesGeneratorTest < ActiveSupport::TestCase
     first = PromoCodes::Generator.referral_for(user)
     assert_equal "referral", first.kind
     assert_equal user.id, first.owner_user_id
-    assert_match(/\AVERSE-MEER[#{ALPHABET}]{4}\z/, first.code)
+    assert_match(/\AMUSILYNK-MEER[#{ALPHABET}]{4}\z/, first.code)
     assert_equal first, PromoCodes::Generator.referral_for(user)
     assert_equal 1, PromoCode.where(owner_user_id: user.id).count
   end

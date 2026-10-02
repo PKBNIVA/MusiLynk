@@ -103,7 +103,7 @@ threads:
       - { from: musician, body: "Thank you. I will be online ten minutes early." }
   - topic: enquiry
     messages:
-      - { from: hirer, body: "Hi {musician}, I found your profile on Verse. We are planning a private party on a rooftop next month for about 80 guests and want live music. Are you available?" }
+      - { from: hirer, body: "Hi {musician}, I found your profile on MusiLynk. We are planning a private party on a rooftop next month for about 80 guests and want live music. Are you available?" }
       - { from: musician, body: "Hi {hirer}, thanks for writing. Which date are you thinking of, and how long would you like the set to be?" }
       - { from: hirer, body: "The last Saturday of next month, two hours with a short break. We are open to a duo if you have a partner you play with." }
       - { from: musician, body: "I do play with a duo partner. For two hours with a PA we would charge in the range shown on my profile; I can send a quote today." }

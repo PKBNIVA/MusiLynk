@@ -95,7 +95,7 @@ test('un-saving an opportunity offers an undo that saves it again', async ({ pag
   const job = {
     id: 's1',
     title: 'Session Guitarist',
-    company: 'Verse Studio',
+    company: 'MusiLynk Studio',
     location: 'Mumbai',
     workplace: 'onsite',
     opportunity_kind: 'gig',

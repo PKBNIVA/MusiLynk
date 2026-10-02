@@ -32,7 +32,7 @@ module Verification
       lines << "Proven channel: #{channel.map { |k, v| "#{k} #{v}" }.join(', ')}" if channel.present?
       lines << "Portfolio providers: #{facts['portfolio_providers'].join(', ')}" if facts["portfolio_providers"].present?
       lines << "Vouches from verified musicians: #{facts['vouchers'].presence&.join(', ') || 'none'}"
-      lines << "Completed fills/bookings on Verse: #{facts['completed'].to_i}; reviews received: #{facts['reviews'].to_i}"
+      lines << "Completed fills/bookings on MusiLynk: #{facts['completed'].to_i}; reviews received: #{facts['reviews'].to_i}"
       lines << "Flags: #{@request.flags.join(', ')}" if @request.flags.present?
       lines.join("\n").first(FACTS_LIMIT)
     end
@@ -71,7 +71,7 @@ module Verification
       [
         "Score #{breakdown['total'] || @request.evidence_score}/100. Identity: #{identity_phrase(facts)}.",
         "Work: #{work_phrase(facts)}.",
-        "On Verse: #{community_phrase(facts)}.#{flags_phrase}"
+        "On MusiLynk: #{community_phrase(facts)}.#{flags_phrase}"
       ].join("\n")
     end
 

@@ -66,7 +66,7 @@ Do **not** ship autonomous mass auto-apply or opaque candidate rejection scores.
 
 
 ## 2026 SaaS + booking architecture expansion
-Verse now treats four related but distinct workflows as first-class:
+MusiLynk now treats four related but distinct workflows as first-class:
 1. **Career hiring** — permanent, contract, tour, session, internship and collaboration opportunities.
 2. **Band building** — define missing seats/roles in a project and publish those seats into the moderated hiring funnel.
 3. **Act booking** — soloists, duos, trios, bands, ensembles, DJs, choirs and other acts receive date/location/event enquiries, issue quotes, accept bookings and collect deposits.

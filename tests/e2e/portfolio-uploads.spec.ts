@@ -153,8 +153,8 @@ test.describe('portfolio uploads', () => {
     request,
   }) => {
     await signInFreshArtist(page, request);
-    const bucket = 'https://bucket.verse-upload.test';
-    const publicUrl = 'https://pub-verse-upload-test.r2.dev/uploads/u/k/cover.png';
+    const bucket = 'https://bucket.musilynk-upload.test';
+    const publicUrl = 'https://pub-musilynk-upload-test.r2.dev/uploads/u/k/cover.png';
     let posted = '';
     let completed = false;
     await page.route('**/api/uploads/presign', (route) =>

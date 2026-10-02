@@ -615,14 +615,14 @@ class StageTest < ActionDispatch::IntegrationTest
     assert_equal newest.id, response.parsed_body["posts"].first["id"]
   end
 
-  test "a system post renders with the Verse author and is not editable by anyone" do
+  test "a system post renders with the MusiLynk author and is not editable by anyone" do
     post = Post.create!(author_type: "system", author_id: Post::SYSTEM_AUTHOR_ID, kind: "system", system_kind: "welcome",
       body: "Welcome someone")
 
     get "/api/stage/posts/#{post.id}", headers: auth(@alice)
     assert_response :success
     author = response.parsed_body["post"]["author"]
-    assert_equal "Verse", author["name"]
+    assert_equal "MusiLynk", author["name"]
     assert author["system"]
 
     delete "/api/stage/posts/#{post.id}", headers: auth(@alice), as: :json

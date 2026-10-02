@@ -9,7 +9,7 @@ import { loadStageTeaser, type StageTeaserPost } from '../../lib/landing';
 const MIN_SHOWN = 3;
 
 /**
- * "From The Stage": the three newest public-safe posts by Verse itself, from the public Stage
+ * "From The Stage": the three newest public-safe posts by MusiLynk itself, from the public Stage
  * author route. Renders nothing when the Stage is switched off, under three posts, or on failure.
  */
 export function StageTeaser() {
@@ -45,11 +45,11 @@ export function StageTeaser() {
           {posts.map((post) => (
             <li
               key={post.id}
-              className="verse-surface flex flex-col gap-2 rounded-2xl p-4"
+              className="musilynk-surface flex flex-col gap-2 rounded-2xl p-4"
               data-testid="stage-teaser-post"
             >
               <p className="leading-7 text-slate-100">{post.body}</p>
-              <p className="text-xs text-slate-400">Verse · {formatDate(post.createdAt)}</p>
+              <p className="text-xs text-slate-400">MusiLynk · {formatDate(post.createdAt)}</p>
             </li>
           ))}
         </ul>

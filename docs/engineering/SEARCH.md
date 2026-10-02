@@ -1,4 +1,4 @@
-# Verse search
+# MusiLynk search
 
 One public endpoint, `GET /api/search?q=…&type=…`, searches opportunities, professionals,
 acts and work samples in PostgreSQL. There is no external search engine; the earlier

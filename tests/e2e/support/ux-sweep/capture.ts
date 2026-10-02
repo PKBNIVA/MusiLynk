@@ -352,7 +352,7 @@ export async function reopen(session: Session) {
 /** Waits for the page to be quiet: app loaded, network idle, fonts ready, skeletons gone. */
 export async function settle(page: Page) {
   await page
-    .waitForFunction(() => !/Loading Verse/.test(document.body?.innerText || ''), null, { timeout: 12_000 })
+    .waitForFunction(() => !/Loading MusiLynk/.test(document.body?.innerText || ''), null, { timeout: 12_000 })
     .catch(() => undefined);
   await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined);
   await page

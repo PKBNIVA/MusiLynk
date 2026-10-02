@@ -122,7 +122,7 @@ export function PromoCodeField({
         autoCapitalize="characters"
         spellCheck={false}
         maxLength={40}
-        placeholder="e.g. VERSE-K7M2QP"
+        placeholder="e.g. MUSILYNK-K7M2QP"
         className="mt-1.5 bg-white/5 border-white/15 uppercase"
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => {

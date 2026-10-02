@@ -2,7 +2,7 @@ import { apiGet } from './api';
 import { formatFromRate, fromRate } from './format';
 
 // Live proof for the landing page. Only real counts from GET /api/public/stats are shown, and
-// only once they mean something; otherwise the page shows how Verse works and what it promises.
+// only once they mean something; otherwise the page shows how MusiLynk works and what it promises.
 
 export interface PublicStats {
   verifiedProfiles?: number;
@@ -105,7 +105,7 @@ export interface StageTeaserPost {
 }
 
 /**
- * The three newest public-safe posts by Verse itself. The Stage's author route is public; a
+ * The three newest public-safe posts by MusiLynk itself. The Stage's author route is public; a
  * system post is public by construction. "Welcome Priya, drummer in Mumbai" posts name one new
  * member, so only the aggregate and platform lines (verified, filled requests, roundups) show.
  */

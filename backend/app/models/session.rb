@@ -33,7 +33,7 @@ class Session < ApplicationRecord
   # Browser and OS family only: "Chrome/129.0.6668.58" and "Chrome/130.0.1" match.
   def self.fingerprint(user_agent)
     family = user_agent.to_s.downcase.gsub(/[\d._]+/, "").squish
-    Digest::SHA256.hexdigest("verse-session-client:#{family}")
+    Digest::SHA256.hexdigest("musilynk-session-client:#{family}")
   end
 
   def fingerprint_matches?(user_agent)

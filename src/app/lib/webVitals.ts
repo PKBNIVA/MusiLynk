@@ -65,7 +65,7 @@ type Reporter = (vital: Vital) => void;
 export function startWebVitals(report: Reporter): () => void {
   if (typeof window === 'undefined' || typeof PerformanceObserver === 'undefined') return () => undefined;
   const supported = PerformanceObserver.supportedEntryTypes || [];
-  // A page opened in a background tab paints late for reasons unrelated to Verse.
+  // A page opened in a background tab paints late for reasons unrelated to MusiLynk.
   const startedHidden = document.visibilityState === 'hidden';
 
   let lcp: number | null = null;

@@ -1,15 +1,15 @@
-# Verse
+# MusiLynk
 
-Verse is a music-industry careers, hiring and live-booking marketplace, built first for India.
+MusiLynk is a music-industry careers, hiring and live-booking marketplace, built first for India.
 Musicians, engineers and crew build a profile with work samples and find jobs, gigs, sessions
 and tours. Employers, studios, venues and bands post opportunities, search talent, assemble
 line-ups and book acts with a Razorpay deposit. Paid plans unlock more hiring capacity.
 
-- Web: https://verse-music-platform.vercel.app
-- API: https://verse-music-platform-production.up.railway.app/api
-  ([live](https://verse-music-platform-production.up.railway.app/api/live) ·
-  [health](https://verse-music-platform-production.up.railway.app/api/health) ·
-  [readiness](https://verse-music-platform-production.up.railway.app/api/readiness))
+- Web: https://musilynk.vercel.app
+- API: https://musilynk-api-production.up.railway.app/api
+  ([live](https://musilynk-api-production.up.railway.app/api/live) ·
+  [health](https://musilynk-api-production.up.railway.app/api/health) ·
+  [readiness](https://musilynk-api-production.up.railway.app/api/readiness))
 
 ## Architecture in five lines
 
@@ -32,7 +32,7 @@ npm ci
 
 cd backend
 bundle install
-export DATABASE_URL=postgres://postgres:postgres@localhost:5432/verse_development  # your local Postgres user/password
+export DATABASE_URL=postgres://postgres:postgres@localhost:5432/musilynk_development  # your local Postgres user/password
 bin/rails db:prepare        # creates the database, loads the schema, seeds demo accounts
 bin/rails server            # API on http://localhost:3000
 ```
@@ -43,8 +43,8 @@ In a second terminal, from the repository root:
 npm run dev                 # web app on http://localhost:5173, proxies /api to :3000
 ```
 
-Seeded development accounts (not created in production): `admin@verse.local` / `Admin@12345`,
-`studio@verse.local` / `Employer@123` (employer), `artist@verse.local` / `Artist@123`
+Seeded development accounts (not created in production): `admin@musilynk.local` / `Admin@12345`,
+`studio@musilynk.local` / `Employer@123` (employer), `artist@musilynk.local` / `Artist@123`
 (professional). Without an email provider, sign-in codes are shown in the API response as
 `debugCode` in development.
 
@@ -58,8 +58,8 @@ see the simulator in [DEPLOYMENT.md](DEPLOYMENT.md#local-rehearsal-without-crede
 ```bash
 # API (uses a separate test database)
 cd backend
-RAILS_ENV=test DATABASE_URL=postgres://postgres:postgres@localhost:5432/verse_test bin/rails db:prepare
-RAILS_ENV=test DATABASE_URL=postgres://postgres:postgres@localhost:5432/verse_test bin/rails test
+RAILS_ENV=test DATABASE_URL=postgres://postgres:postgres@localhost:5432/musilynk_test bin/rails db:prepare
+RAILS_ENV=test DATABASE_URL=postgres://postgres:postgres@localhost:5432/musilynk_test bin/rails test
 bin/rails zeitwerk:check
 bundle exec brakeman --no-pager --exit-on-warn --exit-on-error
 bundle exec bundler-audit check --update

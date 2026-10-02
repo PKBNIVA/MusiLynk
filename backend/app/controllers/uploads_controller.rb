@@ -78,7 +78,7 @@ class UploadsController < ApplicationController
     return render_error("Unsupported file type. Upload MP3, WAV, MP4, JPEG, PNG, WebP or PDF.", :unprocessable_content, "UNSUPPORTED_TYPE") unless ALLOWED_TYPES.include?(declared)
     return render_error("File is too large. The limit is #{MAX_SIZE / 1.megabyte} MB.", :unprocessable_content, "FILE_TOO_LARGE") if request.content_length.to_i > MAX_SIZE
 
-    Tempfile.create(["verse-upload", ".bin"], binmode: true) do |file|
+    Tempfile.create(["musilynk-upload", ".bin"], binmode: true) do |file|
       size = stream_body_to(file)
       return render_error("File is too large. The limit is #{MAX_SIZE / 1.megabyte} MB.", :unprocessable_content, "FILE_TOO_LARGE") if size > MAX_SIZE
       return render_error("File is empty.", :unprocessable_content, "FILE_EMPTY") if size.zero?

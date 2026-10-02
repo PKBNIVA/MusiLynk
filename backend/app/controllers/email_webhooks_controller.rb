@@ -1,5 +1,5 @@
 # Brevo transactional webhook: hard/soft bounces, spam complaints, blocks and unsubscribes
-# are recorded in EmailSuppression so Verse stops emailing addresses that cannot or should
+# are recorded in EmailSuppression so MusiLynk stops emailing addresses that cannot or should
 # not receive mail.
 #
 # Brevo does not sign webhook bodies, so the shared secret BREVO_WEBHOOK_SECRET must be sent

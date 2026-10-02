@@ -18,7 +18,10 @@ async function mockApi(page: Page) {
     }
     if (pathname.endsWith('/auth/resend-verification')) {
       calls.resend.push(request.postDataJSON());
-      return json(200, { ok: true, message: 'If this email can be used on Verse, a confirmation link is on its way.' });
+      return json(200, {
+        ok: true,
+        message: 'If this email can be used on MusiLynk, a confirmation link is on its way.',
+      });
     }
     if (pathname.endsWith('/auth/otp/request')) {
       calls.otp.push(request.postDataJSON());
@@ -45,7 +48,7 @@ test('an unconfirmed email shows the message and lets the person resend the link
   await expect(page.getByRole('alert')).toHaveText(MESSAGE);
   await page.getByRole('button', { name: 'Send the link again' }).click();
   await expect(page.getByRole('status')).toHaveText(
-    'If this email can be used on Verse, a confirmation link is on its way.',
+    'If this email can be used on MusiLynk, a confirmation link is on its way.',
   );
   expect(calls.resend).toEqual([{ email: 'new@example.invalid' }]);
 });

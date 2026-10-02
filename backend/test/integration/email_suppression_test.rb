@@ -244,7 +244,7 @@ class EmailSuppressionTest < ActionDispatch::IntegrationTest
   private
 
   def event(type, email: @user.email, message_id: "<#{SecureRandom.hex(6)}@smtp-relay.mailin.fr>")
-    { "event" => type, "email" => email, "id" => 12_345, "date" => "2026-09-27 10:00:00", "ts_event" => 1_790_000_000, "message-id" => message_id, "subject" => "Your Verse sign-in code" }
+    { "event" => type, "email" => email, "id" => 12_345, "date" => "2026-09-27 10:00:00", "ts_event" => 1_790_000_000, "message-id" => message_id, "subject" => "Your MusiLynk sign-in code" }
   end
 
   def json = { "Content-Type" => "application/json" }

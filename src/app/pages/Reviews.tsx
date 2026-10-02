@@ -74,8 +74,8 @@ export default function Reviews() {
               <h2 className="font-semibold text-lg mb-4">Write a review</h2>
               {loaded && employers.length === 0 && (
                 <p className="text-sm text-slate-400" data-testid="reviews-fill-later">
-                  This fills in after a completed booking or hire. Once you have worked with a hirer through Verse, they
-                  appear here so you can rate them.
+                  This fills in after a completed booking or hire. Once you have worked with a hirer through MusiLynk,
+                  they appear here so you can rate them.
                 </p>
               )}
               <form onSubmit={submit} className={`space-y-3 ${employers.length === 0 ? 'hidden' : ''}`}>

@@ -16,15 +16,15 @@ class AuthController < ApplicationController
   # Per-code attempts are capped by SignInCode::MAX_ATTEMPTS; this IP budget stops
   # one client spraying guesses across many addresses' codes.
   OTP_VERIFY_FAILURES_PER_IP = 25
-  OTP_UNAVAILABLE_MESSAGE = "Email sign-in codes are temporarily unavailable. Try again in a few minutes. If you have a confirmed account with a password you can use that, otherwise contact Verse support.".freeze
-  OTP_REQUEST_MESSAGE = "If this email can be used on Verse, a 6-digit code is on its way. It expires in 10 minutes.".freeze
+  OTP_UNAVAILABLE_MESSAGE = "Email sign-in codes are temporarily unavailable. Try again in a few minutes. If you have a confirmed account with a password you can use that, otherwise contact MusiLynk support.".freeze
+  OTP_REQUEST_MESSAGE = "If this email can be used on MusiLynk, a 6-digit code is on its way. It expires in 10 minutes.".freeze
   EMAIL_VERIFICATION_REQUIRED_MESSAGE = "Confirm your email address before signing in with a password. We can send the link again, or you can sign in with an emailed code.".freeze
   OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
-  EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so Verse can no longer send to it. Use a different email address. If this is your address and you cannot sign in, contact Verse support.".freeze
+  EMAIL_SUPPRESSED_MESSAGE = "Email to this address bounced or was reported as spam, so MusiLynk can no longer send to it. Use a different email address. If this is your address and you cannot sign in, contact MusiLynk support.".freeze
   CODE_ONLY_LOGIN_MESSAGE = "This account uses email codes — send me a code.".freeze
   PASSWORDLESS_LOGIN_MESSAGE = "Use Google to sign in, or set a password from your email.".freeze
   PHONE_OTP_UNAVAILABLE_MESSAGE = "WhatsApp sign-in codes are temporarily unavailable.".freeze
-  PHONE_OTP_REQUEST_MESSAGE = "If this number can be used on Verse, a 6-digit code is on its way on WhatsApp. It expires in 10 minutes.".freeze
+  PHONE_OTP_REQUEST_MESSAGE = "If this number can be used on MusiLynk, a 6-digit code is on its way on WhatsApp. It expires in 10 minutes.".freeze
   PHONE_OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
   # Admin password sign-in needs a second step: a code emailed to the admin.
   SECOND_FACTOR_PURPOSE = :admin_second_factor
@@ -53,7 +53,7 @@ class AuthController < ApplicationController
   #   "off": emergency disable only; every such sign-in is audited.
   # Outside production the on-screen debugCode counts as delivery. With an email
   # address, a suppressed (bounced or complained) address or one on a reserved domain
-  # (admin@verse.local) counts as undeliverable, so auto mode never sends the code nowhere.
+  # (admin@musilynk.local) counts as undeliverable, so auto mode never sends the code nowhere.
   # Returns :enforced, :unavailable (required but undeliverable), :skipped or :off.
   def self.admin_second_factor_state(email = nil)
     mode = ENV.fetch("ADMIN_SECOND_FACTOR", "auto").strip.downcase

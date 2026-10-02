@@ -57,7 +57,7 @@ test('library: add work in two short steps and see where it landed', async ({ pa
   await expect(page.getByLabel(/^Title/)).toBeFocused();
   await expect(page.locator('#work-title-error')).toHaveText('Give this work a title.');
   await page.getByLabel(/^Title/).fill('Late set at Blue Frog');
-  await page.getByLabel(/^Link/).fill('https://media.verse.test/late.mp3');
+  await page.getByLabel(/^Link/).fill('https://media.musilynk.test/late.mp3');
   await page.getByRole('button', { name: /Next: what you did/ }).click();
   const genres = page.getByRole('combobox', { name: 'Genres' });
   await genres.fill('Jaz');

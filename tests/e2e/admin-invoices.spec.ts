@@ -15,7 +15,7 @@ const admin = {
 };
 const invoice = {
   id: 'tax_1',
-  invoiceNumber: 'VRS/2026-27/000001',
+  invoiceNumber: 'MLK/2026-27/000001',
   issuedAt: '2026-10-02T06:30:00Z',
   documentType: 'tax_invoice',
   totalPaise: 249900,
@@ -46,7 +46,7 @@ test('commerce shows invoices with the seller warning and exports a CSV for the 
         total: 1,
       });
     if (url.pathname === '/api/admin/invoices/export.csv')
-      return route.fulfill({ status: 200, contentType: 'text/csv', body: 'invoice_number\n"VRS/2026-27/000001"\n' });
+      return route.fulfill({ status: 200, contentType: 'text/csv', body: 'invoice_number\n"MLK/2026-27/000001"\n' });
     if (url.pathname === '/api/admin/users')
       return json({
         users: [
@@ -89,7 +89,7 @@ test('commerce shows invoices with the seller warning and exports a CSV for the 
 
   await page.getByRole('tab', { name: 'Commerce' }).click();
   const panel = page.getByTestId('admin-invoices');
-  await expect(panel).toContainText('VRS/2026-27/000001');
+  await expect(panel).toContainText('MLK/2026-27/000001');
   await expect(panel).toContainText('₹2,499.00');
   await expect(panel.getByTestId('invoice-seller-pending')).toContainText('business.legal_name, business.pan');
   await panel.getByLabel('From').fill('2026-10-01');
@@ -105,6 +105,6 @@ test('commerce shows invoices with the seller warning and exports a CSV for the 
   await expect(dialog.getByTestId('user-billing-profile')).toContainText('Kapoor Events LLP');
   await expect(dialog.getByTestId('user-billing-profile')).toContainText('GSTIN 27AAPFU0939F1ZV');
   await expect(dialog.getByTestId('user-billing-profile')).toContainText('version 2 of 2');
-  await expect(dialog.getByTestId('user-billing-invoices')).toContainText('VRS/2026-27/000001');
+  await expect(dialog.getByTestId('user-billing-invoices')).toContainText('MLK/2026-27/000001');
   await expect(dialog.getByRole('textbox')).toHaveCount(0);
 });

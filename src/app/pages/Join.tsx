@@ -130,11 +130,11 @@ function JoinShell({
     <div className="min-h-screen bg-slate-950 text-white">
       <SkipLink />
       <header className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
-        <Link to="/" aria-label="Verse home" className="inline-flex min-h-11 items-center rounded-xl">
+        <Link to="/" aria-label="MusiLynk home" className="inline-flex min-h-11 items-center rounded-xl">
           <BrandMark compact />
         </Link>
         <p className="text-sm text-slate-300">
-          On Verse already?{' '}
+          On MusiLynk already?{' '}
           <Link
             to={`/auth/${signInRole}`}
             state={location.state}
@@ -147,7 +147,7 @@ function JoinShell({
       <main className="mx-auto max-w-2xl px-4 pb-16 pt-2 sm:px-6 sm:pt-6">
         <h1 className="text-3xl font-black tracking-tight sm:text-4xl">{title}</h1>
         <p className="mt-2 text-slate-300">{intro}</p>
-        <div className="verse-surface mt-6 rounded-3xl p-5 sm:p-7">{children}</div>
+        <div className="musilynk-surface mt-6 rounded-3xl p-5 sm:p-7">{children}</div>
         <p className="mt-6 text-center text-sm text-slate-400">{other}</p>
       </main>
     </div>
@@ -512,7 +512,7 @@ function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: Us
         id="join-company"
         label="Organisation or team name"
         error={errors.company}
-        hint="We’ll create its Page on Verse, so you can post work as it."
+        hint="We’ll create its Page on MusiLynk, so you can post work as it."
       >
         <Input
           autoComplete="organization"

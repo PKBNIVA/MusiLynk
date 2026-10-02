@@ -18,13 +18,13 @@ const futureDate = (days: number) => new Date(Date.now() + days * 86_400_000).to
 
 const feeOffPolicy = {
   feeEnabled: false,
-  plainEnglish: ['Verse does not currently charge a platform fee on bookings.'],
+  plainEnglish: ['MusiLynk does not currently charge a platform fee on bookings.'],
   policyVersion: 1,
 };
 const feeOnPolicy = {
   feeEnabled: true,
   plainEnglish: [
-    "Verse charges a platform fee of 10% of the quoted total, plus 18% GST on the fee. The fee is added to the hirer's deposit.",
+    "MusiLynk charges a platform fee of 10% of the quoted total, plus 18% GST on the fee. The fee is added to the hirer's deposit.",
     'If the hirer cancels more than 7 days before the event, the deposit is fully refunded.',
     'If the hirer cancels 2-7 days before the event, 50% of the deposit is refunded.',
     'If the hirer cancels within 2 days of the event, the deposit is not refunded.',
@@ -99,7 +99,7 @@ test('checkout breakdown shows only the deposit when the platform fee is off', a
   await expect(breakdown.getByTestId('breakdown-fee')).toHaveCount(0);
   await expect(breakdown.getByTestId('breakdown-gst')).toHaveCount(0);
   await expect(breakdown.getByTestId('breakdown-total')).toContainText('₹20,000');
-  await expect(page.getByText('Verse does not currently charge a platform fee on bookings.').first()).toBeVisible();
+  await expect(page.getByText('MusiLynk does not currently charge a platform fee on bookings.').first()).toBeVisible();
 });
 
 test('checkout breakdown shows the fee and GST on top of the deposit when the platform fee is on', async ({ page }) => {

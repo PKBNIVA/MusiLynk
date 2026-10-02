@@ -100,7 +100,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/admin/stats", :admin, { keys: %w[stats] }],
     [:get, "/api/admin/tester", :admin, { keys: %w[summary checks] }],
     [:get, "/api/admin/account", :admin, { keys: %w[email emailDeliverable secondFactor adminOrigin] }],
-    [:post, "/api/admin/account/email/request", :admin, { ok: [202], params: { email: "matrix-admin-next@example.com" }, bad: { email: "admin@verse.local" }, bad_status: [422], keys: %w[changeToken expiresIn message] }],
+    [:post, "/api/admin/account/email/request", :admin, { ok: [202], params: { email: "matrix-admin-next@example.com" }, bad: { email: "admin@musilynk.local" }, bad_status: [422], keys: %w[changeToken expiresIn message] }],
     [:post, "/api/admin/account/email/confirm", :admin, { ok: [422], params: { changeToken: "not-a-token", code: "000000" }, note: "a forged change token is refused; the happy path is in AdminAccountTest" }],
     [:post, "/api/admin/account/password", :admin, { ok: [403], params: { currentPassword: "not-the-password", newPassword: "LongEnough123!" }, bad: { currentPassword: ApiMatrixWorld::PASSWORD, newPassword: "short" }, bad_status: [422] }],
     [:get, "/api/admin/users", :admin, { keys: %w[users] }],

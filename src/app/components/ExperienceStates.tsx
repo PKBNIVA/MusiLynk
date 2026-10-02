@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { BrandMark } from './BrandMark';
 import { Button } from './ui/button';
 import { reportError } from '../lib/monitoring';
+import { openProblemReport } from '../lib/problemReportEvent';
 
 export function PageLoading({ label = 'Preparing your Verse workspace' }: { label?: string }) {
   return (
@@ -22,11 +23,13 @@ export function PageLoading({ label = 'Preparing your Verse workspace' }: { labe
 
 export class AppErrorBoundary extends React.Component<React.PropsWithChildren, { failed: boolean }> {
   state = { failed: false };
+  lastError: unknown;
   static getDerivedStateFromError() {
     return { failed: true };
   }
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('Verse screen error', error);
+    this.lastError = error;
     reportError(error, { tags: { source: 'app_error_boundary' }, extra: { componentStack: info.componentStack } });
   }
   render() {
@@ -41,10 +44,15 @@ export class AppErrorBoundary extends React.Component<React.PropsWithChildren, {
           <p className="mt-3 text-slate-300">
             Your data is safe. Reload the page and Verse will try the request again.
           </p>
-          <Button className="mt-6" onClick={() => window.location.reload()}>
-            <RefreshCw size={16} className="mr-2" />
-            Reload Verse
-          </Button>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Button onClick={() => window.location.reload()}>
+              <RefreshCw size={16} className="mr-2" />
+              Reload Verse
+            </Button>
+            <Button variant="outline" onClick={() => openProblemReport({ error: this.lastError })}>
+              Tell us what happened
+            </Button>
+          </div>
         </div>
       </div>
     );

@@ -16,6 +16,7 @@ class User < ApplicationRecord
   has_many :recent_activities, dependent: :destroy
   has_many :verification_requests, dependent: :destroy
   has_many :reports, foreign_key: :reporter_id, dependent: :destroy
+  has_many :problem_reports, dependent: :destroy
   has_many :reviews, foreign_key: :author_id, dependent: :destroy
   has_many :talent_folders, foreign_key: :owner_id, dependent: :destroy
   has_many :urgent_requests, foreign_key: :requester_id, dependent: :destroy

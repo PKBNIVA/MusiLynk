@@ -20,7 +20,7 @@ class FounderReport
     "first_action" => "took a first action",
     "booking_or_urgent_filled" => "booked or filled a request"
   }.freeze
-  TABS = { opportunities: "queue", verification: "verification", reports: "reports", urgent: "urgent" }.freeze
+  TABS = { opportunities: "queue", verification: "verification", reports: "reports", urgent: "urgent", problems: ProblemReportNotifier::TAB }.freeze
 
   attr_reader :window, :previous_window, :now
 
@@ -106,12 +106,23 @@ class FounderReport
       bookingsAccepted: bookings.where(status: "accepted", updated_at: range).count,
       bookingsCompleted: bookings.where(status: "completed", updated_at: range).count,
       messages: Message.where(sender_id: organic, created_at: range,
-        conversation_id: Conversation.where(candidate_id: organic, employer_id: organic).select(:id)).count
+        conversation_id: Conversation.where(candidate_id: organic, employer_id: organic).select(:id)).count,
+      problemReports: problem_reports.where(created_at: range).count
     }
   end
 
   def bookings
     BookingRequest.where(requester_id: organic, act_id: Act.where(owner_id: organic).select(:id))
+  end
+
+  # "Report a problem" messages from real accounts and signed-out visitors (never synthetic/demo users).
+  def problem_reports = ProblemReport.where("problem_reports.user_id IS NULL OR problem_reports.user_id IN (?)", organic)
+
+  def problem_reports_waiting(at)
+    scope = problem_reports.where(created_at: ...at)
+    return scope.where(status: "new") if at >= now
+
+    scope.where("status = 'new' OR handled_at >= ?", at)
   end
 
   def median_first_response(win)
@@ -130,7 +141,9 @@ class FounderReport
       verification: pending_verifications.count,
       verificationWeekAgo: verification_requests_waiting(week_ago).count,
       reports: open_reports.count,
-      reportsWeekAgo: reports_waiting(week_ago).count
+      reportsWeekAgo: reports_waiting(week_ago).count,
+      problemReports: problem_reports_waiting(now).count,
+      problemReportsWeekAgo: problem_reports_waiting(week_ago).count
     }
   end
 
@@ -157,6 +170,9 @@ class FounderReport
       reports: reports_waiting(now).order(:created_at).limit(LIST_LIMIT)
         .map { |report| { text: "#{report.entity_type.to_s.downcase} report: #{report.reason.to_s.tr('_', ' ')}", since: report.created_at } },
       reportsTotal: reports_waiting(now).count,
+      problemReports: problem_reports_waiting(now).order(:created_at).limit(LIST_LIMIT)
+        .map { |report| { text: "problem report: #{report.description.to_s.squish.truncate(60)}", since: report.created_at } },
+      problemReportsTotal: problem_reports_waiting(now).count,
       urgent: unanswered_urgent.order(:created_at).limit(LIST_LIMIT)
         .map { |request| { text: "#{request.title} in #{request.city}", since: request.created_at } },
       urgentTotal: unanswered_urgent.count

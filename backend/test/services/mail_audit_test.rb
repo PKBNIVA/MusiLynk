@@ -48,7 +48,12 @@ class MailAuditTest < ActiveSupport::TestCase
       urls.each do |url|
         uri = URI.parse(url)
         assert_equal "https://verse.example", "#{uri.scheme}://#{uri.host}", "#{email.id}: #{url} must use FRONTEND_URL"
-        assert FrontendRoutes.exist?(uri.path), "#{email.id}: #{uri.path} is not a frontend route"
+        # The founder's problem-report email opens the admin console, which is not a marketplace page.
+        if email.id == "problem_report"
+          assert_equal "/admin", uri.path, "#{email.id}: the link opens the admin console"
+        else
+          assert FrontendRoutes.exist?(uri.path), "#{email.id}: #{uri.path} is not a frontend route"
+        end
         assert_no_match %r{/(jobseeker|employer)/(jobseeker|employer)\b}, uri.path, "#{email.id}: doubled workspace prefix"
         assert_no_match %r{//}, uri.path
       end
@@ -81,6 +86,8 @@ class MailAuditTest < ActiveSupport::TestCase
         assert_includes email.text, "/unsubscribe?token="
       elsif email.id == "vouch_invite"
         assert_no_match(/cannot be turned off|your Verse account/, visible_text(email.html), "an invitee has no account yet")
+      elsif email.id == "problem_report"
+        assert_no_match(/cannot be turned off|your Verse account/, visible_text(email.html), "a founder email is not about the reader's account")
       else
         assert_includes email.html, EmailDelivery::SERVICE_NOTE, "#{email.id}: service note"
       end

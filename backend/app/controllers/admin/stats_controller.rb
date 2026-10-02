@@ -7,7 +7,7 @@ module Admin
         pendingJobs: Job.pending.count, applications: Application.count,
         hires: Application.where(status: "Hired").count, pendingReviews: Review.where(status: "pending").count,
         verificationQueue: VerificationRequest.where(status: "pending").count,
-        openReports: Report.where(status: "open").count,
+        openReports: Report.where(status: "open").count, newProblemReports: ProblemReport.where(status: "new").count,
         messages: Message.count, flaggedMessages: Message.flagged.where(created_at: 30.days.ago..).count, acts: Act.where(status: "active").count, bookings: BookingRequest.count,
         acceptedBookings: BookingRequest.where(status: "accepted").count,
         paidDeposits: BookingPayment.where(status: "paid", kind: "deposit").count,

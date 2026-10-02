@@ -62,7 +62,8 @@ module MailCatalog
       "account_password_set" => { detail: "asha.catalog@example.com" },
       "account_password_removed" => { detail: "asha.catalog@example.com" },
       "google_connected" => { link: NotificationEmail.settings_link(@musician) },
-      "vouch_invite" => { link: "#{FRONT}/join/musician?vouch=vch_Zm9vYmFy", name: "Asha Rao" }
+      "vouch_invite" => { link: "#{FRONT}/join/musician?vouch=vch_Zm9vYmFy", name: "Asha Rao" },
+      "problem_report" => { link: "#{FRONT}/admin?tab=problems&report=prob_0f8e6c1a-2b4d-4c7e-9a31-5d6e7f8a9b0c", name: "Asha Rao" }
     }
     EmailDelivery::TEMPLATES.each do |template, content|
       template_data = data.fetch(template) { raise "MailCatalog has no fixture data for email template #{template}" }

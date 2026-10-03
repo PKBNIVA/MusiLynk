@@ -9,6 +9,8 @@ Rails.application.configure do
   config.logger = ActiveSupport::TaggedLogging.logger(STDOUT)
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info")
   config.log_tags = [:request_id]
+  # SQL at or over this many ms is logged, fingerprinted, by SlowQueryLog (docs/ops/observability.md).
+  config.x.slow_query_ms = Integer(ENV.fetch("SLOW_QUERY_MS", "100"), exception: false) || 100
   # Railway probes /api/live during deploys; keep those probes out of the request log.
   config.silence_healthcheck_path = "/api/live"
   # Record#inspect (error pages, console, error trackers) shows only the id, never PII.

@@ -1,10 +1,11 @@
 class ApplicationController < ActionController::API
   include PublicCaching
-  # Requests slower than this (ms) are logged at warn level with slow: true, so they can be
-  # filtered in Railway's log view. SLOW_REQUEST_MS overrides the default.
+  # Requests at least this slow (ms) get `"slow":true` in their request log line (RequestLog),
+  # so they can be filtered in Railway's log view. SLOW_REQUEST_MS overrides the default.
   class_attribute :slow_request_ms, default: Integer(ENV.fetch("SLOW_REQUEST_MS", "500"), exception: false) || 500
 
-  around_action :log_request
+  around_action :server_timing
+  before_action :tag_error_reports
   before_action :require_verified_email_for_mutation
   rescue_from ActiveRecord::RecordNotFound, with: -> { render_error("Not found", :not_found) }
   rescue_from ActiveRecord::RecordInvalid, with: :render_record_invalid
@@ -20,9 +21,10 @@ class ApplicationController < ActionController::API
 
   private
 
-  # One JSON line per API request (total and database time, query count) plus a
-  # Server-Timing header, so slow endpoints show up in the logs and in browser dev tools.
-  def log_request
+  # A Server-Timing header (database time, query count, total) on every response, so slow
+  # endpoints show up in browser dev tools. The request's log line itself is written by lograge
+  # (config/initializers/lograge.rb, RequestLog).
+  def server_timing
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     yield
   ensure
@@ -31,12 +33,12 @@ class ApplicationController < ActionController::API
     unless response.committed?
       response.headers["Server-Timing"] = "db;dur=#{timing[:dbMs]};desc=\"#{timing[:dbQueries]} queries\", app;dur=#{timing[:durationMs]}"
     end
-    slow = timing[:durationMs] >= slow_request_ms
-    Rails.logger.public_send(slow ? :warn : :info, {
-      event: "http_request", requestId: request.request_id, method: request.method,
-      path: request.path, route: "#{controller_name}##{action_name}", status: response.status,
-      **timing, slow: (true if slow), userId: @current_user&.id
-    }.compact.to_json)
+  end
+
+  # Every Sentry event from this request carries the same request id as its log line and the
+  # X-Request-Id header the client saw, so the three can be matched up.
+  def tag_error_reports
+    Sentry.get_current_scope.set_tags(request_id: request.request_id) if Sentry.initialized?
   end
 
   # Active Record moves SQL time into db_runtime whenever a view renders, so both are added.
@@ -87,13 +89,13 @@ class ApplicationController < ActionController::API
       session.destroy!
       AuditLog.create!(actor: session.user, action: "auth.session_revoked", entity_type: "User", entity_id: session.user_id,
         metadata: metadata.merge(reason: "client_mismatch"))
-      Rails.logger.warn({ event: "session_client_mismatch", userId: session.user_id, revoked: true }.to_json)
+      Rails.logger.warn({ event: "session_client_mismatch", userHash: RequestLog.user_hash(session.user_id), revoked: true }.to_json)
       return nil
     end
     if session.flagged_at.nil?
       session.update_columns(flagged_at: Time.current)
       AuditLog.create!(actor: session.user, action: "auth.session_client_mismatch", entity_type: "User", entity_id: session.user_id, metadata:)
-      Rails.logger.warn({ event: "session_client_mismatch", userId: session.user_id, revoked: false }.to_json)
+      Rails.logger.warn({ event: "session_client_mismatch", userHash: RequestLog.user_hash(session.user_id), revoked: false }.to_json)
     end
     session
   end

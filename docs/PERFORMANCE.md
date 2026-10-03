@@ -9,7 +9,7 @@ How MusiLynk keeps pages fast, how to see when they are not, and the latest load
 | Bundle budget | `bundle-budget.json`, `scripts/check-bundle-size.mjs`, CI `frontend` job | A pull request that makes the first page load heavier |
 | Core Web Vitals | `src/app/lib/webVitals.ts` → Sentry metrics | Slow loading (LCP), slow taps (INP) and jumping layouts (CLS) for real visitors |
 | Tracing sample | `SENTRY_TRACES_SAMPLE_RATE` (API), `VITE_SENTRY_TRACES_SAMPLE_RATE` (web) | Slow requests and page loads, with a span breakdown |
-| Request timing | `ApplicationController#log_request` | Every API response logs total time, database time and query count, and sends a `Server-Timing` header |
+| Request timing | lograge + `RequestLog` (`config/initializers/lograge.rb`) | Every API request logs one JSON line with total, view and database time and the query count, and sends a `Server-Timing` header |
 | Query budget | `backend/test/integration/api_query_budget_test.rb` | N+1 queries and unbounded lists in every GET list endpoint |
 | Load test | `scripts/load-test.mjs` | Throughput and p50/p95 of the busiest public and signed-in endpoints |
 
@@ -68,26 +68,29 @@ Once a DSN is set, a small share of requests is traced by default:
 
 | | Variable | Default with a DSN | Without a DSN |
 | --- | --- | --- | --- |
-| API | `SENTRY_TRACES_SAMPLE_RATE` | `0.02` (2%) | off |
+| API | `SENTRY_TRACES_SAMPLE_RATE` | `0.1` (10%, requests and jobs) | off |
 | Web | `VITE_SENTRY_TRACES_SAMPLE_RATE` | `0.05` (5%) | off |
 
 Set either to `0` to turn tracing off, or to another value between `0` and `1`.
 
 ## Request timing in the logs
 
-Every API request writes one JSON line and adds a `Server-Timing` header:
+Every API request writes one JSON line (lograge, see `docs/ops/observability.md`) and adds a
+`Server-Timing` header:
 
 ```
-{"event":"http_request","method":"GET","path":"/api/jobs","route":"jobs#index","status":200,"durationMs":352.3,"dbMs":41.2,"dbQueries":3,...}
+{"event":"http_request","method":"GET","path":"/api/jobs","controller":"JobsController","action":"index","status":200,"duration":352.3,"view":0.4,"db":41.2,"requestId":"…","dbQueries":3}
 Server-Timing: db;dur=41.2;desc="3 queries", app;dur=352.3
 ```
 
-Requests at or over `SLOW_REQUEST_MS` (default 500) are logged at warn level with
-`"slow":true`. In Railway's log view, search for `"slow":true` or for a route, e.g.
-`"route":"jobs#index"`. The header shows up in the browser's dev tools (Network → Timing).
+Requests at or over `SLOW_REQUEST_MS` (default 500) carry `"slow":true`. In Railway's log view,
+search for `"slow":true` or for an action, e.g. `"controller":"JobsController","action":"index"`.
+The header shows up in the browser's dev tools (Network → Timing). SQL statements at or over
+`SLOW_QUERY_MS` (default 100) are logged separately as `"event":"slow_query"` with the
+statement fingerprinted.
 
-`dbMs` is the time spent in SQL calls. Under load it includes waiting for Ruby's global
-lock while other threads work, so compare it with `durationMs` rather than reading it alone.
+`db` is the time spent in SQL calls. Under load it includes waiting for Ruby's global
+lock while other threads work, so compare it with `duration` rather than reading it alone.
 
 ## Load test
 

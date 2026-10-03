@@ -1,6 +1,6 @@
 # Build context is the repository root (railway.toml: dockerfilePath = "backend/Dockerfile").
 # Ignore rules live in backend/Dockerfile.dockerignore (BuildKit reads <Dockerfile>.dockerignore).
-FROM ruby:3.4.5-slim AS base
+FROM ruby:3.3.6-slim AS base
 WORKDIR /rails
 ENV RAILS_ENV=production \
     BUNDLE_DEPLOYMENT=1 \

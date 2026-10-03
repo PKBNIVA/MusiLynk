@@ -101,7 +101,10 @@ class AccountErasure
     Review.where(author_id: id).or(Review.where(employer_id: id)).delete_all
     TalentShortlist.where(employer_id: id).or(TalentShortlist.where(candidate_id: id)).delete_all
     TalentFolderMember.where(candidate_id: id).delete_all
+    lineups = ActMember.where(user_id: id).distinct.pluck(:act_id)
     ActMember.where(user_id: id).delete_all
+    # delete_all skips ActMember's callbacks: rebuild the search documents of the acts they played in.
+    Search::Indexer.refresh("acts", lineups)
     OrganizationMember.where(user_id: id).delete_all
     UrgentRequestResponse.where(user_id: id).delete_all
     erase_third_party_contact_details

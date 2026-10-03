@@ -81,8 +81,8 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     assert_no_match(%r{/hire/drummer/goa<}, response.body)
 
     5.times { |i| create_user("Goa Drummer #{i}", "jobseeker") }
-    Profile.where(user_id: User.where("name LIKE 'Goa Drummer%'").select(:user_id))
-      .update_all(headline: "Session drummer", location: "Goa")
+    # Saved through the model: hire pages count matches on the search document, which the model keeps current.
+    Profile.where(user_id: User.where("name LIKE 'Goa Drummer%'").select(:id)).find_each { _1.update!(headline: "Session drummer", location: "Goa") }
     Rails.cache.clear
 
     get_sitemap

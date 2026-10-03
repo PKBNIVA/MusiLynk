@@ -74,6 +74,62 @@ describe('vercel.json SPA rewrites', () => {
   });
 });
 
+describe('vercel.json edge-cached API rewrites', () => {
+  // The landing page's three anonymous reads go through same-origin paths that Vercel proxies to the
+  // API and caches per s-maxage (docs/ops/edge-caching.md). Nothing else under /api may be proxied:
+  // a signed-in endpoint on the edge would be a mistake even though Vercel skips caching with a token.
+  const API_HOST = 'https://musilynk-api-production.up.railway.app';
+  const EDGE_READS = ['/api/public/stats', '/api/public/talent', '/api/stage/authors/system/:id/posts'];
+  const apiRules = config.rewrites.filter((rule) => rule.source.startsWith('/api/'));
+  /** Vercel's path-to-regexp for the shapes vercel.json uses: `:name*` (rest), `:name` (one segment), groups. */
+  const compile = (source) =>
+    new RegExp(`^${source.replace(/:[a-zA-Z]+\*/g, '(.*)').replace(/:[a-zA-Z]+/g, '([^/]+)')}$`);
+  /** The first rewrite whose source matches `path` (its `has` condition assumed met), as Vercel applies them. */
+  const firstMatch = (path) => config.rewrites.find((rule) => compile(rule.source).test(path));
+
+  it('proxies exactly the three landing reads to the API host, path preserved', () => {
+    expect(apiRules.map((rule) => rule.source)).toEqual(EDGE_READS);
+    for (const rule of apiRules) {
+      expect(rule.destination).toBe(`${API_HOST}${rule.source}`);
+      expect(rule.has).toBeUndefined();
+    }
+  });
+
+  it('wins over the crawler and SPA rules for the paths the landing page calls', () => {
+    for (const path of ['/api/public/stats', '/api/public/talent', '/api/stage/authors/system/musilynk/posts']) {
+      const rule = firstMatch(path);
+      expect(rule?.destination, path).toMatch(new RegExp(`^${API_HOST}/api/`));
+      expect(servedAsApp(path), path).toBe(false);
+    }
+    const lastApiIndex = Math.max(...apiRules.map((rule) => config.rewrites.indexOf(rule)));
+    const firstOtherIndex = config.rewrites.findIndex(
+      (rule) => rule.has || rule.destination === '/index.html' || rule.destination === '/app-shell.html',
+    );
+    expect(lastApiIndex).toBeLessThan(firstOtherIndex);
+  });
+
+  it('proxies no other /api path, so signed-in and non-landing endpoints never reach the edge', () => {
+    for (const path of [
+      '/api/me',
+      '/api/jobs',
+      '/api/jobs/job_1',
+      '/api/public/talent/user_1',
+      '/api/public/acts',
+      '/api/public/portfolios/some-slug',
+      '/api/public/hire-pages/drummer/mumbai',
+      '/api/public/rates/mumbai',
+      '/api/stage/feed',
+      '/api/stage/authors/user/user_1/posts',
+      '/api/stage/authors/system/musilynk',
+      '/api/admin/stats',
+      '/api/health',
+    ]) {
+      expect(firstMatch(path), path).toBeUndefined();
+      expect(servedAsApp(path), path).toBe(false);
+    }
+  });
+});
+
 describe('vercel.json crawler routing and headers', () => {
   const crawlerRules = config.rewrites.filter((rule) => rule.has);
   const agentFor = (source) => crawlerRules.find((rule) => rule.source === source).has[0].value;

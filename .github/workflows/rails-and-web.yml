@@ -74,7 +74,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.4.5
+          ruby-version: 3.3.6
           bundler-cache: true
           working-directory: backend
       # Since Rails 8.0, db:migrate on an empty database loads db/schema.rb instead of
@@ -110,7 +110,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.4.5
+          ruby-version: 3.3.6
           bundler-cache: true
           working-directory: backend
       # Fails on any warning not listed in config/brakeman.ignore (each entry carries a review note).
@@ -148,7 +148,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.4.5
+          ruby-version: 3.3.6
           bundler-cache: true
           working-directory: backend
       - uses: actions/setup-node@v7

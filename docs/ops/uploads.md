@@ -99,7 +99,7 @@ downloads the 512 px (or 5 MB) original:
   upload is purged (they are harmless; nothing links to them).
 - **Local development.** Disk-stored uploads (no `AWS_BUCKET`) get no variants: the pipeline is
   bucket-only. `libvips` is needed where the worker runs (`apt-get install libvips42` on Debian,
-  `libvips42t64` on Ubuntu 24.04); the `ruby-vips` gem binds it at runtime through FFI.
+  `libvips42t64` on Ubuntu 24.04, which is also what the rails CI job installs); the `ruby-vips` gem binds it at runtime through FFI.
 
 No new environment variable: the feature is on wherever direct uploads are on, and off with them.
 

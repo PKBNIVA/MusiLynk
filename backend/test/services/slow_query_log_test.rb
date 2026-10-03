@@ -17,6 +17,15 @@ class SlowQueryLogTest < ActiveSupport::TestCase
     assert_equal %(SELECT * FROM a WHERE b = ?), SqlFingerprint.call(%(SELECT * FROM a /* request:abc */ WHERE b = -7 -- trailing note 'x'))
   end
 
+  test "a leftover quote (escaped or unterminated string) drops the rest of the statement, and .5 is a number" do
+    # A backslash-escaped quote is part of the literal, so the quotes after it pair up correctly.
+    assert_equal %(SELECT * FROM t WHERE a = ? AND b = ?), SqlFingerprint.call(%q(SELECT * FROM t WHERE a = 'ab\'c' AND b = 'secret@x.io'))
+    # Unterminated: everything from the quote on is dropped.
+    assert_equal %(SELECT * FROM t WHERE a = ? AND b = ?), SqlFingerprint.call(%q(SELECT * FROM t WHERE a = 'x' AND b = 'secret@x.io AND c = 7))
+    assert_equal %(UPDATE t SET note = ?), SqlFingerprint.call(%q(UPDATE t SET note = 'never closed priya@example.com))
+    assert_equal %(SELECT * FROM t WHERE ratio > ? AND w = ?), SqlFingerprint.call(%(SELECT * FROM t WHERE ratio > .5 AND w = -.25e3))
+  end
+
   test "fingerprints are bounded in length and squash whitespace" do
     long = "SELECT * FROM t WHERE #{(1..2_000).map { "c#{_1} = #{_1}" }.join(' AND ')}"
     print = SqlFingerprint.call(long)

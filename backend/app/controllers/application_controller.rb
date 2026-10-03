@@ -89,13 +89,13 @@ class ApplicationController < ActionController::API
       session.destroy!
       AuditLog.create!(actor: session.user, action: "auth.session_revoked", entity_type: "User", entity_id: session.user_id,
         metadata: metadata.merge(reason: "client_mismatch"))
-      Rails.logger.warn({ event: "session_client_mismatch", userId: session.user_id, revoked: true }.to_json)
+      Rails.logger.warn({ event: "session_client_mismatch", userHash: RequestLog.user_hash(session.user_id), revoked: true }.to_json)
       return nil
     end
     if session.flagged_at.nil?
       session.update_columns(flagged_at: Time.current)
       AuditLog.create!(actor: session.user, action: "auth.session_client_mismatch", entity_type: "User", entity_id: session.user_id, metadata:)
-      Rails.logger.warn({ event: "session_client_mismatch", userId: session.user_id, revoked: false }.to_json)
+      Rails.logger.warn({ event: "session_client_mismatch", userHash: RequestLog.user_hash(session.user_id), revoked: false }.to_json)
     end
     session
   end

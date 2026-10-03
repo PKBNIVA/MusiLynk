@@ -24,12 +24,12 @@ Configuration lives in one place each: the request line in `backend/config/initi
 One JSON line per API request, written when the response is done:
 
 ```
-[9f1a2b3c-…] {"event":"http_request","method":"GET","path":"/api/jobs","controller":"JobsController","action":"index","status":200,"allocations":41231,"duration":352.3,"view":0.4,"db":41.2,"requestId":"9f1a2b3c-…","userHash":"3b9e2c1d4a5f6e70","dbQueries":3}
+[9f1a2b3c-…] {"event":"http_request","method":"GET","path":"/api/public/talent/:id","controller":"TalentController","action":"public_show","status":200,"allocations":41231,"duration":352.3,"view":0.4,"db":41.2,"requestId":"9f1a2b3c-…","userHash":"3b9e2c1d4a5f6e70","dbQueries":3}
 ```
 
 | Field | Meaning |
 | --- | --- |
-| `method`, `path` | The HTTP method and the path **without its query string**. No parameters are ever logged. |
+| `method`, `path` | The HTTP method and the **route pattern** (`/api/public/talent/:id`, `/share/p/:slug`), never the request's own path: ids, member ids, author ids and portfolio slugs do not appear, and neither does the query string. |
 | `controller`, `action` | The Rails controller and action that answered. |
 | `status` | HTTP status. For an unhandled exception it is `500` and `error` names the exception **class only**; messages can quote record values and are left out. |
 | `duration`, `view`, `db` | Milliseconds: whole request, rendering, SQL. `dbQueries` is the number of statements. |
@@ -37,8 +37,10 @@ One JSON line per API request, written when the response is done:
 | `userHash` | Present when someone was signed in: a keyed HMAC of their user id (first 16 hex characters). The same person always gets the same hash, so their requests can be followed, but the id, email or name never appear. Compute it for a known id with `RequestLog.user_hash(id)` in a Rails console. |
 | `slow` | `true` when `duration >= SLOW_REQUEST_MS`. Absent otherwise. |
 
-Not logged, by construction: query strings, request bodies, headers, cookies, IPs, user ids,
-emails, names. `GET /api/live` (Railway's health probe) is silenced entirely.
+Not logged, by construction: query strings, path ids and slugs, request bodies, headers, cookies,
+IPs, user ids, emails, names. The `session_client_mismatch` warning uses the same `userHash`.
+`GET /api/live` (Railway's health probe) is silenced entirely. (Rails' own `DebugExceptions`
+still writes a 500's class, message and backtrace to the log stream; see the PR 183 proposals.)
 
 ### Slow queries
 
@@ -47,7 +49,8 @@ emails, names. `GET /api/live` (Railway's health probe) is silenced entirely.
 ```
 
 The statement is a **fingerprint**: every string, number and list of literals is replaced by
-`?`, bind placeholders (`$1`) and identifiers are kept, comments are dropped. The same slow
+`?`, bind placeholders (`$1`) become `?`, identifiers are kept, comments are dropped, and if a
+quote is left over (an escaped or unterminated string) everything after it is dropped. The same slow
 query therefore always logs the same `sql`, which is what you group by. `name` is Active
 Record's label (`User Load`, `Job Count`), `source` the query-log tag when it is present.
 

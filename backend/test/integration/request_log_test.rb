@@ -19,7 +19,7 @@ class RequestLogTest < ActionDispatch::IntegrationTest
     assert_equal 1, lines.size
     entry = lines.first[:entry]
     assert_equal "GET", entry["method"]
-    assert_equal "/api/jobs", entry["path"], "the query string is never logged"
+    assert_equal "/api/jobs", entry["path"], "the route pattern: no query string, no ids"
     assert_equal %w[JobsController index], entry.values_at("controller", "action")
     assert_equal 200, entry["status"]
     assert_kind_of Numeric, entry["duration"]
@@ -32,6 +32,49 @@ class RequestLogTest < ActionDispatch::IntegrationTest
     refute entry.key?("userHash"), "anonymous requests carry no user hash"
     refute entry.key?("params")
     refute entry.key?("format")
+  end
+
+  test "path is the route pattern, so ids and public handles in the URL never reach the log" do
+    [
+      ["/api/public/talent/#{@employer.id}", "/api/public/talent/:id"],
+      ["/api/public/talent/user_0d9c1a2b-1111-4222-8333-444455556666", "/api/public/talent/:id"],
+      ["/api/public/acts/act_0d9c1a2b-1111-4222-8333-444455556666", "/api/public/acts/:id"],
+      ["/api/public/portfolios/priya-k-drums", "/api/public/portfolios/:slug"],
+      ["/share/p/priya-k-drums", "/share/p/:slug"],
+      ["/api/stage/authors/user/#{@employer.id}", "/api/stage/authors/:type/:id"],
+      ["/api/stage/authors/user/#{@employer.id}/posts", "/api/stage/authors/:type/:authorId/posts"],
+      ["/share-cards/verified/#{@employer.id}.svg", "/share-cards/verified/:user_id"],
+      ["/api/acts/act_0d9c1a2b-1111-4222-8333-444455556666/members/mem_0d9c1a2b-1111-4222-8333-444455556666", "/api/acts/:id/members/:member_id"]
+    ].each do |url, pattern|
+      lines = capture_request_log { url.include?("/members/") ? delete(url, headers: auth(@employer)) : get(url) }
+      assert_equal 1, lines.size, url
+      assert_equal pattern, lines.first[:entry]["path"], url
+      refute_includes lines.first[:raw], @employer.id, url
+      refute_includes lines.first[:raw], "priya-k-drums", url
+      refute_includes lines.first[:raw], "0d9c1a2b", url
+    end
+  end
+
+  test "the path mask also covers a raw path without a route pattern" do
+    request = Struct.new(:route_uri_pattern, :path).new(nil, "/api/things/user_0d9c1a2b-1111-4222-8333-444455556666/parts/42/x")
+    assert_equal "/api/things/:id/parts/:id/x", RequestLog.route_pattern(request)
+    assert_equal "/api/jobs", RequestLog.route_pattern(Struct.new(:route_uri_pattern, :path).new("/api/jobs(.:format)", "/api/jobs?x"))
+  end
+
+  test "a session presented by a different browser family logs a user hash, not the id" do
+    raw = SecureRandom.urlsafe_base64(48)
+    @employer.sessions.create!(token_digest: Digest::SHA256.hexdigest(raw), expires_at: 30.days.from_now,
+      client_fingerprint: Session.fingerprint("Mozilla/5.0 (Macintosh) AppleWebKit/605 Safari/605"))
+    io = StringIO.new
+    sink = ActiveSupport::Logger.new(io)
+    Rails.logger.broadcast_to(sink)
+    get "/api/me", headers: { "Authorization" => "Bearer #{raw}", "User-Agent" => "Mozilla/5.0 (Windows) Chrome/130" }
+    Rails.logger.stop_broadcasting_to(sink)
+    line = io.string.lines.find { _1.include?('"event":"session_client_mismatch"') }
+    assert line, "expected the mismatch to be logged"
+    assert_includes line, RequestLog.user_hash(@employer.id)
+    refute_includes line, @employer.id
+    refute_includes line, "userId"
   end
 
   test "a signed-in request carries a keyed hash of the user id, never the id, email or name" do
@@ -88,6 +131,14 @@ class RequestLogTest < ActionDispatch::IntegrationTest
       assert_equal "RuntimeError", entry["error"]
       refute_includes lines.first[:raw], "alert-admin"
     end
+  end
+
+  test "the formatter keeps a namespaced exception class and drops the message" do
+    line = JSON.parse(RequestLog.format(status: 500, error: "ActiveRecord::StatementInvalid: PG::UndefinedColumn: ERROR: column users.secret for priya@example.com"))
+    assert_equal "ActiveRecord::StatementInvalid", line["error"]
+    refute_includes line.to_json, "priya"
+    assert_equal "RuntimeError", JSON.parse(RequestLog.format(error: "RuntimeError: boom"))["error"]
+    assert_equal "Stage::PostsController::Refused", JSON.parse(RequestLog.format(error: "Stage::PostsController::Refused"))["error"]
   end
 
   test "an X-Request-Id from the client is kept, echoed back and logged" do

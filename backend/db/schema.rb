@@ -1059,7 +1059,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_100000) do
     t.boolean "email_notifications", default: true, null: false
     t.string "phone_e164"
     t.datetime "whatsapp_consented_at"
-    t.jsonb "email_preferences", default: {"digest"=>true, "product"=>true, "requests"=>true, "lifecycle"=>true}, null: false
+    t.jsonb "email_preferences", default: {"digest" => true, "product" => true, "requests" => true, "lifecycle" => true}, null: false
     t.boolean "share_verification_publicly", default: true, null: false
     t.string "photo_url"
     t.jsonb "event_types", default: [], null: false

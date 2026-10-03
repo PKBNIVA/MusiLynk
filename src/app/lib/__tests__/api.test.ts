@@ -53,11 +53,10 @@ describe('api() requests', () => {
   it('sends a viaEdge read to VITE_PUBLIC_API_BASE and everything else to the API host', async () => {
     vi.stubEnv('VITE_API_URL', 'https://api.example.test/api');
     vi.stubEnv('VITE_PUBLIC_API_BASE', '/api');
-    const { apiGet, PUBLIC_API_BASE } = await loadApi();
+    const { apiGet } = await loadApi();
     // A Response body reads once, so each call gets a fresh one.
     fetchMock.mockImplementation(async () => jsonResponse({ professionals: 12 }));
 
-    expect(PUBLIC_API_BASE).toBe('/api');
     await expect(apiGet('/public/stats', { viaEdge: true, skipAuthRedirect: true })).resolves.toEqual({
       professionals: 12,
     });
@@ -72,10 +71,9 @@ describe('api() requests', () => {
   it('without VITE_PUBLIC_API_BASE a viaEdge read goes to the API host like any other', async () => {
     vi.stubEnv('VITE_API_URL', 'https://api.example.test/api');
     vi.stubEnv('VITE_PUBLIC_API_BASE', '');
-    const { apiGet, PUBLIC_API_BASE, API_BASE } = await loadApi();
+    const { apiGet } = await loadApi();
     fetchMock.mockResolvedValue(jsonResponse({}));
 
-    expect(PUBLIC_API_BASE).toBe(API_BASE);
     await apiGet('/public/stats', { viaEdge: true });
     expect(lastRequest().url).toBe('https://api.example.test/api/public/stats');
   });

@@ -268,7 +268,6 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
   const method = (options.method || 'GET').toUpperCase();
   const canRetry = method === 'GET';
   const { timeoutMs, skipAuthRedirect, skipPlanLimitEvent, signal, viaEdge, ...requestOptions } = options;
-  const base = viaEdge ? PUBLIC_API_BASE : API_BASE;
   const deadlineAt = Date.now() + (timeoutMs ?? DEFAULT_TIMEOUT_MS);
   let lastResponse: Response | undefined;
 
@@ -276,7 +275,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
     try {
       const remainingMs = Math.max(0, deadlineAt - Date.now());
       if (remainingMs === 0) throw new RequestDeadlineError();
-      const response = await fetchWithTimeout(`${base}${path}`, {
+      const response = await fetchWithTimeout(`${viaEdge ? PUBLIC_API_BASE : API_BASE}${path}`, {
         ...requestOptions,
         method,
         headers,
@@ -483,7 +482,7 @@ export const disconnectAuthConnection = (id: string) => apiDelete(`/auth/connect
  * (GoogleAuthController) that live outside the JSON API and are navigated to directly by
  * the browser, not fetched.
  */
-export const apiOrigin = () => API_BASE.replace(/\/api\/?$/, '') || window.location.origin;
+export const apiOrigin = () => BACKEND_ORIGIN || window.location.origin;
 
 export interface GoogleStartOptions {
   intent: 'signin' | 'connect';
@@ -712,9 +711,7 @@ export async function uploadMedia(
   const safeFilename = file.name.replace(/[^A-Za-z0-9_.-]/g, '_') || 'upload';
   const headers: Record<string, string> = { 'Content-Type': contentType, 'X-Filename': safeFilename };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const uploadUrl = prep.uploadUrl.startsWith('http')
-    ? prep.uploadUrl
-    : `${API_BASE.replace(/\/api\/?$/, '')}${prep.uploadUrl}`;
+  const uploadUrl = prep.uploadUrl.startsWith('http') ? prep.uploadUrl : `${BACKEND_ORIGIN}${prep.uploadUrl}`;
   const sent = await sendWithProgress('PUT', uploadUrl, file, headers, options);
   if (sent.status === 401) redirectAfterUnauthorized('/uploads/local', token);
   if (sent.status < 200 || sent.status >= 300)

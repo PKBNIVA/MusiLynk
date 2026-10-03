@@ -86,7 +86,7 @@ class SearchController < ApplicationController
   end
 
   def run(type, query, offset, limit)
-    Search::Runner.call(scope_for(type), query, TARGETS.fetch(type), order: ORDERS.fetch(type), offset:, limit:)
+    Search::Runner.call(scope_for(type, query), query, TARGETS.fetch(type), order: ORDERS.fetch(type), offset:, limit:)
   end
 
   # Every type with matches gets a fair share of the MAX_RESULTS slots before any type
@@ -104,13 +104,16 @@ class SearchController < ApplicationController
     taken.flatten(1)
   end
 
-  def scope_for(type)
+  def scope_for(type, query)
     scope = case type
     when "jobs" then Job.published.joins(:employer).includes(:employer)
     when "talent" then TalentController.apply_facets(User.discoverable_talent.joins(:profile).preload(:profile), params)
     # Acts never join users: the owner rule is an anti-join (a join made the planner scan users once per act).
     when "acts" then Act.preload(:owner).where(status: "active")
-    else PortfolioItem.joins(user: :profile).includes(:user).where(visibility: "public", users: { status: "active", profile_complete: true })
+    else
+      samples = PortfolioItem.joins(:user).includes(:user).where(visibility: "public", users: { status: "active", profile_complete: true })
+      # A sample's place is its owner's profile location: joined only when the query names a city.
+      query.tokens.any?(&:location?) ? samples.joins(user: :profile) : samples
     end
     return scope if synthetic_viewer?
     type == "acts" ? SyntheticQa::Demo.publicly_listed_acts(scope) : SyntheticQa::Demo.publicly_listed(scope)

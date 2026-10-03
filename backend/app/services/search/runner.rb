@@ -58,13 +58,20 @@ module Search
     private
 
     def search(query)
-      exact = attempt(query, :all, "all")
+      exact = typed = attempt(query, :all, "all")
       return exact if exact.total >= Settings.typo_min_results || !query.natural?
 
-      widened = Spelling.widen(query, @scope, @target, exact_total: exact.total)
+      # A narrower term that matches nothing also finds its broader term ("hindustani" → classical).
+      # A longer query that still finds little goes on to typo tolerance and partial matches.
+      if typed.total.zero? && (broadened = query.broaden)
+        broader = attempt(broadened, :all, "all")
+        return broader if broader.total >= Settings.typo_min_results || (broader.total.positive? && !query.multi?)
+      end
+
+      widened = Spelling.widen(query, @scope, @target, exact_total: typed.total)
       if widened
         # Rows matching as typed go first; with none there is nothing to boost.
-        fixed = attempt(widened.query, :all, exact.total.zero? ? "corrected" : "all", widened.did_you_mean, boost: exact.total.zero? ? nil : query)
+        fixed = attempt(widened.query, :all, typed.total.zero? ? "corrected" : "all", widened.did_you_mean, boost: typed.total.zero? ? nil : query)
         return fixed if fixed.total > exact.total
       end
       return exact if exact.total.positive? || !query.multi?

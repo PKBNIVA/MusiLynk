@@ -20,8 +20,11 @@ class SitemapsController < ActionController::API
     ["/privacy", "weekly"]
   ].freeze
 
+  # SearchIndexBackfillJob drops it after building search documents, since hire pages count on them.
+  CACHE_KEY = "sitemap/v2".freeze
+
   def show
-    xml = Rails.cache.fetch("sitemap/v2", expires_in: 1.hour, race_condition_ttl: 30.seconds) { build_xml }
+    xml = Rails.cache.fetch(CACHE_KEY, expires_in: 1.hour, race_condition_ttl: 30.seconds) { build_xml }
     expires_in 1.hour, public: true
     render xml: xml, content_type: "application/xml"
   end

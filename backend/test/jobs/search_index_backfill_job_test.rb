@@ -55,6 +55,18 @@ class SearchIndexBackfillJobTest < ActiveJob::TestCase
     assert_equal({ "jobs" => 3, "talent" => 1, "acts" => 0, "samples" => 0 }, SearchIndexBackfillJob.perform_now)
   end
 
+  test "a run that built documents drops the cached sitemap" do
+    original = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.cache.write(SitemapsController::CACHE_KEY, "<urlset/>")
+    SearchIndexBackfillJob.perform_now(missing_only: true)
+    assert Rails.cache.exist?(SitemapsController::CACHE_KEY), "nothing was missing, so the sitemap stands"
+    SearchIndexBackfillJob.perform_now
+    assert_not Rails.cache.exist?(SitemapsController::CACHE_KEY)
+  ensure
+    Rails.cache = original
+  end
+
   test "runs nightly for missing documents, and the admin reindex queues a full run" do
     entry = Rails.application.config.good_job.cron.fetch(:search_index_sweep)
     assert_equal "SearchIndexBackfillJob", entry[:class]

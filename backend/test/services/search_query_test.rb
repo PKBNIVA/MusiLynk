@@ -83,7 +83,7 @@ class SearchQueryTest < ActiveSupport::TestCase
     all = query.condition(Search::Targets::JOBS)
     assert_includes all, " AND "
     assert_includes all, "jobs.search_vector @@", "matching uses the indexed document, not per-column regexes"
-    assert_includes all, "''guitar'' <-> ''player''", "a vocabulary phrase is matched as consecutive words"
+    assert_includes all, "(''guitar'' & ''player'')", "a vocabulary phrase matches its words anywhere in the row"
     assert_includes all, "''mumbai'':D", "a city matches the location weight only"
     partial = query.condition(Search::Targets::JOBS, mode: :partial)
     assert_not_includes partial, " AND ", "partial mode ignores the city and needs one of the other words"
@@ -98,10 +98,13 @@ class SearchQueryTest < ActiveSupport::TestCase
     assert fixed.tokens.last.location?
   end
 
-  test "symbols become substring matches and hyphenated words become phrases" do
+  test "symbols become substring matches and hyphenated words match as words" do
     sql = Search::Query.new("a&r hip-hop").condition(Search::Targets::TALENT)
     assert_includes sql, "profiles.search_text LIKE ANY (ARRAY['%a&r%'"
-    assert_includes sql, "''hip'' <-> ''hop''"
+    assert_includes sql, "(''hip'' & ''hop'')"
+    query = Search::Query.new("hip-hop")
+    phrase, = query.tsquery(query.tokens.first, phrase: true)
+    assert_includes phrase, "''hip'' <-> ''hop''", "the in-order phrase is what the score rewards"
     assert_not_includes sql, "''a''", "a lone letter never becomes a lexeme of its own"
   end
 

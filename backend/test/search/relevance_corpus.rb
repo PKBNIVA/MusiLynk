@@ -36,16 +36,19 @@ module RelevanceCorpus
     ["Gauri Patil", "गायिका, पुणे", "Pune, Maharashtra", ["Vocalist"], [], ["Folk"], [], ["Marathi"]]
   ].freeze
 
-  # name, act_type, city, genres, event_types, lineup [[role, instrument], ...]
+  # name, act_type, city, genres, event_types, lineup [[role, instrument], ...], tagline
   ACTS = [
     ["Baraat Brass Band", "Wedding band", "Jaipur", ["Folk"], ["Baraat", "Wedding"], [["Dhol Player", "Dhol"], ["Trumpeter", "Trumpet"]]],
     ["Shaadi Beats", "Wedding band", "Delhi", ["Bollywood"], ["Wedding", "Sangeet"], [["Vocalist", nil], ["Keyboardist", "Keys"], ["Dholak Player", "Dholak"]]],
     ["Sufi Sur Collective", "Sufi group", "Delhi", ["Sufi", "Qawwali"], ["Wedding", "Private party"], [["Qawwal", "Harmonium"], ["Tabla Player", "Tabla"]]],
     ["Electric Monsoon", "Band", "Bengaluru", ["Rock"], ["Festival", "Club"], [["Guitarist", "Guitar"], ["Drummer", "Drums"], ["Vocalist", nil]]],
     ["Groove Theory DJs", "DJ", "Goa", ["EDM", "Bollywood"], ["Club", "Wedding"], [["DJ", "Turntables"]]],
-    ["Raag Trio", "Trio", "Pune", ["Hindustani", "Classical"], ["Private party"], [["Sitarist", "Sitar"], ["Tabla Player", "Tabla"], ["Flautist", "Bansuri"]]],
+    ["Raag Trio", "Trio", "Pune", ["Classical"], ["Private party"], [["Sitarist", "Sitar"], ["Tabla Player", "Tabla"], ["Flautist", "Bansuri"]]],
     ["Mehendi Melodies", "Duo", "Jaipur", ["Folk"], ["Mehendi", "Sangeet"], [["Dholak Player", "Dholak"], ["Vocalist", nil]]],
-    ["Corporate Jazz Quartet", "Band", "Mumbai", ["Jazz"], ["Corporate"], [["Pianist", "Piano"], ["Saxophonist", "Saxophone"]]]
+    ["Corporate Jazz Quartet", "Band", "Mumbai", ["Jazz"], ["Corporate"], [["Pianist", "Piano"], ["Saxophonist", "Saxophone"]]],
+    ["Live Wire", "Live band", "Mumbai", ["Rock"], ["Club", "Festival"], [["Guitarist", "Guitar"], ["Drummer", "Drums"]]],
+    ["Weekend Groove", "Band", "Pune", ["Pop"], ["Wedding", "Corporate"], [["Vocalist", nil], ["Bassist", "Bass"]],
+      "Live covers for the dance floor: the band every wedding asks back"]
   ].freeze
 
   # title, location, skills, genre
@@ -83,8 +86,8 @@ module RelevanceCorpus
     end
     hirer = User.create!(name: "Relevance Hirer", email: "relevance-hirer@example.com", password: PASSWORD, role: "employer", status: "active", profile_complete: true)
     hirer.create_profile!(company_name: "Relevance Events")
-    ACTS.each_with_index do |(name, act_type, city, genres, event_types, lineup), index|
-      act = Act.create!(owner: people.values[index], name:, act_type:, city:, genres:, event_types:, currency: "INR", fee_basis: "event", status: "active")
+    ACTS.each_with_index do |(name, act_type, city, genres, event_types, lineup, tagline), index|
+      act = Act.create!(owner: people.values[index], name:, act_type:, city:, genres:, event_types:, tagline:, currency: "INR", fee_basis: "event", status: "active")
       act.update_columns(updated_at: now - index.hours)
       lineup.each { |role, instrument| act.act_members.create!(display_name: role, role_name: role, instrument:, member_status: "confirmed") }
     end

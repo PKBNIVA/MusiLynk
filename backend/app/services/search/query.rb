@@ -14,16 +14,17 @@ module Search
   #
   # Matching is AND across tokens and OR within a token's alternatives (#condition), against a
   # Search::Document: a token becomes one full-text query on the row's weighted search_vector, which
-  # a GIN index serves. A phrase must be consecutive words; vocabulary terms and short words match
+  # a GIN index serves. A phrase matches its words anywhere in the row; vocabulary terms and short words match
   # whole words (English stemming folds plurals, so "singers" finds "Singer" but "dhol" never finds
   # "dholak"); longer unknown words also match as word prefixes; a city matches the location (D)
   # only. Devanagari spellings (गायक) are words like any other; alternatives with symbols ("a&r")
   # or emoji match search_text by substring (trigram index).
   #
   # #score ranks a row by where each token hit: title/name/headline (A) 1100, roles/skills (B) 1060,
-  # anywhere else 1030, a city 1050, plus 10 when the word itself (not only a synonym) is there and
-  # up to 20 for trigram similarity of the whole query to the title. Every matched token adds at
-  # least 1,000, so in partial mode rows matching more words lead.
+  # anywhere else 1030, a city 1050; plus 100 when a typed phrase is there in order, 10 when the word
+  # itself (not only a synonym) is there, and up to 20 for trigram similarity of the whole query to
+  # the title (rows whose title matched). Every matched token adds at least 1,000, so in partial
+  # mode rows matching more words lead.
   class Query
     MAX_LENGTH = 100
     MAX_TOKENS = 8
@@ -93,6 +94,20 @@ module Search
       return self if other.blank?
 
       self.class.new([text, other.text].join(" "), tokens: tokens + other.tokens)
+    end
+
+    # This query with each word that is the narrower term of a one-way expansion ("hindustani" under
+    # "classical") also searching the broader term and its spellings (not everything the broader
+    # term itself expands to, so "dhol" never reaches dholak players this way), or nil when no word has one. The fallback for
+    # a query that matches too few rows (Search::Runner).
+    def broaden
+      broadened = tokens.map do |token|
+        parents = token.location? ? [] : Synonyms.parents(token.text)
+        next token if parents.empty?
+        token.with(words: (token.words + parents.flat_map { Synonyms.group(_1) }).uniq)
+      end
+      return nil if broadened == tokens
+      dup.tap { _1.retoken(broadened) }
     end
 
     # This query with every word matched against the location only (a "location" filter box).
@@ -179,9 +194,12 @@ module Search
     # word ("producer" finds 'produc'); stemming the prefix itself would turn "table" into 'tabl':*,
     # which finds "tabla".
     # `weights` overrides the token's own restriction (the score asks "did it hit the title (A)?").
-    def tsquery(token, weights = token.weights)
+    # A phrase matches its words anywhere in the row ("wedding band" finds a band that plays
+    # weddings); `phrase: true` asks for the words in order instead (only multi-word alternatives),
+    # which the score rewards (#phrase_bonus).
+    def tsquery(token, weights = token.weights, phrase: false)
       @tsqueries ||= {}
-      @tsqueries[[token, weights]] ||= begin
+      @tsqueries[[token, weights, phrase]] ||= begin
         restrict = weights.present? ? ":#{weights}" : ""
         stemmed = []
         prefixes = []
@@ -194,7 +212,9 @@ module Search
               likes << alternative
               next
             end
-            stemmed << words.map { "'#{_1}'#{restrict}" }.join(" <-> ")
+            next if phrase && (prefix || words.one?)
+            lexemes = words.map { "'#{_1}'#{restrict}" }
+            stemmed << (phrase ? lexemes.join(" <-> ") : "(#{lexemes.join(' & ')})")
             prefixes << "'#{words.join(' ')}':*#{weights}" if prefix && words.one?
           end
         end
@@ -224,25 +244,38 @@ module Search
     # `matched`: every row already matches every token (mode :all), so a token's own condition need
     # not be evaluated again for the lowest tier.
     def document_score(document, boost, matched)
+      # Trigram similarity to the title is costly per row, and only tells apart rows whose title
+      # matched: it is added in the first word's title (A) tier only.
+      similarity = "20 * word_similarity(#{quote(text)}, COALESCE(#{document.title}, ''))"
+      titled = tokens.find { !_1.location? }
       parts = tokens.map do |token|
         condition = matched ? "TRUE" : document_condition(token, document)
         next "(CASE WHEN #{condition} THEN 1050 ELSE 0 END)" if token.location?
         tiers = { "A" => 1100, "B" => 1060 }.filter_map do |weight, points|
           tiered, = tsquery(token, weight)
-          "WHEN #{document.vector} @@ #{tiered} THEN #{points}" if tiered
+          bonus = weight == "A" && token.equal?(titled) ? " + #{similarity}" : ""
+          "WHEN #{document.vector} @@ #{tiered} THEN #{points}#{bonus}" if tiered
         end
         fuzzy = token.fuzzy ? " + (CASE WHEN #{document.text} %> #{quote(token.fuzzy)} THEN (20 * word_similarity(#{quote(token.fuzzy)}, #{document.text})) ELSE 0 END)" : ""
-        "(CASE #{[*tiers, "WHEN #{condition} THEN 1030"].join(' ')} ELSE 0 END)#{fuzzy}#{as_typed(token, document)}"
+        "(CASE #{[*tiers, "WHEN #{condition} THEN 1030"].join(' ')} ELSE 0 END)#{fuzzy}#{as_typed(token, document)}#{phrase_bonus(token, document)}"
       end
-      parts << "(20 * word_similarity(#{quote(text)}, COALESCE(#{document.title}, '')))"
       parts << "(CASE WHEN #{boost.condition(document)} THEN 500 ELSE 0 END)" if boost && !boost.blank?
       parts.join(" + ")
+    end
+
+    # 100 more when a typed phrase ("wedding band") is there as a phrase, not only as scattered words,
+    # so exact phrases lead their tier and the next one down.
+    def phrase_bonus(token, document)
+      return "" unless token.text.include?(" ")
+      phrase, = tsquery(token, phrase: true)
+      phrase ? " + (CASE WHEN #{document.vector} @@ #{phrase} THEN 100 ELSE 0 END)" : ""
     end
 
     # 10 more when the row has the word as typed, not only a synonym or a broader term, so within a
     # tier "harmonium" puts harmonium players ahead of the keyboardists it also searches.
     def as_typed(token, document)
-      return "" if token.alternatives.size < 2 || !token.alternatives.include?(token.text)
+      # A typed phrase gets #phrase_bonus instead.
+      return "" if token.alternatives.size < 2 || !token.alternatives.include?(token.text) || token.text.include?(" ")
       typed, = tsquery(token.with(words: [token.text], prefixes: []))
       typed ? " + (CASE WHEN #{document.vector} @@ #{typed} THEN 10 ELSE 0 END)" : ""
     end

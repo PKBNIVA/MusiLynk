@@ -6,6 +6,9 @@ class SearchIndexBackfillJob < ApplicationJob
 
   def perform(missing_only: false, documents: Search::Indexer::DOCUMENTS.keys)
     counts = documents.index_with { Search::Indexer.backfill(_1, missing_only:) }
+    # Hire pages enter the sitemap by counting matches on these documents; a sitemap built while
+    # they were missing would leave pages out for its hour in the cache.
+    Rails.cache.delete(SitemapsController::CACHE_KEY) if counts.values.any?(&:positive?)
     Rails.logger.info("[search] backfill #{missing_only ? 'missing' : 'all'}: #{counts.to_json}")
     counts
   end

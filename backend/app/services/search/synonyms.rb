@@ -29,6 +29,16 @@ module Search
     # no group. Two phrases with the same canonical term are synonyms.
     def canonical(phrase) = data[:groups][normalize(phrase)]&.first
 
+    # The broader terms whose one-way expansion lists `phrase` or one of its synonyms
+    # ("hindustani" → ["classical"]).
+    def parents(phrase)
+      names = [normalize(phrase), *data[:groups][normalize(phrase)]]
+      data[:broader].filter_map { |key, values| key if (values & names).any? && !names.include?(key) }
+    end
+
+    # A phrase and its two-way synonyms (no one-way expansions).
+    def group(phrase) = data[:groups][normalize(phrase)] || [normalize(phrase)]
+
     # The city group for a place name or alias, or nil.
     def city(phrase) = data[:cities][normalize(phrase)]
 

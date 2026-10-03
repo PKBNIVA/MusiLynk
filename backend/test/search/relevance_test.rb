@@ -1,11 +1,13 @@
 require "test_helper"
 require_relative "relevance_corpus"
 
-# R3 relevance suite: 40 real-world queries (English, Hinglish, Devanagari, typos, city words) and
+# R3 relevance suite: 43 real-world queries (English, Hinglish, Devanagari, typos, city words) and
 # the top three each must return, in order, on RelevanceCorpus. A change to the vocabulary
 # (config/search_synonyms.yml), the weights (Search::Targets) or the ranking (Search::Query#score)
 # that moves any of them fails here with the whole table, so the effect is reviewed, not guessed.
-# Fewer than three expected means only those match.
+# Fewer than three expected means only those match. "wedding band" and "live band" check that a
+# phrase also matches its words scattered through a row (ranked after the in-order phrase);
+# "hindustani" checks the fall-back to its broader term when nothing is tagged with it.
 class SearchRelevanceTest < ActionDispatch::IntegrationTest
   ENDPOINTS = {
     talent: ["/api/public/talent", "talent", "name"],
@@ -46,12 +48,15 @@ class SearchRelevanceTest < ActionDispatch::IntegrationTest
     [:talent, "rapper delhi", ["Aman Gill"]],
     [:talent, "ananya desaai", ["Ananya Desai"]],
     [:talent, "hip hop", ["Aman Gill"]],
-    [:acts, "shaadi band", ["Shaadi Beats", "Baraat Brass Band"]],
+    [:acts, "shaadi band", ["Shaadi Beats", "Baraat Brass Band", "Weekend Groove"]],
     [:acts, "baraat", ["Baraat Brass Band"]],
     [:acts, "mehndi", ["Mehendi Melodies"]],
     [:acts, "sufi delhi", ["Sufi Sur Collective"]],
     [:acts, "harmonium", ["Sufi Sur Collective", "Shaadi Beats"]],
     [:acts, "jazz quartet", ["Corporate Jazz Quartet"]],
+    [:acts, "wedding band", ["Baraat Brass Band", "Shaadi Beats", "Weekend Groove"]],
+    [:acts, "live band", ["Live Wire", "Weekend Groove"]],
+    [:acts, "hindustani", ["Raag Trio"]],
     [:jobs, "dhol", ["Dhol player for baraat"]],
     [:jobs, "dholak mehendi", ["Dholak player for mehendi night"]],
     [:jobs, "sangeet dj", ["DJ for sangeet"]],
@@ -65,8 +70,8 @@ class SearchRelevanceTest < ActionDispatch::IntegrationTest
 
   teardown { Search::Spelling.reset! }
 
-  test "40 real-world queries return their expected top three" do
-    assert_equal 40, QUERIES.size
+  test "43 real-world queries return their expected top three" do
+    assert_equal 43, QUERIES.size
     rows = QUERIES.map do |type, query, expected|
       path, key, field = ENDPOINTS.fetch(type)
       get path, params: { q: query }

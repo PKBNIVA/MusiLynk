@@ -360,7 +360,7 @@ class AuthorizationIntegrityTest < ActionDispatch::IntegrationTest
 
   test "database pool covers web and job threads" do
     config = ActiveRecord::Base.configurations.configs_for(env_name: "test").first.configuration_hash
-    expected = ENV.fetch("RAILS_MAX_THREADS", 5).to_i + ENV.fetch("GOOD_JOB_MAX_THREADS", 2).to_i + 3
+    expected = ENV.fetch("RAILS_MAX_THREADS", 5).to_i + JobQueues.thread_count + 3
     assert_equal expected, config[:pool].to_i
   end
 

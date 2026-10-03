@@ -5,7 +5,8 @@
 # PushSubscription::MAX_FAILURES in a row. Nothing is retried by the queue, so a down push
 # service never piles up jobs. Never logs endpoints, keys or payload text.
 class PushDeliveryJob < ApplicationJob
-  queue_as :mailers
+  # Urgent-hire pushes ride the urgent pool (config/job_queues.yml); the rest go with the mail.
+  queue_as { JobQueues.urgent_push?(arguments[1]) ? JobQueues::URGENT : "mailers" }
   discard_on ActiveJob::DeserializationError
 
   def perform(user_id, category, payload)

@@ -61,6 +61,9 @@ class User < ApplicationRecord
     return false if email_verified? || admin?
 
     had_password = password_set?
+    # A random unusable password: the strength rule is for passwords people choose, and a random one
+    # can, rarely, contain the name or email ("Code User" vs "...coDe..."), which failed the sign-in.
+    self.skip_password_strength = true
     update!(password: SecureRandom.base58(32), password_set_at: nil, phone: nil, phone_verified_at: nil)
     sessions.delete_all
     auth_connections.destroy_all

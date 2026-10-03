@@ -80,6 +80,7 @@ class UrgentMatchJobTest < ActiveJob::TestCase
   end
 
   test "runs on a queue the worker picks up" do
-    assert_equal "default", UrgentMatchJob.new.queue_name
+    assert_equal "urgent", UrgentMatchJob.new.queue_name
+    assert_includes JobQueues.queue_string.split(";").map { _1.split(":").first.split(",") }.flatten, "urgent"
   end
 end

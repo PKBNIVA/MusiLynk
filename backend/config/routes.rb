@@ -5,6 +5,7 @@ Rails.application.routes.draw do
   get "auth/google/callback", to: "google_auth#callback"
 
   get "sitemap.xml", to: "sitemaps#show"
+  get "sitemaps/:part.:format", to: "sitemaps#part", constraints: { part: /\d+/, format: /xml/ }
   get "share/opportunities/:id", to: "share_pages#job"
   get "share/professionals/:id", to: "share_pages#professional"
   get "share/acts/:id", to: "share_pages#act"

@@ -192,3 +192,117 @@ The unfiltered list now serves about 4 times as many requests per second with a 
 4 times lower, and a first page is 42 kB of JSON (about 5 kB gzipped) instead of 352 kB
 (about 33 kB gzipped). It costs one extra query (the `total` count, 4 in all), which
 takes a few milliseconds.
+
+## Query plans at volume, 2026-10-03
+
+### How to reproduce
+
+```bash
+cd backend
+export RAILS_ENV=development DATABASE_URL=postgres://postgres@localhost:5433/ml_perf SECRET_KEY_BASE=x
+bin/rails db:create db:schema:load perf:seed   # ~2 min; idempotent; refuses production and non-local databases
+bin/rails perf:explain                          # ONLY=feed, PLANS=1 (full plans), REPEAT=5 (runs per query)
+```
+
+`perf:seed` (`lib/tasks/perf_seed.rake`) writes, with `insert_all` in batches of 2,000: 50,000 users
+with profiles over 16 cities (42,000 musicians, 8,000 hirers), 20,000 acts with 60,000 lineup
+members, 20,000 threads with 200,000 messages, 30,000 portfolio items, 5,000 urgent requests,
+10,000 opportunities and 10,000 applications, 10,000 bookings, 100,000 notifications, 20,000 Stage
+posts and 10,000 availability windows. Two probe accounts (fixed bearer tokens, local data only)
+carry 300 threads, 500 notifications and 50 acts each, so the inbox, thread, bookings and
+notification queries are measured for a busy user.
+
+`perf:explain` (`lib/tasks/perf_explain.rake`) replays each request, captures every SELECT it runs,
+and runs `EXPLAIN (ANALYZE, BUFFERS)` on each five times, keeping the fastest run (the machine was
+shared, so noise only ever adds time).
+
+### Before and after
+
+Before = `production` at 011e845 on the same data without this change's indexes; after = this
+change. Each side was run twice, interleaved, and the faster run is shown. "Queries" counts the
+SELECTs per request; "Slowest" is the slowest one (ms, EXPLAIN ANALYZE execution time); "All" is
+the sum of every SELECT in the request; access paths are those of the slowest query after the change.
+
+| Query | Queries before → after | Slowest ms before → after | All ms before → after | Access paths after |
+| --- | ---: | ---: | ---: | --- |
+| talent list | 11 → 9 | 184.4 → 137.1 | 185.0 → 137.5 | Seq Scan profiles, users; `index_portfolio_items_playable_public` |
+| talent ?location=Mumbai | 11 → 9 | 60.8 → 53.1 | 61.4 → 53.5 | Seq Scan profiles (COALESCE match, see below) |
+| talent ?role=Vocalist | 11 → 9 | 275.0 → 224.0 | 275.6 → 224.4 | Seq Scan profiles (COALESCE match) |
+| talent ?instrument=Tabla | 11 → 9 | 60.1 → 30.0 | 60.6 → 30.4 | `index_profiles_on_instruments_text_trgm` |
+| talent ?verified=true | 11 → 9 | 103.6 → 46.5 | 104.4 → 46.9 | Seq Scan users, profiles |
+| talent ?remoteRecording=true | 11 → 9 | 95.6 → 47.7 | 96.1 → 48.1 | Seq Scan users, profiles |
+| talent ?language=Tamil | 11 → 9 | 107.1 → 64.8 | 107.6 → 65.2 | `index_profiles_on_languages_text_trgm` |
+| talent ?eventType=wedding | 11 → 9 | 225.0 → 124.1 | 225.6 → 124.4 | `index_profiles_on_event_types_text_trgm` + `..._open_to_text_trgm` (BitmapOr) |
+| talent ?genre=Sufi | 11 → 9 | 83.8 → 44.1 | 84.5 → 44.5 | `index_profiles_on_genres_text_trgm` |
+| talent ?budgetMax=20000 | 11 → 9 | 116.6 → 64.7 | 117.1 → 65.1 | Seq Scan users, profiles |
+| talent ?q=drummer | 11 → 9 | 222.1 → 177.5 | 222.7 → 178.0 | Seq Scan profiles, users |
+| talent ?q=sitar player kochi | 11 → 9 | 60.6 → 55.4 | 61.1 → 55.8 | Seq Scan profiles |
+| search all ?q=guitarist | 6 → 6 | 355.3 → 179.5 | 811.0 → 495.6 | Seq Scan acts (per-act lineup subquery) |
+| search talent | 2 → 2 | 215.5 → 161.7 | 215.7 → 161.7 | Seq Scan profiles, users |
+| search jobs | 1 → 1 | 26.6 → 25.5 | 26.6 → 25.5 | Seq Scan jobs |
+| search acts | 1 → 1 | 177.7 → 127.1 | 177.7 → 127.1 | Seq Scan acts |
+| search samples | 2 → 2 | 179.1 → 153.4 | 179.2 → 153.5 | Seq Scan portfolio_items, profiles |
+| acts list | 4 → 4 | 44.2 → 39.8 | 44.5 → 40.1 | Seq Scan acts, users |
+| acts ?city=Pune | 4 → 4 | 16.1 → 13.6 | 16.5 → 13.9 | Seq Scan acts |
+| acts ?genre=Jazz | 4 → 4 | 23.1 → 18.6 | 23.3 → 18.9 | `index_acts_on_genres_text_trgm` |
+| acts ?q=band | 4 → 4 | 169.7 → 115.6 | 169.9 → 115.8 | Seq Scan acts |
+| jobs list (browse) | 4 → 4 | 16.5 → 12.3 | 32.6 → 12.7 | page: `index_jobs_published_browse` (0.8 ms); slowest is the `total` COUNT |
+| jobs ?location=Pune | 4 → 4 | 8.9 → 6.4 | 16.3 → 12.8 | Seq Scan jobs |
+| jobs ?q=drummer | 3 → 3 | 27.0 → 24.3 | 27.2 → 24.4 | Seq Scan jobs |
+| Stage feed | **549 → 11** (18 in the budget test, which adds photo posts and reshares) | 1.2 → 1.3 | 8.7 → 3.1 | primary keys; request 516 ms → 65–87 ms wall |
+| Stage tag `#sufi` | **42 → 3** | 5.2 → 1.3 | 6.9 → 3.3 | `index_posts_on_hashtags` (was Seq Scan posts) |
+| thread messages | 5 → 5 | 0.0 → 0.0 | 0.1 → 0.1 | `index_messages_on_conversation_id` |
+| inbox (musician / hirer) | 7 → 6 | 2.1 → 2.0 | 2.5 → 2.3 | conversations candidate/employer indexes, messages (conversation_id, created_at) |
+| unread count | 4 → 4 | 0.8 → 0.8 | 0.8 → 0.9 | conversations indexes, `index_messages_on_conversation_id` |
+| public stats (5-min cache) | 10 → 10 | 70.7 → 59.6 | 278.9 → 263.2 | Seq Scan profiles, users |
+| profile show | 9 → 9 | 0.0 → 0.0 | 0.1 → 0.1 | primary keys |
+| bookings list (act owner) | 8 → 7 | 7.8 → 0.1 | 8.1 → 0.4 | BitmapOr of `requester_id` and `act_id` indexes (was Seq Scan booking_requests + acts) |
+| bookings list (hirer) | 8 → 7 | 7.4 → 0.3 | 8.0 → 0.4 | same |
+| notifications | 4 → 4 | 0.1 → 0.1 | 0.2 → 0.2 | `index_notifications_on_user_id` |
+| urgent candidate scope (Mumbai) | 12 → 12 | 26.8 → 14.6 | 69.8 → 36.5 | `index_profiles_on_location_trgm` (was Seq Scan profiles) |
+| sitemap.xml (cache miss) | 389 → 0 | | 18.9–42.6 s → 0.17–0.26 s | built by `SitemapRefreshJob` (18–35 s, 395 queries) off the request |
+
+Most of the drop on the ranked lists that kept their access path (talent, search, acts) is JIT:
+those queries cost more than `jit_above_cost`, so Postgres compiled each one with LLVM on every
+request (about 45 ms of a 250 ms talent list). `database.yml` now sets `jit: off`.
+
+### What changed
+
+- **Indexes** (`20261003100000_add_hot_query_indexes`, concurrent, reversible): trigram GIN on
+  `profiles.languages::text`, `event_types::text`, `open_to::text`, `genres::text`,
+  `instruments::text` (the talent facets) and `acts.event_types::text` (the acts facet), all
+  matched with a bare `ILIKE` and previously unindexed; trigram GIN on `profiles.location` (the
+  urgent candidate scope's `location ILIKE`); `jobs (published_at DESC NULLS LAST, id DESC) WHERE
+  status = 'published'` (the browse page); `portfolio_items (user_id) WHERE` public, audio/video and
+  with a URL (the talent ranking's "has a playable sample").
+- **N+1s**: the Stage feed checked blocks and follows once per candidate post (549 queries); they
+  are now read once, and authors, shared jobs (with their applications count) and media are
+  batch-loaded for the page. The tag and author lists use the same helpers, and the tag lookup uses
+  `hashtags @> ARRAY[...]` (GIN) instead of `= ANY(hashtags)`. Hire pages and the admin Stage and
+  refunds lists preloaded nothing for their cards. The talent list counted completed bookings
+  and reviews twice (stats and tier); the inbox read blocks in two queries.
+- **Plans**: bookings list `requester_id = ? OR act_id = ANY(ARRAY(acts of the user))` instead of a
+  join filtered on `acts.owner_id`, so two index scans replace two sequential scans.
+- **Writes**: a thread poll with nothing new no longer runs the notification UPDATE.
+- **Off the request path**: the sitemap (see `docs/ops/job-queues.md`; served from a never-expiring last-good copy, built inline under a lock only on a brand-new cache), now a sitemap index once
+  past 45,000 URLs instead of silently dropping the hire pages.
+
+### Not fixed here (search rework)
+
+`Search::Query` matches `COALESCE(column, '')` or a `concat_ws(...)` of several columns, and no
+trigram index can serve either: every `q=`, `location=` and `role=` match is a sequential scan
+(the role and location rows above). The 2026-09-27 trigram indexes on headline, bio, name, title
+and so on are unused by search. The acts search runs the lineup subquery once per act. Both
+belong to the search rework, which owns `Search::Query`, `Search::Runner` and the acts list.
+
+### Guards
+
+- `test/integration/hot_endpoint_query_budget_test.rb` pins the query count of the public talent,
+  acts, jobs, profile, act and tag endpoints and of the inbox, thread, notifications, bookings and
+  feed endpoints with `assert_queries_at_most(n)` (`test/support/query_budget.rb`), at two sizes.
+- `bullet` (development and test only) raises on an N+1 inside any request in the test suite and
+  logs it in development (`config/initializers/bullet.rb`).
+- The inbox, thread and bookings lists load with `strict_loading`: a new association read raises
+  in development and tests and is logged in production.
+- Development tags every SQL statement with its controller and action (`query_log_tags`) and logs
+  statements over 100 ms (`config/initializers/slow_query_log.rb`).

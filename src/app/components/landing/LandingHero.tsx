@@ -3,13 +3,14 @@ import { ArrowRight, BriefcaseBusiness, Mic2, Zap, type LucideIcon } from 'lucid
 import { Photo } from '../media/Photo';
 import { trackPathChosen } from '../../lib/analytics';
 import { HERO_PHOTO_WIDTHS } from '../../lib/photo';
-import { HERO_PHOTO, editorialPhoto } from './photos';
+import { HERO_PHOTO, HERO_PHOTO_SIZES, editorialPhoto } from './photos';
 
 export const LAUNCH_CITIES = ['Mumbai'] as const;
 /**
  * Above the fold: the promise in one line and the two ways in, over a full-bleed
  * photograph (the right two-fifths on desktop; behind a scrim on a phone). Sized so that on a
- * 390×844 phone the headline and both path buttons are visible without scrolling.
+ * 390×844 phone the headline and both path buttons are visible without scrolling. The photo is the LCP
+ * element: dist/index.html preloads it (scripts/prerender-heads.mjs, heroPreload) with the same srcset and sizes.
  */
 export function LandingHero({ city }: { city: string; onCityChange?: (city: string) => void }) {
   const photo = editorialPhoto(HERO_PHOTO);
@@ -29,7 +30,7 @@ export function LandingHero({ city }: { city: string; onCityChange?: (city: stri
           alt=""
           width={photo.width}
           height={photo.height}
-          sizes="(min-width: 1024px) 42vw, 100vw"
+          sizes={HERO_PHOTO_SIZES}
           priority
           widths={HERO_PHOTO_WIDTHS}
           className="size-full object-cover object-[35%_50%] opacity-35 lg:opacity-100"

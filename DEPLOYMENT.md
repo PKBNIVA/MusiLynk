@@ -427,7 +427,9 @@ Checklist:
    | `AWS_UPLOAD_METHOD` | leave unset (→ `put` on R2) |
 
    `AWS_PUBLIC_BASE_URL` is mandatory with a custom endpoint; without it uploads return 503
-   `STORAGE_MISCONFIGURED`. Nothing storage-related goes into Vercel `VITE_` variables.
+   `STORAGE_MISCONFIGURED`. Nothing storage-related goes into Vercel `VITE_` variables. To put an
+   R2 custom/public domain in front of reads later, set the optional `UPLOADS_PUBLIC_BASE_URL`
+   (owner steps in `docs/ops/uploads.md`).
 6. **CSP.** `vercel.json` already allows `connect-src https://*.r2.cloudflarestorage.com`
    (browser upload) and `img-src`/`media-src https:` (playback). PDFs open in a new tab, so no
    `frame-src` change is needed.

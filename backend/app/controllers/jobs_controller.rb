@@ -67,11 +67,13 @@ class JobsController < ApplicationController
       meta = search.meta
     end
     saved = current_user&.jobseeker? ? SavedJob.where(user: current_user, job_id: page.map(&:id)).pluck(:job_id).to_set : Set.new
-    render json: {
+    json = {
       jobs: page.map { |job| job.api_json(current_user).merge(saved: saved.include?(job.id)) },
       nextCursor: next_cursor,
       total:
-    }.merge(meta)
+    }.merge(meta).to_json
+    return if public_cache!(:listing, etag: json)
+    render json: json
   end
 
   def show
@@ -86,7 +88,9 @@ class JobsController < ApplicationController
     end
     applied = current_user&.jobseeker? && Application.exists?(candidate: current_user, job:)
     saved = current_user&.jobseeker? && SavedJob.exists?(user: current_user, job:)
-    render json: { job: job.api_json(current_user).merge(applied:, saved:) }
+    json = { job: job.api_json(current_user).merge(applied:, saved:) }.to_json
+    return if public_cache!(:show, etag: json)
+    render json: json
   end
 
   # The poster's plan capacity for active opportunities, read by the post-opportunity page so it

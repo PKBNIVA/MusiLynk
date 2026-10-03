@@ -1,5 +1,6 @@
 # Top-level (outside /api) dynamic sitemap for search crawlers. See routes.rb.
 class SitemapsController < ActionController::API
+  include PublicCaching
   MAX_URLS = 45_000
 
   STATIC_PAGES = [
@@ -22,7 +23,7 @@ class SitemapsController < ActionController::API
 
   def show
     xml = Rails.cache.fetch("sitemap/v2", expires_in: 1.hour, race_condition_ttl: 30.seconds) { build_xml }
-    expires_in 1.hour, public: true
+    return if public_cache!(:sitemap, etag: xml)
     render xml: xml, content_type: "application/xml"
   end
 

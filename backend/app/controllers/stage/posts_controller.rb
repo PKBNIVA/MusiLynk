@@ -21,7 +21,9 @@ module Stage
       page, next_cursor = paginate(candidates)
       Post.preload_media_urls(page)
       applauded = applauded_post_ids(page)
-      render json: { posts: page.map { _1.api_json(applauded_post_ids: applauded) }, nextCursor: next_cursor }
+      json = { posts: page.map { _1.api_json(applauded_post_ids: applauded) }, nextCursor: next_cursor }.to_json
+      return if public_cache!(:stage_posts, etag: json)
+      render json: json
     end
 
     def create

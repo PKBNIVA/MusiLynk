@@ -28,12 +28,14 @@ class TalentController < ApplicationController
 
   def public_index
     return unless require_scalar_params!(*LIST_PARAMS)
-    render_listing(:talent) { public_profile(_1) }
+    render_listing(:talent, cache: :listing) { public_profile(_1) }
   end
 
   def public_show
     candidate = listing_scope.find(params[:id])
-    render json: { professional: with_bookings(public_profile(candidate), candidate.id), portfolio: candidate.portfolio_items.where(visibility: "public").order(featured: :desc, sort_order: :asc).map(&:api_json) }
+    json = { professional: with_bookings(public_profile(candidate), candidate.id), portfolio: candidate.portfolio_items.where(visibility: "public").order(featured: :desc, sort_order: :asc).map(&:api_json) }.to_json
+    return if public_cache!(:show, etag: json)
+    render json: json
   end
 
   def index
@@ -136,7 +138,8 @@ class TalentController < ApplicationController
   def with_bookings(profile, id, counts = nil) = profile.merge("bookingsCount" => (counts || completed_bookings([id])).fetch(id, 0))
 
   # One ranked page of professionals: `key` => rows, plus nextCursor, total and how the query was read.
-  def render_listing(key)
+  # `cache` names the edge-cache lifetime (PublicCaching) for the anonymous public listing.
+  def render_listing(key, cache: nil)
     offset = list_offset
     return render_invalid_cursor if offset.nil?
     scope = filter(listing_scope.joins(:profile))
@@ -148,7 +151,9 @@ class TalentController < ApplicationController
     if (role = role_filter)
       body[:role] = role
     end
-    render json: body
+    json = body.to_json
+    return if cache && public_cache!(cache, etag: json)
+    render json: json
   end
 
   # A landing-page role group ("performer") or a free-text role, as { key:, label: }.

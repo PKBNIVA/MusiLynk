@@ -1,4 +1,5 @@
 class ApplicationController < ActionController::API
+  include PublicCaching
   # Requests slower than this (ms) are logged at warn level with slow: true, so they can be
   # filtered in Railway's log view. SLOW_REQUEST_MS overrides the default.
   class_attribute :slow_request_ms, default: Integer(ENV.fetch("SLOW_REQUEST_MS", "500"), exception: false) || 500

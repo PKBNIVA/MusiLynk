@@ -6,25 +6,47 @@ class RealtimeConnectionTest < ActionCable::Connection::TestCase
   tests ApplicationCable::Connection
   include RealtimeTestPeople
 
-  test "a fresh ticket connects as its session's user" do
+  setup do
+    @original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+  end
+
+  teardown { Rails.cache = @original_cache }
+
+  def connect_with(ticket) = connect(headers: { "Sec-WebSocket-Protocol" => "actioncable-v1-json, #{RealtimeTicket::PROTOCOL_PREFIX}#{ticket}" })
+
+  test "a fresh ticket in the subprotocol header connects as its session's user" do
     user, session = person_with_session("Ticket Holder")
-    connect params: { ticket: RealtimeTicket.issue(session) }
+    connect_with RealtimeTicket.issue(session)
     assert_equal user, connection.current_user
+    assert_equal session, connection.current_session
+  end
+
+  test "a ticket works once" do
+    _user, session = person_with_session("Once Only")
+    ticket = RealtimeTicket.issue(session)
+    connect_with ticket
+    assert_reject_connection { connect_with ticket }
+  end
+
+  test "a ticket in the URL is not accepted (URLs are logged)" do
+    _user, session = person_with_session("Url Ticket")
+    assert_reject_connection { connect params: { ticket: RealtimeTicket.issue(session) } }
   end
 
   test "no ticket, a forged one, an expired one or an ended session are rejected" do
     user, session = person_with_session("Rejected")
     assert_reject_connection { connect }
-    assert_reject_connection { connect params: { ticket: "forged" } }
-    assert_reject_connection { connect params: { ticket: Rails.application.message_verifier("other").generate(session.id) } }
+    assert_reject_connection { connect_with "forged" }
+    assert_reject_connection { connect_with ActiveSupport::MessageVerifier.new("other", url_safe: true).generate({ "s" => session.id, "j" => "x" }) }
     ticket = RealtimeTicket.issue(session)
-    travel(RealtimeTicket.ttl + 1.second) { assert_reject_connection { connect params: { ticket: } } }
+    travel(RealtimeTicket.ttl + 1.second) { assert_reject_connection { connect_with ticket } }
     ticket = RealtimeTicket.issue(session)
     session.update!(expires_at: 1.minute.ago)
-    assert_reject_connection { connect params: { ticket: } }
+    assert_reject_connection { connect_with ticket }
     user.update!(status: "suspended")
     session.update!(expires_at: 1.day.from_now)
-    assert_reject_connection { connect params: { ticket: RealtimeTicket.issue(session) } }
+    assert_reject_connection { connect_with RealtimeTicket.issue(session) }
   end
 end
 
@@ -46,6 +68,11 @@ class ConversationChannelTest < ActionCable::Channel::TestCase
     assert subscription.rejected?
     subscribe id: "missing"
     assert subscription.rejected?
+
+    UserBlock.create!(blocker: hirer, blocked: musician)
+    stub_connection current_user: musician
+    subscribe id: conversation.id
+    assert subscription.rejected?, "no live thread while either side has blocked the other"
   end
 end
 

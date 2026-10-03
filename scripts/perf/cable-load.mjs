@@ -4,8 +4,10 @@
 //   CABLE_TOKEN=<bearer token of a signed-in test user> \
 //   node scripts/perf/cable-load.mjs --api http://127.0.0.1:7904 --pid <puma pid> --sockets 500 --hold 30
 //
-// One ticket (POST /api/cable/ticket) opens every socket: a ticket is valid for its whole lifetime
-// (config/realtime.yml), not once. Each socket subscribes to UserChannel, then the script holds
+// Each socket gets its own single-use ticket, sent as a WebSocket subprotocol like the app does.
+// Tickets come from POST /api/cable/ticket (rate-limited to 30 a minute per user), or, for more
+// sockets than that, from --tickets-file (one per line), made on the local server with:
+//   bin/rails runner 's = Session.find(ID); 500.times { puts RealtimeTicket.issue(s) }' > tickets.txt Each socket subscribes to UserChannel, then the script holds
 // them open for --hold seconds (the server pings every socket every 3 s) and samples the server
 // process from /proc (Linux). Run it against a local server only, never production.
 import { readFileSync } from 'node:fs';
@@ -37,13 +39,17 @@ function sample() {
   return { rssMb: rssKb / 1024, threads, cpuSeconds, at: performance.now() };
 }
 
-const response = await fetch(`${api}/api/cable/ticket`, {
-  method: 'POST',
-  headers: { Authorization: `Bearer ${token}`, Origin: origin },
-});
-if (!response.ok) throw new Error(`ticket: HTTP ${response.status}`);
-const { ticket, url } = await response.json();
-const socketUrl = `${url}?ticket=${encodeURIComponent(ticket)}`;
+const ticketFile = args['tickets-file'] ? readFileSync(args['tickets-file'], 'utf8').split('\n').filter(Boolean) : null;
+const wsBase = api.replace(/^http/, 'ws');
+async function ticket() {
+  if (ticketFile) return { ticket: ticketFile.pop(), url: `${wsBase}/cable` };
+  const response = await fetch(`${api}/api/cable/ticket`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, Origin: origin },
+  });
+  if (!response.ok) throw new Error(`ticket: HTTP ${response.status}`);
+  return response.json();
+}
 const identifier = JSON.stringify({ channel: 'UserChannel' });
 
 const before = sample();
@@ -52,10 +58,14 @@ const latencies = [];
 let failed = 0;
 let pings = 0;
 const sockets = [];
-function openOne() {
+async function openOne() {
+  const t0 = performance.now();
+  const { ticket: value, url } = await ticket();
   return new Promise((resolve) => {
-    const t0 = performance.now();
-    const ws = new WebSocket(socketUrl, { protocols: ['actioncable-v1-json'], headers: { Origin: origin } });
+    const ws = new WebSocket(url, {
+      protocols: ['actioncable-v1-json', `musilynk.ticket.${value}`],
+      headers: { Origin: origin },
+    });
     sockets.push(ws);
     let done = false;
     const finish = (ok) => {

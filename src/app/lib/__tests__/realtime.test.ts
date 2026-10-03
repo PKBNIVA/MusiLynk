@@ -10,6 +10,7 @@ type Callbacks = {
 const cable = vi.hoisted(() => {
   const state = {
     urls: [] as string[],
+    protocols: [] as string[][],
     created: [] as { params: Record<string, unknown>; callbacks: Callbacks; unsubscribe: ReturnType<typeof vi.fn> }[],
     connect: vi.fn(),
     disconnect: vi.fn(),
@@ -20,9 +21,11 @@ const cable = vi.hoisted(() => {
 vi.mock('@rails/actioncable', () => ({
   createConsumer: (url: () => string) => {
     cable.urlFn = url;
-    return {
+    const consumer = {
+      subprotocols: [] as string[],
       connect: () => {
         cable.urls.push(cable.urlFn());
+        cable.protocols.push(consumer.subprotocols);
         cable.connect();
       },
       disconnect: cable.disconnect,
@@ -34,6 +37,7 @@ vi.mock('@rails/actioncable', () => ({
         },
       },
     };
+    return consumer;
   },
 }));
 vi.mock('../api', () => ({ apiPost: vi.fn() }));
@@ -58,6 +62,7 @@ let ticket = 0;
 beforeEach(() => {
   vi.useFakeTimers();
   cable.urls.length = 0;
+  cable.protocols.length = 0;
   cable.created.length = 0;
   cable.connect.mockReset();
   cable.disconnect.mockReset();
@@ -93,7 +98,8 @@ describe('realtime', () => {
     const offB = subscribe('ConversationChannel', { id: 'c1' }, b);
     await flush();
     expect(apiPost).toHaveBeenCalledWith('/cable/ticket');
-    expect(cable.urls[0]).toMatch(/^wss:\/\/api\.example\/cable\?ticket=t\d+$/);
+    expect(cable.urls[0]).toBe('wss://api.example/cable');
+    expect(cable.protocols[0]).toEqual([expect.stringMatching(/^musilynk\.ticket\.t\d+$/)]);
     expect(cable.created).toHaveLength(1);
     expect(cable.created[0].params).toEqual({ channel: 'ConversationChannel', id: 'c1' });
     cable.created[0].callbacks.received?.({ type: 'message', id: 'm1' });
@@ -121,7 +127,8 @@ describe('realtime', () => {
     });
     await flush();
     expect(cable.urls).toHaveLength(2);
-    expect(cable.urls[1]).not.toBe(cable.urls[0]);
+    expect(cable.protocols[1]).not.toEqual(cable.protocols[0]);
+    expect(cable.protocols[1]).toHaveLength(1);
   });
 
   it('a failed ticket request retries with growing delays', async () => {

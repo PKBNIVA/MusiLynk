@@ -9,14 +9,16 @@ import { onRealtimeAvailability, realtimeAvailable } from './realtimeAvailabilit
  * Polling stays the fallback: while the socket is connected, `useRealtimeInterval` stretches a
  * poll to CONNECTED_POLL_MS; when it drops, polls return to their usual intervals at once.
  *
- * The socket opens with a short-lived ticket from POST /api/cable/ticket (WebSockets cannot send
- * the bearer token). After a drop, a fresh ticket is fetched and the socket reopened with backoff
+ * The socket opens with a short-lived, single-use ticket from POST /api/cable/ticket, sent as a
+ * WebSocket subprotocol (WebSockets cannot send the bearer token, and URLs are logged). After a drop, a fresh ticket is fetched and the socket reopened with backoff
  * (1 s, 2 s, 4 s ... up to 30 s, with jitter). The socket closes when nothing is subscribed (for
  * example after sign-out), and @rails/actioncable is loaded only when something subscribes and
  * the API has said it offers live updates (`realtime: true` on GET /me); until then pages poll.
  */
 
 export const CONNECTED_POLL_MS = 30_000;
+/** Subprotocol prefix that carries the ticket (RealtimeTicket::PROTOCOL_PREFIX on the API). */
+export const TICKET_PROTOCOL = 'musilynk.ticket.';
 export const BACKOFF_START_MS = 1_000;
 export const BACKOFF_MAX_MS = 30_000;
 
@@ -108,11 +110,13 @@ async function open() {
     if (mine !== generation || entries.size === 0) return;
     // An API without the cable (or a stub that answers {}) leaves the app on polling.
     if (!ticket || !url) throw new Error('No real-time ticket');
-    socketUrl = `${url}?ticket=${encodeURIComponent(ticket)}`;
+    socketUrl = url;
     if (!consumer) {
       consumer = cable.createConsumer(() => socketUrl);
       entries.forEach((entry) => attach(entry));
     }
+    // The single-use ticket rides as a WebSocket subprotocol, never in the URL (URLs get logged).
+    consumer.subprotocols = [`${TICKET_PROTOCOL}${ticket}`];
     consumer.connect();
   } catch {
     if (mine !== generation) return;

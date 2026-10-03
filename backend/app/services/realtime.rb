@@ -7,7 +7,22 @@ module Realtime
 
   # Whether pages should open the socket (config/realtime.yml `enabled`; sign-in and GET /me say so).
   # Off means every page polls at its old pace and no ticket is ever requested.
-  def enabled? = RealtimeTicket.settings.fetch("enabled", true) == true
+  # CABLE_ENABLED (optional, "true"/"false") overrides config/realtime.yml without a deploy.
+  def enabled?
+    override = ENV["CABLE_ENABLED"].to_s.strip.downcase
+    return override == "true" if override.present?
+    RealtimeTicket.settings.fetch("enabled", true) == true
+  end
+
+  # Closes the open sockets of these sessions (call before deleting them). Revocation must not fail
+  # because the adapter is down, so errors are reported and swallowed.
+  def disconnect(sessions)
+    Array(sessions).each do |session|
+      ActionCable.server.remote_connections.where(current_user: session.user, current_session: session).disconnect(reconnect: false)
+    end
+  rescue StandardError => e
+    ErrorReporter.capture(e, tags: { source: "realtime" })
+  end
 
   def broadcast(channel, record, payload)
     channel.broadcast_to(record, payload)

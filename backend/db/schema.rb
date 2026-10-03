@@ -39,8 +39,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.index ["invitee_user_id", "status"], name: "index_act_invites_on_invitee_user_id_and_status"
     t.index ["inviter_id"], name: "index_act_invites_on_inviter_id"
     t.index ["token_digest"], name: "index_act_invites_on_token_digest", unique: true
-    t.check_constraint "kind::text = ANY (ARRAY['user'::character varying, 'email'::character varying, 'link'::character varying]::text[])", name: "act_invites_kind_valid"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'declined'::character varying, 'revoked'::character varying]::text[])", name: "act_invites_status_valid"
+    t.check_constraint "kind::text = ANY (ARRAY['user'::character varying::text, 'email'::character varying::text, 'link'::character varying::text])", name: "act_invites_kind_valid"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'accepted'::character varying::text, 'declined'::character varying::text, 'revoked'::character varying::text])", name: "act_invites_status_valid"
   end
 
   create_table "act_members", id: :string, force: :cascade do |t|
@@ -371,7 +371,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.index ["user_id", "version"], name: "index_billing_profiles_on_user_id_and_version", unique: true
     t.index ["user_id"], name: "index_billing_profiles_on_user_id"
     t.index ["user_id"], name: "index_billing_profiles_one_current_per_user", unique: true, where: "current"
-    t.check_constraint "buyer_type::text = ANY (ARRAY['individual'::character varying, 'business'::character varying]::text[])", name: "billing_profiles_buyer_type_valid"
+    t.check_constraint "buyer_type::text = ANY (ARRAY['individual'::character varying::text, 'business'::character varying::text])", name: "billing_profiles_buyer_type_valid"
   end
 
   create_table "billing_reminders", id: :string, force: :cascade do |t|
@@ -381,7 +381,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["subscription_id", "kind", "sent_on"], name: "index_billing_reminders_on_sub_kind_date", unique: true
-    t.check_constraint "kind::text = ANY (ARRAY['trial_ending'::character varying, 'renewal_ending'::character varying, 'early_access_7d'::character varying, 'early_access_1d'::character varying]::text[])", name: "billing_reminders_kind_valid"
+    t.check_constraint "kind::text = ANY (ARRAY['trial_ending'::character varying::text, 'renewal_ending'::character varying::text, 'early_access_7d'::character varying::text, 'early_access_1d'::character varying::text])", name: "billing_reminders_kind_valid"
   end
 
   create_table "booking_payments", id: :string, force: :cascade do |t|
@@ -404,7 +404,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.decimal "fee_percent", precision: 6, scale: 2, default: "0.0", null: false
     t.integer "policy_version", default: 0, null: false
     t.index ["booking_quote_id"], name: "index_booking_payments_on_booking_quote_id"
-    t.index ["booking_request_id", "kind"], name: "index_booking_payments_on_active_kind", unique: true, where: "((status)::text = ANY ((ARRAY['created'::character varying, 'paid'::character varying])::text[]))"
+    t.index ["booking_request_id", "kind"], name: "index_booking_payments_on_active_kind", unique: true, where: "((status)::text = ANY (ARRAY[('created'::character varying)::text, ('paid'::character varying)::text]))"
     t.index ["booking_request_id"], name: "index_booking_payments_on_booking_request_id"
     t.index ["payer_id"], name: "index_booking_payments_on_payer_id"
     t.index ["provider_order_id"], name: "index_booking_payments_on_provider_order_id", unique: true, where: "(provider_order_id IS NOT NULL)"
@@ -412,9 +412,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.check_constraint "amount > 0", name: "booking_payments_amount_positive"
     t.check_constraint "currency::text ~ '^[A-Z]{3}$'::text", name: "booking_payments_currency_format"
     t.check_constraint "fee_amount >= 0 AND gst_amount >= 0", name: "booking_payments_fee_breakdown_nonnegative"
-    t.check_constraint "kind::text = ANY (ARRAY['deposit'::character varying, 'balance'::character varying, 'refund'::character varying]::text[])", name: "booking_payments_kind_valid"
-    t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying, 'razorpay'::character varying]::text[])", name: "booking_payments_provider_valid"
-    t.check_constraint "status::text = ANY (ARRAY['created'::character varying, 'paid'::character varying, 'failed'::character varying, 'refunded'::character varying]::text[])", name: "booking_payments_status_valid"
+    t.check_constraint "kind::text = ANY (ARRAY['deposit'::character varying::text, 'balance'::character varying::text, 'refund'::character varying::text])", name: "booking_payments_kind_valid"
+    t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying::text, 'razorpay'::character varying::text])", name: "booking_payments_provider_valid"
+    t.check_constraint "status::text = ANY (ARRAY['created'::character varying::text, 'paid'::character varying::text, 'failed'::character varying::text, 'refunded'::character varying::text])", name: "booking_payments_status_valid"
   end
 
   create_table "booking_quotes", id: :string, force: :cascade do |t|
@@ -469,7 +469,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.datetime "updated_at", null: false
     t.index ["act_id"], name: "index_booking_requests_on_act_id"
     t.index ["requester_id"], name: "index_booking_requests_on_requester_id"
-    t.check_constraint "status::text = ANY (ARRAY['requested'::character varying, 'viewed'::character varying, 'negotiating'::character varying, 'quoted'::character varying, 'accepted'::character varying, 'completed'::character varying, 'disputed'::character varying, 'declined'::character varying, 'cancelled'::character varying]::text[])", name: "booking_requests_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['requested'::character varying::text, 'viewed'::character varying::text, 'negotiating'::character varying::text, 'quoted'::character varying::text, 'accepted'::character varying::text, 'completed'::character varying::text, 'disputed'::character varying::text, 'declined'::character varying::text, 'cancelled'::character varying::text])", name: "booking_requests_status_valid"
   end
 
   create_table "career_entries", id: :string, force: :cascade do |t|
@@ -900,7 +900,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.index ["search_vector"], name: "index_portfolio_items_on_search_vector", using: :gin
     t.index ["title"], name: "index_portfolio_items_on_title", opclass: :gin_trgm_ops, using: :gin
     t.index ["user_id"], name: "index_portfolio_items_on_user_id"
-    t.index ["user_id"], name: "index_portfolio_items_playable_public", where: "(((visibility)::text = 'public'::text) AND ((kind)::text = ANY ((ARRAY['audio'::character varying, 'video'::character varying])::text[])) AND (btrim((COALESCE(url, ''::character varying))::text) <> ''::text))"
+    t.index ["user_id"], name: "index_portfolio_items_playable_public", where: "(((visibility)::text = 'public'::text) AND ((kind)::text = ANY (ARRAY[('audio'::character varying)::text, ('video'::character varying)::text])) AND (btrim((COALESCE(url, ''::character varying))::text) <> ''::text))"
   end
 
   create_table "portfolios", id: :string, force: :cascade do |t|
@@ -1120,7 +1120,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.index ["code"], name: "index_promo_codes_on_code", unique: true
     t.index ["owner_user_id"], name: "index_promo_codes_on_owner_user_id", unique: true, where: "(owner_user_id IS NOT NULL)"
     t.check_constraint "duration_periods IS NULL OR duration_periods >= 1", name: "promo_codes_duration_valid"
-    t.check_constraint "kind::text = ANY (ARRAY['discount_percent'::character varying, 'extended_trial'::character varying, 'early_access'::character varying, 'referral'::character varying]::text[])", name: "promo_codes_kind_valid"
+    t.check_constraint "kind::text = ANY (ARRAY['discount_percent'::character varying::text, 'extended_trial'::character varying::text, 'early_access'::character varying::text, 'referral'::character varying::text])", name: "promo_codes_kind_valid"
     t.check_constraint "per_user_limit >= 1", name: "promo_codes_per_user_limit_valid"
     t.check_constraint "percent_off IS NULL OR percent_off >= 1 AND percent_off <= 100", name: "promo_codes_percent_off_valid"
     t.check_constraint "trial_days IS NULL OR trial_days >= 1", name: "promo_codes_trial_days_valid"
@@ -1189,7 +1189,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.index ["status"], name: "index_refund_records_on_status"
     t.check_constraint "amount >= 0", name: "refund_records_amount_nonnegative"
     t.check_constraint "refund_percent >= 0 AND refund_percent <= 100", name: "refund_records_percent_valid"
-    t.check_constraint "status::text = ANY (ARRAY['pending_manual'::character varying, 'done'::character varying, 'not_applicable'::character varying]::text[])", name: "refund_records_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['pending_manual'::character varying::text, 'done'::character varying::text, 'not_applicable'::character varying::text])", name: "refund_records_status_valid"
   end
 
   create_table "reports", id: :string, force: :cascade do |t|
@@ -1368,8 +1368,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.index ["promo_code_id"], name: "index_subscriptions_on_promo_code_id"
     t.index ["provider_subscription_id"], name: "index_subscriptions_on_provider_subscription_id", unique: true, where: "(provider_subscription_id IS NOT NULL)"
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
-    t.check_constraint "\"interval\"::text = ANY (ARRAY['monthly'::character varying, 'annual'::character varying]::text[])", name: "subscriptions_interval_valid"
-    t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying, 'razorpay'::character varying]::text[])", name: "subscriptions_provider_valid"
+    t.check_constraint "\"interval\"::text = ANY (ARRAY['monthly'::character varying::text, 'annual'::character varying::text])", name: "subscriptions_interval_valid"
+    t.check_constraint "provider::text = ANY (ARRAY['internal'::character varying::text, 'razorpay'::character varying::text])", name: "subscriptions_provider_valid"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'trialing'::character varying::text, 'active'::character varying::text, 'past_due'::character varying::text, 'cancelled'::character varying::text, 'early_access'::character varying::text])", name: "subscriptions_status_valid"
   end
 
@@ -1437,7 +1437,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.index ["subscription_id"], name: "index_tax_invoices_on_subscription_id"
     t.index ["user_id"], name: "index_tax_invoices_on_user_id"
     t.check_constraint "(taxable_paise + cgst_paise + sgst_paise + igst_paise) = total_paise", name: "tax_invoices_totals_add_up"
-    t.check_constraint "document_type::text = ANY (ARRAY['tax_invoice'::character varying, 'bill_of_supply'::character varying]::text[])", name: "tax_invoices_document_type_valid"
+    t.check_constraint "document_type::text = ANY (ARRAY['tax_invoice'::character varying::text, 'bill_of_supply'::character varying::text])", name: "tax_invoices_document_type_valid"
   end
 
   create_table "uploads", id: :string, force: :cascade do |t|
@@ -1568,7 +1568,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.index ["audit_sample"], name: "idx_verification_requests_audit_sample", where: "audit_sample"
     t.index ["reviewed_by_id"], name: "index_verification_requests_on_reviewed_by_id"
     t.index ["user_id"], name: "index_verification_requests_on_user_id"
-    t.check_constraint "auto_decision::text = ANY (ARRAY['auto_approved'::character varying, 'needs_more_proof'::character varying]::text[])", name: "verification_requests_auto_decision_valid"
+    t.check_constraint "auto_decision::text = ANY (ARRAY['auto_approved'::character varying::text, 'needs_more_proof'::character varying::text])", name: "verification_requests_auto_decision_valid"
   end
 
   create_table "vouches", id: :string, force: :cascade do |t|
@@ -1582,7 +1582,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.index ["token"], name: "index_vouches_on_token", unique: true
     t.index ["vouchee_id"], name: "index_vouches_on_vouchee_id"
     t.index ["voucher_id", "vouchee_email"], name: "idx_vouches_voucher_and_email", unique: true
-    t.check_constraint "status::text = ANY (ARRAY['invited'::character varying, 'joined'::character varying, 'verified'::character varying]::text[])", name: "vouches_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['invited'::character varying::text, 'joined'::character varying::text, 'verified'::character varying::text])", name: "vouches_status_valid"
   end
 
   add_foreign_key "act_invites", "acts", on_delete: :cascade

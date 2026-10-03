@@ -441,7 +441,7 @@ class AuthController < ApplicationController
       user.reclaim_unverified_credentials!
       user.update!(password: params[:password], password_set_at: Time.current, email_verified: true)
       token.update!(used_at: Time.current)
-      user.sessions.delete_all
+      Session.revoke!(user.sessions)
       user.email_tokens.usable("reset_password").update_all(used_at: Time.current)
     end
     AuditLog.create!(actor: user, action: "auth.password_reset", entity_type: "User", entity_id: user.id)
@@ -479,7 +479,7 @@ class AuthController < ApplicationController
     Session.start!(user, token_digest: digest(raw), user_agent: request.user_agent)
     # The cap counts live sessions only: expired ones are inert and kept a few days for the
     # retention sweep (config/retention.yml), so they must never push out a live one.
-    user.sessions.where(id: user.sessions.active.order(created_at: :desc).offset(MAX_LIVE_SESSIONS).select(:id)).delete_all
+    Session.revoke!(user.sessions.where(id: user.sessions.active.order(created_at: :desc).offset(MAX_LIVE_SESSIONS).select(:id)))
     raw
   end
 

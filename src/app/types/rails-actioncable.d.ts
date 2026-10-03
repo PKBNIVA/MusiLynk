@@ -11,6 +11,7 @@ declare module '@rails/actioncable' {
   }
   export interface Consumer {
     subscriptions: { create(params: Record<string, unknown>, callbacks: SubscriptionCallbacks): Subscription };
+    subprotocols: string[];
     connect(): void;
     disconnect(): void;
   }

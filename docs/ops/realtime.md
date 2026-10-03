@@ -7,11 +7,16 @@ polls slow to every 30 s; when the socket drops they return at once to 3 s (open
 
 ## How it works
 
-- `POST /api/cable/ticket` (signed in, 30 per minute) returns a signed ticket valid for 60 s that
-  names the caller's session. The browser opens `/cable?ticket=...`; the server checks the ticket
-  and that the session is still active. The bearer token itself never goes in a URL.
+- `POST /api/cable/ticket` (signed in, 30 per minute) returns a signed, single-use ticket valid for
+  60 s that names the caller's session. The browser sends it as a WebSocket subprotocol
+  (`musilynk.ticket.<ticket>`), never in the URL, so it is not logged (`ticket` is also a filtered
+  parameter). The server checks the ticket, that it was not used before (a one-time id in the
+  shared cache), and that the session is still active.
+- Signing out, a password change or reset, an admin suspension or session revoke, a report action
+  that revokes sessions, and account deletion close that session's (or user's) open sockets
+  (`Session.revoke!`, `Realtime.disconnect`).
 - Channels (`backend/app/channels`): `UserChannel` (the user's own badge hints),
-  `ConversationChannel` (the two participants only), `UrgentRequestChannel` (the requester only).
+  `ConversationChannel` (the two participants only, and not while either has blocked the other), `UrgentRequestChannel` (the requester only).
   Anyone else's subscription is rejected.
 - Broadcasts carry ids and states only (`{ type: "message", id, conversationId }`); pages refetch
   from the usual endpoints, so who may see what is decided there. They are sent after the write
@@ -40,17 +45,24 @@ hold Puma threads after the upgrade.
 ## Capacity (measured)
 
 `scripts/perf/cable-load.mjs` opens N sockets against a local API and samples its memory and CPU.
-On the 4-vCPU test bed (one Puma process, development mode, Solid Cable): 500 sockets subscribed
-with 0 failures in 7.7 s; server memory 123 → 164 MB (about 83 kB per socket); about 5% of one
-CPU while holding them (Action Cable pings every socket every 3 s).
+On the 4-vCPU test bed (one Puma process, development mode, Solid Cable, single-use tickets sent as
+subprotocols): 500 sockets subscribed with 0 failures in 12.7 s (subscribe p50 714 ms, p95
+1,275 ms); server memory 114 → 170 MB (about 115 kB per socket); about 5.5% of one CPU while
+holding them (Action Cable pings every socket every 3 s).
 
 ## Turning it off
 
-There is no switch to flip: if `/cable` is unreachable (or `POST /api/cable/ticket` fails) the app
+Set `CABLE_ENABLED=false` on the `musilynk-api` service in Railway (Variables; a restart, no
+deploy). `GET /me` and sign-in then say `realtime: false`, pages stop asking for tickets and poll at
+their old pace, and `POST /api/cable/ticket` answers 503 `REALTIME_DISABLED`. Remove the variable
+(or set `true`) to turn it back on; without it, `enabled` in `backend/config/realtime.yml` decides.
+
+Independently of the switch, if `/cable` is unreachable (or `POST /api/cable/ticket` fails) the app
 keeps polling at the old intervals and retries the socket with backoff (1 s doubling to 30 s).
 To remove it entirely, revert the release; the `solid_cable_messages` table can stay.
 
 ## Environment variables
 
-None new. `REDIS_URL` (optional, existing) switches the adapter; `ALLOWED_ORIGINS` and
+`CABLE_ENABLED` (new, optional, `musilynk-api`): `true`/`false` overrides `enabled` in
+`config/realtime.yml`; unset means the config decides (on). `REDIS_URL` (optional, existing) switches the adapter; `ALLOWED_ORIGINS` and
 `ADMIN_ORIGIN` (existing) gate socket origins.

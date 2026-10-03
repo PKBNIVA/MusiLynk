@@ -53,6 +53,48 @@ class RealtimeTest < ActionDispatch::IntegrationTest
     assert_equal true, response.parsed_body["realtime"]
   end
 
+  test "CABLE_ENABLED overrides the config without a deploy: off means 503 and realtime false" do
+    previous = ENV["CABLE_ENABLED"]
+    ENV["CABLE_ENABLED"] = "false"
+    post "/api/cable/ticket", headers: auth(@musician)
+    assert_response :service_unavailable
+    get "/api/me", headers: auth(@musician)
+    assert_equal false, response.parsed_body["realtime"], "the app then only polls"
+    ENV["CABLE_ENABLED"] = "true"
+    RealtimeTicket.stub(:settings, RealtimeTicket.settings.merge("enabled" => false)) do
+      post "/api/cable/ticket", headers: auth(@musician)
+      assert_response :created
+    end
+  ensure
+    ENV["CABLE_ENABLED"] = previous
+  end
+
+  test "the ticket never reaches the logs" do
+    filtered = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters).filter("ticket" => "secret")
+    assert_equal "[FILTERED]", filtered["ticket"]
+  end
+
+  test "signing out, revoking sessions and suspending close that session's open sockets" do
+    raw = SecureRandom.urlsafe_base64(48)
+    session = @musician.sessions.create!(token_digest: Digest::SHA256.hexdigest(raw), expires_at: 1.day.from_now)
+    # Action Cable's internal channel for one connection (its identifiers' global ids, sorted).
+    channel = ->(s) { "action_cable/#{[@musician, s].map(&:to_gid_param).sort.join(':')}" }
+    disconnects = ->(s) { ActionCable.server.pubsub.broadcasts(channel.(s)).map { JSON.parse(_1) } }
+
+    post "/api/auth/logout", headers: { "Authorization" => "Bearer #{raw}" }
+    assert_equal [{ "type" => "disconnect", "reconnect" => false }], disconnects.(session)
+
+    other = @musician.sessions.create!(token_digest: Digest::SHA256.hexdigest("other"), expires_at: 1.day.from_now)
+    assert_equal 1, Session.revoke!(@musician.sessions.where(id: other.id))
+    assert_equal 1, disconnects.(other).size
+
+    third = @musician.sessions.create!(token_digest: Digest::SHA256.hexdigest("third"), expires_at: 1.day.from_now)
+    admin, = person_with_session("Admin Mod", role: "admin")
+    patch "/api/admin/users/#{@musician.id}", params: { status: "suspended" }, headers: auth(admin), as: :json
+    assert_response :success
+    assert_equal 1, disconnects.(third).size, "suspending an account closes its sockets"
+  end
+
   test "a new message reaches the thread and the recipient's badge, with ids only" do
     post "/api/conversations/#{@conversation.id}/messages", params: { body: "Soundcheck at 6?" }, headers: auth(@hirer), as: :json
     assert_response :success

@@ -24,6 +24,7 @@ import { lazy, Suspense, useState } from 'react';
 import { BrandMark } from './BrandMark';
 import { SkipLink } from './SkipLink';
 import { useAuth } from '../lib/authContext';
+import { useMounted } from '../lib/clientOnly';
 
 const dashboardPathFor = (role: string) => (role === 'employer' ? '/employer' : role === 'admin' ? '/' : '/jobseeker');
 
@@ -42,6 +43,7 @@ export function PublicNav() {
   const nav = useNavigate();
   const location = useLocation();
   const { status, user, logout } = useAuth();
+  const mounted = useMounted();
   const [q, setQ] = useState('');
   const go = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,9 +96,12 @@ export function PublicNav() {
               </Button>
             ))}
           </div>
-          <Suspense fallback={null}>
-            <IdentitySwitcher className="ml-auto xl:ml-0" />
-          </Suspense>
+          {/* Mounted after hydration: a lazy boundary in pre-rendered HTML must not be hit by an update first. */}
+          {mounted && (
+            <Suspense fallback={null}>
+              <IdentitySwitcher className="ml-auto xl:ml-0" />
+            </Suspense>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="ml-auto xl:hidden" aria-label="Open navigation">

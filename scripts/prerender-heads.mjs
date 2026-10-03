@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Writes a per-route dist/<path>/index.html for each static public page, with its own <title>,
 // meta description and canonical/og/twitter tags baked in (item 5 of the SEO change set). Static
 // hosts and crawlers that don't execute usePageMeta's client-side effect (src/app/components/
@@ -14,7 +13,7 @@
 // VITE_APP_TARGET=admin, which never calls this script (build:admin invokes `vite build` directly).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { HERO_PHOTO, HERO_PHOTO_SIZES, HERO_PHOTO_WIDTHS, photoSrcSet } from '../src/app/lib/photo.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -147,6 +146,45 @@ export function uploadsDnsPrefetch(uploadsOrigin) {
 export function heroPreload() {
   const srcset = photoSrcSet(`/img/${HERO_PHOTO}`, HERO_PHOTO_WIDTHS, 'avif');
   return `<link rel="preload" as="image" type="image/avif" imagesrcset="${srcset}" imagesizes="${HERO_PHOTO_SIZES}" fetchpriority="high">`;
+}
+
+// ---- Body pre-rendering ----------------------------------------------------------------------------
+// Beyond the <head>, these routes also get their first screen as HTML (src/entry-server.tsx, built by
+// `npm run build:ssr` into dist-ssr/), so text paints before any JavaScript runs; main.tsx hydrates it in
+// place. Pages whose first screen depends on who is looking (search, sign-in, the workspace) stay
+// client-rendered. The hire and rates pages are added from backend/config/seo_pages.yml at run time.
+export const PRERENDERED_PATHS = [
+  '/',
+  '/music-jobs',
+  '/music-professionals',
+  '/book-music',
+  '/urgent',
+  '/pricing',
+  '/guide',
+  '/join/hiring',
+  '/join/musician',
+];
+// Record pages: one HTML shell per route family (static frame plus the loading state), served by the
+// vercel.json rewrite for every id. `data-prerendered` carries the pattern so main.tsx can check the URL.
+export const PRERENDERED_SHELLS = {
+  '/professionals/:id': 'professionals',
+  '/acts/:id': 'acts',
+  '/opportunities/:id': 'opportunities',
+};
+
+/** `<div id="root"></div>` -> the same div holding the pre-rendered markup and the route it is for. */
+export function withBody(html, route, body) {
+  return html.replace('<div id="root"></div>', `<div id="root" data-prerendered="${route}">${body}</div>`);
+}
+
+/** The render(url) function of the pre-render bundle, or null when `npm run build:ssr` has not run. */
+export async function loadRenderer(ssrDir) {
+  const entry = join(ssrDir, 'entry-server.js');
+  if (!existsSync(entry)) return null;
+  // The bundle leaves React external, so React picks its build from NODE_ENV here: production, the same
+  // code the browser bundle ships (the development build also prints a warning per page).
+  process.env.NODE_ENV = 'production';
+  return (await import(pathToFileURL(entry).href)).render;
 }
 
 /** PageMeta.tsx cuts a description at 160 characters; do the same so the head matches the page. */
@@ -299,7 +337,7 @@ export function writeAdminShells(distDir, routesSource) {
   return paths;
 }
 
-function main(distDir = join(root, 'dist')) {
+async function main(distDir = join(root, 'dist'), ssrDir = join(root, 'dist-ssr')) {
   if (process.env.VITE_APP_TARGET === 'admin') {
     const paths = writeAdminShells(distDir, readFileSync(join(root, 'src', 'app', 'routes.tsx'), 'utf8'));
     console.log(`prerender-heads: admin build, wrote the app shell to ${paths.join(', ')} and 404.html`);
@@ -330,12 +368,33 @@ function main(distDir = join(root, 'dist')) {
   // every dynamic URL (/professionals/:id, /opportunities/:id, /acts/:id, ...), which would then all say
   // "canonical: /" and carry the landing title. app-shell.html is the neutral shell (no canonical, default
   // title and description) that vercel.json serves for those instead; 404.html is built from it too.
-  writeFileSync(join(distDir, 'app-shell.html'), indexHtml.replace(/<link\s+rel="canonical"[^>]*>\s*/, ''));
+  const appShellHtml = indexHtml.replace(/<link\s+rel="canonical"[^>]*>\s*/, '');
+  writeFileSync(join(distDir, 'app-shell.html'), appShellHtml);
 
+  const renderBody = await loadRenderer(ssrDir);
+  if (!renderBody)
+    console.warn(`prerender-heads: ${ssrDir}/entry-server.js not found (npm run build:ssr); writing heads only.`);
+  const withBodies = new Set([...PRERENDERED_PATHS, ...Object.keys(seoRoutes)]);
+  let bodies = 0;
   for (const [path, meta] of Object.entries(routes)) {
     const outDir = path === '/' ? distDir : join(distDir, path);
     mkdirSync(outDir, { recursive: true });
-    writeFileSync(join(outDir, 'index.html'), render(indexHtml, path, [meta[0], clip(meta[1])], jsonLd[path]));
+    let html = render(indexHtml, path, [meta[0], clip(meta[1])], jsonLd[path]);
+    if (renderBody && withBodies.has(path)) {
+      html = withBody(html, path, await renderBody(path));
+      bodies += 1;
+    }
+    writeFileSync(join(outDir, 'index.html'), html);
+  }
+  if (renderBody) {
+    for (const [pattern, dir] of Object.entries(PRERENDERED_SHELLS)) {
+      mkdirSync(join(distDir, dir), { recursive: true });
+      writeFileSync(
+        join(distDir, dir, 'shell.html'),
+        withBody(appShellHtml, pattern, await renderBody(`/${dir}/shell`)),
+      );
+      bodies += 1;
+    }
   }
   writeFileSync(join(distDir, '404.html'), renderNotFound(indexHtml));
 
@@ -345,10 +404,13 @@ function main(distDir = join(root, 'dist')) {
   }
 
   console.log(
-    `prerender-heads: wrote ${Object.keys(routes).length} route heads (${Object.keys(seoRoutes).length} hire and rates pages) to ${distDir}`,
+    `prerender-heads: wrote ${Object.keys(routes).length} route heads (${Object.keys(seoRoutes).length} hire and rates pages) and ${bodies} pre-rendered bodies to ${distDir}`,
   );
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main(process.argv[2] ? resolve(process.argv[2]) : undefined);
+  await main(
+    process.argv[2] ? resolve(process.argv[2]) : undefined,
+    process.argv[3] ? resolve(process.argv[3]) : undefined,
+  );
 }

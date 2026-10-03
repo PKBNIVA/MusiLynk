@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, startTransition, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ApiError,
   apiGet,
@@ -113,23 +113,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const generation = useRef(0);
   const refresh = async () => {
     const current = ++generation.current;
+    /* The session answer re-renders the whole app. As a transition it waits for any pre-rendered page
+       (src/entry-server.tsx) that is still hydrating instead of making React throw that HTML away
+       (React error #421) and render the page again from scratch. */
+    const settle = (next: User | null) =>
+      startTransition(() => {
+        setUser(next);
+        setLoading(false);
+      });
     if (!hasAccessToken()) {
-      setUser(null);
-      setLoading(false);
+      settle(null);
       return;
     }
     try {
       const d = await apiGet<{ user: User }>('/me');
-      if (current === generation.current) setUser(d.user);
+      if (current === generation.current) settle(d.user);
     } catch (e) {
       /* Only a rejected session (expired, revoked or inactive account) ends it; timeouts and outages keep the token so the user can retry. A 401 is cleared by api() itself, and only if no other tab has signed in since. */ if (
         current !== generation.current
       )
         return;
       if (e instanceof ApiError && e.status === 403) setAccessToken(null);
-      setUser(null);
-    } finally {
-      if (current === generation.current) setLoading(false);
+      settle(null);
     }
   };
   useEffect(() => {

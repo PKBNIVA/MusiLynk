@@ -14,7 +14,7 @@ import { apiGet } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { fromRateText, roleNoun } from '../../lib/landing';
 import { personLines } from '../../lib/personLine';
-import { hireHeading, hireLinkText, hirePagePath } from '../../lib/seoPages';
+import { hireHeading, hireLinkText, hirePagePath, seoCityName, seoRoleLabel } from '../../lib/seoPages';
 import type { Professional } from '../../lib/apiTypes';
 
 interface HirePageData {
@@ -54,6 +54,8 @@ export default function HirePage() {
     };
   }, [role, city]);
 
+  const knownRole = seoRoleLabel(role);
+  const knownCity = seoCityName(city);
   const title = data
     ? `Hire a verified ${roleNoun(data.role.label)} in ${data.city.name} | MusiLynk`
     : 'Hire on MusiLynk';
@@ -102,9 +104,19 @@ export default function HirePage() {
       <PublicNav />
       <main className="max-w-6xl mx-auto px-5 py-14">
         {loading ? (
-          <p className="text-slate-400 text-center py-16" role="status">
-            Loading…
-          </p>
+          <>
+            {/* A listed role and city have their heading before the API answers (and in the pre-rendered HTML). */}
+            {knownRole && knownCity && (
+              <PhotoHeader
+                photo={ROLE_PHOTOS[role.toLowerCase()] ?? 'rehearsal-room'}
+                eyebrow="Musician directory"
+                title={hireHeading(knownRole, knownCity)}
+              />
+            )}
+            <p className="text-slate-400 text-center py-16" role="status">
+              Loading…
+            </p>
+          </>
         ) : error || !data ? (
           <div className="text-center py-16" role="alert">
             <p className="text-rose-300">

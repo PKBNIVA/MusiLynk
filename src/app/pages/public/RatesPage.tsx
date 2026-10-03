@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { useAuth } from '../../lib/authContext';
-import { ratesPagePath } from '../../lib/seoPages';
+import { ratesPagePath, seoCityName } from '../../lib/seoPages';
 import { formatDate, formatMoney } from '../../lib/format';
 
 interface RateRange {
@@ -106,9 +106,19 @@ export default function RatesPage() {
       <PublicNav />
       <main className="max-w-5xl mx-auto px-5 py-14">
         {loading ? (
-          <p className="text-slate-400 text-center py-16" role="status">
-            Loading…
-          </p>
+          <>
+            {/* A listed city has its heading before the API answers (and in the pre-rendered HTML). */}
+            {seoCityName(city) && (
+              <PhotoHeader
+                photo="recording-studio"
+                eyebrow="Rates guide"
+                title={`What musicians charge in ${seoCityName(city)}`}
+              />
+            )}
+            <p className="text-slate-400 text-center py-16" role="status">
+              Loading…
+            </p>
+          </>
         ) : error || !data ? (
           <div className="text-center py-16" role="alert">
             <p className="text-rose-300">

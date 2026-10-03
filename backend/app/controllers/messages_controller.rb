@@ -32,12 +32,12 @@ class MessagesController < ApplicationController
       anchor = scope.find_by(id: params[:after])
       return render_error("Message not found", :not_found) unless anchor
       scope = scope.where("(messages.created_at, messages.id) > (?, ?)", anchor.created_at, anchor.id)
-      mark_read!
+      mark_read!(always_clear: false)
       newer = scope.order(created_at: :asc, id: :asc).limit(HISTORY_LIMIT).to_a
       return render json: { messages: newer.map { serialize(_1) }, truncated: false, limit: HISTORY_LIMIT, theirReadAt: their_read_at }
     end
 
-    mark_read!
+    mark_read!(always_clear: true)
     recent = scope.order(created_at: :desc, id: :desc).limit(HISTORY_LIMIT + 1).to_a
     truncated = recent.size > HISTORY_LIMIT
     render json: { messages: recent.first(HISTORY_LIMIT).reverse.map { serialize(_1) }, truncated:, limit: HISTORY_LIMIT, theirReadAt: their_read_at }
@@ -71,13 +71,17 @@ class MessagesController < ApplicationController
 
   private
 
-  # The message notification is only cleared when this actually read something: a poll with nothing
-  # new (most of them, every 3 s per open thread) then runs one UPDATE that matches no row instead of two.
-  # The notification for a message is created with the message, so it is unread only while one is.
-  def mark_read!
+  # Opening the thread (a full load) always clears its message notification, so a stale unread one
+  # (from before this rule, or any path that ever got out of step) is cleared on the next open.
+  # A poll (`after=`) clears it only when the poll actually read something: most polls, every 3 s per
+  # open thread, find nothing new and then run one UPDATE that matches no row instead of two. That is
+  # safe because every message is committed in the same transaction as its notification
+  # (MessagesController#create, BookingsController#post_change_request), so a poll that reads a
+  # message also sees, and clears, its notification.
+  def mark_read!(always_clear:)
     now = Time.current
     read = @conversation.messages.where.not(sender: current_user).where(read_at: nil).update_all(read_at: now, updated_at: now)
-    Notifier.conversation_read(@conversation, current_user) if read.positive?
+    Notifier.conversation_read(@conversation, current_user) if always_clear || read.positive?
   end
 
   # The most recent time the counterpart read one of the current user's own messages, so a poll that

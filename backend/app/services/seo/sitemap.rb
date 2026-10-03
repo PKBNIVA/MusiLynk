@@ -1,6 +1,9 @@
-# Builds the sitemap that SitemapsController serves. Too slow for a request (one COUNT per hire
-# page, 390 at the time of writing, plus every portfolio; 33 s at 50k profiles), so
-# SitemapRefreshJob builds it on a schedule into Rails.cache and the controller only reads it.
+# Builds the sitemap that SitemapsController serves. Too slow for every request (one COUNT per hire
+# page, 390 at the time of writing, plus every portfolio; 18-35 s at 50k profiles), so
+# SitemapRefreshJob builds it hourly into Rails.cache under two keys: CACHE_KEY, which expires, and
+# LAST_GOOD_KEY, which never does, so a crawler is always served the last good build even when the
+# job has not run or failed. `sitemap:warm` (the pre-deploy step) builds it when neither exists, and
+# the controller builds it inline, once, under LOCK_KEY only when neither exists (a new cache store).
 #
 # Up to MAX_URLS URLs it is one <urlset> at /sitemap.xml. Past that, /sitemap.xml is a
 # <sitemapindex> of /sitemaps/1.xml, /sitemaps/2.xml, ... of MAX_URLS each (the protocol allows
@@ -10,8 +13,14 @@ module Seo
   module Sitemap
     MAX_URLS = 45_000
     CACHE_KEY = "sitemap/v3".freeze
-    # The job runs hourly; three hours keeps serving the last build through a missed run or two.
+    LAST_GOOD_KEY = "sitemap/v3/last-good".freeze
+    # The job runs hourly; past this the build is stale and a request queues a rebuild while it is
+    # still served from LAST_GOOD_KEY.
     CACHE_TTL = 3.hours
+    # Postgres advisory lock id for the inline build, so concurrent misses build it once.
+    LOCK_KEY = 0x5173_6d61 # "Sitemap"
+    # How long a request that finds the lock taken waits for the other build before building itself.
+    LOCK_WAIT = 10.seconds
 
     STATIC_PAGES = [
       ["/", "daily"], ["/music-jobs", "daily"], ["/music-professionals", "daily"], ["/book-music", "daily"],
@@ -36,9 +45,40 @@ module Seo
       files.merge("generatedAt" => now.iso8601, "urls" => entries.length)
     end
 
-    def refresh! = build.tap { Rails.cache.write(CACHE_KEY, _1, expires_in: CACHE_TTL) }
+    # Builds and stores the sitemap under both keys.
+    def refresh!
+      build.tap do |files|
+        Rails.cache.write(CACHE_KEY, files, expires_in: CACHE_TTL)
+        Rails.cache.write(LAST_GOOD_KEY, files)
+      end
+    end
 
+    # The current build, or nil when it expired or was never written.
     def cached = Rails.cache.read(CACHE_KEY)
+
+    # The newest build ever written (never expires), or nil on a brand-new cache store.
+    def last_good = Rails.cache.read(LAST_GOOD_KEY)
+
+    # Builds inline when nothing was ever stored: under a Postgres advisory lock, so concurrent
+    # requests build it once. A request that finds the lock taken waits up to LOCK_WAIT for that
+    # build, then builds on its own rather than fail.
+    def build_once!
+      connection = ActiveRecord::Base.lease_connection
+      if connection.select_value("SELECT pg_try_advisory_lock(#{LOCK_KEY})")
+        begin
+          return last_good || refresh!
+        ensure
+          connection.select_value("SELECT pg_advisory_unlock(#{LOCK_KEY})")
+        end
+      end
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + LOCK_WAIT
+      while Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
+        sleep 0.25
+        found = last_good
+        return found if found
+      end
+      refresh!
+    end
 
     def page_entries(base)
       STATIC_PAGES.map { |path, freq| { loc: "#{base}#{path}", changefreq: freq } } +

@@ -8,7 +8,9 @@ dockerfilePath = "backend/Dockerfile"
 # Runs once per deploy in its own container, before the new release takes traffic; a
 # failure stops the deploy and the old release keeps serving. The web container also runs
 # db:prepare on boot until SKIP_DB_PREPARE_ON_BOOT=true is set on the service.
-preDeployCommand = "bin/rails db:prepare"
+# sitemap:warm builds the sitemap into the cache when none is stored yet (a no-op otherwise, and it
+# never fails the deploy), so crawlers are not the ones paying for the first build.
+preDeployCommand = "bin/rails db:prepare && bin/rails sitemap:warm"
 healthcheckPath = "/api/live"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

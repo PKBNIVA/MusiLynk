@@ -36,12 +36,18 @@ automatically (`RAILS_MAX_THREADS` + job threads + 3), so changing a number need
 ## The sitemap
 
 `/sitemap.xml` is built by `SitemapRefreshJob` (cron, hourly at :23, `scheduled` queue) into
-`Rails.cache` and only read by the web request. Building it takes one COUNT per role x city hire
-page plus every portfolio (about 33 s at 50k profiles), far too long for a crawler's request.
+`Rails.cache` and read by the web request. Building it takes one COUNT per role x city hire page
+plus every portfolio (18-35 s at 50k profiles), too long for every crawler request.
 
+- The job writes two keys: the current build (expires after 3 hours) and a last-good copy that
+  never expires. When the current build has expired, requests are served the last-good copy and
+  one rebuild is queued (at most once per 10 minutes). Crawlers never get an error page.
+- Only when nothing was ever stored (a brand-new cache store) does a request build it inline,
+  once, under a Postgres advisory lock; other requests wait up to 10 s for that build.
+- The pre-deploy step (`railway.toml`: `bin/rails db:prepare && bin/rails sitemap:warm`) builds it
+  when nothing is stored, so even a first deploy is not a miss. It is a no-op otherwise and never
+  fails the deploy.
 - Up to 45,000 URLs it is one `<urlset>`. Past that, `/sitemap.xml` is a `<sitemapindex>` of
   `/sitemaps/1.xml`, `/sitemaps/2.xml`, ... (Vercel rewrites `/sitemaps/:part.xml` to the API), so
   no URL is dropped. Static, hire and rates pages are always in the first file.
-- When the cache is empty (a new cache store, or right after a cache flush) the request queues
-  the job at most once per 10 minutes and answers `503` with `Retry-After: 300`; crawlers retry.
 - To rebuild by hand: `bin/rails runner 'SitemapRefreshJob.perform_now'` on the worker service.

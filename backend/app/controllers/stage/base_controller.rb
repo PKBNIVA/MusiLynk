@@ -44,7 +44,7 @@ module Stage
       shown = posts.flat_map { [_1, _1.reshared_post].compact }
       Post.preload_authors(shown)
       Post.preload_shared_jobs(shown)
-      Post.preload_media_urls(posts)
+      Post.preload_media_urls(shown)
     end
 
     # The includes a list of posts needs before visible_to and preload_for_json.

@@ -9,7 +9,8 @@ class HotEndpointQueryBudgetTest < ActionDispatch::IntegrationTest
 
   PASSWORD = "StrongPass123!".freeze
 
-  # path => budget (queries per request), measured 2026-10-03.
+  # path => budget (queries per request), measured 2026-10-03. The Stage fixtures include photo posts
+  # and reshares of them, so the feed and tag budgets cover the reshared posts' media lookup too.
   PUBLIC = {
     "/api/public/talent" => 9,
     "/api/public/talent?location=Mumbai&role=Drummer&genre=Rock" => 9,
@@ -18,7 +19,7 @@ class HotEndpointQueryBudgetTest < ActionDispatch::IntegrationTest
     "/api/public/acts/{act}" => 4,
     "/api/jobs" => 4,
     "/api/jobs/{job}" => 3,
-    "/api/stage/tags/gig" => 3
+    "/api/stage/tags/gig" => 5
   }.freeze
   SIGNED_IN = {
     "/api/conversations" => 6,
@@ -26,7 +27,7 @@ class HotEndpointQueryBudgetTest < ActionDispatch::IntegrationTest
     "/api/notifications/unread" => 4,
     "/api/notifications" => 4,
     "/api/bookings" => 7,
-    "/api/stage/feed" => 16
+    "/api/stage/feed" => 18
   }.freeze
 
   setup do
@@ -102,6 +103,11 @@ class HotEndpointQueryBudgetTest < ActionDispatch::IntegrationTest
       Post.create!(author_type: "user", author_id: talent.id, created_by_user_id: talent.id, kind: "portfolio_share", shared_portfolio_item_id: item.id)
       Post.create!(author_type: "act", author_id: act.id, created_by_user_id: talent.id, kind: "update", body: "Our band #{@seq}")
       Post.create!(author_type: "user", author_id: @hirer.id, created_by_user_id: @hirer.id, kind: "job_share", shared_job_id: job.id)
+      upload = Upload.create!(user: talent, storage: "s3", key: "uploads/#{talent.id}/#{@seq}.jpg", filename: "gig.jpg", content_type: "image/jpeg",
+        byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/#{@seq}.jpg")
+      photo = Post.create!(author_type: "user", author_id: talent.id, created_by_user_id: talent.id, kind: "update", body: "Photos #{@seq} #gig",
+        media: [{ uploadId: upload.id, type: "image" }])
+      Post.create!(author_type: "user", author_id: @hirer.id, created_by_user_id: @hirer.id, kind: "update", body: "Look at this #{@seq} #gig", reshared_post_id: photo.id)
       @talent ||= talent
       @act ||= act
       @job ||= job

@@ -228,10 +228,14 @@ class BookingsController < ApplicationController
 
     conversation = Conversation.open_between!(candidate: owner, employer: requester)
     sender = current_user
-    message = conversation.messages.new(sender:, body: "Changes requested for #{booking.event_name.presence || booking.act.name}: #{note}".first(MessagesController::MAX_LENGTH))
-    message.flag_scam_signals
-    message.save!
-    Notifier.new_message(message)
+    # The message and its notification commit together, so a thread poll can never read the message
+    # before its notification exists (which would leave the badge unread; see MessagesController#mark_read!).
+    Message.transaction do
+      message = conversation.messages.new(sender:, body: "Changes requested for #{booking.event_name.presence || booking.act.name}: #{note}".first(MessagesController::MAX_LENGTH))
+      message.flag_scam_signals
+      message.save!
+      Notifier.new_message(message)
+    end
     conversation
   end
 

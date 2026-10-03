@@ -60,7 +60,8 @@ Configure one service from `backend/Dockerfile`:
 - Production branch: `production`
 - Config file: `railway.toml`
 - PostgreSQL must expose `DATABASE_URL` to the Rails service.
-- Migrations: `railway.toml` sets `preDeployCommand = "bin/rails db:prepare"`, which Railway
+- Migrations: `railway.toml` sets `preDeployCommand = "bin/rails db:prepare && bin/rails sitemap:warm"` (the second
+  step builds the sitemap into the cache only when none is stored, and never fails), which Railway
   runs once per deploy in a separate container before the new release takes traffic. If it
   fails, the deploy stops and the previous release keeps serving. The web container
   (`backend/bin/web`) also runs `db:prepare` before Puma unless

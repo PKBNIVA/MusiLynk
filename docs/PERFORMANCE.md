@@ -249,7 +249,7 @@ the sum of every SELECT in the request; access paths are those of the slowest qu
 | jobs list (browse) | 4 → 4 | 16.5 → 12.3 | 32.6 → 12.7 | page: `index_jobs_published_browse` (0.8 ms); slowest is the `total` COUNT |
 | jobs ?location=Pune | 4 → 4 | 8.9 → 6.4 | 16.3 → 12.8 | Seq Scan jobs |
 | jobs ?q=drummer | 3 → 3 | 27.0 → 24.3 | 27.2 → 24.4 | Seq Scan jobs |
-| Stage feed | **549 → 11** | 1.2 → 1.3 | 8.7 → 3.1 | primary keys; request 516 ms → 65–87 ms wall |
+| Stage feed | **549 → 11** (18 in the budget test, which adds photo posts and reshares) | 1.2 → 1.3 | 8.7 → 3.1 | primary keys; request 516 ms → 65–87 ms wall |
 | Stage tag `#sufi` | **42 → 3** | 5.2 → 1.3 | 6.9 → 3.3 | `index_posts_on_hashtags` (was Seq Scan posts) |
 | thread messages | 5 → 5 | 0.0 → 0.0 | 0.1 → 0.1 | `index_messages_on_conversation_id` |
 | inbox (musician / hirer) | 7 → 6 | 2.1 → 2.0 | 2.5 → 2.3 | conversations candidate/employer indexes, messages (conversation_id, created_at) |
@@ -284,7 +284,7 @@ request (about 45 ms of a 250 ms talent list). `database.yml` now sets `jit: off
 - **Plans**: bookings list `requester_id = ? OR act_id = ANY(ARRAY(acts of the user))` instead of a
   join filtered on `acts.owner_id`, so two index scans replace two sequential scans.
 - **Writes**: a thread poll with nothing new no longer runs the notification UPDATE.
-- **Off the request path**: the sitemap (see `docs/ops/job-queues.md`), now a sitemap index once
+- **Off the request path**: the sitemap (see `docs/ops/job-queues.md`; served from a never-expiring last-good copy, built inline under a lock only on a brand-new cache), now a sitemap index once
   past 45,000 URLs instead of silently dropping the hire pages.
 
 ### Not fixed here (search rework)

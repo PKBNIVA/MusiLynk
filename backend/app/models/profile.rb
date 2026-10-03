@@ -1,6 +1,9 @@
 class Profile < ApplicationRecord
   self.primary_key = :user_id
   belongs_to :user
+  include SearchIndexed
+  search_document "talent", key: :user_id,
+    fields: %i[headline location bio roles skills instruments genres credits gear software event_types open_to languages]
 
   JSON_FIELDS = %i[skills genres instruments languages credits open_to roles gear software event_types].freeze
   JSON_FIELDS.each { |field| attribute field, :json, default: -> { [] } }

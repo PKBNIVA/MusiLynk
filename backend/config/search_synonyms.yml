@@ -1,63 +1,117 @@
-# Search vocabulary shared by every search surface (global search, jobs, talent, candidates, acts).
-# Loaded once per process by Search::Synonyms. All entries are lower case; matching is case-insensitive.
+# Search vocabulary shared by every search surface (global search, type-ahead, jobs, talent,
+# candidates, acts, urgent matching). Loaded once per process by Search::Synonyms.
+# How to change it: docs/ops/search.md. Run `bin/rails test test/search` after every edit; the
+# relevance suite (test/search/relevance_test.rb) pins the top results of 40 real queries.
 #
-# groups:   two-way synonyms. Searching any member also searches every other member.
-# broader:  one-way expansions. Searching the key also searches the listed terms, but not the reverse
-#           ("percussionist" finds tabla players; "tabla player" does not find every percussionist).
-# cities:   city names and their aliases. A query word that is a city constrains location fields.
-# stopwords: filler words dropped from multi-word queries ("vocalist for a wedding").
+# roles, instruments, genres, events: two-way synonym groups. Searching any member also searches
+#   every other member. The FIRST entry is the label the type-ahead shows (keep its capitals);
+#   the rest are spellings, Hinglish and Devanagari variants. Matching ignores case.
+#   Words are matched whole, so "dhol" never finds "dholak": keep instruments that are different
+#   things in different groups, even when one name starts with the other.
+# broader: one-way expansions. Searching the key also searches the listed terms, but not the
+#   reverse ("percussionist" finds tabla players; "tabla player" does not find every percussionist).
+# cities: city names and their aliases (first entry is the label). A query word that is a city
+#   constrains location fields only.
+# stopwords: filler words dropped from multi-word queries ("vocalist for a wedding",
+#   "shaadi ke liye dhol").
 
-groups:
+roles:
   # Performers
-  - [singer, vocalist, playback singer, lead vocalist, vocals, gayak, gayika, गायक, गायिका]
-  - [guitarist, guitar player, guitar]
-  - [bassist, bass player, bass guitarist, bass guitar]
-  - [drummer, drum player, drums, drum kit]
-  - [keyboardist, keyboard player, keys player, keys, pianist, piano player, piano]
-  - [violinist, violin player, violin, fiddle, fiddler]
-  - [percussionist, percussion player, percussion]
-  - [tabla player, tabla, tabla vadak, tabla artist, tablist]
-  - [flautist, flutist, flute player, bansuri player, flute]
-  - [saxophonist, sax player, saxophone]
-  - [cellist, cello player, cello]
-  - [sitarist, sitar player, sitar]
-  - [harmonium player, harmonium]
-  - [rapper, mc, hip hop artist]
-  - [dj, disc jockey, deejay]
+  - [Singer, vocalist, playback singer, lead vocalist, vocals, gayak, gaayak, gayika, gaayika, gayak kalakar, गायक, गायिका, सिंगर]
+  - [Guitarist, guitar player, guitar, gitar, गिटारिस्ट, गिटार]
+  - [Bassist, bass player, bass guitarist, bass guitar]
+  - [Drummer, drum player, drums, drum, drum kit, ड्रमर]
+  - [Keyboardist, keyboard player, keys player, keys, keyboard, pianist, piano player, piano, कीबोर्ड, पियानो]
+  - [Violinist, violin player, violin, fiddle, fiddler, वायलिन]
+  - [Percussionist, percussion player, percussion]
+  - [Tabla player, tabla, tabla vadak, tabla artist, tablist, tablaist, tabalchi, tabla wala, tabala, तबला, तबला वादक]
+  - [Dhol player, dhol, dholi, dhol wala, dhol tasha, dhol vadak, ढोल, ढोली]
+  - [Dholak player, dholak, dholki, dholak vadak, ढोलक]
+  - [Flautist, flutist, flute player, flute, bansuri player, bansuri, बांसुरी]
+  - [Saxophonist, sax player, saxophone, sax]
+  - [Cellist, cello player, cello]
+  - [Sitarist, sitar player, sitar, सितार]
+  - [Harmonium player, harmonium, peti, हारमोनियम]
+  - [Shehnai player, shehnai, shehnai vadak, shahnai, शहनाई]
+  - [Santoor player, santoor, santur, संतूर]
+  - [Sarangi player, sarangi, सारंगी]
+  - [Mridangam player, mridangam, mridangist, mrudangam]
+  - [Cajon player, cajon]
+  - [Rapper, mc, hip hop artist]
+  - [DJ, disc jockey, deejay, dj artist, डीजे]
+  - [Anchor, emcee, event anchor, compere, master of ceremonies, event host]
+  - [Qawwal, qawwali singer, qawwali group]
   # Writing and production
-  - [music director, musical director, sangeet nirdeshak]
-  - [music producer, record producer, beatmaker, beat maker, producer, beat producer]
-  - [composer, film composer, score composer, background score composer]
-  - [songwriter, lyricist, lyric writer]
-  - [arranger, music arranger]
+  - [Music director, musical director, sangeet nirdeshak]
+  - [Music producer, record producer, beatmaker, beat maker, producer, beat producer]
+  - [Composer, film composer, score composer, background score composer, sangeetkar, संगीतकार]
+  - [Songwriter, lyricist, lyric writer, geetkar, गीतकार]
+  - [Arranger, music arranger]
   # Studio and live sound
-  - [mixing engineer, mix engineer, mixer]
-  - [mastering engineer, mastering]
-  - [recording engineer, studio engineer, tracking engineer]
-  - [sound engineer, foh engineer, front of house engineer, live sound engineer, audio engineer, sound guy, live sound]
-  - [monitor engineer, monitors engineer]
-  - [tech director, technical director]
-  - [roadie, backline technician, stage technician, stagehand]
-  - [lighting designer, lighting engineer, light designer]
+  - [Mixing engineer, mix engineer, mixer]
+  - [Mastering engineer, mastering]
+  - [Recording engineer, studio engineer, tracking engineer]
+  - [Sound engineer, foh engineer, front of house engineer, live sound engineer, audio engineer, sound guy, live sound]
+  - [Monitor engineer, monitors engineer]
+  - [Technical director, tech director]
+  - [Roadie, backline technician, stage technician, stagehand]
+  - [Lighting designer, lighting engineer, light designer]
   # Business and touring
-  - [tour manager, road manager, touring manager]
-  - [artist manager, talent manager, band manager]
-  - [booking agent, booker]
-  - [a&r, a and r, artist and repertoire, talent scout]
-  # Genres and styles
-  - [hip hop, hip-hop, hiphop, rap]
-  - [edm, electronic dance music, electronic]
-  - [bollywood, filmi, hindi film]
-  - [indie pop, indie]
-  - [classical, hindustani, carnatic]
-  - [sufi, qawwali, qawwal]
-  - [rock, rock and roll, rock & roll]
-  # Events
-  - [wedding, shaadi, sangeet, destination wedding, wedding band]
-  - [corporate, corporate event, corporate gala, brand launch]
+  - [Tour manager, road manager, touring manager]
+  - [Artist manager, talent manager, band manager]
+  - [Booking agent, booker]
+  - [A&R, a and r, artist and repertoire, talent scout]
+
+acts:
+  - [Wedding band, shaadi band, shadi band, band baja, band baaja, baraat band, brass band]
+  - [Live band, live music band, music band]
+  - [Sufi group, sufi band, qawwali party]
+
+instruments:
+  - [Electric guitar, electric guitarist]
+  - [Acoustic guitar, acoustic guitarist]
+  - [Synthesizer, synth, synth player]
+  - [Pakhawaj, pakhavaj, pakhawaj player]
+  - [Ghatam, ghatam player]
+  - [Sarod, sarod player]
+  - [Veena, veena player, वीणा]
+
+genres:
+  - [Hip hop, hip-hop, hiphop, rap]
+  - [EDM, electronic dance music, electronic]
+  - [Bollywood, filmi, hindi film, film songs, बॉलीवुड]
+  - [Indie pop, indie]
+  - [Hindustani, hindustani classical]
+  - [Carnatic, carnatic classical, karnatak]
+  - [Classical, shastriya sangeet, शास्त्रीय संगीत]
+  - [Sufi, qawwali, सूफ़ी, सूफी, कव्वाली]
+  - [Ghazal, gazal, ghazals, ग़ज़ल, गज़ल]
+  - [Bhajan, bhajans, भजन]
+  - [Kirtan, keertan, kirtaniya, कीर्तन]
+  - [Folk, lok geet, lok sangeet, folk music, लोक गीत]
+  - [Rock, rock and roll, rock & roll]
+  - [Jazz]
+  - [Pop, pop music]
+  - [Fusion, indo fusion, indo-western fusion]
+  - [Metal, heavy metal]
+
+events:
+  - [Wedding, shaadi, shadi, vivah, vivaah, destination wedding, शादी, विवाह]
+  - [Sangeet, sangeet night, sangeet ceremony]
+  - [Baraat, barat, baarat, बारात]
+  - [Mehendi, mehndi, mehandi, henna night, मेहंदी]
+  - [Haldi, haldi ceremony]
+  - [Reception, wedding reception]
+  - [Engagement, sagai, roka, ring ceremony, सगाई]
+  - [Corporate, corporate event, corporate gala, brand launch, corporate show]
+  - [Private party, house party, birthday party, private event]
+  - [Festival, fest, music festival]
+  - [Club, club night, nightclub]
+  - [Studio session, recording session]
+  - [Devotional, religious, jagran, jagrata, satsang]
 
 broader:
-  percussionist: [tabla player, drummer, cajon player, dholak player]
+  percussionist: [tabla player, drummer, cajon player, dholak player, dhol player, mridangam player]
   harmonium: [keyboardist]
   music director: [composer]
   qawwali: [sufi]
@@ -65,26 +119,32 @@ broader:
   musician: [vocalist, guitarist, bassist, drummer, keyboardist, violinist, tabla player, percussionist]
   instrumentalist: [guitarist, bassist, drummer, keyboardist, violinist, tabla player, percussionist]
   band: [ensemble, collective, band]
+  classical: [hindustani, carnatic]
+  wedding: [sangeet, baraat, mehendi, haldi, reception]
+  devotional: [bhajan, kirtan]
 
 cities:
-  - [mumbai, bombay]
-  - [delhi, new delhi, ncr]
-  - [bengaluru, bangalore]
-  - [kolkata, calcutta]
-  - [chennai, madras]
-  - [hyderabad, secunderabad]
-  - [pune, poona]
-  - [kochi, cochin]
-  - [goa, panaji, panjim]
-  - [jaipur]
-  - [ahmedabad]
-  - [gurugram, gurgaon]
-  - [thiruvananthapuram, trivandrum]
-  - [mysuru, mysore]
-  - [vadodara, baroda]
-  - [lucknow]
-  - [chandigarh]
-  - [indore]
-  - [shillong]
+  - [Mumbai, bombay, मुंबई]
+  - [Delhi, new delhi, ncr, दिल्ली]
+  - [Bengaluru, bangalore]
+  - [Kolkata, calcutta]
+  - [Chennai, madras]
+  - [Hyderabad, secunderabad]
+  - [Pune, poona]
+  - [Kochi, cochin]
+  - [Goa, panaji, panjim]
+  - [Jaipur, जयपुर]
+  - [Ahmedabad]
+  - [Gurugram, gurgaon]
+  - [Noida]
+  - [Thiruvananthapuram, trivandrum]
+  - [Mysuru, mysore]
+  - [Vadodara, baroda]
+  - [Lucknow, लखनऊ]
+  - [Chandigarh]
+  - [Indore]
+  - [Shillong]
+  - [Udaipur]
 
-stopwords: [a, an, the, for, in, at, of, with, and, or, to, near, looking, need, needed, wanted, available, based, from, "on", my, our]
+stopwords: [a, an, the, for, in, at, of, with, and, or, to, near, looking, need, needed, wanted, available, based, from, "on", my, our,
+  ke, ki, ka, liye, chahiye, mein, hai, ko]

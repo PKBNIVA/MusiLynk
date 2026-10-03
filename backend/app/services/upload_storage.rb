@@ -8,6 +8,10 @@
 #           then verifies the stored object before it can be used.
 # - "disk": Active Storage Disk service, streamed through the API. Development/test, or
 #           production with PERSISTENT_UPLOADS=true on a volume.
+#
+# Public reads of stored objects go to UPLOADS_PUBLIC_BASE_URL when set (an R2 public or custom
+# domain in front of the bucket, see docs/ops/uploads.md), else AWS_PUBLIC_BASE_URL, else the
+# AWS virtual-hosted bucket URL. Unset, nothing changes.
 class UploadStorage
   class NotConfigured < StandardError; end
 
@@ -27,10 +31,10 @@ class UploadStorage
       return [] unless direct?
       problems = []
       problems << "missing_credentials" unless ENV["AWS_ACCESS_KEY_ID"].present? && ENV["AWS_SECRET_ACCESS_KEY"].present?
-      problems << "missing_public_base_url" if endpoint && public_base_url.nil?
+      problems << "missing_public_base_url" if endpoint && read_base_url.nil?
       if Rails.env.production?
         problems << "insecure_endpoint" if endpoint && !endpoint.start_with?("https://")
-        problems << "insecure_public_base_url" if public_base_url && !public_base_url.start_with?("https://")
+        problems << "insecure_public_base_url" if read_base_url && !read_base_url.start_with?("https://")
       end
       problems
     end
@@ -38,6 +42,10 @@ class UploadStorage
     def bucket = ENV.fetch("AWS_BUCKET")
     def endpoint = ENV["AWS_ENDPOINT_URL_S3"].presence
     def public_base_url = ENV["AWS_PUBLIC_BASE_URL"].presence&.delete_suffix("/")
+    # Optional origin that fronts the bucket for public reads (R2 public domain, docs/ops/uploads.md).
+    def uploads_public_base_url = ENV["UPLOADS_PUBLIC_BASE_URL"].presence&.delete_suffix("/")
+    # Where a stored object's public URL points: the fronting domain first, then the bucket's own origin.
+    def read_base_url = uploads_public_base_url || public_base_url
     # R2 expects "auto"; AWS keeps the historical default.
     def region = ENV["AWS_REGION"].presence || (endpoint ? "auto" : "ap-south-1")
 
@@ -61,8 +69,8 @@ class UploadStorage
     end
 
     def public_url_for(key)
-      return "#{public_base_url}/#{key}" if public_base_url
-      raise NotConfigured, "AWS_PUBLIC_BASE_URL is required with a custom S3 endpoint." if endpoint
+      return "#{read_base_url}/#{key}" if read_base_url
+      raise NotConfigured, "AWS_PUBLIC_BASE_URL or UPLOADS_PUBLIC_BASE_URL is required with a custom S3 endpoint." if endpoint
       "https://#{bucket}.s3.#{region}.amazonaws.com/#{key}"
     end
 

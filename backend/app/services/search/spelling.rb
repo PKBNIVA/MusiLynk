@@ -1,9 +1,14 @@
 module Search
-  # "Did you mean" for words that match nothing: the nearest known term by pg_trgm similarity.
+  # Typo tolerance for words that match too few rows (fewer than Settings.typo_min_results):
+  #
+  # * a word with a near vocabulary term (pg_trgm similarity >= Settings.spelling_threshold, fewest
+  #   edits) also searches that term: "guitarst" → guitarist, reported as "did you mean";
+  # * any other word also matches documents by trigram word similarity
+  #   (>= Settings.fuzzy_word_threshold), which catches misspelt names and places.
+  #
   # Known terms are the synonym vocabulary, the catalog taxonomy and the roles, skills, genres and
   # instruments people actually use (refreshed every REFRESH).
   module Spelling
-    THRESHOLD = 0.4
     MIN_LENGTH = 4
     REFRESH = 10.minutes
     MAX_DB_TERMS = 5_000
@@ -12,32 +17,64 @@ module Search
     MAX_CACHED = 2_000
     LOCK = Mutex.new
 
-    DB_TERMS_SQL = <<~SQL.squish.freeze
-      SELECT DISTINCT lower(term) FROM (
-        SELECT jsonb_array_elements_text(skills) AS term FROM jobs WHERE status = 'published'
-        UNION ALL SELECT genre FROM jobs WHERE status = 'published'
-        UNION ALL SELECT jsonb_array_elements_text(roles) FROM profiles
-        UNION ALL SELECT jsonb_array_elements_text(skills) FROM profiles
-        UNION ALL SELECT jsonb_array_elements_text(instruments) FROM profiles
-        UNION ALL SELECT jsonb_array_elements_text(genres) FROM profiles
-        UNION ALL SELECT jsonb_array_elements_text(genres) FROM acts WHERE status = 'active'
-        UNION ALL SELECT act_type FROM acts WHERE status = 'active'
-      ) terms WHERE term IS NOT NULL AND length(term) BETWEEN 3 AND 40 LIMIT #{MAX_DB_TERMS}
-    SQL
+    # Terms people use, from the most recently updated rows of each source (reading every profile's
+    # lists took 1.7 s at 50k profiles; the vocabulary file covers the common terms anyway).
+    def self.db_terms_sql(rows)
+      recent = ->(table, where = nil) { "(SELECT * FROM #{table} #{where} ORDER BY updated_at DESC LIMIT #{Integer(rows)}) #{table}" }
+      <<~SQL.squish
+        SELECT DISTINCT lower(term) FROM (
+          SELECT jsonb_array_elements_text(skills) AS term FROM #{recent.('jobs', "WHERE status = 'published'")}
+          UNION ALL SELECT genre FROM #{recent.('jobs', "WHERE status = 'published'")}
+          UNION ALL SELECT jsonb_array_elements_text(roles || skills || instruments || genres) FROM #{recent.('profiles')}
+          UNION ALL SELECT jsonb_array_elements_text(genres) FROM #{recent.('acts', "WHERE status = 'active'")}
+          UNION ALL SELECT act_type FROM #{recent.('acts', "WHERE status = 'active'")}
+        ) terms WHERE term IS NOT NULL AND length(term) BETWEEN 3 AND 40 LIMIT #{MAX_DB_TERMS}
+      SQL
+    end
+
+    # The result of #widen: the widened query, and the corrected text to show as "did you mean"
+    # (nil when only trigram matching was added).
+    Widened = Data.define(:query, :did_you_mean)
 
     module_function
 
-    # A copy of `query` with each unknown word that matches nothing in `scope` replaced by its
-    # nearest known term, or nil when nothing could be corrected.
-    def correct(query, scope, fields)
-      corrected = query
+    # `query` with every unknown word that matches fewer than Settings.typo_min_results rows of
+    # `scope` widened: it also searches its nearest vocabulary term, or else matches by trigram
+    # word similarity. Returns a Widened, or nil when no word needed it. `exact_total` is the
+    # whole query's count (enough for a one-word query, which then needs no count of its own).
+    def widen(query, scope, target, exact_total:)
+      minimum = Settings.typo_min_results
+      tokens = []
+      corrected = []
       query.tokens.each do |token|
-        next if token.known? || token.location? || token.text.length < MIN_LENGTH
-        next if scope.where(Arel.sql(query.token_condition(token, fields))).exists?
+        if token.known? || token.location? || token.text.length < MIN_LENGTH ||
+            (query.tokens.one? ? exact_total : matches(scope, query, token, target, minimum)) >= minimum
+          tokens << token
+          corrected << token.text
+          next
+        end
         suggestion = suggest(token.text)
-        corrected = corrected.replace(token, suggestion) if suggestion && suggestion != token.text
+        replacement = Query.new(suggestion.to_s).tokens if suggestion && suggestion != token.text
+        if replacement&.one?
+          fixed = replacement.first
+          tokens << fixed.with(words: (fixed.words + token.words).uniq, prefixes: (fixed.prefixes + token.prefixes).uniq)
+          corrected << suggestion
+        elsif replacement.present?
+          tokens.concat(replacement)
+          corrected << suggestion
+        else
+          tokens << token.with(fuzzy: token.text)
+          corrected << token.text
+        end
       end
-      corrected.equal?(query) ? nil : corrected
+      return nil if tokens == query.tokens
+      text = corrected.join(" ")
+      Widened.new(query: Query.new(text, tokens:), did_you_mean: text == query.text ? nil : text)
+    end
+
+    # How many rows of `scope` match `token`, counting no further than `minimum`.
+    def matches(scope, query, token, target, minimum)
+      scope.except(:select, :order, :includes, :preload, :eager_load).where(Arel.sql(query.token_condition(token, target))).limit(minimum).count
     end
 
     # The closest vocabulary term to `word`, or nil. pg_trgm finds the candidates at or above
@@ -59,7 +96,7 @@ module Search
       quoted = connection.quote(word)
       candidates = connection.select_rows(<<~SQL.squish)
         SELECT term, similarity(term, #{quoted}) AS score FROM unnest(ARRAY[#{terms}]::text[]) AS term
-        WHERE similarity(term, #{quoted}) >= #{THRESHOLD} ORDER BY score DESC, term ASC LIMIT #{CANDIDATES}
+        WHERE similarity(term, #{quoted}) >= #{Float(Settings.spelling_threshold)} ORDER BY score DESC, term ASC LIMIT #{CANDIDATES}
       SQL
       candidates.min_by { |term, score| [edit_distance(word, term), term.length < word.length ? 1 : 0, -score.to_f, term] }&.first
     end
@@ -95,7 +132,7 @@ module Search
     def build_vocabulary
       catalog = CatalogController::ROLE_CATEGORIES.values.flatten + CatalogController::INSTRUMENTS + CatalogController::ACT_TYPES +
         CatalogController::EVENT_TYPES + Taxonomy.function_areas + Taxonomy.talent_roles.values.flat_map { _1[:terms] }
-      stored = ActiveRecord::Base.lease_connection.select_values(DB_TERMS_SQL)
+      stored = ActiveRecord::Base.lease_connection.select_values(db_terms_sql(Settings.spelling_db_rows_per_source))
       phrases = (Synonyms.terms + catalog + stored).map { Query.normalize(_1) }
       words = phrases.flat_map { _1.split(" ") }
       (phrases + words).select { _1.length >= 3 }.uniq.freeze

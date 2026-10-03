@@ -3,6 +3,11 @@ import { PROTECTED_AREA, signInPath } from './appTarget';
 
 // `?.`: the Node smoke tests import this module without Vite, where import.meta.env is undefined.
 export const API_BASE = import.meta.env?.VITE_API_URL || '/api';
+/** Base for the few anonymous public reads Vercel's edge caches (landing counters, featured
+ * talent, the Stage teaser): `VITE_PUBLIC_API_BASE` (`/api` on Vercel, where vercel.json rewrites
+ * exactly those three paths to the API host so `s-maxage` is honoured). Unset, it is API_BASE: nothing changes.
+ * See docs/ops/edge-caching.md. */
+export const PUBLIC_API_BASE = import.meta.env?.VITE_PUBLIC_API_BASE || API_BASE;
 /** The Rails origin without the /api suffix, for routes served outside that scope (uploads,
  * the public share cards at /share-cards/...). */
 export const BACKEND_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
@@ -91,6 +96,9 @@ export type ApiOptions = RequestInit & {
    * dedicated plan-limit dialog for the 402 (see PostJob's publish flow, V-14) instead of the
    * generic upgrade prompt. */
   skipPlanLimitEvent?: boolean;
+  /** Send this GET to PUBLIC_API_BASE (the edge-cached same-origin path) instead of API_BASE. Only
+   * for the anonymous public reads listed in docs/ops/edge-caching.md. */
+  viaEdge?: boolean;
 };
 
 // Server-enforced plan limits (402). Pages still show their own error; the app-level
@@ -259,7 +267,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
 
   const method = (options.method || 'GET').toUpperCase();
   const canRetry = method === 'GET';
-  const { timeoutMs, skipAuthRedirect, skipPlanLimitEvent, signal, ...requestOptions } = options;
+  const { timeoutMs, skipAuthRedirect, skipPlanLimitEvent, signal, viaEdge, ...requestOptions } = options;
   const deadlineAt = Date.now() + (timeoutMs ?? DEFAULT_TIMEOUT_MS);
   let lastResponse: Response | undefined;
 
@@ -267,7 +275,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
     try {
       const remainingMs = Math.max(0, deadlineAt - Date.now());
       if (remainingMs === 0) throw new RequestDeadlineError();
-      const response = await fetchWithTimeout(`${API_BASE}${path}`, {
+      const response = await fetchWithTimeout(`${viaEdge ? PUBLIC_API_BASE : API_BASE}${path}`, {
         ...requestOptions,
         method,
         headers,
@@ -474,7 +482,7 @@ export const disconnectAuthConnection = (id: string) => apiDelete(`/auth/connect
  * (GoogleAuthController) that live outside the JSON API and are navigated to directly by
  * the browser, not fetched.
  */
-export const apiOrigin = () => API_BASE.replace(/\/api\/?$/, '') || window.location.origin;
+export const apiOrigin = () => BACKEND_ORIGIN || window.location.origin;
 
 export interface GoogleStartOptions {
   intent: 'signin' | 'connect';
@@ -703,9 +711,7 @@ export async function uploadMedia(
   const safeFilename = file.name.replace(/[^A-Za-z0-9_.-]/g, '_') || 'upload';
   const headers: Record<string, string> = { 'Content-Type': contentType, 'X-Filename': safeFilename };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const uploadUrl = prep.uploadUrl.startsWith('http')
-    ? prep.uploadUrl
-    : `${API_BASE.replace(/\/api\/?$/, '')}${prep.uploadUrl}`;
+  const uploadUrl = prep.uploadUrl.startsWith('http') ? prep.uploadUrl : `${BACKEND_ORIGIN}${prep.uploadUrl}`;
   const sent = await sendWithProgress('PUT', uploadUrl, file, headers, options);
   if (sent.status === 401) redirectAfterUnauthorized('/uploads/local', token);
   if (sent.status < 200 || sent.status >= 300)

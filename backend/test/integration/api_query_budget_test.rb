@@ -17,7 +17,7 @@ class ApiQueryBudgetTest < ActionDispatch::IntegrationTest
     ["/api/jobs", nil, "jobs"], ["/api/jobs", :js, "jobs"], ["/api/saved-jobs", :js, "jobs"], ["/api/applications", :js, "applications"],
     ["/api/job-alerts", :js, "job_alerts"], ["/api/employer/applications", :emp, "applications"], ["/api/portfolio", :js, "portfolio_items"],
     ["/api/notifications", :js, "notifications"], ["/api/reviews", :js, "reviews"], ["/api/resources", nil, "career_resources"],
-    ["/api/dashboard", :js, "jobs"], ["/api/dashboard", :emp, "jobs"], ["/api/search?q=Matrix", nil, "jobs"],
+    ["/api/dashboard", :js, "jobs"], ["/api/dashboard", :emp, "jobs"], ["/api/search?q=Matrix", nil, "jobs"], ["/api/search/suggest?q=Ma", nil, "users"],
     ["/api/public/talent", nil, "users"], ["/api/candidates", :emp, "users"], ["/api/recent-activity", :emp, "recent_activities"],
     ["/api/employers", :js, "users"], ["/api/availability", :js, "availability_windows"], ["/api/conversations", :js, "conversations"],
     ["/api/conversations/{conversation}/messages", :js, "messages"], ["/api/public/acts", nil, "acts"], ["/api/acts", :emp, "acts"],

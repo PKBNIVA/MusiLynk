@@ -26,6 +26,18 @@
       "destination": "https://musilynk-api-production.up.railway.app/sitemap.xml"
     },
     {
+      "source": "/api/public/stats",
+      "destination": "https://musilynk-api-production.up.railway.app/api/public/stats"
+    },
+    {
+      "source": "/api/public/talent",
+      "destination": "https://musilynk-api-production.up.railway.app/api/public/talent"
+    },
+    {
+      "source": "/api/stage/authors/system/:id/posts",
+      "destination": "https://musilynk-api-production.up.railway.app/api/stage/authors/system/:id/posts"
+    },
+    {
       "source": "/opportunities/:id",
       "has": [
         {

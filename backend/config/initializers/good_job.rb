@@ -98,6 +98,12 @@ Rails.application.configure do
       class: "FounderReportJob",
       description: "Email the founders last week's numbers (organic accounts only) and what needs them"
     },
+    search_index_sweep: {
+      cron: "21 2 * * *",
+      class: "SearchIndexBackfillJob",
+      kwargs: { missing_only: true },
+      description: "Build the search documents of rows written without model callbacks (bulk inserts)"
+    },
     sitemap_refresh: {
       cron: "23 * * * *",
       class: "SitemapRefreshJob",

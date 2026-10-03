@@ -10,18 +10,18 @@ gem "bcrypt", "~> 3.1"
 gem "rack-cors", "~> 3.0"
 gem "aws-sdk-s3", require: false
 gem "faraday", "~> 2.12"
-gem "jwt", "~> 2.9"
+gem "jwt", "~> 3.3"
 # Web push (VAPID + aes128gcm payload encryption); optional at runtime, see PushNotifications.
-gem "web-push", "~> 3.0"
+gem "web-push", "~> 3.1"
 gem "redis", "~> 6.0"
 gem "good_job", "~> 4.13"
 gem "solid_cache", "~> 1.0"
-gem "sentry-ruby", "~> 7.0"
+gem "sentry-ruby", "~> 7.1"
 gem "sentry-rails", "~> 7.0"
 gem "bootsnap", require: false
 # Pure-Ruby QR codes for the verified-share cards (ShareCard). No headless browser or
 # ImageMagick is available in the production image, so the card is rendered as inline SVG.
-gem "rqrcode", "~> 2.2"
+gem "rqrcode", "~> 3.2"
 
 group :development, :test do
   gem "debug", platforms: %i[mri windows], require: "debug/prelude"

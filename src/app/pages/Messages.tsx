@@ -13,6 +13,7 @@ import { UserAvatar } from '../components/kit/UserAvatar';
 import { ReportDialog } from '../components/ReportDialog';
 import { useConfirm } from '../components/booking/BookingDialogs';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
+import { cachedGet, peek, sameData, update as updateCache } from '../lib/dataCache';
 import { useAuth } from '../lib/authContext';
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { errorCode, errorMessage as messageOf, errorStatus } from '../lib/errors';
@@ -142,13 +143,25 @@ export default function Messages() {
   );
 
   const loadConvs = useCallback(async () => {
-    try {
-      const d = await apiGet<{ conversations?: Conversation[] }>('/conversations');
-      const rows: Conversation[] = d.conversations || [];
+    type Inbox = { conversations?: Conversation[] };
+    // The inbox as it was last seen comes from the client data cache at once (no blank on return);
+    // the request below refreshes it. A poll that returns the same rows changes nothing on screen.
+    const applyRows = (rows: Conversation[]) => {
       // The open thread was marked read when it loaded; an inbox response computed earlier may still count it.
-      setConvs(
-        readThreadRef.current ? rows.map((c) => (c.id === readThreadRef.current ? { ...c, unreadCount: 0 } : c)) : rows,
-      );
+      const next = readThreadRef.current
+        ? rows.map((c) => (c.id === readThreadRef.current ? { ...c, unreadCount: 0 } : c))
+        : rows;
+      setConvs((current) => (sameData(current, next) ? current : next));
+    };
+    const cached = peek<Inbox>('/conversations');
+    if (cached && !convsRef.current.length) {
+      applyRows(cached.conversations || []);
+      setConvsLoading(false);
+    }
+    try {
+      const d = await cachedGet<Inbox>('/conversations', { family: 'inbox', force: true });
+      const rows: Conversation[] = d.conversations || [];
+      applyRows(rows);
       setConvsError('');
       // Desktop shows list and thread side by side, so open the latest thread; phones keep the list.
       if (!activeRef.current && rows[0] && isDesktop()) select(rows[0].id, true);
@@ -168,15 +181,32 @@ export default function Messages() {
       // A silent (polling) fetch of a thread already in view only needs what's new: the `after`
       // cursor keeps the fast 3s poll cheap instead of re-fetching the whole history each time.
       const cursor = silent ? msgsRef.current[msgsRef.current.length - 1]?.id : undefined;
+      const threadPath = `/conversations/${id}/messages`;
+      // A thread opened before shows its last known messages at once while the request refreshes them.
+      const cached = !cursor ? peek<MessagePage>(threadPath) : undefined;
+      if (cached && !silent) {
+        setMsgs([...(cached.messages || [])].sort(byTime));
+        setThreadState('ready');
+      }
       try {
-        const d = await apiGet<MessagePage>(
-          cursor
-            ? `/conversations/${id}/messages?after=${encodeURIComponent(cursor)}`
-            : `/conversations/${id}/messages`,
-        );
+        const d = cursor
+          ? await apiGet<MessagePage>(`${threadPath}?after=${encodeURIComponent(cursor)}`)
+          : await cachedGet<MessagePage>(threadPath, { family: 'thread', force: true });
         if (activeRef.current !== id) return;
         const server: Message[] = [...(d.messages || [])].sort(byTime);
         if (cursor) {
+          // Nothing new: leave the screen alone (the poll is a diff, not a re-render).
+          if (!server.length && !d.theirReadAt) {
+            setThreadState('ready');
+            return;
+          }
+          if (server.length)
+            updateCache<MessagePage>(threadPath, (page) => ({
+              ...(page as MessagePage),
+              messages: [...(page?.messages || []).filter((m) => !server.some((s) => s.id === m.id)), ...server].sort(
+                byTime,
+              ),
+            }));
           setMsgs((prev) => {
             const merged = [...prev.filter((m) => !server.some((s) => s.id === m.id)), ...server].sort(byTime);
             // theirReadAt: the counterpart may have read an earlier message of ours that this
@@ -335,13 +365,27 @@ export default function Messages() {
     }
     setSending(true);
     setSendError('');
+    // Optimistic: the message appears at once and the box clears; on failure it is removed and the text restored.
+    const pending: Message = {
+      id: `pending-${Date.now()}`,
+      senderId: user?.id || '',
+      body,
+      createdAt: new Date().toISOString(),
+      readAt: null,
+    };
+    stickToBottom.current = true;
+    setMsgs((xs) => [...xs, pending]);
+    setText('');
     try {
       const d = await apiPost<{ message: Message }>(`/conversations/${id}/messages`, { body });
       if (activeRef.current === id) {
         stickToBottom.current = true;
-        setMsgs((xs) => (xs.some((m) => m.id === d.message.id) ? xs : [...xs, d.message].sort(byTime)));
-      }
-      setText('');
+        setMsgs((xs) => [...xs.filter((m) => m.id !== pending.id && m.id !== d.message.id), d.message].sort(byTime));
+      } else setMsgs((xs) => xs.filter((m) => m.id !== pending.id));
+      updateCache<MessagePage>(`/conversations/${id}/messages`, (page) => ({
+        ...(page as MessagePage),
+        messages: [...(page?.messages || []).filter((m) => m.id !== d.message.id), d.message].sort(byTime),
+      }));
       setConvs((prev) => {
         const row = prev.find((c) => c.id === id);
         return row
@@ -353,6 +397,9 @@ export default function Messages() {
       });
       void loadConvs();
     } catch (err: unknown) {
+      // Roll back: the optimistic bubble goes, the draft comes back.
+      setMsgs((xs) => xs.filter((m) => m.id !== pending.id));
+      setText((current) => current || body);
       const message = errorMessage(err, 'Unable to send your message.');
       setSendError(message);
       // Blocks and deactivated accounts change what the thread allows; refresh so the composer reflects it.
@@ -624,8 +671,13 @@ export default function Messages() {
                     {convs.length ? 'Select a conversation' : 'Your messages will appear here'}
                   </div>
                 ) : threadState === 'loading' && msgs.length === 0 ? (
-                  <div className="text-slate-400 text-sm" role="status">
-                    Loading messages…
+                  <div role="status" aria-label="Loading messages" data-testid="thread-skeleton" className="space-y-3">
+                    <span className="sr-only">Loading messages…</span>
+                    <div aria-hidden="true" className="space-y-3">
+                      {['w-3/5', 'ml-auto w-1/2', 'w-2/5', 'ml-auto w-3/5'].map((width, i) => (
+                        <div key={i} className={`${width} h-12 animate-pulse rounded-2xl bg-white/10`} />
+                      ))}
+                    </div>
                   </div>
                 ) : threadState === 'missing' ? (
                   <div className="h-full grid place-items-center text-center text-slate-400" role="alert">
@@ -671,7 +723,9 @@ export default function Messages() {
                           key={m.id}
                           data-testid="message"
                           data-mine={mine ? 'true' : 'false'}
-                          className={`max-w-[85%] md:max-w-[75%] w-fit rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-violet-600' : 'bg-white/10'}`}
+                          data-pending={m.id.startsWith('pending-') ? 'true' : undefined}
+                          aria-busy={m.id.startsWith('pending-') || undefined}
+                          className={`max-w-[85%] md:max-w-[75%] w-fit rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-violet-600' : 'bg-white/10'} ${m.id.startsWith('pending-') ? 'opacity-70' : ''}`}
                         >
                           <div
                             className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
@@ -687,7 +741,11 @@ export default function Messages() {
                             <time dateTime={m.createdAt}>{formatTime(m.createdAt)}</time>
                             {mine && m.id === lastMineId && (
                               <span data-testid="read-receipt">
-                                {m.readAt ? `Seen ${formatTime(m.readAt)}` : 'Sent'}
+                                {m.id.startsWith('pending-')
+                                  ? 'Sending…'
+                                  : m.readAt
+                                    ? `Seen ${formatTime(m.readAt)}`
+                                    : 'Sent'}
                               </span>
                             )}
                           </div>

@@ -8,7 +8,8 @@ import { PublicDetailState } from '../../components/PublicDetailState';
 import { absoluteUrl, usePageMeta } from '../../components/PageMeta';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { apiGet, apiPost } from '../../lib/api';
+import { apiPost } from '../../lib/api';
+import { cachedGet, peek, subscribe } from '../../lib/dataCache';
 import { trackProfileView } from '../../lib/analytics';
 import { ShareMenu } from '../../components/ShareMenu';
 import { shareCopy } from '../../lib/share';
@@ -49,20 +50,24 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
   const { id } = useParams();
   const { user } = useAuth();
   const nav = useNavigate();
-  const [d, setD] = useState<{ professional: Professional; portfolio: PortfolioItem[] }>(),
-    [loading, setLoading] = useState(true),
+  const profilePath = `/public/talent/${encodeURIComponent(id || '')}`;
+  // A profile opened from a list card is usually already in the cache (prefetched on hover/touch).
+  const [d, setD] = useState<{ professional: Professional; portfolio: PortfolioItem[] } | undefined>(() =>
+      peek(profilePath),
+    ),
+    [loading, setLoading] = useState(() => peek(profilePath) === undefined),
     [reporting, setReporting] = useState(false),
     [reportMounted, setReportMounted] = useState(false),
     [bioOpen, setBioOpen] = useState(false),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const load = useCallback(async () => {
-    setLoading(true);
+    const cached = peek<{ professional: Professional; portfolio: PortfolioItem[] }>(profilePath);
+    if (cached) setD(cached);
+    else setLoading(true);
     setError(null);
     try {
       setD(
-        await apiGet<{ professional: Professional; portfolio: PortfolioItem[] }>(
-          `/public/talent/${encodeURIComponent(id || '')}`,
-        ),
+        await cachedGet<{ professional: Professional; portfolio: PortfolioItem[] }>(profilePath, { family: 'record' }),
       );
     } catch (e: unknown) {
       setD(undefined);
@@ -70,10 +75,12 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [profilePath]);
   useEffect(() => {
     void load();
   }, [load]);
+  // A background refresh of a stale profile (dataCache) lands here.
+  useEffect(() => subscribe(profilePath, () => setD((current) => peek(profilePath) ?? current)), [profilePath]);
   const p = d?.professional;
   useEffect(() => {
     if (p?.id) trackProfileView(p.id);

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { usePrefetchIntent } from '../lib/useCachedGet';
 import { ShieldCheck } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
@@ -32,6 +33,10 @@ type Props = {
  * Public and signed-in lists show the same facts (SRCH-13).
  */
 export function JobCard({ job, to, index, aside, compact = false }: Props) {
+  // Hover, focus or a first touch warms the cache for the public opportunity page (dataCache.ts).
+  const prefetchJob = usePrefetchIntent(
+    to.startsWith('/opportunities/') ? `/jobs/${encodeURIComponent(job.id)}` : null,
+  );
   const applicants = job.applicationsCount || 0;
   const pay = formatPay(job, 'Pay not disclosed');
   const undisclosed = pay === 'Pay not disclosed';
@@ -62,6 +67,7 @@ export function JobCard({ job, to, index, aside, compact = false }: Props) {
             className={`min-w-0 flex-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 flex flex-col gap-1 md:gap-4 ${compact ? '' : 'md:flex-row md:justify-between'}`}
             to={to}
             data-job-item={index}
+            {...prefetchJob}
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2 min-w-0">

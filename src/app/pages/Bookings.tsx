@@ -174,10 +174,21 @@ export default function Bookings() {
     void load();
   }, []);
   async function changeStatus(id: string, s: string, success: string, noShow?: 'musician' | 'hirer', message?: string) {
-    const res = await apiPost<{
-      refund?: { amount: number; currency: string; note: string } | null;
-      conversationId?: string | null;
-    }>(`/bookings/${id}/status`, { status: s, ...(noShow ? { noShow } : {}), ...(message ? { message } : {}) });
+    // Optimistic: the row shows its new status at once; a failed request puts the old row back and toasts.
+    const previous = rows;
+    setRows((current) => current.map((b) => (b.id === id ? { ...b, status: s } : b)));
+    let res: { refund?: { amount: number; currency: string; note: string } | null; conversationId?: string | null };
+    try {
+      res = await apiPost(`/bookings/${id}/status`, {
+        status: s,
+        ...(noShow ? { noShow } : {}),
+        ...(message ? { message } : {}),
+      });
+    } catch (e: unknown) {
+      setRows(previous);
+      toast.error(errorMessage(e, 'Unable to update this booking.'));
+      throw e;
+    }
     if (s === 'accepted') trackBookingQuoteAccepted();
     toast.success(res.refund ? `${success} · ${res.refund.note}` : success, {
       action: res.conversationId

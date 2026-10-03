@@ -22,9 +22,9 @@ const ROUTES: Array<[string, string, RegExp]> = [
   ['/hire/drummer/mumbai', '/hire/drummer/mumbai/index.html', /Hire a verified drummer in Mumbai/],
   ['/rates/mumbai', '/rates/mumbai/index.html', /What musicians charge in Mumbai/],
   // Record pages: one shell per family, served for every id.
-  ['/professionals/user_1', '/professionals/shell.html', /role="status">Loading/],
-  ['/acts/act_1', '/acts/shell.html', /role="status">Loading/],
-  ['/opportunities/job_1', '/opportunities/shell.html', /role="status">Loading/],
+  ['/professionals/user_1', '/professionals/shell.html', /role="status" aria-label="Loading/],
+  ['/acts/act_1', '/acts/shell.html', /role="status" aria-label="Loading/],
+  ['/opportunities/job_1', '/opportunities/shell.html', /role="status" aria-label="Loading/],
 ];
 
 /** The HTML's text for an attribute or element back to characters. */

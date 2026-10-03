@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
 import { PhotoHeader } from '../../components/landing/PhotoHeader';
+import { RATES_HEADER_PHOTO } from '../../lib/photo';
 import { absoluteUrl, usePageMeta } from '../../components/PageMeta';
 import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
@@ -110,7 +111,7 @@ export default function RatesPage() {
             {/* A listed city has its heading before the API answers (and in the pre-rendered HTML). */}
             {seoCityName(city) && (
               <PhotoHeader
-                photo="recording-studio"
+                photo={RATES_HEADER_PHOTO}
                 eyebrow="Rates guide"
                 title={`What musicians charge in ${seoCityName(city)}`}
               />
@@ -131,7 +132,7 @@ export default function RatesPage() {
         ) : (
           <>
             <PhotoHeader
-              photo="recording-studio"
+              photo={RATES_HEADER_PHOTO}
               eyebrow="Rates guide"
               title={`What musicians charge in ${data.city.name}`}
             >

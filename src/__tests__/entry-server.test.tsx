@@ -22,7 +22,7 @@ describe('entry-server render', () => {
     const a = await render('/professionals/shell');
     const b = await render('/professionals/user_42');
     expect(a).toBe(b);
-    expect(a).toMatch(/role="status">Loading .*profile/);
+    expect(a).toMatch(/role="status" aria-label="Loading profile"/);
   });
   it('bakes nothing that depends on the build-time clock, the query string or storage', async () => {
     const html = await render('/urgent');

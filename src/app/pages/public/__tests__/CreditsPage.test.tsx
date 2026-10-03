@@ -77,10 +77,10 @@ describe('public/img', () => {
     expect(readdirSync(imgDir).sort()).toEqual(expected);
   });
 
-  it('keeps the set under 8 MB with each 1600 variant at most 160 KB and each AVIF smaller than its WebP', () => {
-    // 2026-10-03: 7.0 MB with the AVIF variants (scripts/perf/build-photos.mjs); was 4 MB for WebP alone.
+  it('keeps the set under 10 MB with each 1600 variant at most 160 KB and each AVIF smaller than its WebP', () => {
+    // 2026-10-03: 9 MB with the AVIF and 1200 px variants (scripts/perf/build-photos.mjs); was 4 MB for WebP alone.
     const files = readdirSync(imgDir);
-    expect(files.reduce((sum, f) => sum + statSync(join(imgDir, f)).size, 0)).toBeLessThan(8 * 1024 * 1024);
+    expect(files.reduce((sum, f) => sum + statSync(join(imgDir, f)).size, 0)).toBeLessThan(10 * 1024 * 1024);
     for (const f of files.filter((name) => name.endsWith('-1600.webp'))) {
       expect(statSync(join(imgDir, f)).size, f).toBeLessThanOrEqual(160 * 1024);
     }

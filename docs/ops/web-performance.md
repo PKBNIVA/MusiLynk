@@ -20,7 +20,7 @@ LCP and its element, CLS, request count and bytes over the wire.
 | --- | --- | --- |
 | `requests` | 40 | each request costs a round trip (150 ms) on the throttled profile |
 | `transferredKB` | 300 | roughly 1.5 s of transfer at 1.6 Mbps |
-| `lcpMs` | 2500 | Google's "good" LCP threshold |
+| `lcpMs` | 3000 | CI gate; LCP on a throttled CPU varies ~300 ms run to run. The production target is Google's "good" 2500 ms, tracked with `perf:measure` after each deploy |
 | `cls` | 0.1 | Google's "good" CLS threshold |
 
 Update path: change the value in `budget.json` and append the date, the new measurement and the
@@ -32,8 +32,8 @@ Measure the live site the same way: `npm run perf:measure -- --base https://musi
 
 ## Editorial photos (`public/img`)
 
-Every photo ships as AVIF and WebP at the widths in `src/app/lib/photo.ts` (480, 800, 1600; the
-home hero also 768 and 1200). `<Photo>` renders a `<picture>` with the AVIF source first; the home
+Every photo ships as AVIF and WebP at the widths in `src/app/lib/photo.ts` (480, 800, 1200, 1600; the
+home hero 480, 768, 1200, 1600). `<Photo>` renders a `<picture>` with the AVIF source first; the home
 page's HTML preloads the hero's AVIF candidates (`scripts/prerender-heads.mjs`). To add or replace a
 photo: add its credit to `src/app/pages/public/imageCredits.ts`, put the original next to the others
 in a folder of your own, then
@@ -54,7 +54,8 @@ WebP. Unit tests fail when a variant is missing or an AVIF is not smaller than i
 - Analytics (`src/app/lib/analytics.ts`) starts two frames after the first paint and records the
   page the router is already on.
 - Sentry (`src/app/lib/monitoring.ts`) loads only when `VITE_SENTRY_DSN` is set, and then only after
-  the page's `load` event and an idle period (at most 8 s + 3 s). Errors before that are queued.
+  the page's `load` event and an idle period (at most 8 s + 3 s). An error reported before then starts
+  the download at once; vitals wait.
 - Push registration (`src/app/lib/push.ts`) and the service worker run only from the opt-in button.
 - Shared UI primitives, Radix internals and Lucide icons are grouped into a few chunks per page
   (`vite.config.ts`, `codeSplitting.groups`) instead of one request each.

@@ -22,6 +22,8 @@ test('a 390px phone at 3x density gets a hero no wider than 1280px', async ({ pa
     srcset: img.srcset,
     avifSrcset: img.parentElement?.querySelector('source[type="image/avif"]')?.getAttribute('srcset') ?? '',
     preload: document.querySelector('link[rel="preload"][as="image"]')?.getAttribute('imagesrcset') ?? '',
+    preloadSizes: document.querySelector('link[rel="preload"][as="image"]')?.getAttribute('imagesizes') ?? '',
+    sizes: img.getAttribute('sizes') ?? '',
     width: img.getAttribute('width'),
     height: img.getAttribute('height'),
     priority: img.getAttribute('fetchpriority'),
@@ -36,6 +38,8 @@ test('a 390px phone at 3x density gets a hero no wider than 1280px', async ({ pa
   }
   // The prerendered head preloads the same AVIF candidates, so the download starts with the entry script.
   expect(info.preload).toBe(info.avifSrcset);
+  expect(info.preloadSizes).toBe(info.sizes);
+  expect(info.sizes).not.toBe('');
   expect(Number(info.width)).toBeGreaterThan(0);
   expect(Number(info.height)).toBeGreaterThan(0);
   expect(info.priority).toBe('high');

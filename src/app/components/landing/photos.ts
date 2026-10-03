@@ -1,5 +1,5 @@
 import { IMAGE_CREDITS } from '../../pages/public/imageCredits';
-import { HERO_PHOTO } from '../../lib/photo';
+import { HERO_PHOTO, HERO_PHOTO_SIZES } from '../../lib/photo';
 
 /** One editorial photograph from public/img, ready for `<Photo>`. Credits live on /credits. */
 export type EditorialPhoto = { src: string; alt: string; width: number; height: number };
@@ -13,9 +13,8 @@ export function editorialPhoto(file: string): EditorialPhoto {
   return { src: `/img/${credit.file}`, alt: credit.alt, width: credit.width, height: credit.height };
 }
 
-/** The landing hero photo (src/app/lib/photo.ts) and how wide it renders: the right 42% on desktop, full width on a phone. */
-export { HERO_PHOTO };
-export const HERO_PHOTO_SIZES = '(min-width: 1024px) 42vw, 100vw';
+/** The landing hero photo and how wide it renders (both from src/app/lib/photo.ts, shared with the HTML preload). */
+export { HERO_PHOTO, HERO_PHOTO_SIZES };
 
 /** The photo behind each hire page and role tile, keyed by the SEO role slug (seoPages.ts). */
 export const ROLE_PHOTOS: Readonly<Record<string, string>> = {

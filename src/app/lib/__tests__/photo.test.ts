@@ -4,10 +4,10 @@ import { HERO_PHOTO_WIDTHS, PHOTO_WIDTHS, photoSrcSet, photoUrl, squareCropRect 
 describe('photo helpers', () => {
   it('builds the srcset from a base path, WebP by default and AVIF on request', () => {
     expect(photoSrcSet('/img/tabla-hands')).toBe(
-      '/img/tabla-hands-480.webp 480w, /img/tabla-hands-800.webp 800w, /img/tabla-hands-1600.webp 1600w',
+      '/img/tabla-hands-480.webp 480w, /img/tabla-hands-800.webp 800w, /img/tabla-hands-1200.webp 1200w, /img/tabla-hands-1600.webp 1600w',
     );
     expect(photoSrcSet('/img/tabla-hands', PHOTO_WIDTHS, 'avif')).toBe(
-      '/img/tabla-hands-480.avif 480w, /img/tabla-hands-800.avif 800w, /img/tabla-hands-1600.avif 1600w',
+      '/img/tabla-hands-480.avif 480w, /img/tabla-hands-800.avif 800w, /img/tabla-hands-1200.avif 1200w, /img/tabla-hands-1600.avif 1600w',
     );
   });
   it('builds the four-width srcset for the hero', () => {

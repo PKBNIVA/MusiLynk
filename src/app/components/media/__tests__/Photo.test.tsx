@@ -27,7 +27,7 @@ describe('Photo', () => {
     const source = picture.querySelector('source') as HTMLSourceElement;
     expect(source.getAttribute('type')).toBe('image/avif');
     expect(source.getAttribute('srcset')).toBe(
-      '/img/tabla-hands-480.avif 480w, /img/tabla-hands-800.avif 800w, /img/tabla-hands-1600.avif 1600w',
+      '/img/tabla-hands-480.avif 480w, /img/tabla-hands-800.avif 800w, /img/tabla-hands-1200.avif 1200w, /img/tabla-hands-1600.avif 1600w',
     );
     expect(source.getAttribute('sizes')).toBe('50vw');
     const img = picture.querySelector('img') as HTMLImageElement;
@@ -36,7 +36,7 @@ describe('Photo', () => {
     expect(img.getAttribute('width')).toBe('1600');
     expect(img.getAttribute('height')).toBe('1067');
     expect(img.getAttribute('srcset')).toBe(
-      '/img/tabla-hands-480.webp 480w, /img/tabla-hands-800.webp 800w, /img/tabla-hands-1600.webp 1600w',
+      '/img/tabla-hands-480.webp 480w, /img/tabla-hands-800.webp 800w, /img/tabla-hands-1200.webp 1200w, /img/tabla-hands-1600.webp 1600w',
     );
     expect(img.getAttribute('src')).toBe('/img/tabla-hands-1600.webp');
     expect(img.getAttribute('sizes')).toBe('50vw');

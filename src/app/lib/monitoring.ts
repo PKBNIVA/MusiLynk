@@ -88,6 +88,9 @@ export function allowSampled(key: string, now = Date.now()) {
 
 function enqueue(item: Pending) {
   if (queue.length < MAX_QUEUE) queue.push(item);
+  // An error before Sentry is loaded must not wait for the page to go idle: the visitor's next move
+  // after a crash is a reload or a close, and that would drop the queue. Vitals keep the deferred path.
+  if (item.kind !== 'vital') loadNow();
 }
 
 export function reportError(error: unknown, context?: ReportContext) {
@@ -189,9 +192,18 @@ const SENTRY_IDLE_TIMEOUT_MS = 3_000;
 /** Longest the page's own loading may hold the Sentry download back (a stalled image must not block it). */
 const SENTRY_LOAD_TIMEOUT_MS = 8_000;
 
-/** Runs `start` once the page has finished loading (first paint, hero image, route chunk) and the browser is idle. */
+/** Starts the Sentry download at once (an error is waiting); a no-op before initMonitoring or once started. */
+let loadNow: () => void = () => undefined;
+
+/** Runs `start` once the page has finished loading (first paint, hero image, route chunk) and the browser is idle,
+ *  or as soon as `loadNow()` is called, whichever comes first. */
 function afterLoadAndIdle(start: () => void) {
   let started = false;
+  loadNow = () => {
+    if (started) return;
+    started = true;
+    start();
+  };
   const once = () => {
     if (started) return;
     started = true;

@@ -15,10 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { HERO_PHOTO, HERO_PHOTO_WIDTHS, photoSrcSet } from '../src/app/lib/photo.ts';
-
-/** How wide the hero renders (kept in step with HERO_PHOTO_SIZES in src/app/components/landing/photos.ts). */
-const HERO_PHOTO_SIZES = '(min-width: 1024px) 42vw, 100vw';
+import { HERO_PHOTO, HERO_PHOTO_SIZES, HERO_PHOTO_WIDTHS, photoSrcSet } from '../src/app/lib/photo.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE_URL = (process.env.VITE_PUBLIC_URL || 'https://musilynk.vercel.app').replace(/\/+$/, '');

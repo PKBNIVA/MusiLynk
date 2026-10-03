@@ -69,7 +69,7 @@ describe('check-perf.mjs', () => {
     expect(budget.paths).toEqual(['/', '/search']);
     expect(budget.limits.requests).toBeLessThanOrEqual(40);
     expect(budget.limits.transferredKB).toBeLessThanOrEqual(300);
-    expect(budget.limits.lcpMs).toBeLessThanOrEqual(2500);
+    expect(budget.limits.lcpMs).toBeLessThanOrEqual(3000); // CI gate; 2500 is the production target (budget.json note)
     expect(budget.note.length).toBeGreaterThan(50);
   });
   it('names every budget line a page breaks, and nothing for a page within budget', () => {

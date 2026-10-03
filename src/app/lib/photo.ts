@@ -6,12 +6,15 @@
 
 export type PhotoFormat = 'avif' | 'webp';
 
-/** Widths every editorial photo ships: 480 for a phone tile, 800 for a 2x tile or a phone header, 1600 for desktop. */
-export const PHOTO_WIDTHS = [480, 800, 1600] as const;
+/** Widths every editorial photo ships: 480 for a phone tile, 800 for a 2x tile, 1200 for a full-width header on a 3x phone, 1600 for desktop. */
+export const PHOTO_WIDTHS = [480, 800, 1200, 1600] as const;
 /** The landing hero: a veena player mid-concert. Also the one photo that ships HERO_PHOTO_WIDTHS. */
 export const HERO_PHOTO = 'veena-concert';
 /** The home hero (the LCP image) ships finer steps so a phone at 2 to 3x density never downloads the 1600. */
 export const HERO_PHOTO_WIDTHS = [480, 768, 1200, 1600] as const;
+/** How wide the hero renders: the right 42% on desktop, full width on a phone. The <picture> and the
+ * HTML preload (scripts/prerender-heads.mjs) must use the same value or the browser downloads two files. */
+export const HERO_PHOTO_SIZES = '(min-width: 1024px) 42vw, 100vw';
 
 const ALL_WIDTHS: readonly number[] = [...new Set<number>([...PHOTO_WIDTHS, ...HERO_PHOTO_WIDTHS])];
 const LARGEST = PHOTO_WIDTHS[PHOTO_WIDTHS.length - 1];

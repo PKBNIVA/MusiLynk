@@ -3,7 +3,7 @@
 # requests that are still "pending" after a minute, or stuck in "matching" past UrgentMatchJob::STALE_CLAIM.
 # Idempotent: UrgentMatchJob claims the row with a conditional UPDATE, so a duplicate enqueue does nothing.
 class UrgentMatchSweepJob < ApplicationJob
-  queue_as :default
+  queue_as JobQueues::URGENT
 
   PENDING_GRACE = 1.minute
   PER_RUN = 200

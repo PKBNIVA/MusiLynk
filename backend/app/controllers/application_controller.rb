@@ -188,9 +188,11 @@ class ApplicationController < ActionController::API
   end
 
   # Call before mapping a list through public_profile: loads every row's ProfileStats in one go.
-  def prime_profile_stats(users)
+  # `completed_bookings` ({owner_id => n}, see TalentController) saves the tier its own count.
+  def prime_profile_stats(users, completed_bookings: nil)
     @profile_stats = ProfileStats.batch(users)
-    @verification_tiers = Verification::Tier.batch(users)
+    reviews = @profile_stats.transform_values { _1["reviewsCount"] }
+    @verification_tiers = Verification::Tier.batch(users, completed_bookings:, reviews:)
     @verification_summaries = batch_verification_summaries(users)
   end
 

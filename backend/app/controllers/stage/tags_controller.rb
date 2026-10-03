@@ -5,12 +5,11 @@ module Stage
 
     def show
       tag = params[:tag].to_s.downcase.delete_prefix("#")
-      candidates = Post.visible.where("? = ANY(hashtags)", tag)
-        .includes(:created_by, :shared_portfolio_item, :shared_job, reshared_post: :created_by)
-        .order(created_at: :desc, id: :desc).limit(500).to_a
-        .select { post_visible_to?(_1, current_user) }
-      page, next_cursor = paginate(candidates)
-      Post.preload_media_urls(page)
+      # `@>` (array contains) is what the hashtags GIN index serves; `? = ANY(hashtags)` read every post.
+      candidates = Post.visible.where("posts.hashtags @> ARRAY[?]::varchar[]", tag)
+        .includes(*LIST_INCLUDES).order(created_at: :desc, id: :desc).limit(500).to_a
+      page, next_cursor = paginate(visible_to(candidates, current_user))
+      preload_for_json(page)
       applauded = applauded_post_ids(page)
       render json: { tag:, posts: page.map { _1.api_json(applauded_post_ids: applauded) }, nextCursor: next_cursor }
     end

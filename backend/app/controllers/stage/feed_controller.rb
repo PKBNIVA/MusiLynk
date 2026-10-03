@@ -14,13 +14,14 @@ module Stage
 
     def index
       candidates = visible_posts.where.not(status: %w[hidden deleted])
-        .includes(:created_by, :shared_portfolio_item, :shared_job, reshared_post: :created_by)
-        .order(created_at: :desc, id: :desc).limit(POOL_LIMIT).to_a
+        .includes(*LIST_INCLUDES).order(created_at: :desc, id: :desc).limit(POOL_LIMIT).to_a
 
       user = current_user
-      candidates.select! { post_visible_to?(_1, user) && !blocked_pair?(_1.created_by_user_id, user&.id) }
-
-      followed_keys = user ? Set.new(Follow.for_follower(user.id).pluck(:followable_type, :followable_id).map { |t, i| "#{t}:#{i}" }) : Set.new
+      # Follows and blocks are read once for the whole pool (one query each), not once per post:
+      # the per-post checks cost a query or two for each of up to POOL_LIMIT candidates (549 a request).
+      blocked = blocked_user_ids(user)
+      candidates = visible_to(candidates, user).reject { blocked.include?(_1.created_by_user_id) }
+      followed_keys = followed_keys(user)
       own_keys = viewer_actor_keys.to_set
       city = user&.profile&.location.presence
       genres = Set.new(Array(user&.profile&.genres).map { _1.to_s.downcase })
@@ -31,7 +32,7 @@ module Stage
       start_index = start_index_for(scored, decode_cursor(params[:cursor]))
       page = scored[start_index, PAGE_SIZE] || []
 
-      Post.preload_media_urls(page.map(&:last))
+      preload_for_json(page.map(&:last))
       applauded = applauded_post_ids(page.map(&:last))
       next_cursor = page.length == PAGE_SIZE && scored[start_index + PAGE_SIZE] ? encode_cursor(page.last, start_index + page.length) : nil
 
@@ -39,6 +40,12 @@ module Stage
     end
 
     private
+
+    # Everyone the viewer blocked or was blocked by (either direction hides their posts).
+    def blocked_user_ids(user)
+      return Set.new unless user
+      UserBlock.where(blocker_id: user.id).or(UserBlock.where(blocked_id: user.id)).pluck(:blocker_id, :blocked_id).flatten.to_set.delete(user.id)
+    end
 
     def score(post, followed_keys, own_keys, city, genres)
       key = "#{post.author_type}:#{post.author_id}"

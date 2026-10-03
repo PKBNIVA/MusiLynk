@@ -11,6 +11,10 @@ class DatabaseSessionSettingsTest < ActiveSupport::TestCase
     assert_equal expected[:lock_timeout], connection.select_value("SHOW lock_timeout")
   end
 
+  test "connections run without JIT compilation (a one-page list query never pays it back)" do
+    assert_equal "off", ActiveRecord::Base.lease_connection.select_value("SHOW jit")
+  end
+
   test "a query running past statement_timeout is cancelled" do
     connection = ActiveRecord::Base.lease_connection
     connection.transaction(requires_new: true) do

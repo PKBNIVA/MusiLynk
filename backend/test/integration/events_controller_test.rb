@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 class EventsControllerTest < ActionDispatch::IntegrationTest
   setup do
@@ -110,4 +111,35 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, counts["signup_completed"]
     assert_equal 1, counts["first_action"]
   end
+
+  test "the 100-views milestone counts from the stored total, so views older than the event retention still count" do
+    owner = User.create!(name: "Milestone Owner", email: "milestone-#{SecureRandom.hex(3)}@example.com", password: "StrongPass123!", role: "jobseeker", status: "active", email_verified: true, profile_complete: true)
+    owner.create_profile!
+    # 99 views recorded long ago: their events are past the 180-day retention and already swept.
+    owner.profile.update_columns(profile_view_count: 99)
+    assert_equal 0, ProductEvent.where(name: "profile_view").count
+    counts = []
+    Notifier.stub(:milestone_profile_100_views, ->(user, count) { counts << [user.id, count] }) do
+      post "/api/events", params: { events: [{ name: "profile_view", anonId: "viewer-100", props: { profileId: owner.id } }] }, as: :json
+      post "/api/events", params: { events: [{ name: "profile_view", anonId: "viewer-101", props: { profileId: owner.id } }] }, as: :json
+    end
+    assert_equal [[owner.id, 100], [owner.id, 101]], counts, "the milestone sees the stored total (100 fires it, 101 does not)"
+    assert_equal 101, owner.profile.reload.profile_view_count
+  end
+
+  test "the view-count backfill sums each profile's existing profile_view events" do
+    owner = User.create!(name: "Backfill Owner", email: "backfill-#{SecureRandom.hex(3)}@example.com", password: "StrongPass123!", role: "jobseeker", status: "active")
+    owner.create_profile!
+    ProductEvent.insert_all(Array.new(3) { |i| { id: "pe_bf_#{i}", anon_id: "a#{i}", name: "profile_view", props: { "profileId" => owner.id }, created_at: (i * 100).days.ago } })
+    ProductEvent.insert_all([{ id: "pe_bf_other", anon_id: "x", name: "landing_view", props: { "profileId" => owner.id }, created_at: Time.current }])
+    require Rails.root.join("db/migrate/20261003140000_add_profile_view_count_to_profiles")
+    migration = AddProfileViewCountToProfiles.new
+    migration.verbose = false
+    migration.down
+    Profile.reset_column_information
+    migration.up
+    Profile.reset_column_information
+    assert_equal 3, owner.profile.reload.profile_view_count
+  end
+
 end

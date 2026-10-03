@@ -18,9 +18,15 @@ module Retention
     "sessions" => { after: "expired", scopes: ->(cutoff) { [Session.where("expires_at < :cutoff OR absolute_expires_at < :cutoff", cutoff:)] } },
     # Only read notifications; unread ones stay until they are read.
     "notifications" => { after: "read", scopes: ->(cutoff) { [Notification.where(read_at: ...cutoff)] } },
-    # The screenshot file and its blob row go; the report itself (text, status, notes) stays.
-    "problem_report_screenshots" => { after: "created", files: true, scopes: ->(cutoff) { [ProblemReport.where.not(screenshot_blob_id: nil).where(created_at: ...cutoff)] } },
-    # Analytics and funnel events (FunnelQueries reads at most 90 days back).
+    # Only reports an admin has handled (triaged or resolved), counted from when they were handled
+    # (or filed, for a report handled before handled_at existed): an untriaged report keeps its
+    # screenshot however old. The file and its blob row go; the report (text, status, notes) stays.
+    "problem_report_screenshots" => {
+      after: "handled", files: true,
+      scopes: ->(cutoff) { [ProblemReport.where.not(screenshot_blob_id: nil).where.not(status: "new").where("COALESCE(problem_reports.handled_at, problem_reports.created_at) < ?", cutoff)] }
+    },
+    # Analytics and funnel events. The admin funnel reads 7 or 30 days back and the founder report
+    # two weeks; the 100-views milestone uses the stored profiles.profile_view_count instead.
     "product_events" => { after: "created", scopes: ->(cutoff) { [ProductEvent.where(created_at: ...cutoff)] } },
     # What AccountErasure keeps on purpose for a while after erasure (the anonymised user row,
     # messages, billing and audit records stay): the person's analytics events, and other people's

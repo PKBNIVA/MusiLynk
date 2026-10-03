@@ -15,7 +15,7 @@ rules:
   sign_in_codes:              { after: expired, days: 1 }
   sessions:                   { after: expired, days: 7 }
   notifications:              { after: read, days: 90 }
-  problem_report_screenshots: { after: created, days: 30 }
+  problem_report_screenshots: { after: handled, days: 30 }
   product_events:             { after: created, days: 180 }
   erased_account_residue:     { after: erased, days: 30 }
   good_jobs:                  { after: finished, days: 14 }

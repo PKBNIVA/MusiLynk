@@ -38,9 +38,9 @@ class RetentionTest < ActiveSupport::TestCase
     assert_equal [edge.id, unread.id].sort, Notification.where(id: [old_read, edge, unread].map(&:id)).pluck(:id).sort
   end
 
-  test "problem-report screenshots go thirty days after the report; the report and newer screenshots stay" do
-    old = report(created_at: @now - 31.days)
-    fresh = report(created_at: @now - 29.days)
+  test "problem-report screenshots go thirty days after the report was handled; the report and newer screenshots stay" do
+    old = report(created_at: @now - 60.days, status: "resolved", handled_at: @now - 31.days)
+    fresh = report(created_at: @now - 60.days, status: "triaged", handled_at: @now - 29.days)
     old_blob = old.screenshot_blob_id
     assert_equal 1, sweep("problem_report_screenshots").count
     assert_nil old.reload.screenshot_blob_id
@@ -48,6 +48,15 @@ class RetentionTest < ActiveSupport::TestCase
     assert_not ActiveStorage::Blob.exists?(old_blob)
     assert fresh.reload.screenshot_blob_id
     assert ActiveStorage::Blob.exists?(fresh.screenshot_blob_id)
+  end
+
+  test "an untriaged report keeps its screenshot however old" do
+    untriaged = report(created_at: @now - 40.days)
+    legacy = report(created_at: @now - 40.days, status: "resolved")
+    assert_equal 1, sweep("problem_report_screenshots").count, "a handled report without handled_at counts from when it was filed"
+    assert untriaged.reload.screenshot_blob_id
+    assert ActiveStorage::Blob.exists?(untriaged.screenshot_blob_id)
+    assert_nil legacy.reload.screenshot_blob_id
   end
 
   test "analytics events go after 180 days" do
@@ -157,9 +166,9 @@ class RetentionTest < ActiveSupport::TestCase
     @user.sessions.create!(token_digest: SecureRandom.hex(16), expires_at:, absolute_expires_at:)
   end
 
-  def report(created_at:)
+  def report(created_at:, status: "new", handled_at: nil)
     blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new("png bytes"), filename: "shot.png", content_type: "image/png")
-    ProblemReport.create!(user: @user, description: "Something broke", screenshot_blob: blob, created_at:)
+    ProblemReport.create!(user: @user, description: "Something broke", screenshot_blob: blob, created_at:, status:, handled_at:)
   end
 
   def event(name, created_at, user: nil)

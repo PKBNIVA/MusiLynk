@@ -3,6 +3,7 @@
 # directly here is safe regardless of load order.
 require Rails.root.join("app/services/ai_pricing")
 require Rails.root.join("config/job_queues")
+require Rails.root.join("config/backup_schedule")
 
 Rails.application.configure do
   config.good_job.execution_mode = ENV.fetch("GOOD_JOB_EXECUTION_MODE", Rails.env.production? ? "async" : "external").to_sym
@@ -90,6 +91,12 @@ Rails.application.configure do
       class: "FounderReportJob",
       description: "Email the founders last week's numbers (organic accounts only) and what needs them"
     },
+    search_index_sweep: {
+      cron: "21 2 * * *",
+      class: "SearchIndexBackfillJob",
+      kwargs: { missing_only: true },
+      description: "Build the search documents of rows written without model callbacks (bulk inserts)"
+    },
     sitemap_refresh: {
       cron: "23 * * * *",
       class: "SitemapRefreshJob",
@@ -112,5 +119,9 @@ Rails.application.configure do
     class: "AiBatchSubmitJob",
     description: "Submit queued portfolio item classifications as one Anthropic Message Batch, and ingest finished batches"
   } if AiPricing.task_enabled?("classify_portfolio_item")
+  # In-app weekly backup to BACKUP_BUCKET (docs/ops/backups.md): registered only when the bucket is set.
+  if (backup = BackupSchedule.cron_entry)
+    cron[:backup_to_r2] = backup
+  end
   config.good_job.cron = cron
 end

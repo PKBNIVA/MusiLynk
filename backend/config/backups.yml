@@ -1,0 +1,9 @@
+# In-app database backups (DatabaseBackup, BackupToR2Job, `bin/rails backup:*`). The one place their
+# settings live; the runbook is docs/ops/backups.md. The weekly job only runs when BACKUP_BUCKET is set.
+#
+# prefix:          object key prefix inside BACKUP_BUCKET.
+# retention_days:  dumps (and their manifests) older than this are deleted after each upload.
+# verify_tables:   how many of the biggest tables (by source row count) backup:verify compares.
+prefix: backups/
+retention_days: 30
+verify_tables: 10

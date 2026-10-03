@@ -5,8 +5,6 @@
 # own "Browse all" link finds.
 module Seo
   class HireStats
-    ROLE_FIELDS = TalentController::ROLE_FIELDS
-    LOCATION_FIELDS = TalentController::LOCATION_FIELDS
 
     # `include_demo: true` adds the badged demo-* batches, which is what browsers see in listings and
     # counts; the default (organic only) is what indexability, the sitemap and metrics use, so demo
@@ -14,8 +12,8 @@ module Seo
     def self.scope_for(role_label, city_name, include_demo: false)
       talent = User.discoverable_talent
       scope = (include_demo ? SyntheticQa::Demo.publicly_listed(talent) : talent.organic).joins(:profile)
-      scope = Search::Query.new(role_label).filter(scope, ROLE_FIELDS)
-      Search::Query.new(city_name).filter(scope, LOCATION_FIELDS)
+      scope = Search::Query.new(role_label).restrict(TalentController::ROLE_WEIGHTS).filter(scope, Search::Targets::TALENT)
+      Search::Query.new(city_name).as_location.filter(scope, Search::Targets::TALENT)
     end
 
     # Just the head count: one COUNT query, for the callers (popular searches, related roles, the

@@ -1,0 +1,49 @@
+# Search tuning. Read once per process by Search::Settings. How to change it: docs/ops/search.md.
+# The vocabulary (synonyms, spellings, cities) lives in config/search_synonyms.yml.
+
+# Totals are counted exactly up to this many rows. Past it, `total` is PostgreSQL's planner estimate
+# rounded to two significant figures (never below this cap): counting every match of a broad word
+# ("singer") on a big table was the slow part of a search, and nobody pages past the first thousand.
+count_cap: 1000
+
+# Typo tolerance runs only when the exact (and prefix) match finds fewer than this many rows.
+typo_min_results: 3
+# pg_trgm similarity a vocabulary term needs to be offered as a correction ("guitarst" -> "guitarist").
+spelling_threshold: 0.4
+# pg_trgm word similarity a document needs to match a word that has no vocabulary correction
+# (names and places: "ananya desaai" finds "Ananya Desai").
+fuzzy_word_threshold: 0.5
+# Spelling suggestions also learn the roles, skills, genres and instruments people use; this many
+# of the most recently updated rows per source are read when the word list refreshes.
+spelling_db_rows_per_source: 3000
+
+# Unknown words shorter than this match whole words only ("dhol", "tom"); this long or longer they
+# also match as a word prefix ("drumm" finds "drummer").
+prefix_min_length: 5
+
+# A search statement that runs longer than this is cancelled and that result type comes back
+# empty instead of the whole request failing.
+statement_timeout_ms: 3000
+
+# GET /api/search/suggest (type-ahead).
+suggest:
+  min_length: 2
+  max_length: 40
+  # Per IP. Type-ahead fires as people type (debounced 150 ms in the browser), so this is higher
+  # than the 60 full searches a minute.
+  requests_per_minute: 120
+  cache_seconds: 60
+  # How many of each kind are returned.
+  # role, instrument, genre, event and act_type come from config/search_synonyms.yml (plus the
+  # catalog's role and instrument lists), city from its cities, name from people's names and act
+  # from act names.
+  per_kind:
+    role: 4
+    instrument: 3
+    genre: 2
+    event: 2
+    act_type: 2
+    city: 3
+    name: 4
+    act: 3
+  max_total: 10

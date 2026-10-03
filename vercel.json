@@ -86,6 +86,18 @@
       "destination": "/index.html"
     },
     {
+      "source": "/professionals/:id",
+      "destination": "/professionals/shell.html"
+    },
+    {
+      "source": "/acts/:id",
+      "destination": "/acts/shell.html"
+    },
+    {
+      "source": "/opportunities/:id",
+      "destination": "/opportunities/shell.html"
+    },
+    {
       "source": "/hire/(drummer|guitarist|bassist|keyboard-player|singer|tabla-player|dhol-player|violinist|saxophonist|dj|sound-engineer|music-producer)/(mumbai|delhi|gurgaon|noida|bengaluru|pune|hyderabad|chennai|kolkata|goa|ahmedabad|jaipur|chandigarh|kochi|lucknow|indore)",
       "destination": "/app-shell.html"
     },

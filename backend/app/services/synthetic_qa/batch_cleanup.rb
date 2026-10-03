@@ -110,7 +110,10 @@ module SyntheticQa
       remove(BookingPayment.where(id: ids[:payments]), "booking_payments")
       remove(BookingQuote.where(id: ids[:quotes]), "booking_quotes")
       remove(ActInvite.where(act_id: ids[:acts]).or(ActInvite.where(inviter_id: user_ids)).or(ActInvite.where(invitee_user_id: user_ids)), "act_invites")
+      lineups = ActMember.where(user_id: user_ids).where.not(act_id: ids[:acts]).distinct.pluck(:act_id)
       remove(ActMember.where(act_id: ids[:acts]).or(ActMember.where(user_id: user_ids)), "act_members")
+      # The delete skips ActMember's callbacks: rebuild the search documents of the real acts they played in.
+      Search::Indexer.refresh("acts", lineups)
       remove(OrganizationMember.where(organization_id: ids[:organizations]).or(OrganizationMember.where(user_id: user_ids)), "organization_members")
       remove(UrgentRequestNotification.where(urgent_request_id: ids[:urgent_requests]).or(UrgentRequestNotification.where(user_id: user_ids))
         .or(UrgentRequestNotification.where(notified_by_admin_id: user_ids)), "urgent_request_notifications")

@@ -24,6 +24,8 @@ import { lazy, Suspense, useState } from 'react';
 import { BrandMark } from './BrandMark';
 import { SkipLink } from './SkipLink';
 import { useAuth } from '../lib/authContext';
+import { useMounted } from '../lib/clientOnly';
+import { SearchSuggestInput, suggestionPath } from './SearchSuggestInput';
 
 const dashboardPathFor = (role: string) => (role === 'employer' ? '/employer' : role === 'admin' ? '/' : '/jobseeker');
 
@@ -42,6 +44,7 @@ export function PublicNav() {
   const nav = useNavigate();
   const location = useLocation();
   const { status, user, logout } = useAuth();
+  const mounted = useMounted();
   const [q, setQ] = useState('');
   const go = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,11 +72,15 @@ export function PublicNav() {
             <label htmlFor="public-search" className="sr-only">
               Search jobs, people and acts
             </label>
-            <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
-            <input
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-3 z-10 text-slate-400" />
+            <SearchSuggestInput
               id="public-search"
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onValueChange={setQ}
+              onSelect={(suggestion) => {
+                setQ('');
+                nav(suggestionPath(suggestion));
+              }}
               placeholder="Search the music network"
               className="h-10 w-full rounded-xl border border-white/15 bg-white/[.055] pl-10 pr-3 text-sm outline-none focus:border-violet-300/60 focus:bg-white/[.08] focus-visible:ring-2 focus-visible:ring-violet-300/70"
             />
@@ -94,9 +101,12 @@ export function PublicNav() {
               </Button>
             ))}
           </div>
-          <Suspense fallback={null}>
-            <IdentitySwitcher className="ml-auto xl:ml-0" />
-          </Suspense>
+          {/* Mounted after hydration: a lazy boundary in pre-rendered HTML must not be hit by an update first. */}
+          {mounted && (
+            <Suspense fallback={null}>
+              <IdentitySwitcher className="ml-auto xl:ml-0" />
+            </Suspense>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="ml-auto xl:hidden" aria-label="Open navigation">

@@ -47,10 +47,44 @@ npm run perf:photos -- --check      # lists any width or format still missing
 and commit the generated files. Without `--src`, the smaller sizes are cut from the committed 1600
 WebP. Unit tests fail when a variant is missing or an AVIF is not smaller than its WebP.
 
+## Pre-rendered first screens
+
+`npm run build` = `vite build` (the browser bundle) + `npm run build:ssr` (`src/entry-server.tsx` as a Node
+module in `dist-ssr/`, not deployed) + `scripts/prerender-heads.mjs`, which renders each route in
+`PRERENDERED_PATHS` (home, music-jobs, music-professionals, book-music, urgent, pricing, guide, join/*)
+and every hire and rates page to HTML inside `<div id="root" data-prerendered="<route>">`, and one
+shell per record family (`professionals/shell.html`, `acts/shell.html`, `opportunities/shell.html`,
+served by `vercel.json` rewrites for every id). `main.tsx` hydrates when the marker matches the URL,
+otherwise it renders from scratch (a host serving the wrong file can never show a mismatch).
+
+Rules for a page that is pre-rendered: its first render must not read the browser (no `window`,
+storage, the clock or the URL's query string in render), and it must render the same thing for a
+signed-out visitor before `/me` answers (the auth status is `loading` in both places). Anything the HTML
+cannot know is read behind `useHydrated()` (`src/app/lib/hydrated.ts`; false for the hydration render,
+true right after) or in an effect: `useUrlFilters` exposes `ready`, `/pricing` applies `?code=`, `?interval=`
+and the saved promo code after mount, `/urgent` fills in "tomorrow, 6 pm" and the `?role=&city=` prefill
+after mount. `src/__tests__/entry-server.test.tsx` checks the HTML carries no date and is the same with or
+without a query string.
+
+The per-page `<title>` and description come from one table, `PUBLIC_PAGE_META` in
+`src/app/lib/siteMeta.ts` (also `publicOrigin()`, `documentTitle()`, `clipDescription()`), read by the
+pages, by `prerender-heads.mjs` and by the OG image function; `src/__tests__/pageMetaParity.test.tsx` diffs
+the baked head against the DOM after hydration for every pre-rendered path. A lazily
+loaded part inside such a page (`React.lazy` + `Suspense`) renders behind `useMounted()`
+(`src/app/lib/clientOnly.ts`), so the HTML has no half-hydrated boundary for a state update to hit. Data
+still loads in the browser, so a page shows its frame and skeleton; the hire and rates pages take
+their heading from the slugs (`seoPages.ts`). `tests/e2e/prerender.spec.ts` fails on any hydration
+error on any pre-rendered route; `src/__tests__/entry-server.test.tsx` renders a few in Node.
+
+To pre-render another route: add its path to `PRERENDERED_PATHS` (and to `ROUTES` if it has no head
+yet), run `npm run build`, open it with `npm run check:perf`'s server or `vite preview`, and add it to
+the Playwright list. Pages that depend on who is looking (search, sign-in, the workspace) stay
+client-rendered on purpose.
+
 ## Loading order
 
-- The entry chunk renders the shell; the route chunk and the hero image download in parallel
-  (the hero is preloaded from the HTML).
+- The HTML already holds the first screen of a pre-rendered page; the entry chunk hydrates it while the
+  route chunk and the hero image download in parallel (the hero is preloaded from the HTML).
 - Analytics (`src/app/lib/analytics.ts`) starts two frames after the first paint and records the
   page the router is already on.
 - Sentry (`src/app/lib/monitoring.ts`) loads only when `VITE_SENTRY_DSN` is set, and then only after

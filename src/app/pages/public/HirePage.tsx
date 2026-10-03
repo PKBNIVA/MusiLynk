@@ -12,9 +12,18 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '..
 import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
-import { fromRateText, roleNoun } from '../../lib/landing';
+import { fromRateText } from '../../lib/landing';
 import { personLines } from '../../lib/personLine';
-import { hireHeading, hireLinkText, hirePagePath } from '../../lib/seoPages';
+import {
+  hireHeading,
+  hireLinkText,
+  hirePageDescription,
+  hirePagePath,
+  hirePageTitle,
+  roleNoun,
+  seoCityName,
+  seoRoleLabel,
+} from '../../lib/seoPages';
 import type { Professional } from '../../lib/apiTypes';
 
 interface HirePageData {
@@ -54,12 +63,13 @@ export default function HirePage() {
     };
   }, [role, city]);
 
-  const title = data
-    ? `Hire a verified ${roleNoun(data.role.label)} in ${data.city.name} | MusiLynk`
-    : 'Hire on MusiLynk';
-  const description = data
-    ? `Browse verified ${roleNoun(data.role.label)}s in ${data.city.name} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`
-    : undefined;
+  const knownRole = seoRoleLabel(role);
+  const knownCity = seoCityName(city);
+  // A listed role and city name the page from the first render (the pre-rendered head says the same);
+  // the API's labels take over once loaded, and an unknown or failed page falls back to a plain title.
+  const named = data ? [data.role.label, data.city.name] : knownRole && knownCity ? [knownRole, knownCity] : null;
+  const title = named ? hirePageTitle(named[0], named[1]) : 'Hire on MusiLynk';
+  const description = named ? hirePageDescription(named[0], named[1]) : undefined;
   const jsonLd = data
     ? [
         {
@@ -102,9 +112,19 @@ export default function HirePage() {
       <PublicNav />
       <main className="max-w-6xl mx-auto px-5 py-14">
         {loading ? (
-          <p className="text-slate-400 text-center py-16" role="status">
-            Loading…
-          </p>
+          <>
+            {/* A listed role and city have their heading before the API answers (and in the pre-rendered HTML). */}
+            {knownRole && knownCity && (
+              <PhotoHeader
+                photo={ROLE_PHOTOS[role.toLowerCase()] ?? 'rehearsal-room'}
+                eyebrow="Musician directory"
+                title={hireHeading(knownRole, knownCity)}
+              />
+            )}
+            <p className="text-slate-400 text-center py-16" role="status">
+              Loading…
+            </p>
+          </>
         ) : error || !data ? (
           <div className="text-center py-16" role="alert">
             <p className="text-rose-300">

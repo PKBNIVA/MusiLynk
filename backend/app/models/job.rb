@@ -1,4 +1,7 @@
 class Job < ApplicationRecord
+  include SearchIndexed
+  search_document "jobs",
+    fields: %i[title skills function_area opportunity_kind genre description requirements company languages location]
   belongs_to :employer, class_name: "User"
   # The Page the job is posted as (see posted_as_page). Two plain associations on the same key
   # instead of a polymorphic one, so listings can preload them and the stored type stays the
@@ -44,7 +47,8 @@ class Job < ApplicationRecord
   }
 
   scope :with_applications_count, -> {
-    select(arel_table[Arel.star], "(SELECT COUNT(*) FROM applications WHERE applications.job_id = jobs.id) AS applications_total")
+    # Named columns, not jobs.*: the search document columns are ignored (SearchIndexed).
+    select(*column_names.map { arel_table[_1] }, "(SELECT COUNT(*) FROM applications WHERE applications.job_id = jobs.id) AS applications_total")
   }
 
   def applications_count

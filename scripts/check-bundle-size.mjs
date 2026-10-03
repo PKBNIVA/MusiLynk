@@ -27,9 +27,9 @@ if (!existsSync(join(dist, 'index.html'))) {
 }
 
 const html = readFileSync(join(dist, 'index.html'), 'utf8');
-const gz = file => gzipSync(readFileSync(join(dist, file)), { level: 9 }).length;
-const kb = bytes => `${(bytes / 1000).toFixed(1)} kB`;
-const attr = (pattern) => [...html.matchAll(pattern)].map(match => match[1].replace(/^\//, ''));
+const gz = (file) => gzipSync(readFileSync(join(dist, file)), { level: 9 }).length;
+const kb = (bytes) => `${(bytes / 1000).toFixed(1)} kB`;
+const attr = (pattern) => [...html.matchAll(pattern)].map((match) => match[1].replace(/^\//, ''));
 
 const entries = attr(/<script[^>]*type="module"[^>]*src="([^"]+)"/g);
 const preloads = attr(/<link[^>]*rel="modulepreload"[^>]*href="([^"]+)"/g);
@@ -40,13 +40,16 @@ if (entries.length !== 1) {
 }
 
 const chunks = readdirSync(join(dist, 'assets'))
-  .filter(name => name.endsWith('.js'))
-  .map(name => ({ name, gzip: gz(join('assets', name)) }))
+  .filter((name) => name.endsWith('.js'))
+  .map((name) => ({ name, gzip: gz(join('assets', name)) }))
   .sort((a, b) => b.gzip - a.gzip);
 
 const actual = {
   entryChunk: { bytes: gz(entries[0]), detail: entries[0] },
-  initialJs: { bytes: [...entries, ...preloads].reduce((sum, file) => sum + gz(file), 0), detail: `${1 + preloads.length} files` },
+  initialJs: {
+    bytes: [...entries, ...preloads].reduce((sum, file) => sum + gz(file), 0),
+    detail: `${1 + preloads.length} files`,
+  },
   largestChunk: { bytes: chunks[0].gzip, detail: `assets/${chunks[0].name}` },
   css: { bytes: styles.reduce((sum, file) => sum + gz(file), 0), detail: `${styles.length} files` },
 };
@@ -68,10 +71,20 @@ for (const [key, { bytes, detail }] of Object.entries(actual)) {
   }
   const ok = bytes <= limit;
   failed ||= !ok;
-  console.log(`  ${ok ? 'ok  ' : 'OVER'} ${key.padEnd(13)} ${kb(bytes).padStart(9)} / ${kb(limit).padStart(9)}  (${detail})`);
+  console.log(
+    `  ${ok ? 'ok  ' : 'OVER'} ${key.padEnd(13)} ${kb(bytes).padStart(9)} / ${kb(limit).padStart(9)}  (${detail})`,
+  );
 }
-console.log('  largest chunks: ' + chunks.slice(0, 5).map(c => `${c.name} ${kb(c.gzip)}`).join(', '));
+console.log(
+  '  largest chunks: ' +
+    chunks
+      .slice(0, 5)
+      .map((c) => `${c.name} ${kb(c.gzip)}`)
+      .join(', '),
+);
 if (failed) {
-  console.error('\nBundle budget exceeded. Lazy-load the new code (see src/app/routes.tsx) or, if the growth is intended, raise the limit in bundle-budget.json in the same PR.');
+  console.error(
+    '\nBundle budget exceeded. Lazy-load the new code (see src/app/routes.tsx) or, if the growth is intended, raise the limit in bundle-budget.json in the same PR.',
+  );
   process.exit(1);
 }

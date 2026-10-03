@@ -1,14 +1,16 @@
 {
-  "note": "Loading budget per page on a throttled phone (390x844 at 3x, CPU 4x slower, 1.6 Mbps / 150 ms RTT; see scripts/perf/measure.mjs) against the local build with /api answered from scripts/perf/fixtures; the median of `runs` cold loads. Checked by `npm run check:perf` (scripts/perf/check-perf.mjs) in the frontend CI job. Set 2026-10-03 with the S2+S3 performance packages: production measured 70 requests / 475 kB / LCP 3.8 s on the home page and 45 requests / 337 kB / LCP 3.4 s on /search before them; the local build measured 26 requests / 279 kB / LCP 2.36 s and 20 requests / 216 kB / LCP 2.25 s after. lcpMs is 3000 for the CI gate because LCP on a throttled CPU varies by about 300 ms between runs on the same build (2.3 to 2.6 s measured); the production target is 2500 ms, tracked after each deploy with `npm run perf:measure -- --base https://musilynk.vercel.app --runs 3`. requests and transferredKB are deterministic and stay strict. Raise a limit only in the PR that intentionally grows the page, with the date, the measurement and the reason appended here.",
-  "paths": [
-    "/",
-    "/search"
-  ],
+  "note": "Loading budget per page on a throttled phone (390x844 at 3x, CPU 4x slower, 1.6 Mbps / 150 ms RTT; see scripts/perf/measure.mjs) against the local build with /api answered from scripts/perf/fixtures; the median of `runs` cold loads. Checked by `npm run check:perf` (scripts/perf/check-perf.mjs) in the frontend CI job. Set 2026-10-03 with the S2+S3 performance packages: production measured 70 requests / 475 kB / LCP 3.8 s on the home page and 45 requests / 337 kB / LCP 3.4 s on /search before them; the local build measured 26 requests / 279 kB / LCP 2.36 s and 20 requests / 216 kB / LCP 2.25 s after. lcpMs is 3000 for the CI gate because LCP on a throttled CPU varies by about 300 ms between runs on the same build (2.3 to 2.6 s measured); the production target is 2500 ms, tracked after each deploy with `npm run perf:measure -- --base https://musilynk.vercel.app --runs 3`. requests and transferredKB are deterministic and stay strict. Raise a limit only in the PR that intentionally grows the page, with the date, the measurement and the reason appended here. 2026-10-03 S1 pre-rendering: the home page's first screen ships as HTML, so pageLimits caps its FCP at 1500 ms (measured 1068 ms; 2204 ms before, when the first text waited for the route chunk).",
+  "paths": ["/", "/search"],
   "runs": 3,
   "limits": {
     "requests": 40,
     "transferredKB": 300,
     "lcpMs": 3000,
     "cls": 0.1
+  },
+  "pageLimits": {
+    "/": {
+      "fcpMs": 1500
+    }
   }
 }

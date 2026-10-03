@@ -11,11 +11,13 @@ class HotEndpointQueryBudgetTest < ActionDispatch::IntegrationTest
 
   # path => budget (queries per request), measured 2026-10-03. The Stage fixtures include photo posts
   # and reshares of them, so the feed and tag budgets cover the reshared posts' media lookup too.
+  # R3 search (measured 2026-10-03): the ranked lists (talent, acts) run one more statement, the
+  # per-search limits (statement_timeout, trigram threshold) set at the start of Search::Runner.
   PUBLIC = {
-    "/api/public/talent" => 9,
-    "/api/public/talent?location=Mumbai&role=Drummer&genre=Rock" => 9,
+    "/api/public/talent" => 10,
+    "/api/public/talent?location=Mumbai&role=Drummer&genre=Rock" => 10,
     "/api/public/talent/{talent}" => 11,
-    "/api/public/acts" => 4,
+    "/api/public/acts" => 5,
     "/api/public/acts/{act}" => 4,
     "/api/jobs" => 4,
     "/api/jobs/{job}" => 3,

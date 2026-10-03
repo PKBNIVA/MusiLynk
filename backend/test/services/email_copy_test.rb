@@ -32,6 +32,7 @@ class EmailCopyTest < ActiveSupport::TestCase
       html = content[:html]
       assert_includes html, %(src="#{FrontendUrl.base}/email-mark-64.png" width="32" height="32" alt="M"), "#{template}: brand mark"
       assert_includes html, ">MusiLynk</td>", "#{template}: brand name"
+      assert_includes html, "background:#{Brand::TILE_COLOR};", "#{template}: logo tile colour behind the mark"
       assert_equal 1, html.scan(BUTTON).size, "#{template}: one primary button"
       assert_includes html, "/unsubscribe?token=", "#{template}: unsubscribe link"
       assert_match(/^MusiLynk\n\n/, content[:text])

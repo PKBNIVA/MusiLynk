@@ -119,13 +119,14 @@ class EmailDelivery
   # LifecycleMailer) carry an unsubscribe / manage-emails link.
   SERVICE_NOTE = "This is a service email about your MusiLynk account, so it cannot be turned off.".freeze
 
-  # The brand header every email starts with: the MusiLynk mark (public/email-mark-64.png, served from
-  # the frontend origin, shown at 32px) and the name as live text. If a mail client blocks images,
-  # the alt text and the img's own background still paint a violet square with an "M", so the header
-  # keeps its shape. Inline styles only; mail clients ignore style sheets.
+  # The brand header every email starts with: the MusiLynk mark (public/email-mark-64.png, generated
+  # from brand/logo/ and served from the frontend origin, shown at 32px) and the name as live text. If
+  # a mail client blocks images, the alt text and the img's own background (Brand::TILE_COLOR) still
+  # paint the tile with an "M", so the header keeps its shape. Inline styles only; mail clients
+  # ignore style sheets.
   def self.brand_header_html
     mark = "#{ERB::Util.html_escape(FrontendUrl.base)}/email-mark-64.png"
-    %(<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td style="width:32px;height:32px;padding:0;vertical-align:middle"><img src="#{mark}" width="32" height="32" alt="M" style="display:block;width:32px;height:32px;border:0;border-radius:8px;background:#7c3aed;color:#ffffff;font:800 18px/32px Arial,Helvetica,sans-serif;text-align:center"></td><td style="padding:0 0 0 10px;vertical-align:middle;font:800 22px/32px Arial,Helvetica,sans-serif;letter-spacing:-0.3px;color:#ffffff">#{Brand::NAME}</td></tr></table>)
+    %(<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td style="width:32px;height:32px;padding:0;vertical-align:middle"><img src="#{mark}" width="32" height="32" alt="M" style="display:block;width:32px;height:32px;border:0;border-radius:8px;background:#{Brand::TILE_COLOR};color:#ffffff;font:800 18px/32px Arial,Helvetica,sans-serif;text-align:center"></td><td style="padding:0 0 0 10px;vertical-align:middle;font:800 22px/32px Arial,Helvetica,sans-serif;letter-spacing:-0.3px;color:#ffffff">#{Brand::NAME}</td></tr></table>)
   end
 
   # The opening of <head> every email shares: charset and a mobile viewport, so 375px phones

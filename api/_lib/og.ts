@@ -11,6 +11,7 @@
 // The card is described as plain { type, props } elements (no JSX, no React).
 import { blobs, gradientAngle, paletteFor, ribbonBars, type Palette } from '../../src/app/lib/coverArt.js';
 import { initialsOf } from '../../src/app/lib/avatar.js';
+import { BRAND_TILE_SVG } from '../../src/app/lib/brandMark.generated.js';
 
 export const CARD_TYPES = ['professional', 'opportunity', 'act'] as const;
 export type CardType = (typeof CARD_TYPES)[number];
@@ -182,10 +183,8 @@ const h = (type: string, style: Record<string, unknown>, children?: unknown, ext
 const INK = '#070813';
 const FLEX = { display: 'flex' } as const;
 
-/** public/musilynk-mark.svg (the "Signal M" tile), as a data URI Satori can draw. */
-const MARK_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset=".5" stop-color="#7c3aed"/><stop offset="1" stop-color="#c026d3"/></linearGradient></defs><g transform="translate(0 0) scale(1)"><rect width="100" height="100" rx="23" fill="url(#g1)"/><g transform="translate(50 50) scale(0.86) translate(-50 -50)"><path d="M15 72H22C28 72 30 22 36.5 22C43 22 44.5 58 50 58C55.5 58 57 31 63.5 31C70 31 72 72 78 72H85" fill="none" stroke="#fff" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="15" cy="72" r="9" fill="#f0abfc"/><circle cx="85" cy="72" r="9" fill="#f0abfc"/></g></g></svg>';
-const MARK_URI = `data:image/svg+xml;base64,${btoa(MARK_SVG)}`;
+/** The app-icon tile (public/musilynk-mark.svg, generated from brand/logo/), as a data URI Satori can draw. */
+const MARK_URI = `data:image/svg+xml;base64,${btoa(BRAND_TILE_SVG)}`;
 
 function titleSize(title: string) {
   return title.length <= 20 ? 88 : title.length <= 36 ? 70 : 56;

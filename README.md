@@ -21,7 +21,9 @@ line-ups and book acts with a Razorpay deposit. Paid plans unlock more hiring ca
 5. GitHub `production` is the release branch: pull requests run CI, and merges deploy to
    Vercel and Railway.
 
-Details: [ARCHITECTURE.md](ARCHITECTURE.md).
+Details: [ARCHITECTURE.md](ARCHITECTURE.md) and the map in
+[docs/engineering/ARCHITECTURE.md](docs/engineering/ARCHITECTURE.md). Before changing anything,
+read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Run it locally
 

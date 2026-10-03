@@ -42,8 +42,11 @@ export function distFileFor(urlPath, dir = distDir) {
   if (direct.startsWith(dir) && existsSync(direct) && statSync(direct).isFile()) return direct;
   const prerendered = join(dir, clean, 'index.html');
   if (prerendered.startsWith(dir) && existsSync(prerendered)) return prerendered;
-  const shell = join(dir, 'app-shell.html');
-  return existsSync(shell) ? shell : join(dir, 'index.html');
+  // The record pages' pre-rendered shells (vercel.json rewrites /professionals/:id and friends to them).
+  const record = /^\/(professionals|acts|opportunities)\/[^/]+$/.exec(clean);
+  if (record && existsSync(join(dir, record[1], 'shell.html'))) return join(dir, record[1], 'shell.html');
+  const appShell = join(dir, 'app-shell.html');
+  return existsSync(appShell) ? appShell : join(dir, 'index.html');
 }
 
 /** Serves dist/ (static files, immutable /assets, the SPA shell for everything else) on 127.0.0.1. */
@@ -79,6 +82,8 @@ export function serveDist(port = 0, dir = distDir) {
 /** Every budget line a page breaks, as human sentences; empty when the page is within budget. */
 export function breaches(page, limits) {
   const out = [];
+  if (limits.fcpMs !== undefined && (page.fcpMs === null || page.fcpMs > limits.fcpMs))
+    out.push(`${page.path}: FCP ${page.fcpMs ?? 'not measured'} ms (budget ${limits.fcpMs} ms)`);
   if (limits.requests !== undefined && page.requests > limits.requests)
     out.push(`${page.path}: ${page.requests} requests (budget ${limits.requests})`);
   if (limits.transferredKB !== undefined && page.transferredKB > limits.transferredKB)
@@ -123,7 +128,10 @@ if (isMain) {
   console.log(summarize(result));
   const out = value('--out', null);
   if (out) (await import('node:fs')).writeFileSync(out, JSON.stringify(result, null, 2));
-  const failures = result.pages.flatMap((page) => breaches(page, budget.limits));
+  // budget.pageLimits adds or tightens limits for one path (e.g. FCP on the pre-rendered home page).
+  const failures = result.pages.flatMap((page) =>
+    breaches(page, { ...budget.limits, ...budget.pageLimits?.[page.path] }),
+  );
   const seconds = ((Date.now() - started) / 1000).toFixed(1);
   if (failures.length) {
     console.error(`\ncheck-perf: over budget (${seconds} s)\n  ` + failures.join('\n  '));

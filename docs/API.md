@@ -77,6 +77,7 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 | GET | `/resources` | `{resources: [{id, title, category, description, url}]}` | **Unbounded** |
 | GET | `/search?q=&type=jobs\|talent\|acts\|samples&limit=&cursor=` | `{results: [{type, id, url, title, subtitle, description, tags}], interpretedAs, matchMode, didYouMean?, totals, provider, status}`; without `type` also `moreOf: {jobs: bool…}`; with `type` also `nextCursor, total` | Without `type`: ≤ 30 per type fair-shared into 60. See **Search queries** below |
 | GET | `/search/status` | `{provider, healthy, fallback}` | |
+| GET | `/search/suggest` | `{suggestions: [{kind, label, query?, detail?, url?}]}` | Type-ahead, `q` of 2+ characters; 120/min per IP; cached 60 s (see `docs/engineering/SEARCH.md`) |
 | GET | `/billing/plans` | `{plans: [{code, name, monthly, trialDays, activePosts, seats, shortlist, bookings}]}` | |
 
 ### Auth and profile
@@ -139,11 +140,13 @@ Every `q` (global search, jobs, talent, candidates, acts) goes through `Search::
 - Lower-cased, punctuation stripped, plural folded (`singers` → `singer`); stop words dropped (`vocalist for a wedding`).
 - Known phrases from `backend/config/search_synonyms.yml` become one token with all their alternatives
   (`guitar player` → guitarist…); city names and aliases (`Bombay`) match location fields only.
-- **AND across tokens, OR within a token's alternatives.** Ranked: title/headline 100, skills/roles 60,
-  description/bio 30, location 50, + up to 20 trigram similarity; ties by the list's usual order.
-- Nothing matched → misspelt words are replaced by the nearest known term (pg_trgm similarity, fewest
-  edits): `matchMode: "corrected"`, `didYouMean: "guitarist"`. Still nothing for a multi-word query →
-  rows matching some words, most words first: `matchMode: "partial"`.
+- **AND across tokens, OR within a token's alternatives**, on each row's indexed search document. Ranked:
+  title/headline 100, skills/roles 60, elsewhere 30, location 50, +10 for the word as typed, + up to 20
+  trigram similarity; ties by the list's usual order. `total` is exact for a typed query.
+- Fewer than 3 matches → misspelt words also search the nearest known term (pg_trgm similarity, fewest
+  edits) or match by trigram word similarity: `didYouMean: "guitarist"`, and `matchMode: "corrected"`
+  when nothing matched as typed. Still nothing for a multi-word query → rows matching some words, most
+  words first: `matchMode: "partial"`. Browsing without `q`: `total` is exact up to 1,000, estimated past it.
 - Code-like input (`; = < > { } $ % _ …`) is matched exactly (no correction, no partial); input with
   nothing searchable left (`%`, `' OR '1'='1`) matches no rows.
 - Paging: `limit` (1–100, default 30) and the opaque `cursor` from `nextCursor`; a bad cursor is 400 `INVALID_CURSOR`.

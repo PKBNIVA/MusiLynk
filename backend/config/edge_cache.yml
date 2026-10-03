@@ -1,0 +1,32 @@
+# Shared-cache (CDN) lifetimes, in seconds, for anonymous GETs of the public read endpoints.
+# PublicCaching turns each entry into `Cache-Control: public, s-maxage=<s_maxage>,
+# stale-while-revalidate=<stale_while_revalidate>, max-age=<max_age>` and a weak ETag. `max_age` is
+# the browser's lifetime: 0 makes browsers revalidate on every visit (a 304 when nothing changed)
+# instead of serving a stale body themselves during stale-while-revalidate; the edge still serves
+# and refreshes per s-maxage. Signed-in responses never use these. Update path: docs/ops/edge-caching.md.
+shared:
+  # GET /api/public/stats (the landing counters; also kept in Rails.cache for the same time)
+  stats:
+    s_maxage: 300
+    stale_while_revalidate: 600
+    max_age: 300
+  # GET /api/public/talent, /api/public/acts, /api/jobs (one entry per distinct query string)
+  listing:
+    s_maxage: 60
+    stale_while_revalidate: 300
+    max_age: 0
+  # GET /api/public/talent/:id, /api/public/acts/:id, /api/jobs/:id
+  show:
+    s_maxage: 60
+    stale_while_revalidate: 300
+    max_age: 0
+  # GET /api/stage/authors/:type/:id/posts (the landing page reads the platform's own posts)
+  stage_posts:
+    s_maxage: 60
+    stale_while_revalidate: 300
+    max_age: 0
+  # GET /sitemap.xml (also kept in Rails.cache for an hour)
+  sitemap:
+    s_maxage: 3600
+    stale_while_revalidate: 86400
+    max_age: 3600

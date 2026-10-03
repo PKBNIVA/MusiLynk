@@ -34,6 +34,13 @@ export function PromoCodeField({
 }) {
   const [open, setOpen] = useState(!!initialCode);
   const [value, setValue] = useState(initialCode);
+  // The prefilled code arrives one render after mount on a pre-rendered /pricing (see Pricing.tsx).
+  useEffect(() => {
+    if (initialCode) {
+      setOpen(true);
+      setValue((current) => current || initialCode);
+    }
+  }, [initialCode]);
   const [checked, setChecked] = useState(''); // the code the current status is about
   const [status, setStatus] = useState<Status>({ state: 'idle' });
   const seq = useRef(0);
@@ -89,8 +96,8 @@ export function PromoCodeField({
   useEffect(() => {
     if (checked && paid.length) void validate(checked);
     else if (!checked && initialCode && paid.length) void validate(initialCode);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run for a new interval or plan list only
-  }, [interval, paidKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run for a new interval, plan list or prefilled code only
+  }, [interval, paidKey, initialCode]);
 
   if (!open) {
     return (

@@ -3,13 +3,14 @@
 # never counted, so the landing counters are never inflated. `listed` repeats the same numbers as a
 # visitor browsing the directory would find them (badged demo accounts included); no page reads it yet,
 # it is there for a directory-side counter so the landing numbers never have to change. Cached for five
-# minutes.
+# minutes, in Rails.cache and (anonymous callers) at the CDN edge (PublicCaching).
 class PublicStatsController < ApplicationController
   CACHE_TTL = 5.minutes
 
   def show
-    expires_in CACHE_TTL, public: true
-    render json: Rails.cache.fetch("public-stats:v2", expires_in: CACHE_TTL) { compute }
+    json = Rails.cache.fetch("public-stats:v2", expires_in: CACHE_TTL) { compute }.to_json
+    return if public_cache!(:stats, etag: json)
+    render json: json
   end
 
   private

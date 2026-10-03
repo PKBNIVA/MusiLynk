@@ -6,6 +6,8 @@ import { Card, CardContent } from '../components/ui/card';
 import { PublicNav } from '../components/PublicNav';
 import { PhotoHeader } from '../components/landing/PhotoHeader';
 import { usePageMeta } from '../components/PageMeta';
+import { useHydrated } from '../lib/hydrated';
+import { PUBLIC_PAGE_META } from '../lib/siteMeta';
 import { IntervalToggle } from '../components/IntervalToggle';
 import { PromoCodeField } from '../components/PromoCodeField';
 import { apiGet } from '../lib/api';
@@ -131,19 +133,24 @@ function billingReturnPath(plan: string, interval: BillingInterval, code: string
 }
 
 export default function Pricing() {
-  usePageMeta(
-    'Pricing',
-    'MusiLynk plans for music hiring and booking teams. Musicians build profiles and apply free; paid plans add capacity, seats and trials.',
-    { canonicalPath: '/pricing' },
-  );
+  usePageMeta(PUBLIC_PAGE_META['/pricing'].title, PUBLIC_PAGE_META['/pricing'].description, {
+    canonicalPath: '/pricing',
+  });
   const [plans, setPlans] = useState<ApiPlan[]>(FALLBACK_PLANS);
   const [live, setLive] = useState<boolean | null>(null);
   const [searchParams] = useSearchParams();
   const [annualAvailable, setAnnualAvailable] = useState(false);
-  const [interval, setInterval] = useState<BillingInterval>(
-    searchParams.get('interval') === 'annual' ? 'annual' : 'monthly',
-  );
-  const [initialCode] = useState(() => normaliseCode(searchParams.get('code') || '') || storedCode());
+  const [interval, setInterval] = useState<BillingInterval>('monthly');
+  const [initialCode, setInitialCode] = useState('');
+  // ?interval=, ?code= and the code kept across sign-in are read once the page is on screen: the
+  // pre-rendered HTML cannot know them, so the first render must not depend on them.
+  const hydrated = useHydrated();
+  useEffect(() => {
+    if (!hydrated) return;
+    if (searchParams.get('interval') === 'annual') setInterval('annual');
+    setInitialCode(normaliseCode(searchParams.get('code') || '') || storedCode());
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the URL at arrival only; later changes come from the toggle
+  }, [hydrated]);
   const [appliedCode, setAppliedCode] = useState('');
   const onApplied = useCallback((code: string) => setAppliedCode(code), []);
   // The toggle only exists when the API says annual billing works; otherwise stay monthly.

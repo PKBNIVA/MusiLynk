@@ -1,4 +1,5 @@
 import { usePageMeta } from '../../components/PageMeta';
+import { PUBLIC_PAGE_META } from '../../lib/siteMeta';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Search, X } from 'lucide-react';
@@ -39,13 +40,12 @@ function Chip({ pressed, onClick, children }: { pressed: boolean; onClick: () =>
 }
 
 export default function PublicTalent() {
-  usePageMeta(
-    'Find musicians',
-    'Search singers, instrumentalists, composers, engineers, technical directors, tour crew and managers on MusiLynk.',
-    { canonicalPath: '/music-professionals', type: 'website' },
-  );
+  usePageMeta(PUBLIC_PAGE_META['/music-professionals'].title, PUBLIC_PAGE_META['/music-professionals'].description, {
+    canonicalPath: '/music-professionals',
+    type: 'website',
+  });
   // Filters live in the URL; each change is a history entry, so Back undoes it.
-  const { values, query, update, clear } = useUrlFilters(FILTERS);
+  const { values, query, update, clear, ready } = useUrlFilters(FILTERS);
   const taxonomy = useTaxonomy();
   const list = usePagedList<Professional, TalentPage>({
     path: '/public/talent',
@@ -61,8 +61,8 @@ export default function PublicTalent() {
   }, [values.q, values.location]);
   const load = useLatestCallback(() => list.search(query));
   useEffect(() => {
-    void load();
-  }, [query, load]);
+    if (ready) void load();
+  }, [query, load, ready]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!update({ q, location })) void load();

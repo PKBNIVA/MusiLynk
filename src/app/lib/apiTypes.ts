@@ -737,6 +737,21 @@ export interface SearchResponse extends SearchMeta {
   total?: number;
 }
 
+/** GET /search/suggest: one type-ahead entry. A term (role, instrument, genre, event, act type,
+ * city) carries the `query` to search; a person or act carries the `url` of their page. */
+export interface SearchSuggestion {
+  kind: 'role' | 'instrument' | 'genre' | 'event' | 'act_type' | 'city' | 'name' | 'act';
+  label: string;
+  query?: string;
+  detail?: string;
+  url?: string;
+}
+
+/** GET /search/suggest?q= */
+export interface SearchSuggestResponse {
+  suggestions: SearchSuggestion[];
+}
+
 /** JobAlertsController#index: a job_alerts row. */
 export interface JobAlert {
   id: string;

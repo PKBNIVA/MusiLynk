@@ -19,7 +19,6 @@ class JobsController < ApplicationController
   BROWSE_SENTINEL = "-infinity"
   # `?roles=Drummer,Vocalist` finds opportunities for any of those roles (a musician's own roles).
   MAX_ROLES = 6
-  LOCATION_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["jobs.location"])
 
   def index
     # ?location[]=a or ?kind[x]=y arrive as arrays/hashes; the filters below expect text.
@@ -32,7 +31,7 @@ class JobsController < ApplicationController
     jobs = Job.published.from_active_hirers.with_applications_count.with_posted_as.includes(employer: :profile)
     # Same rule as talent: non-demo synthetic QA batches are only listed to synthetic viewers.
     jobs = SyntheticQa::Demo.publicly_listed(jobs.joins(:employer)) unless current_user&.synthetic_batch.present?
-    jobs = Search::Query.new(params[:location]).filter(jobs, LOCATION_FIELDS)
+    jobs = Search::Query.new(params[:location]).as_location.filter(jobs, Search::Targets::JOBS)
     jobs = jobs.where(function_area: Search::Taxonomy.function_spellings(params[:function])) if params[:function].present?
     { kind: :opportunity_kind, workplace: :workplace, experience: :experience_level }.each { |key, column| jobs = jobs.where(column => params[key]) if params[key].present? }
     jobs = jobs.where(paid: true) if params[:paid] == "true"
@@ -67,11 +66,13 @@ class JobsController < ApplicationController
       meta = search.meta
     end
     saved = current_user&.jobseeker? ? SavedJob.where(user: current_user, job_id: page.map(&:id)).pluck(:job_id).to_set : Set.new
-    render json: {
+    json = {
       jobs: page.map { |job| job.api_json(current_user).merge(saved: saved.include?(job.id)) },
       nextCursor: next_cursor,
       total:
-    }.merge(meta)
+    }.merge(meta).to_json
+    return if public_cache!(:listing, etag: json)
+    render json: json
   end
 
   def show
@@ -86,7 +87,9 @@ class JobsController < ApplicationController
     end
     applied = current_user&.jobseeker? && Application.exists?(candidate: current_user, job:)
     saved = current_user&.jobseeker? && SavedJob.exists?(user: current_user, job:)
-    render json: { job: job.api_json(current_user).merge(applied:, saved:) }
+    json = { job: job.api_json(current_user).merge(applied:, saved:) }.to_json
+    return if public_cache!(:show, etag: json)
+    render json: json
   end
 
   # The poster's plan capacity for active opportunities, read by the post-opportunity page so it

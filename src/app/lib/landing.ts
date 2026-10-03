@@ -1,5 +1,6 @@
 import { apiGet } from './api';
 import { formatFromRate, fromRate } from './format';
+import { roleNoun } from './seoPages';
 
 // Live proof for the landing page. Only real counts from GET /api/public/stats are shown, and
 // only once they mean something; otherwise the page shows how MusiLynk works and what it promises.
@@ -12,7 +13,8 @@ export interface PublicStats {
   urgentRequests?: number;
 }
 
-export const loadPublicStats = () => apiGet<PublicStats>('/public/stats', { skipAuthRedirect: true, timeoutMs: 6_000 });
+export const loadPublicStats = () =>
+  apiGet<PublicStats>('/public/stats', { skipAuthRedirect: true, timeoutMs: 6_000, viaEdge: true });
 
 /** The smallest count worth showing for each stat. */
 export const PROOF_THRESHOLDS = { verifiedProfiles: 10, cities: 2, openOpportunities: 5 } as const;
@@ -62,7 +64,7 @@ export const hireSearchPath = (role: string, city: string) =>
   `/music-professionals?${new URLSearchParams({ role, location: city }).toString()}`;
 
 /** Role label in running text: keeps the acronym in "DJ", lowercases the rest. */
-export const roleNoun = (label: string) => (label === 'DJ' ? label : label.toLowerCase());
+export { roleNoun };
 
 /** "Hire a drummer in Mumbai" / "Hire an arranger in Pune". */
 export function hireLinkText(label: string, city: string) {
@@ -112,7 +114,7 @@ export interface StageTeaserPost {
 export async function loadStageTeaser(limit = 3): Promise<StageTeaserPost[]> {
   const body = await apiGet<{ posts?: { id: string; body?: string | null; createdAt: string; visibility?: string }[] }>(
     '/stage/authors/system/musilynk/posts',
-    { skipAuthRedirect: true, timeoutMs: 6_000 },
+    { skipAuthRedirect: true, timeoutMs: 6_000, viaEdge: true },
   );
   return (body.posts || [])
     .filter((post) => post.visibility !== 'followers' && post.body?.trim() && !/^Welcome\s/i.test(post.body))

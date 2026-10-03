@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
 import { IS_ADMIN_SITE } from '../lib/appTarget';
 import { ADMIN_BRAND_NAME, BRAND_NAME } from '../lib/brand';
+import { absoluteUrl, clipDescription, documentTitle, publicOrigin } from '../lib/siteMeta';
 
 const SITE = IS_ADMIN_SITE ? ADMIN_BRAND_NAME : BRAND_NAME;
+// Pages and structured data build absolute URLs through here; the helper itself lives in lib/siteMeta.ts.
+export { absoluteUrl };
 const DATA_ATTR = 'data-page-meta';
 
 export type PageMetaOptions = {
@@ -12,18 +15,6 @@ export type PageMetaOptions = {
   noindex?: boolean;
   jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
 };
-
-/** VITE_PUBLIC_URL with no trailing slash, or window.location.origin when it was never set. */
-function publicUrl() {
-  const configured = (import.meta.env?.VITE_PUBLIC_URL || '').replace(/\/+$/, '');
-  if (configured) return configured;
-  return typeof window !== 'undefined' ? window.location.origin.replace(/\/+$/, '') : '';
-}
-
-/** An absolute URL on this site for a path ("/hire/dj/mumbai"); structured data needs full URLs. */
-export function absoluteUrl(path: string) {
-  return /^https?:\/\//i.test(path) ? path : `${publicUrl()}${path.startsWith('/') ? path : `/${path}`}`;
-}
 
 function ensureMeta(attr: 'name' | 'property', key: string) {
   let tag = document.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
@@ -67,15 +58,11 @@ export function usePageMeta(title?: string, description?: string, options: PageM
     if (!title) return;
 
     const previousTitle = document.title;
-    document.title = title.includes(SITE) ? title : `${title} · ${SITE}`;
+    document.title = documentTitle(title, SITE);
 
-    const desc = description
-      ? description.length > 160
-        ? `${description.slice(0, 157).trimEnd()}…`
-        : description
-      : undefined;
+    const desc = description ? clipDescription(description) : undefined;
 
-    const base = publicUrl();
+    const base = publicOrigin();
     const path = canonicalPath ?? window.location.pathname;
     const canonical = `${base}${path}`;
     const resolvedImage = image

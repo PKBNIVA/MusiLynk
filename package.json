@@ -9,6 +9,9 @@
   "scripts": {
     "build": "vite build && node scripts/prerender-heads.mjs",
     "check:bundle": "node scripts/check-bundle-size.mjs",
+    "check:perf": "node scripts/perf/check-perf.mjs",
+    "perf:measure": "node scripts/perf/measure.mjs",
+    "perf:photos": "node scripts/perf/build-photos.mjs",
     "build:admin": "VITE_APP_TARGET=admin vite build --outDir dist-admin",
     "check:split": "npm run build:admin && node scripts/check-site-split.mjs",
     "dev": "vite",

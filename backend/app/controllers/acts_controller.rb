@@ -28,7 +28,7 @@ class ActsController < ApplicationController
 
   def mine
     return unless authenticate!("jobseeker", "employer")
-    render json: { acts: current_user.owned_acts.where.not(id: Act.direct_enquiry.select(:id)).includes(:act_members, owner: :profile).order(updated_at: :desc).limit(200).map(&:api_json), memberships: memberships }
+    render json: { acts: Act.preload_image_sets(current_user.owned_acts.where.not(id: Act.direct_enquiry.select(:id)).includes(:act_members, owner: :profile).order(updated_at: :desc).limit(200)).map(&:api_json), memberships: memberships }
   end
 
   def create
@@ -128,7 +128,7 @@ class ActsController < ApplicationController
     scope = fronted_by(scope, params[:member].to_s.strip) if params[:member].present?
     limit = list_limit
     search = Search::Runner.call(scope, params[:q], Search::Targets::ACTS, order: LIST_ORDER, offset:, limit:)
-    json = { acts: search.rows.map(&:public_json), nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta).to_json
+    json = { acts: Act.preload_image_sets(search.rows).map(&:public_json), nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta).to_json
     return if cache && public_cache!(cache, etag: json)
     render json: json
   end

@@ -195,6 +195,16 @@ class ApplicationController < ActionController::API
     reviews = @profile_stats.transform_values { _1["reviewsCount"] }
     @verification_tiers = Verification::Tier.batch(users, completed_bookings:, reviews:)
     @verification_summaries = batch_verification_summaries(users)
+    @image_sets = ImageSet.by_url(users.map { _1.profile&.photo_url })
+  end
+
+  # The responsive-image payload (ImageSet) for an upload's public URL: from the batch primed by
+  # prime_profile_stats when there is one, else a single lookup; nil for a blank URL or one without
+  # variants (the client then shows the plain URL).
+  def image_set_for(url)
+    return nil if url.blank?
+    return @image_sets[url] if @image_sets
+    ImageSet.by_url([url])[url]
   end
 
   # { user_id => {checks:, verifiedAt:} } for the verified users among `users`: the newest approved request each.
@@ -208,6 +218,7 @@ class ApplicationController < ActionController::API
   def public_profile(user)
     { "id" => user.id, "name" => user.name, "role" => user.role, "createdAt" => user.created_at }
       .merge((user.profile&.api_json || {}).slice(*PUBLIC_PROFILE_KEYS))
+      .merge("photo" => image_set_for(user.profile&.photo_url))
       .merge("demo" => SyntheticQa::Demo.user?(user), "verification" => verification_summary(user),
         "verificationTier" => verification_tier(user))
       .merge(@profile_stats&.dig(user.id) || ProfileStats.for(user))

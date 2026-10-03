@@ -13,12 +13,15 @@ class HotEndpointQueryBudgetTest < ActionDispatch::IntegrationTest
   # and reshares of them, so the feed and tag budgets cover the reshared posts' media lookup too.
   # R3 search (measured 2026-10-03): the ranked lists (talent, acts) run one more statement, the
   # per-search limits (statement_timeout, trigram threshold) set at the start of Search::Runner.
+  # R5 images (measured 2026-10-03): a page of profiles with photos resolves their variants (ImageSet.by_url)
+  # in one more statement, as does a page of acts with covers; the talent detail runs two (the photo,
+  # then the work samples' images and thumbnails) and an act detail one; the feed budget had the room.
   PUBLIC = {
-    "/api/public/talent" => 10,
-    "/api/public/talent?location=Mumbai&role=Drummer&genre=Rock" => 10,
-    "/api/public/talent/{talent}" => 11,
-    "/api/public/acts" => 5,
-    "/api/public/acts/{act}" => 4,
+    "/api/public/talent" => 11,
+    "/api/public/talent?location=Mumbai&role=Drummer&genre=Rock" => 11,
+    "/api/public/talent/{talent}" => 13,
+    "/api/public/acts" => 6,
+    "/api/public/acts/{act}" => 5,
     "/api/jobs" => 4,
     "/api/jobs/{job}" => 3,
     "/api/stage/tags/gig" => 5
@@ -106,8 +109,16 @@ class HotEndpointQueryBudgetTest < ActionDispatch::IntegrationTest
       Post.create!(author_type: "user", author_id: talent.id, created_by_user_id: talent.id, kind: "portfolio_share", shared_portfolio_item_id: item.id)
       Post.create!(author_type: "act", author_id: act.id, created_by_user_id: talent.id, kind: "update", body: "Our band #{@seq}")
       Post.create!(author_type: "user", author_id: @hirer.id, created_by_user_id: @hirer.id, kind: "job_share", shared_job_id: job.id)
+      variants = { "width" => 1200, "height" => 800, "formats" => { "webp" => [320, 768], "avif" => [320, 768] } }
       upload = Upload.create!(user: talent, storage: "s3", key: "uploads/#{talent.id}/#{@seq}.jpg", filename: "gig.jpg", content_type: "image/jpeg",
-        byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/#{@seq}.jpg")
+        byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/uploads/#{talent.id}/#{@seq}.jpg", variants:)
+      # Profile photo, act cover and an image work sample with generated variants (R5): their ImageSet
+      # payloads are resolved per page, so the budgets below include that lookup.
+      Upload.create!(user: talent, storage: "s3", key: "uploads/#{talent.id}/face-#{@seq}.jpg", filename: "face.jpg", content_type: "image/jpeg",
+        byte_size: 1000, status: "complete", public_url: "https://cdn.example.com/uploads/#{talent.id}/face-#{@seq}.jpg", variants:)
+      talent.profile.update!(photo_url: "https://cdn.example.com/uploads/#{talent.id}/face-#{@seq}.jpg")
+      act.update!(photo_url: "https://cdn.example.com/uploads/#{talent.id}/face-#{@seq}.jpg")
+      PortfolioItem.new(user: talent, kind: "image", title: "Stage shot #{@seq}", url: upload.public_url, visibility: "public").save!(validate: false)
       photo = Post.create!(author_type: "user", author_id: talent.id, created_by_user_id: talent.id, kind: "update", body: "Photos #{@seq} #gig",
         media: [{ uploadId: upload.id, type: "image" }])
       Post.create!(author_type: "user", author_id: @hirer.id, created_by_user_id: @hirer.id, kind: "update", body: "Look at this #{@seq} #gig", reshared_post_id: photo.id)

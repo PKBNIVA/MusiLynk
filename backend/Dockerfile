@@ -19,7 +19,8 @@ RUN gem install bundler -v "$(tail -n 1 Gemfile.lock | tr -d ' ')" --no-document
 COPY backend/ .
 
 FROM base
-RUN apt-get update -qq && apt-get install --no-install-recommends -y libpq5 curl gosu && rm -rf /var/lib/apt/lists/*
+# libvips42: image variants (ImageVariantsJob, ruby-vips); Debian bookworm builds it with WebP and AVIF (libheif + aom) encoders.
+RUN apt-get update -qq && apt-get install --no-install-recommends -y libpq5 libvips42 curl gosu && rm -rf /var/lib/apt/lists/*
 ENV RAILS_SERVE_STATIC_FILES=false
 COPY --from=build /usr/local/bundle /usr/local/bundle
 COPY --from=build /rails /rails

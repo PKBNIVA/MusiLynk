@@ -27,14 +27,30 @@ class Act < ApplicationRecord
   # act the musician manages, so it is left out of My acts.
   scope :direct_enquiry, -> { where(status: "hidden", act_type: "solo", tagline: DIRECT_ENQUIRY_TAGLINE) }
 
-  def api_json = attributes.merge(members: act_members.map(&:api_json), ownerName: owner.name, ownerVerified: owner.profile&.verified || false, demo: SyntheticQa::Demo.user?(owner))
+  def api_json = attributes.merge(members: act_members.map(&:api_json), ownerName: owner.name, ownerVerified: owner.profile&.verified || false, demo: SyntheticQa::Demo.user?(owner), photo: photo_image_set)
   def public_json
     attributes.except("owner_id", "tech_rider_url", "hospitality_rider_url").merge(
       members: act_members.select { _1.member_status == "confirmed" }.map(&:public_json),
       ownerName: owner.name,
       ownerVerified: owner.profile&.verified || false,
-      demo: SyntheticQa::Demo.user?(owner)
+      demo: SyntheticQa::Demo.user?(owner),
+      photo: photo_image_set
     )
+  end
+
+  # Resolves the cover photos' variants (ImageSet) of a page of acts in one query; call before
+  # api_json/public_json on each. Returns the acts.
+  def self.preload_image_sets(acts)
+    acts = Array(acts)
+    sets = ImageSet.by_url(acts.map(&:photo_url))
+    acts.each { _1.instance_variable_set(:@photo_image_set, sets[_1.photo_url]) }
+  end
+
+  # The cover's responsive-image payload, or nil (no photo, no variants yet, or the act was not
+  # preloaded: a single act is resolved on its own).
+  def photo_image_set
+    return @photo_image_set if instance_variable_defined?(:@photo_image_set)
+    @photo_image_set = photo_url.present? ? ImageSet.by_url([photo_url])[photo_url] : nil
   end
 
   private

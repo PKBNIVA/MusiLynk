@@ -27,7 +27,7 @@ class LibraryImportsController < ApplicationController
       { items: created_items, suggested: }
     end
 
-    render json: { portfolioItems: result[:items].map(&:api_json), suggestedReview: result[:suggested] }
+    render json: { portfolioItems: PortfolioItem.preload_image_sets(result[:items]).map(&:api_json), suggestedReview: result[:suggested] }
   end
 
   private

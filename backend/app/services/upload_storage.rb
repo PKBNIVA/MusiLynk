@@ -76,20 +76,41 @@ class UploadStorage
 
     def build_key(user_id, filename) = "#{KEY_PREFIX}#{user_id}/#{SecureRandom.uuid}/#{filename}"
 
-    # Browser upload instructions for a pending Upload.
+    # Browser upload instructions for a pending Upload. The object's Cache-Control (config/images.yml)
+    # is part of the signature: a signed header the browser must send on the PUT, a policy field on
+    # the POST, so the original is stored immutable-cacheable like its variants.
     def presign(upload)
       raise NotConfigured, "Direct uploads are misconfigured." unless ready?
+      cache_control = ImageVariants.cache_control
       if upload_method == "put"
-        url = Aws::S3::Presigner.new(client:).presigned_url(:put_object, bucket:, key: upload.key, content_type: upload.content_type,
-          content_length: upload.byte_size, expires_in: PRESIGN_TTL.to_i, whitelist_headers: ["content-length"])
-        { method: "PUT", uploadUrl: url, headers: { "Content-Type" => upload.content_type }, fields: {} }
+        options = { bucket:, key: upload.key, content_type: upload.content_type, content_length: upload.byte_size,
+                    expires_in: PRESIGN_TTL.to_i, whitelist_headers: %w[cache-control content-length] }
+        options[:cache_control] = cache_control if cache_control
+        url = Aws::S3::Presigner.new(client:).presigned_url(:put_object, **options)
+        headers = { "Content-Type" => upload.content_type }
+        headers["Cache-Control"] = cache_control if cache_control
+        { method: "PUT", uploadUrl: url, headers:, fields: {} }
       else
-        post = Aws::S3::Bucket.new(name: bucket, client:).presigned_post(
-          key: upload.key, content_type: upload.content_type, content_length_range: upload.byte_size..upload.byte_size,
-          signature_expiration: PRESIGN_TTL.from_now, success_action_status: "201"
-        )
+        options = { key: upload.key, content_type: upload.content_type, content_length_range: upload.byte_size..upload.byte_size,
+                    signature_expiration: PRESIGN_TTL.from_now, success_action_status: "201" }
+        options[:cache_control] = cache_control if cache_control
+        post = Aws::S3::Bucket.new(name: bucket, client:).presigned_post(**options)
         { method: "POST", uploadUrl: post.url, headers: {}, fields: post.fields }
       end
+    end
+
+    # Copies a stored object to a local path (streamed, never held in memory).
+    def download(key, path)
+      client.get_object(bucket:, key:, response_target: path)
+      path
+    end
+
+    # Stores a derived object (an image variant) with its type and caching headers.
+    def put_object(key, body:, content_type:, cache_control: nil)
+      options = { bucket:, key:, body:, content_type: }
+      options[:cache_control] = cache_control if cache_control
+      client.put_object(**options)
+      true
     end
 
     # => { size:, content_type:, header: } or nil when the object does not exist.
@@ -101,9 +122,14 @@ class UploadStorage
       nil
     end
 
-    def delete(storage, key)
+    # Removes the object and its derived objects (`extra_keys`: generated variants).
+    def delete(storage, key, extra_keys = [])
       case storage
-      when "s3" then client.delete_object(bucket:, key:)
+      when "s3"
+        client.delete_object(bucket:, key:)
+        Array(extra_keys).each_slice(1000) do |keys|
+          client.delete_objects(bucket:, delete: { objects: keys.map { { key: _1 } }, quiet: true })
+        end
       when "disk"
         # Upload blobs have no attachments or variants (and the schema has no variant
         # table), so delete the file and the row directly instead of Blob#purge.

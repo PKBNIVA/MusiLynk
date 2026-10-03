@@ -1,3 +1,4 @@
+import type { ImageSet } from './imageSet';
 // Response shapes of the Rails API as the pages read them. Each type mirrors what the named
 // controller or model method renders (see backend/app); many endpoints merge raw snake_case
 // column attributes with camelCase extras, so both spellings appear where the API sends both.
@@ -56,6 +57,8 @@ export interface ProfileFields {
   currency?: string | null;
   /** The person's uploaded (or Google) picture. Demo accounts never have one: they render generated art. */
   photoUrl?: string | null;
+  /** Responsive variants of photoUrl once generated (backend ImageSet); null or absent otherwise. */
+  photo?: ImageSet | null;
   /** Kinds of event they take (wedding, corporate…); the directory's event-type filter reads it. */
   eventTypes?: string[];
   /** Consent to announce a verification approval on The Stage and generate a share card
@@ -281,6 +284,10 @@ export interface PortfolioItem {
   creditedAs?: string | null;
   thumbnailUrl?: string | null;
   waveformUrl?: string | null;
+  /** Responsive variants of an uploaded image sample's `url` (backend ImageSet); null for links and pending variants. */
+  image?: ImageSet | null;
+  /** Responsive variants of an uploaded `thumbnailUrl`. */
+  thumbnail?: ImageSet | null;
   visibility?: string | null;
   description?: string | null;
   tags?: string[];
@@ -425,6 +432,8 @@ export interface Act {
   promo_url?: string | null;
   /** The act's uploaded picture; demo acts have none and render generated art. */
   photo_url?: string | null;
+  /** Responsive variants of photo_url once generated (backend ImageSet). */
+  photo?: ImageSet | null;
   bio?: string | null;
   genres: string[];
   languages: string[];

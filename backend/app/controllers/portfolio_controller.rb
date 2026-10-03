@@ -1,7 +1,7 @@
 class PortfolioController < ApplicationController
   before_action -> { authenticate!("jobseeker", "employer") }
 
-  def index = render(json: { items: current_user.portfolio_items.order(featured: :desc, sort_order: :asc, created_at: :desc).limit(200).map(&:api_json) })
+  def index = render(json: { items: PortfolioItem.preload_image_sets(current_user.portfolio_items.order(featured: :desc, sort_order: :asc, created_at: :desc).limit(200)).map(&:api_json) })
 
   def create
     item = current_user.portfolio_items.create!(item_params)

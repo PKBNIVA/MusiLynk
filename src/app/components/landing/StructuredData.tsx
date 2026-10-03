@@ -1,8 +1,10 @@
 import { BRAND_NAME } from '../../lib/brand';
+import { publicOrigin } from '../../lib/siteMeta';
 
-/** Organization and WebSite structured data for search engines (schema.org JSON-LD). */
+/** Organization and WebSite structured data for search engines (schema.org JSON-LD). The origin is the
+ *  configured public one (lib/siteMeta.ts), never window.location, so pre-rendered HTML and browser agree. */
 export function StructuredData({ description }: { description: string }) {
-  const origin = window.location.origin;
+  const origin = publicOrigin();
   const data = [
     {
       '@context': 'https://schema.org',

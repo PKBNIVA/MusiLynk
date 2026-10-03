@@ -4,10 +4,11 @@
   "version": "0.5.0",
   "type": "module",
   "engines": {
-    "node": ">=22.18"
+    "node": ">=24"
   },
   "scripts": {
-    "build": "vite build && node scripts/prerender-heads.mjs",
+    "build": "vite build && npm run build:ssr && node scripts/prerender-heads.mjs",
+    "build:ssr": "vite build --ssr src/entry-server.tsx --outDir dist-ssr",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "check:perf": "node scripts/perf/check-perf.mjs",
     "perf:measure": "node scripts/perf/measure.mjs",

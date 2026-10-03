@@ -1,4 +1,5 @@
 import { usePageMeta } from '../../components/PageMeta';
+import { PUBLIC_PAGE_META } from '../../lib/siteMeta';
 import { useEffect } from 'react';
 import { Link } from 'react-router';
 import { PublicNav } from '../../components/PublicNav';
@@ -19,18 +20,17 @@ const NOUN = ['act', 'acts'] as const;
 const ACT_SUGGESTIONS = ['wedding band', 'sufi', 'jazz', 'DJ', 'singer'] as const;
 
 export default function PublicActs() {
-  usePageMeta(
-    'Book singers, bands & live acts',
-    'Discover bookable singers, duos, bands and ensembles, compare lineups and request a quote for your event on MusiLynk.',
-    { canonicalPath: '/book-music', type: 'website' },
-  );
-  const { values, query, update, clear } = useUrlFilters(FILTERS);
+  usePageMeta(PUBLIC_PAGE_META['/book-music'].title, PUBLIC_PAGE_META['/book-music'].description, {
+    canonicalPath: '/book-music',
+    type: 'website',
+  });
+  const { values, query, update, clear, ready } = useUrlFilters(FILTERS);
   const list = usePagedList<Act, ActPage>({ path: '/public/acts', pick: pickActs, noun: 'acts' });
   const { items: acts, loading, error, meta } = list;
   const load = useLatestCallback(() => list.search(query));
   useEffect(() => {
-    void load();
-  }, [query, load]);
+    if (ready) void load();
+  }, [query, load, ready]);
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />

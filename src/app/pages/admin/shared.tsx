@@ -147,6 +147,7 @@ export const ADMIN_TABS = [
   'commerce',
   'codes',
   'operations',
+  'health',
   'audit',
   'demo',
   'ai',

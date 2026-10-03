@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { PublicNav } from '../components/PublicNav';
 import { PhotoHeader } from '../components/landing/PhotoHeader';
 import { usePageMeta } from '../components/PageMeta';
+import { PUBLIC_PAGE_META } from '../lib/siteMeta';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -25,11 +26,9 @@ type Confirmed = { id: string; notifiedCount: number; matchStatus?: string; resp
 type LocationState = { confirmed?: Confirmed } | null;
 
 export default function UrgentHire() {
-  usePageMeta(
-    'Need someone by tomorrow?',
-    'Post an urgent music hiring request and get matched with available, verified musicians and crew near you within hours.',
-    { canonicalPath: '/urgent' },
-  );
+  usePageMeta(PUBLIC_PAGE_META['/urgent'].title, PUBLIC_PAGE_META['/urgent'].description, {
+    canonicalPath: '/urgent',
+  });
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

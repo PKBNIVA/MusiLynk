@@ -1,6 +1,6 @@
-# Daily housekeeping for authentication records: expired sessions and email
-# tokens that expired or were used more than RETENTION ago, and sign-in codes
-# that expired more than RETENTION ago.
+# Daily housekeeping for email tokens that expired or were used more than RETENTION ago.
+# Expired sessions and sign-in codes are deleted by RetentionSweepJob, on the windows in
+# config/retention.yml.
 class AuthCleanupJob < ApplicationJob
   RETENTION = 7.days
   BATCH_SIZE = 1_000
@@ -9,10 +9,8 @@ class AuthCleanupJob < ApplicationJob
 
   def perform(now = Time.current)
     cutoff = now - RETENTION
-    sessions = delete_in_batches(Session.where(expires_at: ..now))
     tokens = delete_in_batches(EmailToken.where(expires_at: ...cutoff).or(EmailToken.where(used_at: ...cutoff)))
-    codes = delete_in_batches(SignInCode.where(expires_at: ...cutoff))
-    Rails.logger.info({ event: "auth_cleanup", sessionsDeleted: sessions, emailTokensDeleted: tokens, signInCodesDeleted: codes }.to_json)
+    Rails.logger.info({ event: "auth_cleanup", emailTokensDeleted: tokens }.to_json)
   end
 
   private

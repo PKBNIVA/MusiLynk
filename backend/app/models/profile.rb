@@ -1,4 +1,11 @@
 class Profile < ApplicationRecord
+  # Adds one profile view and returns the new total in one statement (no lost update between
+  # concurrent views), or nil when the user has no profile. Feeds the 100-views milestone.
+  def self.increment_view_count(user_id)
+    sql = sanitize_sql_array(["UPDATE profiles SET profile_view_count = profile_view_count + 1 WHERE user_id = ? RETURNING profile_view_count", user_id])
+    lease_connection.select_value(sql)&.to_i
+  end
+
   self.primary_key = :user_id
   belongs_to :user
   include SearchIndexed

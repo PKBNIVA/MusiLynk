@@ -1,5 +1,6 @@
 import { apiGet } from './api';
 import { formatFromRate, fromRate } from './format';
+import { roleNoun } from './seoPages';
 
 // Live proof for the landing page. Only real counts from GET /api/public/stats are shown, and
 // only once they mean something; otherwise the page shows how MusiLynk works and what it promises.
@@ -63,7 +64,7 @@ export const hireSearchPath = (role: string, city: string) =>
   `/music-professionals?${new URLSearchParams({ role, location: city }).toString()}`;
 
 /** Role label in running text: keeps the acronym in "DJ", lowercases the rest. */
-export const roleNoun = (label: string) => (label === 'DJ' ? label : label.toLowerCase());
+export { roleNoun };
 
 /** "Hire a drummer in Mumbai" / "Hire an arranger in Pune". */
 export function hireLinkText(label: string, city: string) {

@@ -826,6 +826,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.datetime "read_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["read_at"], name: "index_notifications_on_read_at_when_read", where: "(read_at IS NOT NULL)"
     t.index ["user_id", "read_at", "created_at"], name: "index_notifications_on_user_id_and_read_at_and_created_at"
     t.index ["user_id"], name: "index_notifications_on_user_id"
   end
@@ -1026,6 +1027,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.datetime "created_at", null: false
     t.index "((props ->> 'profileId'::text))", name: "index_product_events_on_profile_view_profile_id", where: "((name)::text = 'profile_view'::text)"
     t.index ["anon_id"], name: "index_product_events_on_anon_id"
+    t.index ["created_at"], name: "index_product_events_on_created_at"
     t.index ["name", "created_at"], name: "index_product_events_on_name_and_created_at"
     t.index ["user_id"], name: "index_product_events_on_user_id"
   end
@@ -1078,6 +1080,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_150000) do
     t.jsonb "push_preferences", default: {}, null: false
     t.tsvector "search_vector"
     t.text "search_text"
+    t.integer "profile_view_count", default: 0, null: false
     t.index "((event_types)::text) gin_trgm_ops", name: "index_profiles_on_event_types_text_trgm", using: :gin
     t.index "((genres)::text) gin_trgm_ops", name: "index_profiles_on_genres_text_trgm", using: :gin
     t.index "((instruments)::text) gin_trgm_ops", name: "index_profiles_on_instruments_text_trgm", using: :gin

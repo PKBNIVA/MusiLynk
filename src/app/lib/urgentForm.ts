@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFormErrors } from './formErrors';
 
 // The one urgent-request form, used by the public /urgent page and by /employer/urgent (and
@@ -154,7 +154,19 @@ export function urgentBody(values: UrgentFormValues): UrgentRequestBody {
 
 /** Form state, per-field errors and the request body for the urgent form. */
 export function useUrgentForm(initial: { role?: string; city?: string } = {}) {
-  const [values, setValues] = useState<UrgentFormValues>(() => emptyUrgentValues(initial));
+  // The first render carries neither the clock ("tomorrow, 6 pm") nor the ?role=&city= prefill: the
+  // pre-rendered HTML of /urgent cannot know them, so they are applied right after mount instead.
+  const [values, setValues] = useState<UrgentFormValues>(() => ({ ...emptyUrgentValues(), startAt: '' }));
+  const initialRole = initial.role;
+  const initialCity = initial.city;
+  useEffect(() => {
+    setValues((current) => ({
+      ...current,
+      role: initialRole ? [initialRole] : current.role,
+      city: initialCity ? [initialCity] : current.city,
+      startAt: current.startAt || defaultStartAt(),
+    }));
+  }, [initialRole, initialCity]);
   const form = useFormErrors<UrgentField>({ ids: URGENT_IDS, apiFields: API_FIELDS });
   const set = <K extends keyof UrgentFormValues>(key: K, value: UrgentFormValues[K]) => {
     setValues((current) => ({ ...current, [key]: value }));

@@ -626,7 +626,7 @@ initialises Sentry and the web app never downloads it (zero requests to Sentry).
 | --- | --- | --- |
 | Railway (Rails service) | `SENTRY_DSN` | `verse-api` DSN |
 | Railway | `SENTRY_ENVIRONMENT` | optional, defaults to `RAILS_ENV` (`production`) |
-| Railway | `SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.02` once `SENTRY_DSN` is set (2% of requests traced for performance data); `0` turns tracing off |
+| Railway | `SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.1` once `SENTRY_DSN` is set (10% of requests and jobs traced for performance data; profiling is always off); `0` turns tracing off |
 | Vercel (Production environment) | `VITE_SENTRY_DSN` | `verse-web` DSN |
 | Vercel (Production environment) | `VITE_SENTRY_ENVIRONMENT` | `production` (Preview deployments can use `preview`, or leave the DSN unset there) |
 | Vercel | `VITE_SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.05` once `VITE_SENTRY_DSN` is set; `0` turns tracing off. Core Web Vitals are sent as metrics either way (see docs/PERFORMANCE.md) |
@@ -750,8 +750,11 @@ rollback below). Email provider rejections (4xx from Brevo) are logged as `email
 
 ## Backups and rollback
 
-Railway's current trial does not provide managed backups or point-in-time recovery, so
-`.github/workflows/db-backup.yml` takes a nightly (03:00 IST) off-Railway backup:
+Railway's current trial does not provide managed backups or point-in-time recovery (checked
+2026-10-03: no volume backups and no backup schedule on the Postgres volume), so
+`.github/workflows/db-backup.yml` takes a nightly (03:00 IST) off-Railway backup. A weekly in-app
+second copy (`BackupToR2Job`, off unless `BACKUP_BUCKET` is set) and the 10-step restore runbook
+are in `docs/ops/backups.md`. The nightly flow:
 
 1. `scripts/db/backup.sh` runs `pg_dump --format=custom`, records a SHA-256 checksum and a
    manifest of per-table row counts, and encrypts the dump with GPG (AES-256).

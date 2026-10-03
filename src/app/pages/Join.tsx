@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { ArrowLeft, ArrowRight, KeyRound, Link2, Mic2, Sparkles } from 'lucide-react';
 import { usePageMeta } from '../components/PageMeta';
+import { PUBLIC_PAGE_META } from '../lib/siteMeta';
 import { SkipLink } from '../components/SkipLink';
 import { BrandMark } from '../components/BrandMark';
 import { StepForm, focusStepHeading, type FormStep } from '../components/help/StepForm';
@@ -209,11 +210,9 @@ function useSteps(ids: readonly string[]) {
 const MUSICIAN_STEPS = ['you', 'work', 'account'] as const;
 
 function MusicianJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: User) => void }) {
-  usePageMeta(
-    'Join as a musician or crew',
-    'Create a verified music portfolio in two minutes: pick your role, paste links to your YouTube, Instagram, SoundCloud or Spotify work, and get booked in Mumbai.',
-    { canonicalPath: '/join/musician' },
-  );
+  usePageMeta(PUBLIC_PAGE_META['/join/musician'].title, PUBLIC_PAGE_META['/join/musician'].description, {
+    canonicalPath: '/join/musician',
+  });
   useSignupStarted('jobseeker');
   const { step, reached, goTo } = useSteps(MUSICIAN_STEPS);
   const [roles, setRoles] = useState<string[]>([]);
@@ -474,11 +473,9 @@ const HIRING_FOR: Record<HirerKind, string> = {
  * answers become the organisation's Page.
  */
 function HirerJoin({ onStart, onDone }: { onStart: () => void; onDone: (user: User) => void }) {
-  usePageMeta(
-    'Join to hire musicians and crew',
-    'Studios, event and wedding companies, bands, labels and venues: create a free account in a minute and find a verified musician in Mumbai within 24 hours.',
-    { canonicalPath: '/join/hiring' },
-  );
+  usePageMeta(PUBLIC_PAGE_META['/join/hiring'].title, PUBLIC_PAGE_META['/join/hiring'].description, {
+    canonicalPath: '/join/hiring',
+  });
   useSignupStarted('employer');
   const [kind, setKind] = useState<HirerKind | ''>('');
   const [city, setCity] = useState<string[]>([DEFAULT_CITY]);

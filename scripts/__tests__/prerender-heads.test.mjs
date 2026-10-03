@@ -13,6 +13,10 @@ import {
   apiPreconnect,
   uploadsDnsPrefetch,
   heroPreload,
+  withBody,
+  loadRenderer,
+  PRERENDERED_PATHS,
+  PRERENDERED_SHELLS,
 } from '../prerender-heads.mjs';
 
 const scriptPath = resolve(process.cwd(), 'scripts/prerender-heads.mjs');
@@ -54,12 +58,12 @@ function makeDist() {
 describe('prerender-heads.mjs', () => {
   it('writes a per-route index.html with the right title, description and canonical', () => {
     const dist = makeDist();
-    execFileSync(process.execPath, [scriptPath, dist], {
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example' },
     });
 
     const html = readFileSync(join(dist, 'pricing', 'index.html'), 'utf8');
-    expect(html).toContain('<title>Pricing</title>');
+    expect(html).toContain('<title>Pricing · MusiLynk</title>');
     expect(html).toContain('<link rel="canonical" href="https://musilynk.example/pricing">');
     expect(html).toContain('<meta property="og:url" content="https://musilynk.example/pricing">');
     expect(html).toContain('<div id="root"></div>');
@@ -68,7 +72,7 @@ describe('prerender-heads.mjs', () => {
 
   it('writes the root route to dist/index.html itself', () => {
     const dist = makeDist();
-    execFileSync(process.execPath, [scriptPath, dist], {
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example' },
     });
     const html = readFileSync(join(dist, 'index.html'), 'utf8');
@@ -78,7 +82,7 @@ describe('prerender-heads.mjs', () => {
 
   it('rewrites the robots.txt Sitemap line to the configured base URL', () => {
     const dist = makeDist();
-    execFileSync(process.execPath, [scriptPath, dist], {
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example' },
     });
     const robots = readFileSync(join(dist, 'robots.txt'), 'utf8');
@@ -90,7 +94,9 @@ describe('prerender-heads.mjs', () => {
     dirs.push(dist);
     mkdirSync(dist, { recursive: true });
     writeFileSync(join(dist, 'index.html'), FAKE_INDEX);
-    execFileSync(process.execPath, [scriptPath, dist], { env: { ...process.env, VITE_APP_TARGET: 'admin' } });
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
+      env: { ...process.env, VITE_APP_TARGET: 'admin' },
+    });
     for (const file of ['admin/index.html', 'admin/tester/index.html', 'account/index.html', '404.html'])
       expect(readFileSync(join(dist, file), 'utf8')).toBe(FAKE_INDEX);
     // None of the public pages is created, and index.html is left alone.
@@ -111,7 +117,7 @@ describe('prerender-heads.mjs', () => {
 
   it('replaces the document-level og and twitter defaults instead of repeating them', () => {
     const dist = makeDist();
-    execFileSync(process.execPath, [scriptPath, dist], {
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example' },
     });
     const html = readFileSync(join(dist, 'pricing', 'index.html'), 'utf8');
@@ -120,22 +126,22 @@ describe('prerender-heads.mjs', () => {
     expect(html.match(/name="twitter:title"/g)).toHaveLength(1);
     expect(html).not.toContain('Default og title');
     expect(html).not.toContain('default.example');
-    expect(render(FAKE_INDEX, '/x', ['T', 'D'])).toContain('<title>T</title>');
+    expect(render(FAKE_INDEX, '/x', ['T', 'D'])).toContain('<title>T · MusiLynk</title>');
   });
 
   it('writes the photo credits page', () => {
     const dist = makeDist();
-    execFileSync(process.execPath, [scriptPath, dist], {
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example' },
     });
     const html = readFileSync(join(dist, 'credits', 'index.html'), 'utf8');
-    expect(html).toContain('<title>Photo credits</title>');
+    expect(html).toContain('<title>Photo credits · MusiLynk</title>');
     expect(html).toContain('<link rel="canonical" href="https://musilynk.example/credits">');
   });
 
   it('writes a head for each of the 12 x 16 hire pages and 16 rates pages, worded like the pages', () => {
     const dist = makeDist();
-    execFileSync(process.execPath, [scriptPath, dist], {
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example' },
     });
     const hire = readFileSync(join(dist, 'hire', 'dj', 'pune', 'index.html'), 'utf8');
@@ -168,7 +174,7 @@ describe('prerender-heads.mjs', () => {
 
   it('writes 404.html as a noindex copy of the app shell, so unknown URLs are a real 404 that still mounts the SPA', () => {
     const dist = makeDist();
-    execFileSync(process.execPath, [scriptPath, dist], {
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example' },
     });
     const html = readFileSync(join(dist, '404.html'), 'utf8');
@@ -184,7 +190,7 @@ describe('prerender-heads.mjs', () => {
 
   it('gives every hire and rates page a BreadcrumbList with absolute URLs, marked so the page replaces it', () => {
     const dist = makeDist();
-    execFileSync(process.execPath, [scriptPath, dist], {
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example' },
     });
     const html = readFileSync(join(dist, 'hire', 'drummer', 'mumbai', 'index.html'), 'utf8');
@@ -218,7 +224,7 @@ describe('prerender-heads.mjs', () => {
 
   it('writes app-shell.html: the neutral shell for dynamic URLs, with no canonical and not the landing head', () => {
     const dist = makeDist();
-    execFileSync(process.execPath, [scriptPath, dist], {
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example' },
     });
     const shell = readFileSync(join(dist, 'app-shell.html'), 'utf8');
@@ -240,6 +246,24 @@ describe('prerender-heads.mjs', () => {
     expect(render(FAKE_INDEX, '/pricing', ['T', 'D'])).not.toContain('rel="preload"');
   });
 
+  it('puts a pre-rendered body into #root with the route it is for', () => {
+    const html = withBody('<body><div id="root"></div></body>', '/pricing', '<!--$--><h1>Pricing</h1><!--/$-->');
+    expect(html).toBe(
+      '<body><div id="root" data-prerendered="/pricing"><!--$--><h1>Pricing</h1><!--/$--></div></body>',
+    );
+    expect(PRERENDERED_PATHS).toEqual(expect.arrayContaining(['/', '/music-jobs', '/urgent', '/join/musician']));
+    expect(PRERENDERED_PATHS).not.toContain('/search');
+    expect(PRERENDERED_SHELLS).toEqual({
+      '/professionals/:id': 'professionals',
+      '/acts/:id': 'acts',
+      '/opportunities/:id': 'opportunities',
+    });
+  });
+
+  it('writes heads only when the pre-render bundle is missing', async () => {
+    expect(await loadRenderer(join(tmpdir(), 'no-such-dist-ssr'))).toBeNull();
+  });
+
   it('adds a dns-prefetch for the uploads origin and nothing when it is unset or relative', () => {
     expect(uploadsDnsPrefetch('https://media.musilynk.example/uploads')).toBe(
       '<link rel="dns-prefetch" href="https://media.musilynk.example">',
@@ -255,7 +279,7 @@ describe('prerender-heads.mjs', () => {
     expect(apiPreconnect('')).toBe('');
     expect(apiPreconnect('/api')).toBe('');
     const dist = makeDist();
-    execFileSync(process.execPath, [scriptPath, dist], {
+    execFileSync(process.execPath, [scriptPath, dist, join(dist, 'no-ssr')], {
       env: {
         ...process.env,
         VITE_PUBLIC_URL: 'https://musilynk.example',

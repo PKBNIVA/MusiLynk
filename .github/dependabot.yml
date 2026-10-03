@@ -7,7 +7,16 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
+    ignore:
+      # typescript-eslint's peer range (typescript >=4.8.4 <6.1.0 in 8.70) does not cover the next
+      # TypeScript major, so a major bump breaks lint (see #87). Bump typescript by hand once
+      # typescript-eslint supports the new major.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
     groups:
+      # React must move as one family (see #86): react, react-dom and their types in one PR.
+      react:
+        patterns: [react, react-dom, '@types/react', '@types/react-dom']
       npm-minor-and-patch:
         update-types: [minor, patch]
 

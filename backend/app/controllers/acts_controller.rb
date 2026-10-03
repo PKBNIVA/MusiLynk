@@ -6,8 +6,13 @@ class ActsController < ApplicationController
   # Only "confirmed" exists today: public lineups show confirmed members and no flow sets another status.
   MEMBER_STATUSES = %w[confirmed].freeze
 
-  def public_index = render_listing
-  def public_show = render(json: { act: public_visible(Act.includes(:act_members, owner: :profile).where(status: "active")).find(params[:id]).public_json })
+  def public_index = render_listing(cache: :listing)
+
+  def public_show
+    json = { act: public_visible(Act.includes(:act_members, owner: :profile).where(status: "active")).find(params[:id]).public_json }.to_json
+    return if public_cache!(:show, etag: json)
+    render json: json
+  end
 
   def index
     return unless authenticate!
@@ -109,7 +114,8 @@ class ActsController < ApplicationController
 
   # One ranked page of active acts. Filters: q (name, type, genres, events, lineup roles and
   # instruments), city, type (act type), genre, eventType and member (a musician's id); paged like the talent directory.
-  def render_listing
+  # `cache` names the edge-cache lifetime (PublicCaching) for the anonymous public listing.
+  def render_listing(cache: nil)
     unless LIST_PARAMS.all? { params[_1].nil? || params[_1].is_a?(String) }
       return render_error("Search filters must be plain text.", :bad_request, "INVALID_PARAMETER")
     end
@@ -123,7 +129,9 @@ class ActsController < ApplicationController
     scope = fronted_by(scope, params[:member].to_s.strip) if params[:member].present?
     limit = list_limit
     search = Search::Runner.call(scope, params[:q], Search::Targets::ACTS, order: LIST_ORDER, offset:, limit:)
-    render json: { acts: search.rows.map(&:public_json), nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta)
+    json = { acts: search.rows.map(&:public_json), nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta).to_json
+    return if cache && public_cache!(cache, etag: json)
+    render json: json
   end
 
   # Acts a musician owns or plays in as a confirmed member (a profile's "Request a quote" lands on these).

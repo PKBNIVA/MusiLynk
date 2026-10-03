@@ -52,7 +52,11 @@ describe('NowOnMusiLynk', () => {
     talent[0] = person(0, { demo: true, verified: true, verificationTier: 'verified' });
     vi.mocked(apiGet).mockResolvedValue({ talent });
     await show();
-    expect(apiGet).toHaveBeenCalledWith('/public/talent?location=Mumbai&limit=6', { skipAuthRedirect: true });
+    // viaEdge: the landing's three public reads go through the edge-cached same-origin path.
+    expect(apiGet).toHaveBeenCalledWith('/public/talent?location=Mumbai&limit=6', {
+      skipAuthRedirect: true,
+      viaEdge: true,
+    });
     const cards = host.querySelectorAll('[data-testid=now-card]');
     expect(cards).toHaveLength(6);
     expect(cards[0].textContent).toContain('Person 0');

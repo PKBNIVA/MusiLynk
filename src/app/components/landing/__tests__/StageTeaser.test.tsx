@@ -55,7 +55,7 @@ describe('StageTeaser', () => {
     await show();
     expect(apiGet).toHaveBeenCalledWith(
       '/stage/authors/system/musilynk/posts',
-      expect.objectContaining({ skipAuthRedirect: true }),
+      expect.objectContaining({ skipAuthRedirect: true, viaEdge: true }),
     );
     const cards = host.querySelectorAll('[data-testid=stage-teaser-post]');
     expect(cards).toHaveLength(3);

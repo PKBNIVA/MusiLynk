@@ -134,7 +134,8 @@ describe('landing proof', () => {
   it('loads stats quietly', () => {
     vi.mocked(apiGet).mockResolvedValue({});
     void loadPublicStats();
-    expect(apiGet).toHaveBeenCalledWith('/public/stats', { skipAuthRedirect: true, timeoutMs: 6_000 });
+    // viaEdge: the landing counters go through the edge-cached same-origin path (docs/ops/edge-caching.md).
+    expect(apiGet).toHaveBeenCalledWith('/public/stats', { skipAuthRedirect: true, timeoutMs: 6_000, viaEdge: true });
   });
   it('links each role to the directory search for the city', () => {
     expect(HIRE_ROLES.length).toBeGreaterThan(6);

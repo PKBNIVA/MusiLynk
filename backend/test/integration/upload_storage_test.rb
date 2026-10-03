@@ -10,7 +10,7 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
   PNG = "\x89PNG\r\n\x1A\n".b + ("\x00".b * 64)
   MP3 = "ID3\x04\x00\x00\x00\x00\x00\x00".b + ("\x00".b * 64)
   PDF = "%PDF-1.7\n".b + ("x" * 64)
-  STORAGE_ENV = %w[AWS_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION AWS_ENDPOINT_URL_S3 AWS_PUBLIC_BASE_URL AWS_UPLOAD_METHOD API_HOST].freeze
+  STORAGE_ENV = %w[AWS_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION AWS_ENDPOINT_URL_S3 AWS_PUBLIC_BASE_URL UPLOADS_PUBLIC_BASE_URL AWS_UPLOAD_METHOD API_HOST].freeze
 
   setup do
     @saved_env = STORAGE_ENV.to_h { [_1, ENV.delete(_1)] }
@@ -192,6 +192,43 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
     assert_equal 3, Upload.count
   end
 
+  test "UPLOADS_PUBLIC_BASE_URL fronts public reads (an R2 public or custom domain) and satisfies the R2 base-URL requirement" do
+    # Unset: behaviour unchanged, the bucket's own public origin is used.
+    with_bucket(endpoint: "https://acct.r2.cloudflarestorage.com", public_base: "https://pub-abc.r2.dev") do
+      assert_equal "https://pub-abc.r2.dev/uploads/x/y.png", UploadStorage.public_url_for("uploads/x/y.png")
+    end
+    # Set alongside AWS_PUBLIC_BASE_URL: the fronting domain wins for reads; uploads still go to the bucket endpoint.
+    with_bucket(endpoint: "https://acct.r2.cloudflarestorage.com", public_base: "https://pub-abc.r2.dev", reads_base: "https://media.musilynk.test/") do
+      assert_empty UploadStorage.configuration_problems
+      assert_equal "https://media.musilynk.test/uploads/x/y.png", UploadStorage.public_url_for("uploads/x/y.png")
+      post "/api/uploads/presign", params: { filename: "a.png", contentType: "image/png", size: 10 }, headers: auth, as: :json
+      assert_response :success
+      body = response.parsed_body
+      assert_match %r{\Ahttps://media\.musilynk\.test/uploads/#{@user.id}/[0-9a-f-]{36}/a\.png\z}, body.fetch("publicUrl")
+      assert_match %r{\Ahttps://acct\.r2\.cloudflarestorage\.com/}, body.fetch("uploadUrl"), "the browser still writes to the bucket"
+    end
+    # Set on its own: it is the public base URL, so an R2 endpoint is no longer misconfigured.
+    with_bucket(endpoint: "https://acct.r2.cloudflarestorage.com", public_base: nil, reads_base: "https://media.musilynk.test") do
+      assert_empty UploadStorage.configuration_problems
+      assert_equal "https://media.musilynk.test/uploads/x/y.png", UploadStorage.public_url_for("uploads/x/y.png")
+    end
+    # AWS without a custom endpoint: the fronting domain still replaces the virtual-hosted bucket URL.
+    with_bucket(reads_base: "https://media.musilynk.test") do
+      assert_equal "https://media.musilynk.test/uploads/x/y.png", UploadStorage.public_url_for("uploads/x/y.png")
+    end
+    with_bucket do
+      assert_equal "https://musilynk-test.s3.ap-south-1.amazonaws.com/uploads/x/y.png", UploadStorage.public_url_for("uploads/x/y.png")
+    end
+  end
+
+  test "an http fronting domain is reported as insecure in production" do
+    with_bucket(endpoint: "https://acct.r2.cloudflarestorage.com", public_base: "https://pub-abc.r2.dev", reads_base: "http://media.musilynk.test") do
+      Rails.env.stub(:production?, true) do
+        assert_equal ["insecure_public_base_url"], UploadStorage.configuration_problems
+      end
+    end
+  end
+
   test "a disk upload used by a deleted work sample is purged" do
     put "/api/uploads/local", params: PNG, headers: auth.merge("CONTENT_TYPE" => "image/png", "X-Filename" => "cover.png")
     assert_response :created
@@ -206,10 +243,11 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
 
   private
 
-  def with_bucket(endpoint: nil, public_base: nil)
+  def with_bucket(endpoint: nil, public_base: nil, reads_base: nil)
     ENV.update("AWS_BUCKET" => "musilynk-test", "AWS_ACCESS_KEY_ID" => "test-access", "AWS_SECRET_ACCESS_KEY" => "test-secret")
     endpoint ? ENV["AWS_ENDPOINT_URL_S3"] = endpoint : ENV.delete("AWS_ENDPOINT_URL_S3")
     public_base ? ENV["AWS_PUBLIC_BASE_URL"] = public_base : ENV.delete("AWS_PUBLIC_BASE_URL")
+    reads_base ? ENV["UPLOADS_PUBLIC_BASE_URL"] = reads_base : ENV.delete("UPLOADS_PUBLIC_BASE_URL")
     UploadStorage.stub(:client, fake_client(endpoint)) { yield }
   end
 

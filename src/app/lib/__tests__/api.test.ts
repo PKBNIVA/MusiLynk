@@ -25,6 +25,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllEnvs();
 });
 
 function lastRequest() {
@@ -47,6 +48,34 @@ describe('api() requests', () => {
     expect(init.body).toBe(JSON.stringify({ title: 'Session drummer' }));
     expect(init.headers.get('Authorization')).toBe('Bearer tok-123');
     expect(init.headers.get('Content-Type')).toBe('application/json');
+  });
+
+  it('sends a viaEdge read to VITE_PUBLIC_API_BASE and everything else to the API host', async () => {
+    vi.stubEnv('VITE_API_URL', 'https://api.example.test/api');
+    vi.stubEnv('VITE_PUBLIC_API_BASE', '/api');
+    const { apiGet } = await loadApi();
+    // A Response body reads once, so each call gets a fresh one.
+    fetchMock.mockImplementation(async () => jsonResponse({ professionals: 12 }));
+
+    await expect(apiGet('/public/stats', { viaEdge: true, skipAuthRedirect: true })).resolves.toEqual({
+      professionals: 12,
+    });
+    expect(lastRequest().url).toBe('/api/public/stats');
+    // viaEdge is a routing option, not a request header or fetch field.
+    expect('viaEdge' in lastRequest().init).toBe(false);
+
+    await apiGet('/jobs');
+    expect(lastRequest().url).toBe('https://api.example.test/api/jobs');
+  });
+
+  it('without VITE_PUBLIC_API_BASE a viaEdge read goes to the API host like any other', async () => {
+    vi.stubEnv('VITE_API_URL', 'https://api.example.test/api');
+    vi.stubEnv('VITE_PUBLIC_API_BASE', '');
+    const { apiGet } = await loadApi();
+    fetchMock.mockResolvedValue(jsonResponse({}));
+
+    await apiGet('/public/stats', { viaEdge: true });
+    expect(lastRequest().url).toBe('https://api.example.test/api/public/stats');
   });
 
   it('sends no Authorization header when signed out and no Content-Type for FormData', async () => {

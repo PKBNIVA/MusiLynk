@@ -23,7 +23,8 @@ class HotEndpointQueryBudgetTest < ActionDispatch::IntegrationTest
   }.freeze
   SIGNED_IN = {
     "/api/conversations" => 6,
-    "/api/conversations/{conversation}/messages" => 6,
+    # Opening a thread always clears its message notification (one UPDATE), see MessagesController#mark_read!.
+    "/api/conversations/{conversation}/messages" => 7,
     "/api/notifications/unread" => 4,
     "/api/notifications" => 4,
     "/api/bookings" => 7,

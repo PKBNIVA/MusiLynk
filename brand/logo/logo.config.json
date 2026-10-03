@@ -1,0 +1,45 @@
+{
+  "name": "MusiLynk",
+  "design": "A4 One-line M",
+  "markInkBox": [13, 16, 87, 84],
+  "colors": {
+    "violet": "#5B3CF0",
+    "lilac": "#A99BFF",
+    "ink": "#0E0B1F",
+    "night": "#070813",
+    "mist": "#F4F2FF",
+    "white": "#FFFFFF"
+  },
+  "mark": {
+    "onDark": "#A99BFF",
+    "onLight": "#5B3CF0"
+  },
+  "tile": {
+    "gradientFrom": "#6C4DFF",
+    "gradientTo": "#4A2BD6",
+    "flat": "#5B3CF0",
+    "glyph": "#FFFFFF",
+    "cornerRadius": 0.225,
+    "smallCornerRadius": 0.19
+  },
+  "padding": {
+    "tile": 0.56,
+    "smallTile": 0.68,
+    "maskable": 0.5,
+    "appleTouch": 0.56,
+    "avatar": 0.5
+  },
+  "lockup": {
+    "capHeight": 0.746,
+    "gap": 0.4
+  },
+  "og": {
+    "background": "#070813",
+    "headline": "Hire verified musicians in your city",
+    "highlight": "within 24 hours",
+    "subline": "Singers · bands · DJs · session players · sound engineers"
+  },
+  "email": {
+    "headerBackground": "#0b0b12"
+  }
+}

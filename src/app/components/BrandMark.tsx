@@ -1,44 +1,38 @@
-import { useId } from 'react';
 import { BRAND_NAME } from '../lib/brand';
+import {
+  BRAND_MARK_ASPECT,
+  BRAND_MARK_EVENODD,
+  BRAND_MARK_ON_DARK,
+  BRAND_MARK_ON_LIGHT,
+  BRAND_MARK_PATHS,
+  BRAND_MARK_VIEWBOX,
+} from '../lib/brandMark.generated';
 
 type BrandMarkProps = {
   compact?: boolean;
   inverse?: boolean;
 };
 
-/** The MusiLynk "Signal M" tile (public/musilynk-mark.svg), inline so it needs no request and scales crisply. */
-export function BrandGlyph({ size = 38 }: { size?: number }) {
-  const gradient = useId();
+/**
+ * The MusiLynk symbol, drawn inline from brandMark.generated.ts (built from brand/logo/ by
+ * `npm run brand:build`), so it needs no request and scales crisply. `size` is its height in px.
+ */
+export function BrandGlyph({ size = 30, inverse = true }: { size?: number; inverse?: boolean }) {
   return (
     <svg
-      width={size}
+      width={Math.round(size * BRAND_MARK_ASPECT)}
       height={size}
-      viewBox="0 0 100 100"
+      viewBox={BRAND_MARK_VIEWBOX}
+      fill={inverse ? BRAND_MARK_ON_DARK : BRAND_MARK_ON_LIGHT}
+      fillRule={BRAND_MARK_EVENODD ? 'evenodd' : undefined}
       aria-hidden="true"
       focusable="false"
       className="shrink-0"
       data-testid="brand-glyph"
     >
-      <defs>
-        <linearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#8b5cf6" />
-          <stop offset=".5" stopColor="#7c3aed" />
-          <stop offset="1" stopColor="#c026d3" />
-        </linearGradient>
-      </defs>
-      <rect width="100" height="100" rx="23" fill={`url(#${gradient})`} />
-      <g transform="translate(50 50) scale(0.86) translate(-50 -50)">
-        <path
-          d="M15 72H22C28 72 30 22 36.5 22C43 22 44.5 58 50 58C55.5 58 57 31 63.5 31C70 31 72 72 78 72H85"
-          fill="none"
-          stroke="#fff"
-          strokeWidth="10.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <circle cx="15" cy="72" r="9" fill="#f0abfc" />
-        <circle cx="85" cy="72" r="9" fill="#f0abfc" />
-      </g>
+      {BRAND_MARK_PATHS.map((d) => (
+        <path key={d} d={d} />
+      ))}
     </svg>
   );
 }
@@ -46,7 +40,7 @@ export function BrandGlyph({ size = 38 }: { size?: number }) {
 export function BrandMark({ compact = false, inverse = true }: BrandMarkProps) {
   return (
     <span className="inline-flex items-center gap-2.5 select-none">
-      <BrandGlyph />
+      <BrandGlyph size={compact ? 24 : 30} inverse={inverse} />
       <span className="leading-none">
         <span className={`block text-lg font-black tracking-[-0.03em] ${inverse ? 'text-white' : 'text-slate-950'}`}>
           {BRAND_NAME}

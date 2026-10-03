@@ -27,7 +27,9 @@
     "qa:e2e": "playwright test",
     "qa:e2e:public": "playwright test tests/e2e/public-experience.spec.ts tests/e2e/accessibility.spec.ts",
     "qa:e2e:api": "playwright test tests/e2e/api-health.spec.ts --project=api",
-    "qa:e2e:report": "playwright show-report"
+    "qa:e2e:report": "playwright show-report",
+    "brand:build": "node scripts/brand/build-logo.mjs",
+    "brand:check": "node scripts/brand/build-logo.mjs --check"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.20",

@@ -25,7 +25,26 @@ class PortfolioItem < ApplicationRecord
   after_commit -> { ShowcaseSync.item(self) if (previous_changes.keys & SYNC_ATTRIBUTES).any? }, on: :update
   after_destroy_commit -> { ShowcaseSync.forget_item(id) }
 
-  def api_json = attributes.transform_keys { _1.camelize(:lower) }.merge(type: kind)
+  # `image` is the responsive payload (ImageSet) of an uploaded image sample, `thumbnail` that of an
+  # uploaded thumbnail; both nil for links and uploads without variants. Call
+  # PortfolioItem.preload_image_sets on a list first, or each item costs a lookup.
+  def api_json = attributes.transform_keys { _1.camelize(:lower) }.merge(type: kind, image: image_sets[url], thumbnail: image_sets[thumbnail_url])
+
+  # Resolves the variants of every item's image and thumbnail URLs in one query (or hands the items
+  # a lookup already made, `sets`, so a page can resolve them together with other URLs). Returns the items.
+  def self.preload_image_sets(items, sets: nil)
+    items = Array(items)
+    sets ||= ImageSet.by_url(image_urls(items))
+    items.each { _1.instance_variable_set(:@image_sets, sets) }
+  end
+
+  # The URLs whose variants api_json needs: uploaded image samples and uploaded thumbnails.
+  def self.image_urls(items) = Array(items).flat_map { [_1.kind == "image" ? _1.url : nil, _1.thumbnail_url] }.compact_blank
+
+  def image_sets
+    return @image_sets if defined?(@image_sets)
+    @image_sets = ImageSet.by_url([kind == "image" ? url : nil, thumbnail_url])
+  end
 
   def self.storage_url?(value)
     uri = URI.parse(value.to_s)

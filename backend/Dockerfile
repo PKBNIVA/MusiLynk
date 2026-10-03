@@ -38,7 +38,8 @@ RUN apt-get update -qq && apt-get install --no-install-recommends -y curl ca-cer
 
 FROM base
 # liblz4/libzstd (dump compression) and libreadline (psql) are what the copied binaries need beyond libpq5's own dependencies.
-RUN apt-get update -qq && apt-get install --no-install-recommends -y libpq5 curl gosu liblz4-1 libzstd1 libreadline8 && rm -rf /var/lib/apt/lists/*
+# libvips42: image variants (ImageVariantsJob, ruby-vips); Debian bookworm builds it with WebP and AVIF (libheif + aom) encoders.
+RUN apt-get update -qq && apt-get install --no-install-recommends -y libpq5 libvips42 curl gosu liblz4-1 libzstd1 libreadline8 && rm -rf /var/lib/apt/lists/*
 COPY --from=pgclient /pgclient/bin/ /usr/local/bin/
 COPY --from=pgclient /pgclient/lib/ /usr/local/lib/
 # /usr/local/lib is searched before the system directory, so the client tools (and the pg gem, same

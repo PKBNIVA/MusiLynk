@@ -71,7 +71,15 @@ export function TalentCard({ person: c, index, to, aside, footer }: Props) {
     >
       <CardContent className="flex h-full flex-col p-5">
         <div className="flex items-start gap-3">
-          <UserAvatar id={c.id} name={c.name} size="lg" photoUrl={c.photoUrl} demo={c.demo} genres={c.genres} />
+          <UserAvatar
+            id={c.id}
+            name={c.name}
+            size="lg"
+            photoUrl={c.photoUrl}
+            photo={c.photo}
+            demo={c.demo}
+            genres={c.genres}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
               <h2 className="min-w-0 break-words text-lg font-semibold">

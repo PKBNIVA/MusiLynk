@@ -112,5 +112,12 @@ Rails.application.configure do
     class: "AiBatchSubmitJob",
     description: "Submit queued portfolio item classifications as one Anthropic Message Batch, and ingest finished batches"
   } if AiPricing.task_enabled?("classify_portfolio_item")
+  # In-app weekly backup to BACKUP_BUCKET (docs/ops/backups.md): registered only when the bucket is set.
+  # Sunday 03:00 IST = Saturday 21:30 UTC.
+  cron[:backup_to_r2] = {
+    cron: "30 21 * * 6",
+    class: "BackupToR2Job",
+    description: "Dump the database to BACKUP_BUCKET (backups/) and delete copies older than the retention window"
+  } if ENV["BACKUP_BUCKET"].present?
   config.good_job.cron = cron
 end

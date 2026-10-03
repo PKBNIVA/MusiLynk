@@ -19,7 +19,17 @@ RUN gem install bundler -v "$(tail -n 1 Gemfile.lock | tr -d ' ')" --no-document
 COPY backend/ .
 
 FROM base
-RUN apt-get update -qq && apt-get install --no-install-recommends -y libpq5 curl gosu && rm -rf /var/lib/apt/lists/*
+# PG_CLIENT_MAJOR must be at least the server's major version (Railway runs postgres-ssl:18):
+# pg_dump refuses a newer server. The client tools come from the PostgreSQL project's apt repo
+# (the base image only has 15). Used by `bin/rails backup:*` and BackupToR2Job (docs/ops/backups.md).
+ARG PG_CLIENT_MAJOR=18
+RUN apt-get update -qq && apt-get install --no-install-recommends -y libpq5 curl gosu ca-certificates \
+  && install -d /usr/share/postgresql-common/pgdg \
+  && curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+  && . /etc/os-release \
+  && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update -qq && apt-get install --no-install-recommends -y "postgresql-client-${PG_CLIENT_MAJOR}" \
+  && rm -rf /var/lib/apt/lists/*
 ENV RAILS_SERVE_STATIC_FILES=false
 COPY --from=build /usr/local/bundle /usr/local/bundle
 COPY --from=build /rails /rails

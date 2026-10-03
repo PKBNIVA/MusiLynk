@@ -9,6 +9,7 @@ class BackupToR2Job < ApplicationJob
 
   def perform
     return log(:skipped, reason: "BACKUP_BUCKET not set") unless DatabaseBackup.enabled?
+    DatabaseBackup.ensure_upload_ready! # fails before dumping when BACKUP_PASSPHRASE is missing
 
     Dir.mktmpdir("musilynk-backup") do |dir|
       result = DatabaseBackup.dump(File.join(dir, "musilynk-#{Time.current.utc.strftime('%Y%m%dT%H%M%SZ')}.dump"))

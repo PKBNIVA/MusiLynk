@@ -12,6 +12,7 @@ namespace :backup do
     target = args[:target].presence
     stamp = Time.current.utc.strftime("%Y%m%dT%H%M%SZ")
     if target == "r2"
+      DatabaseBackup.ensure_upload_ready!
       Dir.mktmpdir("musilynk-backup") do |dir|
         result = DatabaseBackup.dump(File.join(dir, "musilynk-#{stamp}.dump"))
         keys = DatabaseBackup.upload(result.path)

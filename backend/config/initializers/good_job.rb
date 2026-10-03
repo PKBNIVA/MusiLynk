@@ -3,6 +3,7 @@
 # directly here is safe regardless of load order.
 require Rails.root.join("app/services/ai_pricing")
 require Rails.root.join("config/job_queues")
+require Rails.root.join("config/backup_schedule")
 
 Rails.application.configure do
   config.good_job.execution_mode = ENV.fetch("GOOD_JOB_EXECUTION_MODE", Rails.env.production? ? "async" : "external").to_sym
@@ -113,11 +114,8 @@ Rails.application.configure do
     description: "Submit queued portfolio item classifications as one Anthropic Message Batch, and ingest finished batches"
   } if AiPricing.task_enabled?("classify_portfolio_item")
   # In-app weekly backup to BACKUP_BUCKET (docs/ops/backups.md): registered only when the bucket is set.
-  # Sunday 03:00 IST = Saturday 21:30 UTC.
-  cron[:backup_to_r2] = {
-    cron: "30 21 * * 6",
-    class: "BackupToR2Job",
-    description: "Dump the database to BACKUP_BUCKET (backups/) and delete copies older than the retention window"
-  } if ENV["BACKUP_BUCKET"].present?
+  if (backup = BackupSchedule.cron_entry)
+    cron[:backup_to_r2] = backup
+  end
   config.good_job.cron = cron
 end

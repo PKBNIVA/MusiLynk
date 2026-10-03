@@ -73,12 +73,18 @@ class DatabaseBackup
       end
     end
 
-    # Dumps the current database to `path` (custom format) and writes its manifest.
+    # Dumps the database to `path` (custom format) and writes its manifest. The row counts are taken
+    # in the same snapshot pg_dump reads (a REPEATABLE READ transaction whose exported snapshot is
+    # passed to pg_dump --snapshot), so writes during the dump can never make verify disagree.
     def dump(path, db: ActiveRecord::Base.connection_db_config.configuration_hash)
       path = Pathname(path)
       FileUtils.mkdir_p(path.dirname)
-      run!(pg_env(db), "pg_dump", "--format=custom", "--no-owner", "--no-privileges", "--file=#{path}")
-      counts = table_counts
+      counts = with_connection(db) do |connection|
+        connection.pg.exec("BEGIN ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+        snapshot = connection.select_value("SELECT pg_export_snapshot()")
+        run!(pg_env(db), "pg_dump", "--format=custom", "--no-owner", "--no-privileges", "--snapshot=#{snapshot}", "--file=#{path}")
+        table_counts(connection).tap { connection.pg.exec("COMMIT") }
+      end
       manifest_path = Pathname("#{path}.manifest.json")
       manifest_path.write(JSON.pretty_generate({ createdAt: Time.current.iso8601, database: "redacted", sha256: Digest::SHA256.file(path).hexdigest, tables: counts }))
       Result.new(path:, manifest_path:, bytes: path.size, tables: counts.size, rows: counts.values.sum)
@@ -115,7 +121,7 @@ class DatabaseBackup
     # Encrypts the dump (BACKUP_PASSPHRASE; a plain dump never leaves the machine) and copies it and
     # its manifest to BACKUP_BUCKET under the configured prefix; returns the keys.
     def upload(path)
-      raise Error, "BACKUP_BUCKET is not set." unless enabled?
+      ensure_upload_ready!
       encrypted = encrypt(path, "#{path}.enc")
       [encrypted.to_s, "#{path}.manifest.json"].map do |file|
         key = "#{config.fetch('prefix')}#{File.basename(file)}"
@@ -126,13 +132,14 @@ class DatabaseBackup
       end
     end
 
-    # Deletes objects under the prefix older than retention_days; returns how many.
+    # Deletes this code's own objects (own_key?) older than retention_days; returns how many.
+    # Anything else under the prefix is left alone.
     def prune(now: Time.current)
       raise Error, "BACKUP_BUCKET is not set." unless enabled?
       cutoff = now - config.fetch("retention_days").days
       old = []
       s3.list_objects_v2(bucket:, prefix: config.fetch("prefix")).each do |page|
-        old.concat(page.contents.select { _1.last_modified < cutoff }.map(&:key))
+        old.concat(page.contents.select { own_key?(_1.key) && _1.last_modified < cutoff }.map(&:key))
       end
       old.each_slice(1_000) { |keys| s3.delete_objects(bucket:, delete: { objects: keys.map { { key: _1 } }, quiet: true }) }
       old.size
@@ -141,10 +148,21 @@ class DatabaseBackup
     def s3 = @s3 ||= UploadStorage.client
     attr_writer :s3
 
-    def table_counts
-      connection = ActiveRecord::Base.lease_connection
-      connection.tables.sort.to_h { [_1, connection.select_value("SELECT COUNT(*) FROM #{connection.quote_table_name(_1)}").to_i] }
+    # { table => rows } for every table in the public schema, over `connection` (a Counter).
+    def table_counts(connection)
+      tables = connection.pg.exec("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename").column_values(0)
+      tables.to_h { [_1, connection.select_value("SELECT COUNT(*) FROM #{connection.quote_table_name(_1)}").to_i] }
     end
+
+    # Refuses an upload before anything is dumped when the bucket or the passphrase is missing.
+    def ensure_upload_ready!
+      raise Error, "BACKUP_BUCKET is not set." unless enabled?
+      raise Error, "BACKUP_PASSPHRASE is not set; copies are never uploaded unencrypted." if passphrase.blank?
+    end
+
+    # Only objects this code wrote: backups/musilynk-<UTC stamp>.dump.enc and its manifest.
+    def own_key?(key) = key.match?(/\A#{Regexp.escape(config.fetch("prefix"))}musilynk-\d{8}T\d{6}Z\.dump(\.enc|\.manifest\.json)\z/)
+
 
     # PG* variables for a child process. Nothing here is ever printed.
     def pg_env(db)

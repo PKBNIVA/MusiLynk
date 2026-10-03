@@ -87,35 +87,67 @@ Result: 10 tables restored and checked in 10.6 s, 0 mismatches. The scratch data
 
 ## Restore to Railway in 10 steps
 
-Do this only to replace production data (corruption, a bad migration, an accident). Every step
-is in Railway's dashboard or your own shell. Never paste the connection string into chat or tickets.
+Use this only to replace production data (corruption, a bad migration, an accident). Every step
+happens in Railway's dashboard or your own shell. Never paste the connection string into chat or
+tickets. Your machine needs `pg_dump`/`pg_restore`/`psql` 18 or newer (`pg_restore --version`).
 
-1. **Pick the backup.** Use the newest green GitHub run (Actions → Database backup → the run →
-   artifact `verse-db-<run id>`), or the newest `backups/musilynk-*.dump.enc` plus its
-   `.manifest.json` from `BACKUP_BUCKET`. Download it to your machine.
-2. **Decrypt and verify it locally.** Use `scripts/db/restore-verify.sh` for a GitHub artifact,
-   or `bin/rails "backup:verify[...]"` for an in-app copy. Do not go on unless the row counts match.
-3. **Stop writes.** Railway → `musilynk-api` and `musilynk-worker` → Settings → scale to 0 replicas
-   (or remove the start command). Users then see the maintenance error instead of writing to a
-   database you are about to replace.
-4. **Back up what is there now,** even if it is broken:
-   `bin/rails "backup:dump[before-restore.dump]"` against the production URL, or run the GitHub
-   workflow by hand. You can then undo the restore.
-5. **Get the connection.** Railway → Postgres → Variables → `DATABASE_PUBLIC_URL` (public
-   networking must be on). Export it in your shell as `TARGET_URL`; do not echo it.
-6. **Check versions.** Run `pg_restore --version`; it must be at least Postgres 18 (the server's
-   major version).
-7. **Restore over the existing schema:**
+1. **Pick the backup.** Either:
+   - the newest green GitHub run (Actions → Database backup → the run → artifact `verse-db-<run id>`), or
+   - the newest `backups/musilynk-*.dump.enc` and its `.manifest.json` from `BACKUP_BUCKET`.
+
+   Download it to your machine.
+2. **Decrypt and verify it locally.** For a GitHub artifact use `scripts/db/restore-verify.sh`; for
+   an in-app copy use `bin/rails "backup:verify[...]"` against a local scratch database. Do not go
+   on unless the row counts match.
+3. **Get the connection.** Railway → Postgres → Variables → `DATABASE_PUBLIC_URL`. Public
+   networking must be on: Postgres → Settings → Networking → TCP proxy. Export it in your shell as
+   `TARGET_URL` (for example `read -rs TARGET_URL && export TARGET_URL`). Do not echo it.
+4. **Back up what is there now,** even if it is broken, so the restore can be undone:
+   `pg_dump "$TARGET_URL" --format=custom --no-owner --no-privileges --file=before-restore.dump`
+5. **Stop the app writing.** Remove the running deployments. That is the reliable way to stop a
+   Railway service: the replica setting is for scaling out, and this runbook does not rely on it
+   accepting 0.
+   - `musilynk-worker`, then `musilynk-api`: Deployments → the active deployment → ⋮ → **Remove**.
+   - Visitors then get errors instead of writing to a database you are about to replace. The
+     Vercel site stays up.
+6. **Restore over the existing schema:**
    `pg_restore --dbname="$TARGET_URL" --clean --if-exists --no-owner --no-privileges --exit-on-error X.dump`
-8. **Check it:**
-   - `psql "$TARGET_URL" -XAtc "select max(version) from schema_migrations"` matches the latest
+7. **Check it:**
+   - `psql "$TARGET_URL" -XAtc "select max(version) from schema_migrations"` must match the latest
      migration of the code you will run.
-   - Spot-check the counts of `users`, `profiles` and `messages` against the manifest.
-9. **Start the app again.** Scale `musilynk-api` back up first and wait for `/api/readiness` to
-   return 200. Then scale up `musilynk-worker`, and check `/api/health` shows the expected commit.
+   - Spot-check `users`, `profiles` and `messages` counts against the manifest.
+8. **Deal with the queue and the files** (see "After a restore" below) before anything runs again.
+9. **Start the app.**
+   - `musilynk-api` → Deployments → the last good deployment → ⋮ → **Redeploy**. Wait for
+     `/api/readiness` to return 200 and `/api/health` to show the expected commit.
+   - Then redeploy `musilynk-worker` the same way.
 10. **Close out.**
-    - Run the GitHub backup workflow by hand so a fresh backup of the restored state exists.
-    - Write down the restore time and the data window lost (RPO) in the incident note.
-    - Turn public networking back off if you enabled it only for this.
+    - Run the GitHub backup workflow by hand, so a backup of the restored state exists.
+    - Write the restore time and the data window lost (RPO) in the incident note.
+    - Turn the TCP proxy off again if you enabled it only for this.
 
-Rollback of a restore: repeat steps 3 to 9 with `before-restore.dump` from step 4.
+**Rollback of a restore:** repeat steps 5 to 9 with `before-restore.dump` from step 4.
+
+### After a restore
+
+- **Background jobs** (GoodJob tables are in the same database).
+  - Jobs that were queued when the backup was taken are queued again and will run, so emails,
+    pushes and WhatsApp alerts sent since then can go out twice.
+  - Jobs queued after the backup are gone.
+  - Before redeploying the worker, look at `good_jobs` where `finished_at IS NULL`. Delete what must
+    not run twice (for example `DELETE FROM good_jobs WHERE finished_at IS NULL AND job_class IN
+    ('NotificationEmailJob','PushDeliveryJob','WhatsappAlertJob','WeeklyDigestDeliveryJob')`).
+  - Then run `BillingReconciliationJob` once (it reconciles Razorpay payments made after the backup).
+- **Billing.** Payments captured by Razorpay after the backup are not in the restored data until
+  reconciliation or the webhooks' retries bring them back. Check the admin Billing attempts page
+  after reconciliation.
+- **Stored files (R2).** Files are not in the database dump, so after a restore they no longer
+  line up with the rows:
+  - Files uploaded after the backup still exist but nothing points at them. `UploadSweepJob`
+    removes orphaned objects on its nightly run.
+  - Files deleted after the backup are gone, but their restored rows still point at them, so those
+    images and samples show as broken until their owners upload them again.
+  - Problem-report screenshots are Active Storage blobs and behave the same way.
+- **Sessions** restored from the backup are valid again until they expire. Sign-outs and
+  revocations made after the backup are undone. If the incident involved account security, revoke
+  all sessions (`DELETE FROM sessions`) so everyone signs in again.

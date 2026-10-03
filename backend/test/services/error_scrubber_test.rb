@@ -73,4 +73,17 @@ class ErrorScrubberTest < ActiveSupport::TestCase
     assert_nil event.request.data
     assert_nil event.request.cookies
   end
+
+  test "credentials in URLs and pg connection errors are filtered" do
+    url = "could not connect: postgresql://app_user:s3cret-pw@db.proxy.rlwy.net:43210/railway?sslmode=require"
+    assert_equal "could not connect: postgresql://[Filtered]@db.proxy.rlwy.net:43210/railway?sslmode=require", ErrorScrubber.scrub_string(url)
+    pg = 'pg_dump failed (exit 1): pg_dump: error: connection to server at "db.internal" (10.1.2.3), port 5432 failed: FATAL:  password authentication failed for user "app_user"'
+    scrubbed = ErrorScrubber.scrub_string(pg)
+    assert_not_includes scrubbed, "db.internal"
+    assert_not_includes scrubbed, "10.1.2.3"
+    assert_not_includes scrubbed, "app_user"
+    assert_includes scrubbed, "password authentication failed"
+    assert_equal "redis://[Filtered]@cache:6379/0", ErrorScrubber.scrub_string("redis://:pw@cache:6379/0")
+  end
+
 end

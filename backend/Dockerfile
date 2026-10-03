@@ -18,18 +18,32 @@ RUN gem install bundler -v "$(tail -n 1 Gemfile.lock | tr -d ' ')" --no-document
   && rm -rf "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git
 COPY backend/ .
 
-FROM base
-# PG_CLIENT_MAJOR must be at least the server's major version (Railway runs postgres-ssl:18):
-# pg_dump refuses a newer server. The client tools come from the PostgreSQL project's apt repo
-# (the base image only has 15). Used by `bin/rails backup:*` and BackupToR2Job (docs/ops/backups.md).
+# pg_dump / pg_restore / psql for `bin/rails backup:*` and BackupToR2Job (docs/ops/backups.md).
+# PG_CLIENT_MAJOR must be at least the server's major version (Railway runs postgres-ssl:18): pg_dump
+# refuses a newer server, and Debian only ships 15. The client comes from the PostgreSQL project's
+# apt repo (key fingerprint checked) in this throwaway stage; only the three binaries and libpq are
+# copied into the final image (about 1 MB), not the client package's Perl wrapper stack (about 90 MB).
+FROM base AS pgclient
 ARG PG_CLIENT_MAJOR=18
-RUN apt-get update -qq && apt-get install --no-install-recommends -y libpq5 curl gosu ca-certificates \
+RUN apt-get update -qq && apt-get install --no-install-recommends -y curl ca-certificates gnupg \
   && install -d /usr/share/postgresql-common/pgdg \
   && curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+  && gpg --show-keys --with-colons /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc | grep -q '^fpr:::::::::B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8:$' \
   && . /etc/os-release \
   && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
   && apt-get update -qq && apt-get install --no-install-recommends -y "postgresql-client-${PG_CLIENT_MAJOR}" \
-  && rm -rf /var/lib/apt/lists/*
+  && mkdir -p /pgclient/bin /pgclient/lib \
+  && cp "/usr/lib/postgresql/${PG_CLIENT_MAJOR}/bin/pg_dump" "/usr/lib/postgresql/${PG_CLIENT_MAJOR}/bin/pg_restore" "/usr/lib/postgresql/${PG_CLIENT_MAJOR}/bin/psql" /pgclient/bin/ \
+  && cp "$(readlink -f "$(dpkg -L libpq5 | grep -E '/libpq\.so\.5$')")" /pgclient/lib/
+
+FROM base
+# liblz4/libzstd (dump compression) and libreadline (psql) are what the copied binaries need beyond libpq5's own dependencies.
+RUN apt-get update -qq && apt-get install --no-install-recommends -y libpq5 curl gosu liblz4-1 libzstd1 libreadline8 && rm -rf /var/lib/apt/lists/*
+COPY --from=pgclient /pgclient/bin/ /usr/local/bin/
+COPY --from=pgclient /pgclient/lib/ /usr/local/lib/
+# /usr/local/lib is searched before the system directory, so the client tools (and the pg gem, same
+# libpq.so.5 interface) use libpq from the same release as pg_dump. The build fails if a binary cannot load.
+RUN cd /usr/local/lib && ln -sf libpq.so.5.* libpq.so.5 && ldconfig && pg_dump --version && pg_restore --version && psql --version
 ENV RAILS_SERVE_STATIC_FILES=false
 COPY --from=build /usr/local/bundle /usr/local/bundle
 COPY --from=build /rails /rails

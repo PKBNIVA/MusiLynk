@@ -78,7 +78,7 @@
     "react-dom": "18.3.1",
     "react-hook-form": "7.89.0",
     "react-parallax-tilt": "^1.7.344",
-    "react-resizable-panels": "2.1.7",
+    "react-resizable-panels": "4.14.1",
     "react-router": "7.18.4",
     "recharts": "3.10.1",
     "satori": "0.35.0",

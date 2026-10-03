@@ -54,11 +54,14 @@ class HirePagesController < ApplicationController
     counts = Seo::HireStats.counts_for(role_label, city_name, include_demo: true)
     indexable = Seo::HireStats.scope_for(role_label, city_name).count >= INDEXABLE_MIN_PROFESSIONALS
     rates = Seo::Rates.summary_for(role_label, city_name, include_demo: true)
+    # Profiles, stats and tiers for the featured cards in a few batched queries, not several per card.
+    featured = Seo::HireStats.featured_for(role_label, city_name).preload(:profile).to_a
+    prime_profile_stats(featured)
     {
       role: { slug: role_slug, label: role_label },
       city: { slug: city_slug, name: city_name },
       counts:,
-      featured: Seo::HireStats.featured_for(role_label, city_name).map { public_profile(_1) },
+      featured: featured.map { public_profile(_1) },
       relatedRoles: related_roles(role_slug, city_name),
       nearbyCities: Seo::Pages.nearby_cities(city_slug).map { { slug: _1, name: Seo::Pages.city_name(_1) } },
       indexable:,

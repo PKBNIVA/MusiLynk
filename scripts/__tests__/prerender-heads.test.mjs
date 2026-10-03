@@ -11,6 +11,8 @@ import {
   renderNotFound,
   adminRoutePaths,
   apiPreconnect,
+  uploadsDnsPrefetch,
+  heroPreload,
 } from '../prerender-heads.mjs';
 
 const scriptPath = resolve(process.cwd(), 'scripts/prerender-heads.mjs');
@@ -227,6 +229,23 @@ describe('prerender-heads.mjs', () => {
     expect(readFileSync(join(dist, 'index.html'), 'utf8')).toContain(
       '<link rel="canonical" href="https://musilynk.example/">',
     );
+  });
+
+  it('preloads the hero photo on the home page only, as the AVIF srcset the hero renders', () => {
+    const preload = heroPreload();
+    expect(preload).toContain('rel="preload" as="image" type="image/avif"');
+    expect(preload).toContain('imagesrcset="/img/veena-concert-480.avif 480w, /img/veena-concert-768.avif 768w, ');
+    expect(preload).toContain('imagesizes="(min-width: 1024px) 42vw, 100vw" fetchpriority="high"');
+    expect(render(FAKE_INDEX, '/', ['T', 'D'])).toContain(preload);
+    expect(render(FAKE_INDEX, '/pricing', ['T', 'D'])).not.toContain('rel="preload"');
+  });
+
+  it('adds a dns-prefetch for the uploads origin and nothing when it is unset or relative', () => {
+    expect(uploadsDnsPrefetch('https://media.musilynk.example/uploads')).toBe(
+      '<link rel="dns-prefetch" href="https://media.musilynk.example">',
+    );
+    expect(uploadsDnsPrefetch('')).toBe('');
+    expect(uploadsDnsPrefetch('/uploads')).toBe('');
   });
 
   it('adds a preconnect to a cross-origin API and nothing for a same-origin one', () => {

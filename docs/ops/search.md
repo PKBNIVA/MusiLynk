@@ -39,10 +39,10 @@ limit, cache time and how many of each kind it shows). Same steps as above from 
   migration that added the columns queued one run after deploy. From a console:
   `SearchIndexBackfillJob.perform_now` (about 50 s for 111k rows on the 4-vCPU test bed).
 - Until the first run finishes after the deploy, typed searches miss rows that have no document yet.
-- **Do not rebuild the sitemap while a backfill is running.** Hire pages (`/hire/<role>/<city>`)
-  enter the sitemap by counting profiles on the search documents, so a sitemap built mid-backfill
-  leaves pages out. The job drops the cached sitemap (`sitemap/v2`) when it finishes, so the next
-  request rebuilds it from complete documents; do not warm or pre-build it before then.
+- **Do not rebuild the sitemap while a backfill is running** (no `sitemap:warm` mid-run). Hire
+  pages (`/hire/<role>/<city>`) enter the sitemap by counting profiles on the search documents, so a
+  sitemap built mid-backfill leaves pages out. When the job finishes it queues `SitemapRefreshJob`,
+  which rebuilds the sitemap from complete documents; the last good copy is served meanwhile.
 
 ## Rollback
 

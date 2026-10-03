@@ -2,10 +2,13 @@
 # up, and AiPricing has no dependencies of its own beyond Rails.root/YAML, so requiring it
 # directly here is safe regardless of load order.
 require Rails.root.join("app/services/ai_pricing")
+require Rails.root.join("config/job_queues")
 
 Rails.application.configure do
   config.good_job.execution_mode = ENV.fetch("GOOD_JOB_EXECUTION_MODE", Rails.env.production? ? "async" : "external").to_sym
   config.good_job.max_threads = ENV.fetch("GOOD_JOB_MAX_THREADS", "2").to_i
+  # One thread pool per queue group (config/job_queues.yml), so urgent alerts never wait behind digests.
+  config.good_job.queues = JobQueues.queue_string
   config.good_job.poll_interval = ENV.fetch("GOOD_JOB_POLL_INTERVAL", "10").to_i
   config.good_job.enable_cron = ENV.fetch("GOOD_JOB_ENABLE_CRON", Rails.env.production?.to_s) == "true"
   config.good_job.preserve_job_records = true
@@ -92,6 +95,11 @@ Rails.application.configure do
       class: "SearchIndexBackfillJob",
       kwargs: { missing_only: true },
       description: "Build the search documents of rows written without model callbacks (bulk inserts)"
+    },
+    sitemap_refresh: {
+      cron: "23 * * * *",
+      class: "SitemapRefreshJob",
+      description: "Rebuild the sitemap into the cache (too slow to build inside a crawler's request)"
     },
     fast_responder_week: {
       # Monday 00:20 IST — after the week just ended, before that day's own urgent traffic.

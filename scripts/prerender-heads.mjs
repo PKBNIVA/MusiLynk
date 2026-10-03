@@ -15,6 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { HERO_PHOTO, HERO_PHOTO_SIZES, HERO_PHOTO_WIDTHS, photoSrcSet } from '../src/app/lib/photo.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE_URL = (process.env.VITE_PUBLIC_URL || 'https://musilynk.vercel.app').replace(/\/+$/, '');
@@ -129,6 +130,25 @@ export function apiPreconnect(apiUrl) {
   }
 }
 
+/** Lets the browser resolve the uploads host (profile and act photos on R2, VITE_UPLOADS_ORIGIN) before the
+ *  first card renders. Returns '' when unset or not an absolute URL. */
+export function uploadsDnsPrefetch(uploadsOrigin) {
+  try {
+    const origin = new URL(uploadsOrigin).origin;
+    return origin === 'null' ? '' : `<link rel="dns-prefetch" href="${origin}">`;
+  } catch {
+    return '';
+  }
+}
+
+/** The home page's LCP element is the hero photo, rendered by a lazy route chunk. Preloading it from the
+ *  HTML (AVIF, the same srcset and sizes as <LandingHero>) starts the download with the entry script
+ *  instead of two round trips later. Only dist/index.html (path "/") carries it. */
+export function heroPreload() {
+  const srcset = photoSrcSet(`/img/${HERO_PHOTO}`, HERO_PHOTO_WIDTHS, 'avif');
+  return `<link rel="preload" as="image" type="image/avif" imagesrcset="${srcset}" imagesizes="${HERO_PHOTO_SIZES}" fetchpriority="high">`;
+}
+
 /** PageMeta.tsx cuts a description at 160 characters; do the same so the head matches the page. */
 const clip = (text) => (text.length > 160 ? `${text.slice(0, 157).trimEnd()}…` : text);
 
@@ -216,6 +236,7 @@ export function render(indexHtml, path, [title, description], jsonLd) {
     .replace(/<meta\s+name="description"[^>]*>\s*/, '')
     .replace(/<meta\s+(?:property="og:|name="twitter:)[^>]*>\s*/g, '')
     .replace(/<link\s+rel="canonical"[^>]*>\s*/, '');
+  if (path === '/') html = html.replace('</head>', `    ${heroPreload()}\n  </head>`);
   html = html.replace('</head>', `${head}`);
   return html;
 }
@@ -290,9 +311,15 @@ function main(distDir = join(root, 'dist')) {
     process.exitCode = 2;
     return;
   }
-  const hint = apiPreconnect(process.env.VITE_API_URL || '');
+  const hints = [
+    apiPreconnect(process.env.VITE_API_URL || ''),
+    uploadsDnsPrefetch(process.env.VITE_UPLOADS_ORIGIN || ''),
+  ]
+    .filter(Boolean)
+    .map((hint) => `    ${hint}\n`)
+    .join('');
   const builtHtml = readFileSync(indexPath, 'utf8');
-  const indexHtml = hint ? builtHtml.replace('</head>', `    ${hint}\n  </head>`) : builtHtml;
+  const indexHtml = hints ? builtHtml.replace('</head>', `${hints}  </head>`) : builtHtml;
 
   const seoYaml = join(root, 'backend', 'config', 'seo_pages.yml');
   const seoLists = existsSync(seoYaml) ? readSeoPages(readFileSync(seoYaml, 'utf8')) : { roles: [], cities: [] };

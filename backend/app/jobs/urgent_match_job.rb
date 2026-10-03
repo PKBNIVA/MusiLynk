@@ -7,7 +7,7 @@
 # WhatsApp deliveries are enqueued from here (Notifier / WhatsappAlertJob), never from the request.
 # Logs ids only, never names, emails or request text.
 class UrgentMatchJob < ApplicationJob
-  queue_as :default
+  queue_as JobQueues::URGENT
 
   # How long a "matching" claim is trusted before another run may take it over (a crashed worker).
   STALE_CLAIM = 10.minutes

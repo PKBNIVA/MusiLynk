@@ -38,8 +38,8 @@ class DirectEnquiryActsTest < ActionDispatch::IntegrationTest
     assert_not_includes response.parsed_body.fetch("acts").pluck("id"), @act.id
     get "/api/search", params: { q: "Dev Drummer" }
     assert_not_includes response.parsed_body.fetch("results").pluck("id"), @act.id
-    get "/sitemap.xml"
-    assert_not_includes response.body, @act.id
+    # The sitemap is built by SitemapRefreshJob into the cache (null in tests), so check the build itself.
+    assert_not_includes Seo::Sitemap.build.fetch("sitemap"), @act.id
     post "/api/bookings", params: { actId: @act.id, eventType: "wedding", city: "Mumbai", eventDate: 2.months.from_now.to_date.iso8601 }, headers: auth(@hirer), as: :json
     assert_response :not_found
     assert_not_includes ActorResolver.identities_for(@musician).map(&:id), @act.id

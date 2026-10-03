@@ -23,10 +23,13 @@ class ConversationsController < ApplicationController
     ])
     rows = Conversation.where("candidate_id = ? OR employer_id = ?", current_user.id, current_user.id)
       .select(Conversation.arel_table[Arel.star], *LATEST_MESSAGE_SELECTS, unread_sql)
-      .includes(:candidate, :employer, :job).order(updated_at: :desc).limit(200).to_a
+      .includes(:candidate, :employer, :job).strict_loading.order(updated_at: :desc).limit(200).to_a
     counterpart_ids = rows.map { _1.counterpart_for(current_user).id }
-    @blocked_ids = UserBlock.where(blocker: current_user, blocked_id: counterpart_ids).pluck(:blocked_id).to_set
-    @blocked_by_ids = UserBlock.where(blocked: current_user, blocker_id: counterpart_ids).pluck(:blocker_id).to_set
+    # Both directions in one query.
+    blocks = UserBlock.where(blocker: current_user, blocked_id: counterpart_ids).or(UserBlock.where(blocked: current_user, blocker_id: counterpart_ids))
+      .pluck(:blocker_id, :blocked_id)
+    @blocked_ids = blocks.filter_map { |blocker, blocked| blocked if blocker == current_user.id }.to_set
+    @blocked_by_ids = blocks.filter_map { |blocker, blocked| blocker if blocked == current_user.id }.to_set
     render json: { conversations: rows.map { serialize(_1) } }
   end
 

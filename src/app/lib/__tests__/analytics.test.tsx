@@ -252,6 +252,21 @@ describe('initRouteTracking', () => {
     expect(events[1]!.props).toMatchObject({ path: '/jobs' });
   });
 
+  it('records the page the router is already on, once, when started late', async () => {
+    const a = await load();
+    const listeners: Array<(state: { location: { pathname: string } }) => void> = [];
+    a.initRouteTracking({
+      subscribe: (fn: (state: { location: { pathname: string } }) => void) => (listeners.push(fn), () => undefined),
+      state: { location: { pathname: '/search' } },
+    });
+    listeners[0]!({ location: { pathname: '/search' } }); // the router confirming the same page: no duplicate
+    listeners[0]!({ location: { pathname: '/' } });
+    a.flush();
+    const events = lastBody().events;
+    expect(events.map((e) => e.name)).toEqual(['route_change', 'landing_view']);
+    expect(events[0]!.props).toMatchObject({ path: '/search' });
+  });
+
   it('only attaches once even if called twice', async () => {
     const a = await load();
     let subscribed = 0;

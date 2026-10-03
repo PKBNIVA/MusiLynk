@@ -1,17 +1,48 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { RouterProvider } from 'react-router';
 import { router } from './routes';
 import { AuthProvider } from './lib/authContext';
 import { AppErrorBoundary } from './components/ExperienceStates';
 import { PlanLimitPrompt } from './components/PlanLimitPrompt';
 
-// Dynamically imported so the analytics module (queueing, flush timers, sendBeacon wiring)
-// stays out of the entry chunk; every lazy-loaded page that calls track() already pulls it in.
-void import('./lib/analytics').then((m) => m.initRouteTracking(router));
+// Dynamically imported so the analytics module (queueing, flush timers, sendBeacon wiring) stays out
+// of the entry chunk, and started a frame after the first paint so it never competes with the route
+// chunk and the hero image for it; initRouteTracking records the page the router is already on.
+requestAnimationFrame(() => {
+  setTimeout(() => void import('./lib/analytics').then((m) => m.initRouteTracking(router)), 300);
+});
 
-// The toast container is loaded after the first render so it stays out of the entry chunk.
-// Toasts raised before it mounts are kept by sonner and shown as soon as it subscribes.
+// The toast container is loaded once the browser is idle after the first paint, so its chunk stays out
+// of the entry and off the critical path of the route chunk and the hero image. Toasts raised before
+// it mounts are kept by sonner and shown as soon as it subscribes.
 const Toaster = lazy(() => import('./components/ui/sonner').then((module) => ({ default: module.Toaster })));
+
+/** Runs `callback` when the browser is next idle, at the latest after `timeout` ms (Safari has no requestIdleCallback). */
+export function whenIdle(callback: () => void, timeout = 1_500): () => void {
+  const idle: typeof window.requestIdleCallback | undefined = window.requestIdleCallback;
+  if (idle) {
+    const id = idle(callback, { timeout });
+    return () => window.cancelIdleCallback(id);
+  }
+  const id = window.setTimeout(callback, 250);
+  return () => window.clearTimeout(id);
+}
+
+/** True from the first idle moment after mount; what should not compete with the first paint waits on it. */
+export function useIdleReady(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => whenIdle(() => setReady(true)), []);
+  return ready;
+}
+
+function DeferredToaster() {
+  if (!useIdleReady()) return null;
+  return (
+    <Suspense fallback={null}>
+      <Toaster position="top-right" richColors closeButton />
+    </Suspense>
+  );
+}
 
 // Animations are plain CSS; styles/index.css shortens them for prefers-reduced-motion.
 export default function App() {
@@ -19,9 +50,7 @@ export default function App() {
     <AppErrorBoundary>
       <AuthProvider>
         <RouterProvider router={router} />
-        <Suspense fallback={null}>
-          <Toaster position="top-right" richColors closeButton />
-        </Suspense>
+        <DeferredToaster />
         <PlanLimitPrompt />
       </AuthProvider>
     </AppErrorBoundary>

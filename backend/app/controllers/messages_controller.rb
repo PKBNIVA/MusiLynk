@@ -15,7 +15,8 @@ class MessagesController < ApplicationController
   # tight poll interval stays cheap once the thread is already loaded. `truncated` means
   # older messages exist before the first one returned (always false for `after`).
   def index
-    scope = @conversation.messages
+    # strict_loading: serialize reads message columns only; no association load per message.
+    scope = @conversation.messages.strict_loading
     if params[:before].present?
       return render_error("before must be a single value.", :bad_request, "INVALID_PARAMETER") unless params[:before].is_a?(String)
       anchor = scope.find_by(id: params[:before])
@@ -70,10 +71,13 @@ class MessagesController < ApplicationController
 
   private
 
+  # The message notification is only cleared when this actually read something: a poll with nothing
+  # new (most of them, every 3 s per open thread) then runs one UPDATE that matches no row instead of two.
+  # The notification for a message is created with the message, so it is unread only while one is.
   def mark_read!
     now = Time.current
-    @conversation.messages.where.not(sender: current_user).where(read_at: nil).update_all(read_at: now, updated_at: now)
-    Notifier.conversation_read(@conversation, current_user)
+    read = @conversation.messages.where.not(sender: current_user).where(read_at: nil).update_all(read_at: now, updated_at: now)
+    Notifier.conversation_read(@conversation, current_user) if read.positive?
   end
 
   # The most recent time the counterpart read one of the current user's own messages, so a poll that

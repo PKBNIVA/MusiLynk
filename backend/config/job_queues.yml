@@ -1,0 +1,22 @@
+# GoodJob worker thread pools: which queues share threads, and how many. The one place queue
+# routing lives (docs/ops/job-queues.md). Each pool runs only its own queues, so a burst on one
+# (hundreds of digest emails on `mailers`) never delays another (an urgent alert on `urgent`).
+#
+# GOOD_JOB_QUEUES, when set, replaces `pools` (GoodJob's own syntax, e.g. "urgent:2;*:3").
+# The database pool is sized from the total (config/database.yml), so changing a number here
+# needs nothing else.
+pools:
+  # Urgent hire: matching a fresh request, its WhatsApp alerts, and its push and email alerts.
+  - queues: [urgent]
+    threads: 2
+  # Notification and transactional email, web push, job-alert deliveries.
+  - queues: [notifications, mailers]
+    threads: 2
+  # Everything else: cron sweeps, digests' fan-out, demo data, uploads cleanup.
+  - queues: [default, scheduled]
+    threads: 1
+
+# Deliveries that ride the urgent pool instead of `mailers` (queued from Notifier).
+urgent:
+  email_templates: [urgent_request_alert]
+  push_categories: [urgent]

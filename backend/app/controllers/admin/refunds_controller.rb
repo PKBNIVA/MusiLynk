@@ -8,7 +8,7 @@ module Admin
     include AdminPagination
 
     def index
-      scope = RefundRecord.includes(:booking_request, :booking_payment, :requested_by, :decided_by).order(created_at: :desc)
+      scope = RefundRecord.includes(:booking_payment, :requested_by, :decided_by, booking_request: %i[act requester]).order(created_at: :desc)
       scope = scope.where(status: params[:status]) if params[:status].present? && RefundRecord::STATUSES.include?(params[:status])
       rows, meta = admin_paginate(scope, default_per: 50)
       render json: { refunds: rows.map { refund_json(_1) } }.merge(meta)

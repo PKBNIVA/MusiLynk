@@ -25,6 +25,31 @@ module Stage
       Follow.for_follower(user.id).for_followable(post.author_type, post.author_id).exists?
     end
 
+    # The posts of `posts` that `user` may see (post_visible_to? for a whole list), reading the
+    # viewer's follows once instead of once per followers-only post.
+    def visible_to(posts, user)
+      posts.select do |post|
+        post.visibility == "public" || (user && (post.created_by_user_id == user.id || followed_keys(user).include?("#{post.author_type}:#{post.author_id}")))
+      end
+    end
+
+    # "type:id" of everyone and every Page `user` follows, read once per request.
+    def followed_keys(user)
+      return Set.new unless user
+      @followed_keys ||= Follow.for_follower(user.id).pluck(:followable_type, :followable_id).to_set { |type, id| "#{type}:#{id}" }
+    end
+
+    # Everything Post#api_json reads for a page of posts (and the posts they reshare), batched.
+    def preload_for_json(posts)
+      shown = posts.flat_map { [_1, _1.reshared_post].compact }
+      Post.preload_authors(shown)
+      Post.preload_shared_jobs(shown)
+      Post.preload_media_urls(posts)
+    end
+
+    # The includes a list of posts needs before visible_to and preload_for_json.
+    LIST_INCLUDES = [{ shared_portfolio_item: :user, created_by: :profile, reshared_post: { created_by: :profile } }].freeze
+
     def blocked_pair?(user_id_a, user_id_b)
       return false if user_id_a.blank? || user_id_b.blank? || user_id_a == user_id_b
       UserBlock.between?(User.new(id: user_id_a), User.new(id: user_id_b))

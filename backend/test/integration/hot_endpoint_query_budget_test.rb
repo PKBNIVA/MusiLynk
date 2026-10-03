@@ -1,0 +1,110 @@
+require "test_helper"
+require_relative "../support/query_budget"
+
+# Absolute SQL budgets for the hottest public and messaging endpoints (docs/PERFORMANCE.md,
+# "Query plans at volume"). Each endpoint is measured on a small world and again after it grew,
+# against the same budget, so the count neither creeps up nor grows with rows.
+class HotEndpointQueryBudgetTest < ActionDispatch::IntegrationTest
+  include QueryBudget
+
+  PASSWORD = "StrongPass123!".freeze
+
+  # path => budget (queries per request), measured 2026-10-03.
+  PUBLIC = {
+    "/api/public/talent" => 9,
+    "/api/public/talent?location=Mumbai&role=Drummer&genre=Rock" => 9,
+    "/api/public/talent/{talent}" => 11,
+    "/api/public/acts" => 4,
+    "/api/public/acts/{act}" => 4,
+    "/api/jobs" => 4,
+    "/api/jobs/{job}" => 3,
+    "/api/stage/tags/gig" => 3
+  }.freeze
+  SIGNED_IN = {
+    "/api/conversations" => 6,
+    "/api/conversations/{conversation}/messages" => 6,
+    "/api/notifications/unread" => 4,
+    "/api/notifications" => 4,
+    "/api/bookings" => 7,
+    "/api/stage/feed" => 16
+  }.freeze
+
+  setup do
+    @seq = 0
+    @artist = person("Budget Artist", "jobseeker")
+    @hirer = person("Budget Hirer", "employer", company_name: "Budget Hall")
+    @token = sign_in(@artist)
+    grow(2)
+  end
+
+  test "public list and show endpoints stay within their query budgets as rows grow" do
+    PUBLIC.each { |path, budget| assert_budget(path, budget) }
+    grow(10)
+    PUBLIC.each { |path, budget| assert_budget(path, budget) }
+  end
+
+  test "inbox, thread, notification, bookings and feed endpoints stay within their query budgets as rows grow" do
+    SIGNED_IN.each { |path, budget| assert_budget(path, budget, auth: true) }
+    grow(10)
+    SIGNED_IN.each { |path, budget| assert_budget(path, budget, auth: true) }
+  end
+
+  test "the helper fails a block that runs more queries than its budget" do
+    two_lookups = -> { [@artist, @hirer].each { User.where(id: _1.id).to_a } }
+    error = assert_raises(Minitest::Assertion) { assert_queries_at_most(1, "two lookups", &two_lookups) }
+    assert_match(/two lookups: 2 queries, budget 1/, error.message)
+    assert_equal 2, assert_queries_at_most(2, &two_lookups)
+  end
+
+  private
+
+  def assert_budget(template, budget, auth: false)
+    path = template.gsub("{talent}", @talent.id).gsub("{act}", @act.id).gsub("{job}", @job.id).gsub("{conversation}", @conversation.id)
+    headers = auth ? { "Authorization" => "Bearer #{@token}" } : {}
+    get(path, headers:) # warm-up: the first request loads schema and caches
+    assert_queries_at_most(budget, path) { get(path, headers:) }
+    assert_response :success
+  end
+
+  def person(name, role, **profile)
+    @seq += 1
+    user = User.create!(name:, email: "budget-#{@seq}-#{SecureRandom.hex(3)}@example.com", password: PASSWORD, role:, status: "active", profile_complete: true, email_verified: true)
+    user.create_profile!({ headline: "Drummer for hire", location: "Mumbai, Maharashtra", roles: ["Drummer"], genres: ["Rock"], skills: ["Session recording"] }.merge(profile))
+    user
+  end
+
+  def sign_in(user)
+    raw = SecureRandom.urlsafe_base64(32)
+    user.sessions.create!(token_digest: Digest::SHA256.hexdigest(raw), expires_at: 1.day.from_now)
+    raw
+  end
+
+  # n more of everything the measured endpoints list.
+  def grow(n)
+    n.times do
+      talent = person("Budget Drummer #{@seq}", "jobseeker")
+      talent.profile.update!(verified: true)
+      VerificationRequest.create!(user: talent, kind: "professional", status: "approved", checks: %w[identity], reviewed_at: Time.current)
+      item = PortfolioItem.create!(user: talent, kind: "audio", title: "Rock drumming #{@seq}", url: "https://example.com/#{@seq}.mp3", visibility: "public")
+      act = Act.create!(owner: talent, name: "Budget band #{@seq}", act_type: "band", status: "active", currency: "INR", fee_basis: "event", city: "Mumbai", genres: ["Rock"])
+      act.act_members.create!(user: talent, display_name: talent.name, role_name: "Drummer", is_leader: true, member_status: "confirmed")
+      job = Job.create!(employer: @hirer, title: "Drummer for a rock night #{@seq}", company: "Budget Hall", location: "Mumbai", kind: "Contract", opportunity_kind: "gig",
+        workplace: "onsite", genre: "Rock", skills: ["Drums"], status: "published", published_at: Time.current,
+        description: "A clearly documented paid engagement with rehearsals, written terms and on-site production support.")
+      conversation = Conversation.create!(candidate: @artist, employer: talent == @artist ? @hirer : person("Budget Client #{@seq}", "employer"))
+      3.times { conversation.messages.create!(sender: conversation.employer, body: "Are you free on the 12th?") }
+      main = (@conversation ||= Conversation.create!(candidate: @artist, employer: @hirer))
+      2.times { main.messages.create!(sender: [@artist, @hirer].sample, body: "Rehearsal notes") }
+      Notification.create!(user: @artist, kind: "system", title: "Budget #{@seq}")
+      BookingRequest.create!(act:, requester: @artist, event_type: "wedding", city: "Mumbai", currency: "INR", status: "requested")
+      Post.create!(author_type: "user", author_id: talent.id, created_by_user_id: talent.id, kind: "update", body: "Gig tonight #{@seq} #gig")
+      Post.create!(author_type: "user", author_id: talent.id, created_by_user_id: talent.id, kind: "update", body: "Fans only #{@seq} #gig", visibility: "followers")
+      Post.create!(author_type: "user", author_id: talent.id, created_by_user_id: talent.id, kind: "portfolio_share", shared_portfolio_item_id: item.id)
+      Post.create!(author_type: "act", author_id: act.id, created_by_user_id: talent.id, kind: "update", body: "Our band #{@seq}")
+      Post.create!(author_type: "user", author_id: @hirer.id, created_by_user_id: @hirer.id, kind: "job_share", shared_job_id: job.id)
+      @talent ||= talent
+      @act ||= act
+      @job ||= job
+    end
+  end
+end

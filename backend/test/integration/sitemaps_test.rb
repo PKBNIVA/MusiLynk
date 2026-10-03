@@ -11,6 +11,22 @@ class SitemapsTest < ActionDispatch::IntegrationTest
 
   teardown { Rails.cache = @original_cache }
 
+  def stub_const(mod, name, value)
+    original = mod.const_get(name)
+    mod.send(:remove_const, name)
+    mod.const_set(name, value)
+    yield
+  ensure
+    mod.send(:remove_const, name)
+    mod.const_set(name, original)
+  end
+
+  # The sitemap is built by SitemapRefreshJob (hourly cron), never inside the request: build it, then read it.
+  def get_sitemap(path = "/sitemap.xml")
+    SitemapRefreshJob.perform_now
+    get path
+  end
+
   def create_user(name, role)
     @seq += 1
     User.create!(name:, email: "sitemap-#{@seq}-#{SecureRandom.hex(4)}@example.com", password: "StrongPass123!", role:, status: "active",
@@ -24,7 +40,7 @@ class SitemapsTest < ActionDispatch::IntegrationTest
   end
 
   test "sitemap.xml has correct content type and is well-formed" do
-    get "/sitemap.xml"
+    get_sitemap
     assert_response :success
     assert_equal "application/xml", response.media_type
     doc = Nokogiri::XML(response.body) { |config| config.strict }
@@ -32,7 +48,7 @@ class SitemapsTest < ActionDispatch::IntegrationTest
   end
 
   test "static pages are present" do
-    get "/sitemap.xml"
+    get_sitemap
     %w[/ /music-jobs /music-professionals /book-music /urgent /join/hiring /join/musician /pricing /guide /about /safety /contact /community-guidelines /terms /privacy].each do |path|
       assert_match %r{<loc>[^<]*#{Regexp.escape(path)}</loc>}, response.body, "missing #{path}"
     end
@@ -43,7 +59,7 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     draft = create_job("draft")
     closed = create_job("closed")
 
-    get "/sitemap.xml"
+    get_sitemap
     assert_match "/opportunities/#{published.id}", response.body
     assert_no_match(/opportunities\/#{draft.id}</, response.body)
     assert_no_match(/opportunities\/#{closed.id}</, response.body)
@@ -54,13 +70,13 @@ class SitemapsTest < ActionDispatch::IntegrationTest
       password: "StrongPass123!", role: "jobseeker", status: "active", profile_complete: false).tap { _1.create_profile! }
     discoverable = create_user("Discoverable Person", "jobseeker")
 
-    get "/sitemap.xml"
+    get_sitemap
     assert_match "/professionals/#{discoverable.id}", response.body
     assert_no_match(/professionals\/#{incomplete.id}</, response.body)
   end
 
   test "a role x city hire page is only in the sitemap once it has enough real profiles" do
-    get "/sitemap.xml"
+    get_sitemap
     assert_no_match(%r{/hire/drummer/goa<}, response.body)
 
     5.times { |i| create_user("Goa Drummer #{i}", "jobseeker") }
@@ -68,12 +84,12 @@ class SitemapsTest < ActionDispatch::IntegrationTest
       .update_all(headline: "Session drummer", location: "Goa")
     Rails.cache.clear
 
-    get "/sitemap.xml"
+    get_sitemap
     assert_match "/hire/drummer/goa", response.body
   end
 
   test "the mumbai rates page is only in the sitemap once enough roles have rate data" do
-    get "/sitemap.xml"
+    get_sitemap
     assert_no_match(%r{/rates/mumbai<}, response.body)
   end
 
@@ -93,7 +109,7 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     real_act = Act.create!(owner: real, name: "Real Act", **act_attrs)
     demo_act = Act.create!(owner: demo, name: "Demo Act", **act_attrs)
 
-    get "/sitemap.xml"
+    get_sitemap
     assert_match "/professionals/#{real.id}", response.body
     assert_match "/opportunities/#{real_job.id}", response.body
     assert_match "/acts/#{real_act.id}", response.body
@@ -107,7 +123,7 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     real_portfolio = Portfolio.create!(owner_type: "user", owner_id: real.id, title: "Real", slug: "sm-real-#{SecureRandom.hex(4)}", visibility: "public")
     demo_portfolio = Portfolio.create!(owner_type: "user", owner_id: demo.id, title: "Demo", slug: "sm-demo-#{SecureRandom.hex(4)}", visibility: "public")
 
-    get "/sitemap.xml"
+    get_sitemap
     assert_includes response.body, "/p/#{real_portfolio.slug}<"
     assert_not_includes response.body, "/p/#{demo_portfolio.slug}<"
   end
@@ -119,7 +135,7 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     dated = create_job("published")
     dated.update_columns(application_deadline: 5.days.from_now)
 
-    get "/sitemap.xml"
+    get_sitemap
     assert_match "/opportunities/#{open_job.id}", response.body
     assert_match "/opportunities/#{dated.id}", response.body
     assert_no_match(/opportunities\/#{expired.id}</, response.body)
@@ -133,10 +149,43 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an empty cache answers 503 with Retry-After and queues one rebuild, never building inline" do
+    assert_enqueued_jobs 1, only: SitemapRefreshJob do
+      get "/sitemap.xml"
+      get "/sitemap.xml"
+    end
+    assert_response :service_unavailable
+    assert_equal "300", response.headers["Retry-After"]
+    perform_enqueued_jobs(only: SitemapRefreshJob)
+    get "/sitemap.xml"
+    assert_response :success
+    assert_match "/music-jobs</loc>", response.body
+  end
+
+  test "past the URL cap the sitemap becomes an index of numbered files, hire pages first, none dropped" do
+    jobs = Array.new(3) { create_job("published") }
+    stub_const(Seo::Sitemap, :MAX_URLS, 10) { get_sitemap }
+    index = Nokogiri::XML(response.body).remove_namespaces!
+    assert_equal "sitemapindex", index.root.name
+    parts = index.xpath("//sitemap/loc").map(&:text)
+    assert_operator parts.length, :>=, 2
+    assert(parts.all? { _1.match?(%r{/sitemaps/\d+\.xml\z}) })
+    locs = parts.flat_map do |url|
+      get URI(url).path
+      assert_response :success
+      Nokogiri::XML(response.body).remove_namespaces!.xpath("//loc").map(&:text)
+    end
+    assert(locs.first(Seo::Sitemap::STATIC_PAGES.size).none? { _1.match?(%r{/(opportunities|professionals|acts|p)/}) }, "static and landing pages lead")
+    jobs.each { |job| assert(locs.any? { _1.end_with?("/opportunities/#{job.id}") }, "#{job.id} dropped") }
+    assert_equal locs.uniq, locs
+    get "/sitemaps/#{parts.length + 1}.xml"
+    assert_response :not_found
+  end
+
   test "the sitemap lists no URL twice" do
     create_job("published")
     create_user("Sitemap Unique Person", "jobseeker")
-    get "/sitemap.xml"
+    get_sitemap
     locs = Nokogiri::XML(response.body).remove_namespaces!.xpath("//loc").map(&:text)
     assert_equal locs.uniq, locs
   end

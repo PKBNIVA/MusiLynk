@@ -5,8 +5,14 @@ class BookingsController < ApplicationController
   before_action -> { authenticate!("jobseeker", "employer") }
 
   def index
-    scope = BookingRequest.joins(:act).includes(:requester, act: :owner, booking_quotes: [], booking_payments: [])
-      .where("booking_requests.requester_id = ? OR acts.owner_id = ?", current_user.id, current_user.id).order(updated_at: :desc).limit(200)
+    # Both sides as one OR of two indexed lookups (requester_id, and act_id among the caller's acts,
+    # read once as an array), so Postgres combines two index scans instead of joining and filtering
+    # every booking.
+    # strict_loading: booking_json reads only what is preloaded here; a new association read fails tests
+    # (and is logged in production) instead of quietly costing a query per booking.
+    scope = BookingRequest.strict_loading.includes(:requester, :act, :booking_quotes, :booking_payments)
+      .where("booking_requests.requester_id = :id OR booking_requests.act_id = ANY (ARRAY(SELECT acts.id FROM acts WHERE acts.owner_id = :id))", id: current_user.id)
+      .order(updated_at: :desc).limit(200)
     render json: { bookings: scope.map { booking_json(_1) } }
   end
 

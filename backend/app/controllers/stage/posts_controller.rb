@@ -15,11 +15,9 @@ module Stage
       return render_error("Unknown author type.", :unprocessable_content, "INVALID_AUTHOR_TYPE") unless Post::AUTHOR_TYPES.include?(type)
 
       candidates = Post.visible.by_author(type, Post.canonical_author_id(type, params[:authorId] || params[:id]))
-        .includes(:created_by, :shared_portfolio_item, :shared_job, reshared_post: :created_by)
-        .order(created_at: :desc, id: :desc).limit(500).to_a
-        .select { post_visible_to?(_1, current_user) }
-      page, next_cursor = paginate(candidates)
-      Post.preload_media_urls(page)
+        .includes(*LIST_INCLUDES).order(created_at: :desc, id: :desc).limit(500).to_a
+      page, next_cursor = paginate(visible_to(candidates, current_user))
+      preload_for_json(page)
       applauded = applauded_post_ids(page)
       render json: { posts: page.map { _1.api_json(applauded_post_ids: applauded) }, nextCursor: next_cursor }
     end

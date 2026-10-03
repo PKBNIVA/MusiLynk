@@ -3,7 +3,7 @@
 # retried. Never touches the in-app/email side (Notifier) — those already went out
 # synchronously from UrgentMatcher#notify_one before this job was enqueued.
 class WhatsappAlertJob < ApplicationJob
-  queue_as :mailers
+  queue_as JobQueues::URGENT
 
   retry_on WhatsappAlerts::Error, Net::OpenTimeout, Net::ReadTimeout, wait: :polynomially_longer, attempts: 5
 

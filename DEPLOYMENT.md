@@ -126,11 +126,13 @@ upload cleanup jobs delete rows but leave their files on the web volume).
    Raw Editor → copy everything, paste into the worker's Raw Editor (or use Railway shared
    variables so both stay in sync). Then set on the worker:
    - `GOOD_JOB_ENABLE_CRON=true`
-   - `GOOD_JOB_MAX_THREADS=5` (the database pool follows it automatically)
+   - Job threads come from the pools in `backend/config/job_queues.yml` (5 by default: urgent
+     alerts have their own; see `docs/ops/job-queues.md`). `GOOD_JOB_MAX_THREADS` only applies to
+     a pool written without a thread count. The database pool follows the total automatically.
    - `GOOD_JOB_SHUTDOWN_TIMEOUT=25` (finish in-flight jobs within `drainingSeconds = 30`)
    `GOOD_JOB_EXECUTION_MODE` is ignored by `good_job start`, so a copied `async` is harmless.
 3. **Deploy and check it is alive.** The worker's logs show
-   `GoodJob ... started scheduler with queues=* max_threads=5` and
+   `GoodJob ... started scheduler with queues=urgent max_threads=2` (one line per pool) and
    `Notifier subscribed with LISTEN`. Until step 4 both services run jobs and cron; that is
    safe (a job is locked by one process, and GoodJob's unique `cron_key`/`cron_at` index
    enqueues each cron tick once), just do step 4 soon after.

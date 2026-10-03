@@ -83,6 +83,91 @@ class ImageVariantsJobTest < ActiveJob::TestCase
     assert_nil audio.api_json[:image]
   end
 
+  test "an object whose bytes no longer match the row (swapped after complete) is rejected for good, not retried" do
+    png = Rails.root.join("tmp/variants-swapped-#{SecureRandom.hex(4)}.png").to_s
+    Vips::Image.black(8, 8).pngsave(png)
+    begin
+      with_fake_storage(png) do # the row says image/jpeg; the bucket now holds a PNG of the right size
+        @upload.update!(byte_size: File.size(png))
+        assert_no_enqueued_jobs(only: ImageVariantsJob) { ImageVariantsJob.perform_now(@upload.id) }
+      end
+    ensure
+      File.delete(png)
+    end
+    assert_empty @stored
+    assert_equal({}, @upload.reload.variants)
+    assert_nil @upload.image_set
+
+    # Right magic bytes but more bytes than the upload recorded: also rejected.
+    with_fake_storage do
+      @upload.update!(byte_size: File.size(FIXTURE) - 1)
+      assert_no_enqueued_jobs(only: ImageVariantsJob) { ImageVariantsJob.perform_now(@upload.id) }
+    end
+    assert_empty @stored
+
+    # Bytes that are not any allowed media type (an SVG renamed to .jpg): rejected before libvips sees it.
+    svg = Rails.root.join("tmp/variants-svg-#{SecureRandom.hex(4)}").to_s
+    File.write(svg, "<svg xmlns='http://www.w3.org/2000/svg'><script>1</script></svg>")
+    begin
+      with_fake_storage(svg) do
+        @upload.update!(byte_size: 10_000)
+        opened = 0
+        Vips::Image.stub(:new_from_file, ->(*) { opened += 1 }) { ImageVariantsJob.perform_now(@upload.id) }
+        assert_equal 0, opened
+      end
+    ensure
+      File.delete(svg)
+    end
+    assert_empty @stored
+    assert_equal({}, @upload.reload.variants)
+  end
+
+  test "a PNG whose header declares an image over the caps is rejected at the header, before decoding" do
+    bomb = Rails.root.join("tmp/variants-bomb-#{SecureRandom.hex(4)}.png").to_s
+    File.binwrite(bomb, png_with_header(100_000, 100_000))
+    begin
+      with_fake_storage(bomb) do
+        @upload.update!(content_type: "image/png", byte_size: File.size(bomb))
+        assert_no_enqueued_jobs(only: ImageVariantsJob) { ImageVariantsJob.perform_now(@upload.id) }
+      end
+    ensure
+      File.delete(bomb) if File.exist?(bomb)
+    end
+    assert_empty @stored
+    assert_equal({}, @upload.reload.variants)
+
+    # The rejection names the caps (header read, nothing decoded); the same file under the caps passes
+    # inspect! and only fails later, in the decode, which the job also treats as final (discard_on Vips::Error).
+    # (Distinct paths: libvips caches header reads by filename; the job's tmpdir paths are unique.)
+    File.binwrite(bomb, png_with_header(100_000, 100_000))
+    error = assert_raises(ImageVariants::Rejected) { ImageVariants.inspect!(bomb, Upload.new(content_type: "image/png", byte_size: 1_000)) }
+    assert_match(/100000x100000 exceeds 10000 px \/ 40000000 pixels/, error.message)
+    small = "#{bomb}.small.png"
+    File.binwrite(small, png_with_header(9_000, 4_000))
+    image = ImageVariants.inspect!(small, Upload.new(content_type: "image/png", byte_size: 1_000))
+    assert_equal [9_000, 4_000], [image.width, image.height]
+    assert_raises(Vips::Error) { image.avg }
+    with_fake_storage(small) do
+      @upload.update!(content_type: "image/png", byte_size: 1_000)
+      assert_no_enqueued_jobs(only: ImageVariantsJob) { ImageVariantsJob.perform_now(@upload.id) }
+    end
+    assert_empty @stored
+    error = assert_raises(ImageVariants::Rejected) { ImageVariants.inspect!(small, Upload.new(content_type: "image/jpeg", byte_size: 1_000)) }
+    assert_match(/bytes are image\/png, upload says image\/jpeg/, error.message)
+    File.delete(small)
+    assert_equal 40_000_000, ImageVariants.max_pixels
+    assert_equal 10_000, ImageVariants.max_dimension
+  ensure
+    File.delete(bomb) if bomb && File.exist?(bomb)
+  end
+
+  test "libvips runs with untrusted loaders blocked and a small pool" do
+    ImageVariants.vips!
+    assert_equal 2, Vips.vips_concurrency_get
+    assert_equal 16, Vips.vips_cache_get_max
+    assert_equal 64 * 1024 * 1024, Vips.vips_cache_get_max_mem
+  end
+
   test "without bucket configuration on the worker the job logs and skips instead of failing" do
     downloads = 0
     UploadStorage.stub(:direct?, false) do
@@ -118,6 +203,14 @@ class ImageVariantsJobTest < ActiveJob::TestCase
   end
 
   private
+
+  # A PNG (signature, IHDR declaring width x height, an empty IDAT, IEND; valid CRCs) of 70 bytes:
+  # libvips reads the dimensions from the header but there are no pixels to decode.
+  def png_with_header(width, height)
+    chunk = ->(type, data) { [data.bytesize].pack("N") + type + data + [Zlib.crc32(type + data)].pack("N") }
+    ihdr = [width, height].pack("N2") + [8, 2, 0, 0, 0].pack("C5")
+    "\x89PNG\r\n\x1A\n".b + chunk["IHDR".b, ihdr] + chunk["IDAT".b, Zlib::Deflate.deflate("")] + chunk["IEND".b, "".b]
+  end
 
   def with_fake_storage(source = FIXTURE.to_s, &block)
     download = ->(_key, path) { FileUtils.cp(source, path) }

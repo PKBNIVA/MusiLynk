@@ -14,12 +14,12 @@ class HotEndpointQueryBudgetTest < ActionDispatch::IntegrationTest
   # R3 search (measured 2026-10-03): the ranked lists (talent, acts) run one more statement, the
   # per-search limits (statement_timeout, trigram threshold) set at the start of Search::Runner.
   # R5 images (measured 2026-10-03): a page of profiles with photos resolves their variants (ImageSet.by_url)
-  # in one more statement, as does a page of acts with covers; the talent detail runs two (the photo,
-  # then the work samples' images and thumbnails) and an act detail one; the feed budget had the room.
+  # in one more statement, as does a page of acts with covers, the talent detail (profile photo and the
+  # work samples' images in the same lookup) and an act detail; the feed budget had the room.
   PUBLIC = {
     "/api/public/talent" => 11,
     "/api/public/talent?location=Mumbai&role=Drummer&genre=Rock" => 11,
-    "/api/public/talent/{talent}" => 13,
+    "/api/public/talent/{talent}" => 12,
     "/api/public/acts" => 6,
     "/api/public/acts/{act}" => 5,
     "/api/jobs" => 4,

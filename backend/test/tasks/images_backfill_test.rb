@@ -32,6 +32,19 @@ class ImagesBackfillTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs only: ImageVariantsJob
   end
 
+  test "in production it prints the environment and count, then refuses without CONFIRM=images-backfill" do
+    Rails.stub(:env, ActiveSupport::EnvironmentInquirer.new("production")) do
+      out, = capture_io { assert_raises(SystemExit) { run_task } }
+      assert_match(/images:backfill production: 1 upload\(s\) to queue/, out)
+      assert_no_enqueued_jobs only: ImageVariantsJob
+      ENV["CONFIRM"] = "images-backfill"
+      capture_io { run_task }
+      assert_enqueued_with(job: ImageVariantsJob, args: [@missing.id])
+    end
+  ensure
+    ENV.delete("CONFIRM")
+  end
+
   test "FORCE=1 redoes finished bucket images that already have variants, in batches" do
     ENV["FORCE"] = "1"
     ENV["BATCH"] = "1"

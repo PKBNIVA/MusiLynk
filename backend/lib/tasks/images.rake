@@ -6,6 +6,13 @@ namespace :images do
     scope = scope.where(variants: {}) unless ENV["FORCE"] == "1"
     scope = scope.limit(Integer(ENV["LIMIT"])) if ENV["LIMIT"].present?
     batch = Integer(ENV.fetch("BATCH", 500))
+    count = scope.count
+    puts "images:backfill #{Rails.env}: #{count} upload(s) to queue#{ENV['FORCE'] == '1' ? ' (FORCE: redoing existing variants)' : ''}."
+    # Production puts every one of these on the worker's single-thread default pool: an admin runs it
+    # from a Railway shell, on purpose (docs/ops/uploads.md).
+    if Rails.env.production? && ENV["CONFIRM"] != "images-backfill"
+      abort "images:backfill refuses to run in production without CONFIRM=images-backfill."
+    end
     enqueued = 0
     scope.in_batches(of: batch).each do |relation|
       ids = relation.pluck(:id)

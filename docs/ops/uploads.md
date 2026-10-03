@@ -88,12 +88,19 @@ downloads the 512 px (or 5 MB) original:
 - **Deletion.** `Upload#purge!` and the daily `UploadSweepJob` delete the variants with the original;
   the bucket sweep treats `<key>/v/...` objects as belonging to `<key>`.
 - **Backfill (existing uploads).** `cd backend && bin/rails images:backfill` enqueues the job for
-  every finished bucket image without variants, 500 ids per batch (`BATCH=n`), and prints progress;
-  it is idempotent (a second run queues nothing new). `FORCE=1` redoes uploads that already have
-  variants (after changing the widths or qualities); `LIMIT=n` stops after n uploads for a trial run.
-  Run it from a Railway shell on the API service after the deploy that adds the column; the worker
-  does the work at its own pace. It has not been run against production by an agent: the owner runs
-  it (expect roughly 1 to 3 s per upload on the worker).
+  every finished bucket image without variants, 500 ids per batch (`BATCH=n`), prints the
+  environment and the count first, then progress; it is idempotent (a second run queues nothing
+  new). `FORCE=1` redoes uploads that already have variants (after changing the widths or
+  qualities); `LIMIT=n` stops after n uploads for a trial run. **Admin only, from a Railway shell on
+  the API service**, after the deploy that adds the column; in production it refuses to run without
+  `CONFIRM=images-backfill`, because every queued job lands on the worker's single-thread default
+  pool ahead of the cron sweeps. It has not been run against production by an agent: the owner runs
+  it (expect roughly 1 to 3 s per upload on the worker). Variants left by a run that stopped halfway
+  stay in the bucket until the original is purged, then the sweep removes them with it.
+- **Safety.** The job re-checks the downloaded object against its row (size, magic bytes), lets
+  libvips use only its JPEG/PNG/WebP loaders (`Vips.block_untrusted`), and refuses images over
+  `max_pixels` / `max_dimension` (config/images.yml) from the header, before decoding. Such files are
+  given up on at once (no retries) and logged as `image_variants_rejected`.
 - **Changing the widths or qualities.** Edit `backend/config/images.yml`, deploy, then
   `bin/rails images:backfill FORCE=1`. Variants under widths you removed stay in the bucket until the
   upload is purged (they are harmless; nothing links to them).

@@ -3,6 +3,7 @@
 # directly here is safe regardless of load order.
 require Rails.root.join("app/services/ai_pricing")
 require Rails.root.join("config/job_queues")
+require Rails.root.join("config/backup_schedule")
 
 Rails.application.configure do
   config.good_job.execution_mode = ENV.fetch("GOOD_JOB_EXECUTION_MODE", Rails.env.production? ? "async" : "external").to_sym
@@ -12,6 +13,8 @@ Rails.application.configure do
   config.good_job.poll_interval = ENV.fetch("GOOD_JOB_POLL_INTERVAL", "10").to_i
   config.good_job.enable_cron = ENV.fetch("GOOD_JOB_ENABLE_CRON", Rails.env.production?.to_s) == "true"
   config.good_job.preserve_job_records = true
+  # GoodJob's own periodic cleanup uses the same window as the retention sweep (config/retention.yml).
+  config.good_job.cleanup_preserved_jobs_before_seconds_ago = YAML.safe_load_file(Rails.root.join("config/retention.yml")).dig("rules", "good_jobs", "days").to_i * 86_400
   config.good_job.retry_on_unhandled_error = false
   # Errors inside GoodJob itself (not in a job) go to the error tracker; job failures are
   # reported by ApplicationJob#after_discard. Both are no-ops without SENTRY_DSN.
@@ -25,7 +28,13 @@ Rails.application.configure do
     auth_cleanup: {
       cron: "17 3 * * *",
       class: "AuthCleanupJob",
-      description: "Delete expired sessions and email tokens expired or used more than 7 days ago"
+      description: "Delete email tokens expired or used more than 7 days ago"
+    },
+    # 03:47 IST = 22:17 UTC, when traffic is lowest.
+    retention_sweep: {
+      cron: "17 22 * * *",
+      class: "RetentionSweepJob",
+      description: "Delete records past their retention window (config/retention.yml), in capped batches"
     },
     billing_reconciliation: {
       cron: "7,37 * * * *",
@@ -118,5 +127,9 @@ Rails.application.configure do
     class: "AiBatchSubmitJob",
     description: "Submit queued portfolio item classifications as one Anthropic Message Batch, and ingest finished batches"
   } if AiPricing.task_enabled?("classify_portfolio_item")
+  # In-app weekly backup to BACKUP_BUCKET (docs/ops/backups.md): registered only when the bucket is set.
+  if (backup = BackupSchedule.cron_entry)
+    cron[:backup_to_r2] = backup
+  end
   config.good_job.cron = cron
 end

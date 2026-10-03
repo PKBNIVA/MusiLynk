@@ -18,13 +18,22 @@ everything else lives here.
 
 ## Engineering
 
+- [engineering/RULES.md](engineering/RULES.md): the engineering rulebook: the twelve rules, the gates, the budgets, and the config-not-code file list. One-page version: [../CONTRIBUTING.md](../CONTRIBUTING.md).
+- [engineering/ARCHITECTURE.md](engineering/ARCHITECTURE.md): system map (builds, API, worker, Postgres, R2, Vercel, Railway, providers) and how a request flows for a public page, a chat message and an urgent request.
 - [engineering/RUNBOOK.md](engineering/RUNBOOK.md): incident runbook for site down, payments, email, restore from backup, and security incidents.
+- [UPGRADES.md](UPGRADES.md): dependency upgrade log, what is on hold and why, and the monthly routine.
 - [API.md](API.md): API contract (routes, roles, status codes, error shape) and the tests that enforce it.
 - [engineering/SAAS_BILLING.md](engineering/SAAS_BILLING.md): plans, entitlements, Razorpay event handling, reconciliation, cancellation rules.
 - [engineering/SEARCH.md](engineering/SEARCH.md): how `/api/search` works (PostgreSQL, synonyms, limits) and its known limits.
 - [engineering/SESSIONS.md](engineering/SESSIONS.md): session expiry and browser binding, admin two-step sign-in, and the HttpOnly cookie migration plan.
 - [PERFORMANCE.md](PERFORMANCE.md): bundle budget, Core Web Vitals, tracing defaults, request timing logs, and load-test results.
 - [RAILS8_UPGRADE.md](RAILS8_UPGRADE.md): the Rails 7.2 → 8.1.4 upgrade and the framework defaults now in effect.
+
+## Operations
+
+- [ops/RUNBOOKS.md](ops/RUNBOOKS.md): deploy skipped, Postgres disk or connection exhaustion, Razorpay webhook failures, Brevo outage, R2 misconfiguration.
+- [ops/OWNER_ITEMS.md](ops/OWNER_ITEMS.md): the owner's checklist with dashboard steps (VAPID keys, Brevo DNS, grievance officer, Railway backups, R2 domain, Vercel variable, Singapore move).
+- One page per configurable area: [ops/edge-caching.md](ops/edge-caching.md), [ops/job-queues.md](ops/job-queues.md), [ops/search.md](ops/search.md), [ops/uploads.md](ops/uploads.md), [ops/web-push.md](ops/web-push.md), [ops/web-performance.md](ops/web-performance.md), [ops/billing-invoices.md](ops/billing-invoices.md).
 
 ## QA
 

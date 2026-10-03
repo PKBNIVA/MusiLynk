@@ -103,10 +103,12 @@ class AuthJobsTest < ActiveJob::TestCase
     assert_equal LINK, EmailDeliveryJob.unseal(sealed)
   end
 
-  test "cleanup deletes expired sessions and stale email tokens only" do
+  # Expired sessions and sign-in codes moved to RetentionSweepJob (config/retention.yml, tested in
+  # test/services/retention_test.rb), so this job now leaves sessions alone.
+  test "cleanup deletes stale email tokens only" do
     now = Time.current
     live = @user.sessions.create!(token_digest: "live", expires_at: now + 1.day)
-    @user.sessions.create!(token_digest: "expired", expires_at: now - 1.minute)
+    expired = @user.sessions.create!(token_digest: "expired", expires_at: now - 1.minute)
 
     fresh_unused = token("fresh", expires_at: now + 1.hour)
     recently_expired = token("recent-expired", expires_at: now - 2.days)
@@ -116,19 +118,18 @@ class AuthJobsTest < ActiveJob::TestCase
 
     AuthCleanupJob.perform_now(now)
 
-    assert_equal [live.id], @user.sessions.pluck(:id)
+    assert_equal [live.id, expired.id].sort, @user.sessions.pluck(:id).sort
     assert_equal [fresh_unused, recently_expired, recently_used].map(&:id).sort, @user.email_tokens.pluck(:id).sort
   end
 
-  test "cleanup job removes sign-in codes that expired more than a week ago" do
+  test "cleanup job leaves sign-in codes to the retention sweep" do
     now = Time.current
     old, _raw = travel_to(now - 8.days) { SignInCode.issue!(email: "old@example.com") }
-    recent, _raw = travel_to(now - 1.day) { SignInCode.issue!(email: "recent@example.com") }
 
     AuthCleanupJob.perform_now(now)
 
-    assert_not SignInCode.exists?(old.id)
-    assert SignInCode.exists?(recent.id)
+    assert SignInCode.exists?(old.id)
+    assert_includes Retention::RULES.keys, "sign_in_codes"
   end
 
   test "cleanup job is scheduled daily through GoodJob cron" do

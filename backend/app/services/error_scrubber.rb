@@ -14,6 +14,12 @@ module ErrorScrubber
   AUTH_SCHEME = /\b(Bearer|Basic|Token)\s+[A-Za-z0-9\-._~+\/=]+/i
   # ?token=…, &reset_token=…, &code=…, &signature=… etc. in URLs and query strings.
   QUERY_SECRET = /((?:\A|[?&;\s"'])[\w\-\[\]]*(?:token|code|otp|secret|signature|password|email|key)[\w\-\[\]]*=)[^&#\s"'<>]*/i
+  # postgres://user:pass@host/... (any scheme): the userinfo part goes.
+  URL_USERINFO = %r{\b([a-z][a-z0-9+.\-]*://)[^\s/?#@]+@}i
+  # libpq / pg_dump errors: 'connection to server at "db.host" (10.0.0.1), port 5432 failed: ...
+  # password authentication failed for user "app"'. Host, address and user name go.
+  PG_SERVER = /(server (?:at|on socket) )"[^"]*"(?: \([^)]*\))?/i
+  PG_USER = /(\buser )"[^"]*"/i
   REQUEST_ENV_ALLOWED = %w[SERVER_NAME SERVER_PORT].freeze
 
   module_function
@@ -61,6 +67,9 @@ module ErrorScrubber
     return value unless value.is_a?(String)
 
     value
+      .gsub(URL_USERINFO) { "#{Regexp.last_match(1)}#{FILTERED}@" }
+      .gsub(PG_SERVER) { "#{Regexp.last_match(1)}\"#{FILTERED}\"" }
+      .gsub(PG_USER) { "#{Regexp.last_match(1)}\"#{FILTERED}\"" }
       .gsub(AUTH_SCHEME) { "#{Regexp.last_match(1)} #{FILTERED}" }
       .gsub(QUERY_SECRET) { "#{Regexp.last_match(1)}#{FILTERED}" }
       .gsub(EMAIL, EMAIL_PLACEHOLDER)

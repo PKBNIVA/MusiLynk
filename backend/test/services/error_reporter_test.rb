@@ -48,15 +48,16 @@ class ErrorReporterTest < ActiveSupport::TestCase
       assert_includes config.excluded_exceptions, name
     end
 
-    assert_in_delta 0.02, MusilynkSentry.traces_sample_rate(nil), 1e-9, "a small default sample once a DSN is set"
-    assert_in_delta 0.02, MusilynkSentry.traces_sample_rate("  "), 1e-9
-    assert_in_delta 0.02, MusilynkSentry.traces_sample_rate("lots"), 1e-9
+    assert_in_delta 0.1, MusilynkSentry.traces_sample_rate(nil), 1e-9, "a 10% default sample once a DSN is set"
+    assert_in_delta 0.1, MusilynkSentry.traces_sample_rate("  "), 1e-9
+    assert_in_delta 0.1, MusilynkSentry.traces_sample_rate("lots"), 1e-9
     assert_equal 0.0, MusilynkSentry.traces_sample_rate("0"), "an explicit 0 turns tracing off"
     assert_equal 1.0, MusilynkSentry.traces_sample_rate("7")
     default = Sentry::Configuration.new
     MusilynkSentry.configure(default, env: { "SENTRY_DSN" => SentryTestSupport::DUMMY_DSN })
     assert_equal Rails.env.to_s, default.environment
-    assert_in_delta 0.02, default.traces_sample_rate, 1e-9
+    assert_in_delta 0.1, default.traces_sample_rate, 1e-9
+    assert_in_delta 0.0, default.profiles_sample_rate.to_f, 1e-9, "profiling stays off"
   end
 
   test "capture is a no-op without a DSN" do

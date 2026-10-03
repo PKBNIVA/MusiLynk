@@ -17,7 +17,7 @@ class SearchQueryTest < ActiveSupport::TestCase
     tokens = Search::Query.new("guitar players in Bombay").tokens
     assert_includes tokens.first.alternatives, "guitarist"
     assert tokens.last.location?, "a city is a location token"
-    assert_equal %w[mumbai bombay], tokens.last.alternatives
+    assert_equal %w[mumbai bombay मुंबई], tokens.last.alternatives
   end
 
   test "drops stop words from multi-word queries but keeps a lone one" do
@@ -43,12 +43,13 @@ class SearchQueryTest < ActiveSupport::TestCase
     end
   end
 
-  test "non-latin scripts and emoji are kept and matched by substring" do
+  test "Devanagari words are lexemes; emoji are matched by substring" do
     token = Search::Query.new("गायक").tokens.first
     assert_includes token.alternatives, "vocalist", "Hindi for singer is in the singer group"
     emoji = Search::Query.new("🥁")
     assert_equal ["🥁"], emoji.tokens.map(&:text)
     assert_includes emoji.condition(Search::Targets::JOBS), "LIKE ANY"
+    assert_not_includes Search::Query.new("गायक").condition(Search::Targets::JOBS), "LIKE ANY", "the parser keeps Devanagari words whole"
   end
 
   test "code-like and symbol-only input is inert or exact" do
@@ -81,8 +82,9 @@ class SearchQueryTest < ActiveSupport::TestCase
     query = Search::Query.new("guitarist mumbai")
     all = query.condition(Search::Targets::JOBS)
     assert_includes all, " AND "
-    assert_includes all, "guitar player"
-    assert_includes all, "jobs.location"
+    assert_includes all, "jobs.search_vector @@", "matching uses the indexed document, not per-column regexes"
+    assert_includes all, "(''guitar'' & ''player'')", "a vocabulary phrase matches its words anywhere in the row"
+    assert_includes all, "''mumbai'':D", "a city matches the location weight only"
     partial = query.condition(Search::Targets::JOBS, mode: :partial)
     assert_not_includes partial, " AND ", "partial mode ignores the city and needs one of the other words"
     assert_includes query.score(Search::Targets::JOBS), "word_similarity"
@@ -96,10 +98,36 @@ class SearchQueryTest < ActiveSupport::TestCase
     assert fixed.tokens.last.location?
   end
 
-  test "regex special characters in words are escaped" do
+  test "symbols become substring matches and hyphenated words match as words" do
     sql = Search::Query.new("a&r hip-hop").condition(Search::Targets::TALENT)
-    assert_includes sql, "a\\&r"
-    assert_includes sql, "hip\\-hop"
+    assert_includes sql, "profiles.search_text LIKE ANY (ARRAY['%a&r%'"
+    assert_includes sql, "(''hip'' & ''hop'')"
+    query = Search::Query.new("hip-hop")
+    phrase, = query.tsquery(query.tokens.first, phrase: true)
+    assert_includes phrase, "''hip'' <-> ''hop''", "the in-order phrase is what the score rewards"
+    assert_not_includes sql, "''a''", "a lone letter never becomes a lexeme of its own"
+  end
+
+  test "dhol and dholak are different words, and short unknown words match whole words only" do
+    dhol = Search::Query.new("dhol").tokens.first
+    assert_includes dhol.alternatives, "dhol player"
+    assert_not_includes dhol.alternatives, "dholak"
+    assert_not_includes Search::Query.new("dholak").tokens.first.alternatives, "dhol"
+    short = Search::Query.new("sur").tokens.first
+    assert_equal ["sur"], short.words
+    assert_empty short.prefixes
+    query = Search::Query.new("drumm")
+    sql, = query.tsquery(query.tokens.first)
+    assert_includes sql, "to_tsquery('simple', '''drumm'':*')", "a prefix is matched unstemmed"
+  end
+
+  test "Hindi, Hinglish and Devanagari spellings share a group" do
+    { "gayak" => "singer", "गायक" => "vocalist", "shaadi" => "wedding", "tablist" => "tabla player", "keys" => "piano",
+      "disc jockey" => "dj", "mehndi" => "mehendi", "barat" => "baraat", "ढोल" => "dhol player", "geetkar" => "lyricist" }.each do |typed, expected|
+      assert_includes Search::Query.new(typed).tokens.first.alternatives, expected, typed
+    end
+    assert_includes Search::Query.new("wedding").interpreted_as, "sangeet", "wedding also searches its ceremonies (one way)"
+    assert_not_includes Search::Query.new("sangeet").tokens.first.alternatives, "wedding"
   end
 
   test "synonyms file loads groups, one-way expansions, cities and stop words" do
@@ -119,7 +147,8 @@ class SearchQueryTest < ActiveSupport::TestCase
     assert_equal 0, Search::Spelling.edit_distance("", "")
     assert_equal "vocalist", Search::Spelling.suggest("vocalst")
     assert_equal "guitarist", Search::Spelling.suggest("guitarst")
-    assert_equal "tabla", Search::Spelling.suggest("tabala")
+    assert_equal "dholak player", Search::Synonyms.canonical(Search::Spelling.suggest("dholk")), "a missing letter: a dholak spelling, not dhol"
+    assert_includes Search::Synonyms.expand("tabala"), "tabla", "a common spelling is vocabulary, not a typo"
     assert_nil Search::Spelling.suggest("zzqqxx")
     assert_equal "vocalist", Search::Spelling.suggest("vocalst"), "cached"
   end

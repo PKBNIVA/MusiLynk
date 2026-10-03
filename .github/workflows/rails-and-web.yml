@@ -34,6 +34,13 @@ jobs:
       - run: npm run build
       - name: Check bundle size budget
         run: npm run check:bundle
+      # The speed gate (scripts/perf/budget.json): serves dist/ locally and loads the home and search
+      # pages on a throttled phone profile in headless Chromium, failing on too many requests, too many
+      # bytes or a slow LCP. The headless shell is the smallest Chromium Playwright offers.
+      - name: Install headless Chromium for the speed gate
+        run: npx playwright install --with-deps chromium-headless-shell
+      - name: Check page speed budget
+        run: npm run check:perf
       # Builds the admin site too and proves neither build contains the other's pages.
       - name: Check public/admin site split
         run: npm run check:split

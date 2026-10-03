@@ -9,15 +9,20 @@ type Props = {
   sizes?: string;
   /** Above-the-fold image: loads eagerly and at high priority. */
   priority?: boolean;
-  /** Widths to offer in the srcset; only the home hero ships more than 800 and 1600. */
+  /** Widths to offer in the srcset; only the home hero ships more than 480, 800 and 1600. */
   widths?: readonly number[];
   className?: string;
 };
 
-/** An `<img>` with explicit dimensions (no layout shift), lazy loading and the 800/1600 srcset. */
+/**
+ * An image with explicit dimensions (no layout shift), lazy loading and async decoding. An editorial
+ * photo (`/img/<name>`) becomes a `<picture>` offering the AVIF variants first and the WebP ones as
+ * the fallback, each with a srcset of every width scripts/perf/build-photos.mjs generated. The
+ * `<picture>` has `display: contents`, so `className` lays the `<img>` out as if it stood alone.
+ */
 export function Photo({ src, alt, width, height, sizes = '100vw', priority = false, widths, className = '' }: Props) {
   const editorial = src.startsWith('/img/') && !/\.[a-z0-9]+$/i.test(src);
-  return (
+  const img = (
     <img
       src={editorial ? photoUrl(src, 1600) : src}
       srcSet={editorial ? photoSrcSet(src, widths) : undefined}
@@ -30,5 +35,12 @@ export function Photo({ src, alt, width, height, sizes = '100vw', priority = fal
       fetchPriority={priority ? 'high' : undefined}
       className={className}
     />
+  );
+  if (!editorial) return img;
+  return (
+    <picture className="contents">
+      <source type="image/avif" srcSet={photoSrcSet(src, widths, 'avif')} sizes={sizes} />
+      {img}
+    </picture>
   );
 }

@@ -48,7 +48,9 @@ class EventsController < ApplicationController
   private
 
   # A profile_view crossing exactly 100 views triggers a one-off milestone email to the
-  # profile's owner (Notifier.milestone_profile_100_views is itself idempotent).
+  # profile's owner (Notifier.milestone_profile_100_views is itself idempotent). The count is the
+  # stored profiles.profile_view_count, incremented atomically here, so it does not depend on old
+  # events (product_events expire after 180 days, config/retention.yml).
   def check_profile_view_milestones(rows)
     rows.each do |row|
       next unless row[:name] == "profile_view"
@@ -59,9 +61,8 @@ class EventsController < ApplicationController
       user = User.find_by(id: profile_id)
       next unless user
 
-      # The literal name in the SQL is what lets Postgres use the partial index on profileId.
-      count = ProductEvent.where("name = 'profile_view' AND props->>'profileId' = ?", profile_id).count
-      Notifier.milestone_profile_100_views(user, count)
+      count = Profile.increment_view_count(user.id)
+      Notifier.milestone_profile_100_views(user, count) if count
     end
   end
 

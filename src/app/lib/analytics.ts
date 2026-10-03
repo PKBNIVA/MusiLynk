@@ -284,22 +284,26 @@ export function trackProfileView(profileId: string): void {
 // React hook, for a page tree that renders under its own <Router> (e.g. a standalone preview) and
 // doesn't go through the app's shared router instance.
 
-type MinimalRouter = { subscribe: (listener: (state: { location: { pathname: string } }) => void) => () => void };
+type RouterState = { location: { pathname: string } };
+type MinimalRouter = { subscribe: (listener: (state: RouterState) => void) => () => void; state?: RouterState };
 let routeTrackingInitialized = false;
 
 /** Wires automatic `route_change` (and `landing_view` for "/") tracking to the app's router.
- * Safe to call more than once; only the first call attaches a listener. */
+ * Safe to call more than once; only the first call attaches a listener. The page the router is already
+ * on counts too, so App.tsx can start this after the first paint without losing the first view. */
 export function initRouteTracking(router: MinimalRouter): void {
   if (routeTrackingInitialized) return;
   routeTrackingInitialized = true;
   let lastPath: string | null = null;
-  router.subscribe((state) => {
+  const onRoute = (state: RouterState) => {
     const path = state.location.pathname;
     if (path === lastPath) return;
     lastPath = path;
     if (path === '/') trackLandingView();
     else track('route_change', { path: redactTrackedPath(path) });
-  });
+  };
+  router.subscribe(onRoute);
+  if (router.state) onRoute(router.state);
 }
 
 /** Same tracking as `initRouteTracking`, as a React hook for a page tree that renders under its

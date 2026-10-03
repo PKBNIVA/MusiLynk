@@ -247,6 +247,29 @@ describe('reportApiFailure', () => {
     expect(sentry.captureText.mock.calls[2]?.[1]?.tags?.apiCode).toBe('none');
   });
 
+  it('starts the Sentry download at once when an error is reported before the page is idle', async () => {
+    // Never-firing idle callback and a page still loading: only an error may start the download.
+    vi.stubGlobal('requestIdleCallback', () => 1);
+    Object.defineProperty(document, 'readyState', { value: 'loading', configurable: true });
+    try {
+      const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });
+      monitoring.initMonitoring();
+      monitoring.reportWebVital({ name: 'LCP', value: 1200, rating: 'good' });
+      await flush();
+      expect(sentry.initSentry).not.toHaveBeenCalled(); // a vital alone waits for load + idle
+      monitoring.reportError(new Error('crashed early'));
+      expect(await monitoring.whenMonitoringReady()).toBe(true);
+      expect(sentry.initSentry).toHaveBeenCalledTimes(1);
+      expect(sentry.captureError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'crashed early' }),
+        undefined,
+      );
+      expect(sentry.captureVital).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(document, 'readyState', { value: 'complete', configurable: true });
+    }
+  });
+
   it('flushes a report queued before load', async () => {
     const monitoring = await loadMonitoring({ VITE_SENTRY_DSN: DSN });
     monitoring.reportApiFailure({ status: 500, method: 'PATCH', path: '/profile' });

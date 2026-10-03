@@ -13,14 +13,17 @@ module Verification
 
     # { user_id => "verified" | "verified_pro" } for the verified users among `users`, in three grouped
     # queries instead of the three per-user COUNTs `for` runs (a directory page lists 24 people at once).
-    def batch(users)
+    # A caller that already counted completed bookings ({owner_id => n}) or published reviews
+    # ({user_id => n}) for these users passes them in, and that query is not run again.
+    def batch(users, completed_bookings: nil, reviews: nil)
       verified = users.select { _1.profile&.verified? }
       return {} if verified.empty?
       ids = verified.map(&:id)
       completed = Hash.new(0)
       UrgentRequest.where(status: "filled", filled_by_id: ids).group(:filled_by_id).count.each { |id, n| completed[id] += n }
-      BookingRequest.where(status: "completed").joins(:act).where(acts: { owner_id: ids }).group("acts.owner_id").count.each { |id, n| completed[id] += n }
-      reviews = Review.where(status: "published", employer_id: ids).group(:employer_id).count
+      completed_bookings ||= BookingRequest.where(status: "completed").joins(:act).where(acts: { owner_id: ids }).group("acts.owner_id").count
+      completed_bookings.each { |id, n| completed[id] += n }
+      reviews ||= Review.where(status: "published", employer_id: ids).group(:employer_id).count
       min_completed = Config.pro.fetch(:min_completed)
       min_reviews = Config.pro.fetch(:min_reviews)
       verified.to_h do |user|

@@ -89,7 +89,7 @@ test('without a DSN Sentry is never downloaded or contacted, even when a route c
   await expect(page.getByRole('heading', { name: 'This screen missed a beat.' })).toBeVisible();
   await page.goto('/');
   await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(2_500); // longer than the idle-load delay a DSN build would use
+  await page.waitForTimeout(2_500); // a DSN build would have started the Sentry download by now (load + idle, or at once on the crash)
   expect(sentryTraffic).toEqual([]);
   expect(await page.locator('meta[name="musilynk-release"]').getAttribute('content')).toBeTruthy();
 });
@@ -183,7 +183,7 @@ test('with a DSN Core Web Vitals are sent as metrics when the page is hidden, ne
 
   await page.goto(`${sentryBaseUrl}/pricing?token=url-secret-88`);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  // Sentry loads once the browser is idle; the vitals are only sent after that.
+  // Sentry loads once the page has loaded and the browser is idle; the vitals are only sent after that.
   await expect
     .poll(
       () => page.evaluate(() => performance.getEntriesByType('resource').some((e) => /sentryClient/.test(e.name))),
@@ -197,10 +197,18 @@ test('with a DSN Core Web Vitals are sent as metrics when the page is hidden, ne
     document.dispatchEvent(new Event('visibilitychange'));
   });
 
-  await expect.poll(async () => (await vitalBodies()).length, { timeout: 15_000 }).toBeGreaterThan(before);
-  const bodies = (await vitalBodies()).slice(before).join('\n');
-  expect(bodies).toContain('"web_vital.lcp"');
-  expect(bodies).toContain('"web_vital.cls"');
+  // LCP and CLS may arrive in separate envelopes a moment apart: wait for both, not for a count.
+  const newBodies = async () => (await vitalBodies()).slice(before).join('\n');
+  await expect
+    .poll(
+      async () => {
+        const bodies = await newBodies();
+        return bodies.includes('"web_vital.lcp"') && bodies.includes('"web_vital.cls"');
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+  const bodies = await newBodies();
   expect(bodies).toContain('"/pricing"'); // the route template attribute
   expect(bodies).toMatch(/"rating"/);
   expect(bodies).toContain('"infer_ip":"never"'); // no IP address, as for error events

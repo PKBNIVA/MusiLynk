@@ -28,6 +28,7 @@ export function NowOnMusiLynk({ city }: { city: string }) {
     setPeople(null);
     apiGet<{ talent?: Person[] }>(`/public/talent?${new URLSearchParams({ location: city, limit: String(SHOWN) })}`, {
       skipAuthRedirect: true,
+      viaEdge: true,
     })
       .then((body) => live && setPeople((body.talent || []).slice(0, SHOWN)))
       .catch(() => live && setPeople([]));

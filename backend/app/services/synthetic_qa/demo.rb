@@ -31,6 +31,13 @@ module SyntheticQa
       scope.where("users.synthetic_batch IS NULL OR users.synthetic_batch LIKE ?", "#{PREFIX}%")
     end
 
+    # The same rule for acts, by their owner, without joining users: an anti-join on the primary key,
+    # so a search over acts never scans users once per act.
+    def publicly_listed_acts(scope)
+      scope.where("NOT EXISTS (SELECT 1 FROM users hidden_owners WHERE hidden_owners.id = acts.owner_id " \
+        "AND hidden_owners.synthetic_batch IS NOT NULL AND hidden_owners.synthetic_batch NOT LIKE ?)", "#{PREFIX}%")
+    end
+
     def users = User.where("synthetic_batch LIKE ?", "#{PREFIX}%")
 
     def batch_names = users.distinct.order(:synthetic_batch).pluck(:synthetic_batch)

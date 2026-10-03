@@ -13,7 +13,8 @@ export interface PublicStats {
   urgentRequests?: number;
 }
 
-export const loadPublicStats = () => apiGet<PublicStats>('/public/stats', { skipAuthRedirect: true, timeoutMs: 6_000 });
+export const loadPublicStats = () =>
+  apiGet<PublicStats>('/public/stats', { skipAuthRedirect: true, timeoutMs: 6_000, viaEdge: true });
 
 /** The smallest count worth showing for each stat. */
 export const PROOF_THRESHOLDS = { verifiedProfiles: 10, cities: 2, openOpportunities: 5 } as const;
@@ -113,7 +114,7 @@ export interface StageTeaserPost {
 export async function loadStageTeaser(limit = 3): Promise<StageTeaserPost[]> {
   const body = await apiGet<{ posts?: { id: string; body?: string | null; createdAt: string; visibility?: string }[] }>(
     '/stage/authors/system/musilynk/posts',
-    { skipAuthRedirect: true, timeoutMs: 6_000 },
+    { skipAuthRedirect: true, timeoutMs: 6_000, viaEdge: true },
   );
   return (body.posts || [])
     .filter((post) => post.visibility !== 'followers' && post.body?.trim() && !/^Welcome\s/i.test(post.body))

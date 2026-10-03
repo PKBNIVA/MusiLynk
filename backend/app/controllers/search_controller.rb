@@ -44,6 +44,23 @@ class SearchController < ApplicationController
   # GET /search/status
   def status = render(json: status_payload)
 
+  # GET /search/suggest?q= — type-ahead for the search box: { suggestions: [{ kind, label, query?,
+  # detail?, url? }] } (Search::Suggest). Rate-limited per IP and cached for config/search.yml
+  # suggest.cache_seconds, in the shared cache and in the browser.
+  def suggest
+    settings = Search::Settings.suggest
+    return unless throttle!("search-suggest", limit: settings.fetch("requests_per_minute"), period: 1.minute)
+    return render_error("Search filters must be plain text.", :bad_request, "INVALID_PARAMETER") unless params[:q].nil? || params[:q].is_a?(String)
+
+    text = Search::Query.normalize(params[:q].to_s.first(settings.fetch("max_length"))).strip
+    seconds = settings.fetch("cache_seconds")
+    suggestions = Rails.cache.fetch(["search-suggest", synthetic_viewer?, text], expires_in: seconds.seconds) do
+      Search::Suggest.call(text, viewer_synthetic: synthetic_viewer?)
+    end
+    expires_in seconds.seconds, public: false
+    render json: { suggestions: }
+  end
+
   private
 
   def cached(key, &block)
@@ -69,7 +86,7 @@ class SearchController < ApplicationController
   end
 
   def run(type, query, offset, limit)
-    Search::Runner.call(scope_for(type), query, TARGETS.fetch(type), order: ORDERS.fetch(type), offset:, limit:)
+    Search::Runner.call(scope_for(type, query), query, TARGETS.fetch(type), order: ORDERS.fetch(type), offset:, limit:)
   end
 
   # Every type with matches gets a fair share of the MAX_RESULTS slots before any type
@@ -87,14 +104,19 @@ class SearchController < ApplicationController
     taken.flatten(1)
   end
 
-  def scope_for(type)
+  def scope_for(type, query)
     scope = case type
     when "jobs" then Job.published.joins(:employer).includes(:employer)
     when "talent" then TalentController.apply_facets(User.discoverable_talent.joins(:profile).preload(:profile), params)
-    when "acts" then Act.joins(:owner).includes(:owner).where(status: "active")
-    else PortfolioItem.joins(user: :profile).includes(:user).where(visibility: "public", users: { status: "active", profile_complete: true })
+    # Acts never join users: the owner rule is an anti-join (a join made the planner scan users once per act).
+    when "acts" then Act.preload(:owner).where(status: "active")
+    else
+      samples = PortfolioItem.joins(:user).includes(:user).where(visibility: "public", users: { status: "active", profile_complete: true })
+      # A sample's place is its owner's profile location: joined only when the query names a city.
+      query.tokens.any?(&:location?) ? samples.joins(user: :profile) : samples
     end
-    synthetic_viewer? ? scope : SyntheticQa::Demo.publicly_listed(scope)
+    return scope if synthetic_viewer?
+    type == "acts" ? SyntheticQa::Demo.publicly_listed_acts(scope) : SyntheticQa::Demo.publicly_listed(scope)
   end
 
   def present(type, row)

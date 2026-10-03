@@ -459,6 +459,7 @@ module SyntheticQa
         leader = plan.fetch(:leader)
         extra = plan.dig(:act, "pro") ? ["Band leader", "Band manager"] : ["Band leader"]
         leader.user.profile.update_columns(roles: (leader.user.profile.roles + extra).uniq)
+        Search::Indexer.refresh("talent", leader.user.id) # update_columns skips the search callbacks
       end
     end
 

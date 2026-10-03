@@ -1,4 +1,6 @@
 class PortfolioItem < ApplicationRecord
+  include SearchIndexed
+  search_document "samples", fields: %i[title tags roles genres instruments credited_as description]
   MEDIA_URL_ATTRIBUTES = %w[url thumbnail_url waveform_url].freeze
   # Hosts that serve bucket objects directly; links there must be the user's own upload.
   SYNC_ATTRIBUTES = %w[title description credited_as kind year tags genres roles instruments].freeze

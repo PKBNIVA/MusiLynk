@@ -23,17 +23,19 @@ class TalentController < ApplicationController
     "profiles.verified DESC", "#{HAS_SAMPLE_SQL} DESC", "#{COMPLETENESS_SQL} DESC", "#{HAS_RATES_SQL} DESC",
     "users.last_login_at DESC NULLS LAST", "users.created_at DESC", "users.id ASC"
   ].freeze
-  ROLE_FIELDS = Search::Query::Fields.new(primary: ["profiles.roles::text", "profiles.headline"], secondary: ["profiles.skills::text"], tertiary: [], location: [])
-  LOCATION_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["profiles.location"])
+  # A role filter matches the name and headline (weight A) and roles, skills, instruments and genres (B).
+  ROLE_WEIGHTS = "AB".freeze
 
   def public_index
     return unless require_scalar_params!(*LIST_PARAMS)
-    render_listing(:talent) { public_profile(_1) }
+    render_listing(:talent, cache: :listing) { public_profile(_1) }
   end
 
   def public_show
     candidate = listing_scope.find(params[:id])
-    render json: { professional: with_bookings(public_profile(candidate), candidate.id), portfolio: candidate.portfolio_items.where(visibility: "public").order(featured: :desc, sort_order: :asc).map(&:api_json) }
+    json = { professional: with_bookings(public_profile(candidate), candidate.id), portfolio: candidate.portfolio_items.where(visibility: "public").order(featured: :desc, sort_order: :asc).map(&:api_json) }.to_json
+    return if public_cache!(:show, etag: json)
+    render json: json
   end
 
   def index
@@ -136,7 +138,8 @@ class TalentController < ApplicationController
   def with_bookings(profile, id, counts = nil) = profile.merge("bookingsCount" => (counts || completed_bookings([id])).fetch(id, 0))
 
   # One ranked page of professionals: `key` => rows, plus nextCursor, total and how the query was read.
-  def render_listing(key)
+  # `cache` names the edge-cache lifetime (PublicCaching) for the anonymous public listing.
+  def render_listing(key, cache: nil)
     offset = list_offset
     return render_invalid_cursor if offset.nil?
     scope = filter(listing_scope.joins(:profile))
@@ -148,7 +151,9 @@ class TalentController < ApplicationController
     if (role = role_filter)
       body[:role] = role
     end
-    render json: body
+    json = body.to_json
+    return if cache && public_cache!(cache, etag: json)
+    render json: json
   end
 
   # A landing-page role group ("performer") or a free-text role, as { key:, label: }.
@@ -159,7 +164,7 @@ class TalentController < ApplicationController
   end
 
   def filter(scope)
-    scope = Search::Query.new(params[:location]).filter(scope, LOCATION_FIELDS)
+    scope = Search::Query.new(params[:location]).as_location.filter(scope, Search::Targets::TALENT)
     if params[:role].present?
       role = params[:role].to_s
       role_query = if (terms = Search::Taxonomy.talent_role_terms(role))
@@ -167,7 +172,7 @@ class TalentController < ApplicationController
       else
         Search::Query.new(role)
       end
-      scope = role_query.filter(scope, ROLE_FIELDS)
+      scope = role_query.restrict(ROLE_WEIGHTS).filter(scope, Search::Targets::TALENT)
     end
     scope = scope.where("profiles.instruments::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:instrument])}%") if params[:instrument].present?
     scope = scope.where(profiles: { verified: true }) if params[:verified] == "true"

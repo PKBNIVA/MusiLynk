@@ -18,12 +18,12 @@
   ],
   "rewrites": [
     {
-      "source": "/sitemap.xml",
-      "destination": "https://musilynk-api-production.up.railway.app/sitemap.xml"
-    },
-    {
       "source": "/sitemaps/:part.xml",
       "destination": "https://musilynk-api-production.up.railway.app/sitemaps/:part.xml"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://musilynk-api-production.up.railway.app/sitemap.xml"
     },
     {
       "source": "/opportunities/:id",

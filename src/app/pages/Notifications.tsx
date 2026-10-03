@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { Bell, CheckCircle2 } from 'lucide-react';
 import { Navigation } from '../components/Navigation';
+import { ListSkeleton } from '../components/ListSkeleton';
 import { PageHeader } from '../components/PageHeader';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { cachedGet, peek, sameData } from '../lib/dataCache';
@@ -196,9 +197,7 @@ export default function Notifications() {
         </Card>
         <div className="space-y-3">
           {loading ? (
-            <div className="text-slate-400 text-center py-12" role="status">
-              Loading notifications…
-            </div>
+            <ListSkeleton label="Loading notifications" count={5} cardClassName="h-20" gridClassName="grid gap-3" />
           ) : error ? (
             <div className="text-center py-12" role="alert">
               <p className="text-rose-300">{error}</p>

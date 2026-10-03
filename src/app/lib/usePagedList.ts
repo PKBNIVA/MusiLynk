@@ -7,7 +7,8 @@ import type { SearchMeta } from './apiTypes';
 /** Paging fields every cursor-paged list response carries, plus how a search read the query. */
 export type PageMeta = SearchMeta & { nextCursor?: string | null; total?: number };
 
-type Fetcher<P> = (path: string) => Promise<P>;
+/** Loads one page; `force` skips the client cache (an explicit re-run of the same search). */
+type Fetcher<P> = (path: string, options?: { force?: boolean }) => Promise<P>;
 
 const messageOf = (error: unknown, fallback: string) =>
   error instanceof Error && error.message ? error.message : fallback;
@@ -21,7 +22,8 @@ export const pagePath = (base: string, q: string, after?: string | null) => {
 };
 
 // Pages come through the client data cache (dataCache.ts): a page fetched a minute ago needs no request.
-const defaultFetch = <P>(path: string) => cachedGet<P>(path, { family: 'list' });
+const defaultFetch = <P>(path: string, options?: { force?: boolean }) =>
+  cachedGet<P>(path, { family: 'list', force: options?.force });
 
 /** A list as it was last shown for one path + query: every page loaded, so Back shows it at once. */
 type Remembered<T, P> = {
@@ -74,6 +76,7 @@ export function usePagedList<T extends { id: string | number }, P extends PageMe
   const generation = useRef(0);
   const query = useRef('');
   const moreInFlight = useRef(false);
+  const searchedOnce = useRef(false);
   // Ids already listed for the current search (the list's length, and duplicates to skip).
   const listed = useRef(new Set<string | number>());
   const pickRows = useLatestCallback(pick);
@@ -88,6 +91,10 @@ export function usePagedList<T extends { id: string | number }, P extends PageMe
   const search = useCallback(
     async (q: string): Promise<string | null> => {
       const n = ++generation.current;
+      // The same query searched again (the Search button, "Try again") is an explicit refresh: it goes to the
+      // network. A first search or a new query may be answered from memory (back-navigation).
+      const rerun = searchedOnce.current && query.current === q;
+      searchedOnce.current = true;
       query.current = q;
       moreInFlight.current = false;
       setLoadingMore(false);
@@ -96,7 +103,7 @@ export function usePagedList<T extends { id: string | number }, P extends PageMe
       const firstPath = pagePath(path, q);
       // Back-navigation: the list as it was (every page) comes back at once, with no request while the
       // first page is still fresh; a stale first page is refreshed underneath and replaces it if changed.
-      const kept = remembered.get(`${path}?${q}`) as Remembered<T, P> | undefined;
+      const kept = rerun ? undefined : (remembered.get(`${path}?${q}`) as Remembered<T, P> | undefined);
       const stillFresh = kept && Date.now() - kept.at < CACHE_TTL_MS.list;
       if (kept && peek(firstPath) !== undefined) {
         listed.current = new Set(kept.items.map((item) => item.id));
@@ -109,7 +116,7 @@ export function usePagedList<T extends { id: string | number }, P extends PageMe
         if (stillFresh && isFresh(firstPath)) return null;
       } else setLoading(true);
       try {
-        const page = await fetchPage(firstPath);
+        const page = rerun ? await fetchPage(firstPath, { force: true }) : await fetchPage(firstPath);
         if (n !== generation.current) return null;
         const list = pickRows(page) || [];
         if (kept && page === kept.first) return null; // the cache answered with the very page we show

@@ -671,8 +671,13 @@ export default function Messages() {
                     {convs.length ? 'Select a conversation' : 'Your messages will appear here'}
                   </div>
                 ) : threadState === 'loading' && msgs.length === 0 ? (
-                  <div className="text-slate-400 text-sm" role="status">
-                    Loading messages…
+                  <div role="status" aria-label="Loading messages" data-testid="thread-skeleton" className="space-y-3">
+                    <span className="sr-only">Loading messages…</span>
+                    <div aria-hidden="true" className="space-y-3">
+                      {['w-3/5', 'ml-auto w-1/2', 'w-2/5', 'ml-auto w-3/5'].map((width, i) => (
+                        <div key={i} className={`${width} h-12 animate-pulse rounded-2xl bg-white/10`} />
+                      ))}
+                    </div>
                   </div>
                 ) : threadState === 'missing' ? (
                   <div className="h-full grid place-items-center text-center text-slate-400" role="alert">

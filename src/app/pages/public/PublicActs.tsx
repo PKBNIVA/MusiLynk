@@ -6,6 +6,7 @@ import { PublicNav } from '../../components/PublicNav';
 import { ActCard } from '../../components/talent/ActCard';
 import { Button } from '../../components/ui/button';
 import { ActSearchForm } from '../../components/ActSearchForm';
+import { ListSkeleton } from '../../components/ListSkeleton';
 import { LoadMore } from '../../components/LoadMore';
 import { NoResults, SearchNotice } from '../../components/SearchFeedback';
 import { useLatestCallback } from '../../lib/useLatestCallback';
@@ -56,9 +57,7 @@ export default function PublicActs() {
         )}
         {!loading && <SearchNotice meta={meta} query={values.q} />}
         {loading ? (
-          <p className="py-16 text-center text-slate-400" role="status">
-            Loading acts…
-          </p>
+          <ListSkeleton label="Loading acts" cardClassName="h-64" />
         ) : error ? (
           <div className="py-16 text-center" role="alert">
             <p className="text-rose-300">{error}</p>

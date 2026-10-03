@@ -7,6 +7,7 @@ import { PublicNav } from '../../components/PublicNav';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { LoadMoreJobs } from '../../components/LoadMoreJobs';
+import { ListSkeleton } from '../../components/ListSkeleton';
 import { JobCard } from '../../components/JobCard';
 import { NoResults, POPULAR_SEARCHES, SearchNotice } from '../../components/SearchFeedback';
 import { usePagedJobs } from '../../lib/usePagedJobs';
@@ -137,9 +138,7 @@ export default function PublicJobs() {
         )}
         {!loading && <SearchNotice meta={meta} query={values.q} />}
         {loading ? (
-          <p className="text-slate-400 text-center py-16" role="status">
-            Loading opportunities…
-          </p>
+          <ListSkeleton label="Loading opportunities" count={5} cardClassName="h-32" gridClassName="grid gap-3" />
         ) : error ? (
           <div className="text-center py-16" role="alert">
             <p className="text-rose-300">{error}</p>

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { RouterProvider } from 'react-router';
+import { RouterProvider, type DataRouter } from 'react-router';
 import { router } from './routes';
 import { AuthProvider } from './lib/authContext';
 import { AppErrorBoundary } from './components/ExperienceStates';
@@ -8,9 +8,11 @@ import { PlanLimitPrompt } from './components/PlanLimitPrompt';
 // Dynamically imported so the analytics module (queueing, flush timers, sendBeacon wiring) stays out
 // of the entry chunk, and started a frame after the first paint so it never competes with the route
 // chunk and the hero image for it; initRouteTracking records the page the router is already on.
-requestAnimationFrame(() => {
-  setTimeout(() => void import('./lib/analytics').then((m) => m.initRouteTracking(router)), 300);
-});
+if (typeof window !== 'undefined') {
+  requestAnimationFrame(() => {
+    setTimeout(() => void import('./lib/analytics').then((m) => m.initRouteTracking(router)), 300);
+  });
+}
 
 // The toast container is loaded once the browser is idle after the first paint, so its chunk stays out
 // of the entry and off the critical path of the route chunk and the hero image. Toasts raised before
@@ -45,11 +47,13 @@ function DeferredToaster() {
 }
 
 // Animations are plain CSS; styles/index.css shortens them for prefers-reduced-motion.
-export default function App() {
+// `router` defaults to the browser router; the build-time pre-render passes a memory router for the
+// route it is rendering and must produce exactly this tree, or hydration would have to redo it.
+export default function App({ router: activeRouter = router }: { router?: DataRouter }) {
   return (
     <AppErrorBoundary>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <RouterProvider router={activeRouter} />
         <DeferredToaster />
         <PlanLimitPrompt />
       </AuthProvider>

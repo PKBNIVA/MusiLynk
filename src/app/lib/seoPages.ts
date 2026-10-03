@@ -43,6 +43,19 @@ export const seoRoleLabel = (slug: string) => roleLabels.get(slug.toLowerCase())
 export const seoCityName = (slug: string) => cityNames.get(slug.toLowerCase());
 
 export const hirePagePath = (roleSlug: string, citySlug: string) => `/hire/${roleSlug}/${citySlug}`;
+
+/** A role label as a noun in a sentence: lower-case, except the acronym. */
+export const roleNoun = (label: string) => (label === 'DJ' ? label : label.toLowerCase());
+
+// The hire and rates pages' <title> and description, used by the pages (usePageMeta) and by the
+// build-time heads (scripts/prerender-heads.mjs), so both say the same thing.
+export const hirePageTitle = (roleLabel: string, cityName: string) =>
+  `Hire a verified ${roleNoun(roleLabel)} in ${cityName} | MusiLynk`;
+export const hirePageDescription = (roleLabel: string, cityName: string) =>
+  `Browse verified ${roleNoun(roleLabel)}s in ${cityName} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`;
+export const ratesPageTitle = (cityName: string) => `What musicians charge in ${cityName} | MusiLynk`;
+export const ratesPageDescription = (cityName: string) =>
+  `Median session, show and day rates reported by verified and unverified musicians on MusiLynk in ${cityName}. A guide, not a quote.`;
 export const ratesPagePath = (citySlug: string) => `/rates/${citySlug}`;
 
 const article = (label: string) => (/^[aeiou]/i.test(label) ? 'an' : 'a');

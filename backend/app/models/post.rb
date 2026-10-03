@@ -152,6 +152,31 @@ class Post < ApplicationRecord
 
   # Resolves the media urls of a whole page of posts in one query, so serialising N posts does
   # not run N Upload lookups. Call before api_json on each; returns the posts.
+  # Loads every post's author record (person, Page or act) in one query per author type, so
+  # api_json on a page of posts does not look each author up separately. A person's own post
+  # reuses the already-loaded created_by user.
+  def self.preload_authors(posts)
+    pending = posts.reject { _1.instance_variable_defined?(:@author_record) || _1.author_type == "system" }
+    pending.select { _1.author_type == "user" && _1.created_by_user_id == _1.author_id && _1.association(:created_by).loaded? }.each do |post|
+      post.instance_variable_set(:@author_record, post.created_by)
+    end
+    pending.reject { _1.instance_variable_defined?(:@author_record) }.group_by(&:author_type).each do |type, group|
+      model = { "organization" => Organization, "act" => Act }.fetch(type, User)
+      records = model.where(id: group.map(&:author_id).uniq).index_by(&:id)
+      group.each { _1.instance_variable_set(:@author_record, records[_1.author_id]) }
+    end
+  end
+
+  # Loads the jobs shared by `posts` in one query, with what Job#api_json reads (employer and
+  # profile, posted-as Page, applications count), so a page of job shares costs no query per post.
+  def self.preload_shared_jobs(posts)
+    sharing = posts.select(&:shared_job_id)
+    return if sharing.empty?
+    ActiveRecord::Associations::Preloader.new(records: sharing, associations: :shared_job, scope: Job.with_applications_count).call
+    jobs = sharing.filter_map(&:shared_job).uniq
+    ActiveRecord::Associations::Preloader.new(records: jobs, associations: [:posted_as_organization, :posted_as_act, { employer: :profile }]).call
+  end
+
   def self.preload_media_urls(posts)
     urls = media_urls_for(posts)
     posts.each { _1.instance_variable_set(:@media_urls, urls) }

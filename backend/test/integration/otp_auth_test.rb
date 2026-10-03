@@ -326,6 +326,11 @@ class OtpAuthTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "reclaiming an unverified account never fails on the random password containing the user's name" do
+    SecureRandom.stub(:base58, "xxCoDeUserxx#{'a' * 20}") { assert_nothing_raised { @user.reclaim_unverified_credentials! } }
+    assert_nil @user.reload.password_set_at
+  end
+
   private
 
   def request_code(email, ip: "127.0.0.1", **extra)

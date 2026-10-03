@@ -5,9 +5,13 @@ module Admin
     include AdminPagination
 
     def index
-      posts = Post.visible.order(created_at: :desc)
+      posts = Post.visible.includes(shared_portfolio_item: :user, created_by: :profile, reshared_post: { created_by: :profile }).order(created_at: :desc)
       posts = posts.where(kind: params[:kind]) if params[:kind].present?
       rows, meta = admin_paginate(posts, default_per: 100)
+      shown = rows.to_a.flat_map { [_1, _1.reshared_post].compact }
+      Post.preload_authors(shown)
+      Post.preload_shared_jobs(shown)
+      Post.preload_media_urls(rows.to_a)
       render json: { posts: rows.map(&:api_json) }.merge(meta)
     end
 

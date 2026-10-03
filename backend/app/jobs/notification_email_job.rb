@@ -2,7 +2,8 @@
 # the recipient's id, the template name and display values only: no email address and
 # no message body.
 class NotificationEmailJob < ApplicationJob
-  queue_as :mailers
+  # Urgent-hire alerts ride the urgent pool (config/job_queues.yml); the rest go with the other mail.
+  queue_as { JobQueues.urgent_email?(arguments[1]) ? JobQueues::URGENT : "mailers" }
 
   retry_on Faraday::ConnectionFailed, Faraday::TimeoutError, Faraday::SSLError, EmailDeliveryJob::ProviderUnavailable,
     wait: :polynomially_longer, attempts: 5

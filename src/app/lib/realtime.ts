@@ -1,5 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { apiPost } from './api';
+import { onRealtimeAvailability, realtimeAvailable } from './realtimeAvailability';
 
 /**
  * Live updates over Action Cable (`/cable` on the API). Payloads are ids and states only; callers
@@ -11,7 +12,8 @@ import { apiPost } from './api';
  * The socket opens with a short-lived ticket from POST /api/cable/ticket (WebSockets cannot send
  * the bearer token). After a drop, a fresh ticket is fetched and the socket reopened with backoff
  * (1 s, 2 s, 4 s ... up to 30 s, with jitter). The socket closes when nothing is subscribed (for
- * example after sign-out), and @rails/actioncable is loaded only when something subscribes.
+ * example after sign-out), and @rails/actioncable is loaded only when something subscribes and
+ * the API has said it offers live updates (`realtime: true` on GET /me); until then pages poll.
  */
 
 export const CONNECTED_POLL_MS = 30_000;
@@ -95,7 +97,7 @@ function scheduleReconnect() {
 }
 
 async function open() {
-  if (entries.size === 0) return;
+  if (entries.size === 0 || !realtimeAvailable()) return;
   const mine = ++generation;
   setStatus('connecting');
   try {
@@ -126,8 +128,18 @@ function close() {
   attempts = 0;
   consumer?.disconnect();
   consumer = null;
+  entries.forEach((entry) => {
+    entry.subscription = undefined;
+  });
   setStatus('idle');
 }
+
+// Signing in to an API with live updates opens the socket for pages already listening; signing
+// out (or an API without them) closes it and leaves those pages polling.
+onRealtimeAvailability((available) => {
+  if (!available) close();
+  else if (entries.size && status === 'idle') void open();
+});
 
 /** Listens to a channel until the returned function is called. Opens the socket on first use. */
 export function subscribe(channel: ChannelName, params: Record<string, string>, listener: Listener) {
@@ -137,7 +149,7 @@ export function subscribe(channel: ChannelName, params: Record<string, string>, 
     entry = { channel, params, listeners: new Set() };
     entries.set(key, entry);
     if (consumer) attach(entry);
-    else if (status === 'idle') void open();
+    else if (status === 'idle' && realtimeAvailable()) void open();
   }
   entry.listeners.add(listener);
   const mine = entry;

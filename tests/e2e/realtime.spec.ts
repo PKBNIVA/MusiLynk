@@ -48,6 +48,8 @@ async function signIn(context: BrowserContext, me: string, role: 'jobseeker' | '
     if (path === '/me')
       return json(route, {
         user: { id: me, name: me, email: `${me}@example.invalid`, role, status: 'active', profileComplete: true },
+        // The API says it offers live updates; without this the app only polls (and never asks for a ticket).
+        realtime: true,
       });
     if (path === '/cable/ticket')
       return json(route, { ticket: `ticket-${role}`, expiresIn: 60, url: 'wss://cable.test/cable' }, 201);

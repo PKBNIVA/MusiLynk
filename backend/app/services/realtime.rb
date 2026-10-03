@@ -5,6 +5,10 @@
 module Realtime
   module_function
 
+  # Whether pages should open the socket (config/realtime.yml `enabled`; sign-in and GET /me say so).
+  # Off means every page polls at its old pace and no ticket is ever requested.
+  def enabled? = RealtimeTicket.settings.fetch("enabled", true) == true
+
   def broadcast(channel, record, payload)
     channel.broadcast_to(record, payload)
   rescue StandardError => e

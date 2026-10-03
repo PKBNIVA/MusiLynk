@@ -2,6 +2,10 @@
 # The adapter is chosen in config/cable.yml: Redis when REDIS_URL is set, otherwise Solid Cable on
 # the existing Postgres (no new infrastructure).
 
+# Pages open the socket only when this is true (GET /me and sign-in responses carry it); false
+# leaves every page polling at its old pace.
+enabled: true
+
 # A browser asks POST /api/cable/ticket for a signed ticket, then opens the socket with it within
 # this many seconds. WebSockets cannot send the Authorization header, so the bearer token never
 # goes in a URL.

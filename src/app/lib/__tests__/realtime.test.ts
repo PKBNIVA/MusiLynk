@@ -38,6 +38,7 @@ vi.mock('@rails/actioncable', () => ({
 }));
 vi.mock('../api', () => ({ apiPost: vi.fn() }));
 import { apiPost } from '../api';
+import { setRealtimeAvailable } from '../realtimeAvailability';
 import {
   backoffDelay,
   CONNECTED_POLL_MS,
@@ -62,13 +63,29 @@ beforeEach(() => {
   cable.disconnect.mockReset();
   vi.mocked(apiPost).mockReset();
   vi.mocked(apiPost).mockImplementation(async () => ({ ticket: `t${++ticket}`, url: 'wss://api.example/cable' }));
+  setRealtimeAvailable(true);
 });
 afterEach(() => {
+  setRealtimeAvailable(false);
   resetRealtimeForTests();
   vi.useRealTimers();
 });
 
 describe('realtime', () => {
+  it('asks for nothing until the API says it offers live updates, then opens for pages already listening', async () => {
+    setRealtimeAvailable(false);
+    subscribe('UserChannel', {}, vi.fn());
+    await flush();
+    expect(apiPost).not.toHaveBeenCalled();
+    expect(realtimeStatus()).toBe('idle');
+    setRealtimeAvailable(true);
+    await flush();
+    expect(apiPost).toHaveBeenCalledWith('/cable/ticket');
+    setRealtimeAvailable(false);
+    expect(realtimeStatus()).toBe('idle');
+    expect(cable.disconnect).toHaveBeenCalled();
+  });
+
   it('opens the socket with a fresh ticket on first subscribe and shares one subscription per channel', async () => {
     const a = vi.fn();
     const b = vi.fn();

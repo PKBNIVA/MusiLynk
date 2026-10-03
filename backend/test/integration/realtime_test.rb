@@ -37,6 +37,22 @@ class RealtimeTest < ActionDispatch::IntegrationTest
     Rails.cache = original if original
   end
 
+  test "sign-in and GET /me say whether live updates are on; off, no ticket is issued" do
+    get "/api/me", headers: auth(@musician)
+    assert_equal true, response.parsed_body["realtime"]
+    RealtimeTicket.stub(:settings, RealtimeTicket.settings.merge("enabled" => false)) do
+      get "/api/me", headers: auth(@musician)
+      assert_equal false, response.parsed_body["realtime"]
+      post "/api/cable/ticket", headers: auth(@musician)
+      assert_response :service_unavailable
+      assert_equal "REALTIME_DISABLED", response.parsed_body["code"]
+    end
+    @musician.update!(email_verified: true)
+    post "/api/auth/login", params: { email: @musician.email, password: "StrongPass123!" }, as: :json
+    assert_response :success
+    assert_equal true, response.parsed_body["realtime"]
+  end
+
   test "a new message reaches the thread and the recipient's badge, with ids only" do
     post "/api/conversations/#{@conversation.id}/messages", params: { body: "Soundcheck at 6?" }, headers: auth(@hirer), as: :json
     assert_response :success

@@ -11,10 +11,14 @@ through a same-origin path that Vercel's edge caches. Signed-in responses are ne
 request is an anonymous GET** (no valid bearer token):
 
 ```
-Cache-Control: public, s-maxage=<N>, stale-while-revalidate=<M>[, max-age=<B>]
+Cache-Control: max-age=<B>, public, stale-while-revalidate=<M>, s-maxage=<N>
 ETag: W/"…"            (a conditional GET with If-None-Match answers 304)
 Vary: Authorization
 ```
+
+`s-maxage` and `stale-while-revalidate` are for shared caches (Vercel's edge). `max-age` is the
+browser's own lifetime: `0` on the listing, show and post endpoints so a browser always revalidates
+(and gets a 304 when nothing changed) instead of serving a stale body itself.
 
 A signed-in request to the same URL gets Rails' default `max-age=0, private, must-revalidate`
 (those bodies carry saved/applied flags, applause, synthetic-QA visibility and admin reach).
@@ -29,17 +33,17 @@ Lifetimes live in **`backend/config/edge_cache.yml`** (seconds); change them the
 | Endpoint | Kind | `s-maxage` (edge) | `stale-while-revalidate` | Browser `max-age` |
 | --- | --- | --- | --- | --- |
 | `GET /api/public/stats` | `stats` | 300 | 600 | 300 |
-| `GET /api/public/talent` (per query string) | `listing` | 60 | 300 | revalidate |
-| `GET /api/public/acts` (per query string) | `listing` | 60 | 300 | revalidate |
-| `GET /api/jobs` (per query string) | `listing` | 60 | 300 | revalidate |
-| `GET /api/public/talent/:id` | `show` | 60 | 300 | revalidate |
-| `GET /api/public/acts/:id` | `show` | 60 | 300 | revalidate |
-| `GET /api/jobs/:id` | `show` | 60 | 300 | revalidate |
-| `GET /api/stage/authors/:type/:id/posts` | `stage_posts` | 60 | 300 | revalidate |
+| `GET /api/public/talent` (per query string) | `listing` | 60 | 300 | 0 |
+| `GET /api/public/acts` (per query string) | `listing` | 60 | 300 | 0 |
+| `GET /api/jobs` (per query string) | `listing` | 60 | 300 | 0 |
+| `GET /api/public/talent/:id` | `show` | 60 | 300 | 0 |
+| `GET /api/public/acts/:id` | `show` | 60 | 300 | 0 |
+| `GET /api/jobs/:id` | `show` | 60 | 300 | 0 |
+| `GET /api/stage/authors/:type/:id/posts` | `stage_posts` | 60 | 300 | 0 |
 | `GET /sitemap.xml` | `sitemap` | 3600 | 86400 | 3600 |
 
-"revalidate" means the browser keeps the body but asks again with `If-None-Match` and gets a 304
-when nothing changed. A change to a profile, act, post or opportunity is therefore visible to
+With browser `max-age` 0 the browser keeps the body but asks again with `If-None-Match` and gets a
+304 when nothing changed. A change to a profile, act, post or opportunity is therefore visible to
 anonymous visitors within about a minute (edge) or at once (direct call, 304 miss).
 
 ## How the landing page reaches the edge
@@ -51,10 +55,12 @@ For the three landing-page reads only, `apiGet(path, { viaEdge: true })` uses `P
 - `GET /public/stats` (counters), `GET /public/talent?location=…&limit=6` (featured people),
   `GET /stage/authors/system/musilynk/posts` (Stage teaser).
 
-`vercel.json` rewrites `/api/public/:path*` and `/api/stage/authors/system/:id/posts` to the API
-host, so with `PUBLIC_API_BASE` = `/api` those calls are same-origin, Vercel proxies them and
-caches the answer per `s-maxage`. Every other call keeps going to `VITE_API_URL`. The CSP's
-`connect-src 'self'` already covers same-origin calls.
+`vercel.json` rewrites exactly those three paths (`/api/public/stats`, `/api/public/talent` and
+`/api/stage/authors/system/:id/posts`; query strings pass through) to the API host, so with
+`PUBLIC_API_BASE` = `/api` those calls are same-origin, Vercel proxies them and caches the answer
+per `s-maxage`. No other `/api` path is proxied (`scripts/__tests__/vercel-config.test.mjs` pins
+this), and every other call keeps going to `VITE_API_URL`. The CSP's `connect-src 'self'` already
+covers same-origin calls.
 
 ### Environment variable (names only)
 

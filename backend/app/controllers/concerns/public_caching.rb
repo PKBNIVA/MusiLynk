@@ -1,6 +1,6 @@
 # CDN cache headers for the anonymous reads of public endpoints (directory listings, public
 # profiles, the landing counters, the sitemap). Vercel's edge honours `s-maxage` on the
-# same-origin `/api/public/*` rewrites (vercel.json), so a landing visitor's three calls are
+# same-origin rewrites of the landing page's three reads (vercel.json), so those calls are
 # served from the edge once a minute instead of hitting Rails every time.
 #
 # Only an anonymous GET is ever marked public: the same URLs answer a signed-in person with

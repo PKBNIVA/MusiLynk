@@ -5,7 +5,7 @@ import { PROTECTED_AREA, signInPath } from './appTarget';
 export const API_BASE = import.meta.env?.VITE_API_URL || '/api';
 /** Base for the few anonymous public reads Vercel's edge caches (landing counters, featured
  * talent, the Stage teaser): `VITE_PUBLIC_API_BASE` (`/api` on Vercel, where vercel.json rewrites
- * `/api/public/*` to the API host so `s-maxage` is honoured). Unset, it is API_BASE: nothing changes.
+ * exactly those three paths to the API host so `s-maxage` is honoured). Unset, it is API_BASE: nothing changes.
  * See docs/ops/edge-caching.md. */
 export const PUBLIC_API_BASE = import.meta.env?.VITE_PUBLIC_API_BASE || API_BASE;
 /** The Rails origin without the /api suffix, for routes served outside that scope (uploads,

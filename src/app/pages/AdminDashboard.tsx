@@ -16,6 +16,7 @@ import {
   CreditCard,
   Settings2,
   History,
+  HeartPulse,
   Database,
   Sparkles,
   TrendingUp,
@@ -66,6 +67,7 @@ const ReviewsTab = lazy(() => import('./admin/ReviewsTab'));
 const SignInDoctorTab = lazy(() => import('./admin/SignInDoctorTab'));
 const CommerceTab = lazy(() => import('./admin/CommerceTab'));
 const OperationsTab = lazy(() => import('./admin/OperationsTab'));
+const HealthTab = lazy(() => import('./admin/HealthTab'));
 const DemoDataTab = lazy(() => import('./admin/DemoDataTab'));
 const AuditTab = lazy(() => import('./admin/AuditTab'));
 const AdminAiTab = lazy(() => import('./admin/AdminAiTab'));
@@ -344,6 +346,10 @@ export default function AdminDashboard() {
               <Settings2 aria-hidden="true" size={14} />
               Operations
             </TabsTrigger>
+            <TabsTrigger value="health" className="flex-none gap-1.5">
+              <HeartPulse aria-hidden="true" size={14} />
+              Health
+            </TabsTrigger>
             <TabsTrigger value="audit" className="flex-none gap-1.5">
               <History aria-hidden="true" size={14} />
               Audit
@@ -477,6 +483,12 @@ export default function AdminDashboard() {
           <TabsContent value="operations" className="mt-5">
             <Suspense fallback={null}>
               <OperationsTab />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="health" className="mt-5">
+            <Suspense fallback={null}>
+              <HealthTab />
             </Suspense>
           </TabsContent>
 

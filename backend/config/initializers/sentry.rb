@@ -8,8 +8,9 @@
 # Variables (Railway):
 #   SENTRY_DSN                  verse-api project DSN; unset = disabled
 #   SENTRY_ENVIRONMENT          defaults to RAILS_ENV
-#   SENTRY_TRACES_SAMPLE_RATE   0.0..1.0, default 0.02 (2% of requests traced for performance
-#                               data; tracing costs quota, 0 turns it off)
+#   SENTRY_TRACES_SAMPLE_RATE   0.0..1.0, default 0.1 (10% of requests and jobs traced for
+#                               performance data; tracing costs quota, 0 turns it off).
+#                               Profiling is always off.
 #   RAILWAY_GIT_COMMIT_SHA      set by Railway; used as the release
 module MusilynkSentry
   # Expected client errors: rescue_from turns these into 4xx responses. They are listed so a
@@ -66,8 +67,9 @@ module MusilynkSentry
     env["SENTRY_DSN"].to_s.strip.present? && !rails_env.test?
   end
 
-  # Only used once SENTRY_DSN is set, so without a DSN nothing is traced at all.
-  DEFAULT_TRACES_SAMPLE_RATE = 0.02
+  # Only used once SENTRY_DSN is set, so without a DSN nothing is traced at all. Applies to
+  # requests (sentry-rails middleware) and ActiveJob runs (its ActiveJob tracing subscriber).
+  DEFAULT_TRACES_SAMPLE_RATE = 0.1
 
   def traces_sample_rate(value)
     raw = value.to_s.strip
@@ -83,6 +85,8 @@ module MusilynkSentry
     config.environment = env["SENTRY_ENVIRONMENT"].presence || Rails.env.to_s
     config.release = env["RAILWAY_GIT_COMMIT_SHA"].presence if env["RAILWAY_GIT_COMMIT_SHA"].present?
     config.traces_sample_rate = traces_sample_rate(env["SENTRY_TRACES_SAMPLE_RATE"])
+    # Performance tracing only; no CPU profiles (they need the stackprof gem and more quota).
+    config.profiles_sample_rate = 0.0 if config.respond_to?(:profiles_sample_rate=)
     config.transport.transport_class = Transport
 
     # Privacy: no request bodies, cookies, query parameters, IPs or queue arguments.

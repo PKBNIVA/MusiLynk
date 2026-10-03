@@ -626,7 +626,7 @@ initialises Sentry and the web app never downloads it (zero requests to Sentry).
 | --- | --- | --- |
 | Railway (Rails service) | `SENTRY_DSN` | `verse-api` DSN |
 | Railway | `SENTRY_ENVIRONMENT` | optional, defaults to `RAILS_ENV` (`production`) |
-| Railway | `SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.02` once `SENTRY_DSN` is set (2% of requests traced for performance data); `0` turns tracing off |
+| Railway | `SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.1` once `SENTRY_DSN` is set (10% of requests and jobs traced for performance data; profiling is always off); `0` turns tracing off |
 | Vercel (Production environment) | `VITE_SENTRY_DSN` | `verse-web` DSN |
 | Vercel (Production environment) | `VITE_SENTRY_ENVIRONMENT` | `production` (Preview deployments can use `preview`, or leave the DSN unset there) |
 | Vercel | `VITE_SENTRY_TRACES_SAMPLE_RATE` | optional, default `0.05` once `VITE_SENTRY_DSN` is set; `0` turns tracing off. Core Web Vitals are sent as metrics either way (see docs/PERFORMANCE.md) |

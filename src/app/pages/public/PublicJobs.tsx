@@ -1,4 +1,5 @@
 import { usePageMeta } from '../../components/PageMeta';
+import { PUBLIC_PAGE_META } from '../../lib/siteMeta';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Search } from 'lucide-react';
@@ -41,13 +42,12 @@ const FILTERS = ['q', 'location', 'kind'] as const;
 const singularKind = (kind: string) => (kind.endsWith('s') ? kind.slice(0, -1) : kind);
 
 export default function PublicJobs() {
-  usePageMeta(
-    'Music jobs, gigs, sessions & auditions',
-    'Browse open music jobs, gigs, studio sessions, auditions and tours across performance, production and live events.',
-    { canonicalPath: '/music-jobs', type: 'website' },
-  );
+  usePageMeta(PUBLIC_PAGE_META['/music-jobs'].title, PUBLIC_PAGE_META['/music-jobs'].description, {
+    canonicalPath: '/music-jobs',
+    type: 'website',
+  });
   // Filters live in the URL and every change is a history entry, so Back undoes one (SRCH-09).
-  const { values, query, update, clear } = useUrlFilters(FILTERS);
+  const { values, query, update, clear, ready } = useUrlFilters(FILTERS);
   const list = usePagedJobs<Job>();
   const { jobs, loading, error, total, meta } = list;
   const kind = singularKind(values.kind);
@@ -64,8 +64,8 @@ export default function PublicJobs() {
     return list.search(params.toString());
   });
   useEffect(() => {
-    void run();
-  }, [query, run]);
+    if (ready) void run();
+  }, [query, run, ready]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     // Searching again for the same thing refreshes the results.

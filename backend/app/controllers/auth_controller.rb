@@ -477,7 +477,9 @@ class AuthController < ApplicationController
   def sign_in(user)
     raw = SecureRandom.urlsafe_base64(48)
     Session.start!(user, token_digest: digest(raw), user_agent: request.user_agent)
-    user.sessions.where(id: user.sessions.order(created_at: :desc).offset(MAX_LIVE_SESSIONS).select(:id)).delete_all
+    # The cap counts live sessions only: expired ones are inert and kept a few days for the
+    # retention sweep (config/retention.yml), so they must never push out a live one.
+    user.sessions.where(id: user.sessions.active.order(created_at: :desc).offset(MAX_LIVE_SESSIONS).select(:id)).delete_all
     raw
   end
 

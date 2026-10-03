@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
+import { createBrowserRouter, Navigate, useLocation, type DataRouter, type RouteObject } from 'react-router';
 import { FEATURE_RESUMES, FEATURE_STAGE } from './lib/features';
 import React from 'react';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -924,9 +924,12 @@ function adminRoutes(): RouteObject[] {
 // The pathless root route gives every page one error boundary: stale lazy chunks after a
 // redeploy reload once, other render errors show a branded recovery screen. Vite replaces
 // import.meta.env.VITE_APP_TARGET with a literal, so only one route table is bundled.
-export const router = createBrowserRouter([
+export const routes: RouteObject[] = [
   {
     errorElement: <RouteErrorPage />,
     children: import.meta.env.VITE_APP_TARGET === 'admin' ? adminRoutes() : publicRoutes(),
   },
-]);
+];
+// The browser router needs `window`; the build-time pre-render (src/entry-server.tsx) imports this
+// module in Node and renders `routes` through a memory router instead.
+export const router = typeof window === 'undefined' ? (null as unknown as DataRouter) : createBrowserRouter(routes);

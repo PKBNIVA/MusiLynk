@@ -1,4 +1,5 @@
 import { usePageMeta } from '../components/PageMeta';
+import { PUBLIC_PAGE_META } from '../lib/siteMeta';
 import { Link } from 'react-router';
 import { PublicNav } from '../components/PublicNav';
 import { PhotoHeader } from '../components/landing/PhotoHeader';
@@ -80,13 +81,9 @@ const paths = [
   },
 ];
 export default function Guide() {
-  usePageMeta(
-    'How to use MusiLynk',
-    'Step-by-step guides for musicians, hirers, bands and event bookers on MusiLynk.',
-    {
-      canonicalPath: '/guide',
-    },
-  );
+  usePageMeta(PUBLIC_PAGE_META['/guide'].title, PUBLIC_PAGE_META['/guide'].description, {
+    canonicalPath: '/guide',
+  });
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicNav />

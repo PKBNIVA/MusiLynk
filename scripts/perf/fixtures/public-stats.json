@@ -1,15 +1,15 @@
 {
- "verifiedProfiles": 0,
- "professionals": 1,
- "cities": 0,
- "openOpportunities": 0,
- "urgentRequests": 0,
- "listed": {
-  "verifiedProfiles": 33,
-  "professionals": 111,
-  "cities": 11,
-  "openOpportunities": 42,
-  "urgentRequests": 5
- },
- "generatedAt": "2026-10-03T09:16:10Z"
+  "verifiedProfiles": 0,
+  "professionals": 1,
+  "cities": 0,
+  "openOpportunities": 0,
+  "urgentRequests": 0,
+  "listed": {
+    "verifiedProfiles": 33,
+    "professionals": 111,
+    "cities": 11,
+    "openOpportunities": 42,
+    "urgentRequests": 5
+  },
+  "generatedAt": "2026-10-03T09:16:10Z"
 }

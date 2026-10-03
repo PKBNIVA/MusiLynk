@@ -1,7 +1,8 @@
 import './app/lib/legacyStorageBoot';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 import App from './app/App.tsx';
-import { initMonitoring, RELEASE } from './app/lib/monitoring';
+import { initMonitoring, RELEASE, reportError } from './app/lib/monitoring';
+import { prerenderedRouteMatches } from './app/lib/prerender';
 import { installPreloadErrorGuard } from './app/lib/chunkReload';
 import './styles/index.css';
 
@@ -12,4 +13,20 @@ initMonitoring();
 // A lazy chunk that 404s after a redeploy: reload once for the new build (see chunkReload.ts).
 installPreloadErrorGuard();
 
-createRoot(document.getElementById('root')!).render(<App />);
+const root = document.getElementById('root')!;
+// A pre-rendered page (scripts/prerender-heads.mjs) ships its first screen as HTML; the app hydrates it in
+// place instead of rendering from scratch, so nothing flickers. Only when the HTML is for this route:
+// a static host may serve the home page's HTML for a URL it has no file for (see prerenderedRouteMatches).
+if (prerenderedRouteMatches(root.dataset.prerendered, location.pathname) && root.firstElementChild) {
+  hydrateRoot(root, <App />, {
+    onRecoverableError(error, info) {
+      // A hydration mismatch is a bug in the pre-render (tests/e2e/prerender.spec.ts asserts there are none).
+      console.error(error, info.componentStack);
+      reportError(error, { tags: { source: 'hydration' }, extra: { componentStack: info.componentStack } });
+    },
+  });
+  root.dataset.hydrated = 'true';
+} else {
+  if (root.dataset.prerendered) root.replaceChildren();
+  createRoot(root).render(<App />);
+}

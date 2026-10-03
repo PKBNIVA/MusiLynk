@@ -90,6 +90,20 @@ class AuthHardeningTest < ActionDispatch::IntegrationTest
     assert_equal 10, AuthController::MAX_LIVE_SESSIONS
   end
 
+  test "the ten-session cap counts live sessions only, so a recently expired session never evicts an older live one" do
+    old_live = @user.sessions.create!(token_digest: "old-live", expires_at: 5.days.from_now, created_at: 25.days.ago)
+    8.times { |i| @user.sessions.create!(token_digest: "live-#{i}", expires_at: 5.days.from_now, created_at: (20 - i).days.ago) }
+    3.times { |i| @user.sessions.create!(token_digest: "expired-#{i}", expires_at: 1.day.ago, created_at: (i + 1).days.ago) }
+    login("target@example.com", PASSWORD)
+    assert_response :success
+    assert @user.sessions.exists?(old_live.id), "the oldest live session is still within the cap of ten live sessions"
+    assert_equal 10, @user.sessions.active.count
+    assert_equal 3, @user.sessions.where(expires_at: ..Time.current).count, "expired sessions are left to the retention sweep"
+    login("target@example.com", PASSWORD)
+    assert_not @user.sessions.exists?(old_live.id), "an eleventh live session evicts the oldest live one"
+    assert_equal 10, @user.sessions.active.count
+  end
+
   test "setting a user to pending or suspended revokes their sessions" do
     admin = User.create!(name: "Admin", email: "admin-hardening@example.com", password: PASSWORD, role: "admin", status: "active")
     admin_token = admin_login_token(admin.email)

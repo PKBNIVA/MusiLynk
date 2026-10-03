@@ -1,3 +1,4 @@
+import { publicOrigin } from '../../../lib/siteMeta';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -147,9 +148,9 @@ describe('HirePage', () => {
     await mount('/hire/drummer/mumbai');
     await act(async () => {});
     expect(breadcrumbItems()).toEqual([
-      `${window.location.origin}/`,
-      `${window.location.origin}/music-professionals`,
-      `${window.location.origin}/hire/drummer/mumbai`,
+      `${publicOrigin()}/`,
+      `${publicOrigin()}/music-professionals`,
+      `${publicOrigin()}/hire/drummer/mumbai`,
     ]);
   });
 

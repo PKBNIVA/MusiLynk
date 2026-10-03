@@ -12,7 +12,7 @@ const config = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8'));
 
 /** The SPA rewrites (no `has` condition), compiled the way Vercel's path-to-regexp does for these shapes. */
 const spaRules = config.rewrites
-  .filter((rule) => !rule.has && (rule.destination === '/index.html' || rule.destination === '/app-shell.html'))
+  .filter((rule) => !rule.has && /^\/(index|app-shell|[a-z]+\/shell)\.html$/.test(rule.destination))
   .map((rule) => new RegExp(`^${rule.source}$`));
 const servedAsApp = (path) => spaRules.some((re) => re.test(path));
 

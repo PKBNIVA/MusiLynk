@@ -80,8 +80,10 @@ function chunkReport(): Plugin {
 // `npm run dev` proxies /api to the Rails API (backend/, `bin/rails server -p 3000`).
 // `vite preview` would inherit server.proxy by default, so it is disabled there: Playwright
 // runs mock /api in the browser, and integration runs set VITE_API_URL explicitly.
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   plugins: [react(), tailwindcss(), releaseMeta(), chunkReport()],
+  // The pre-render bundle (npm run build:ssr) is a Node module; it needs no copy of public/.
+  publicDir: isSsrBuild ? false : 'public',
   server: { proxy: { '/api': 'http://127.0.0.1:3000' } },
   preview: { proxy: {} },
   build: {
@@ -128,4 +130,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

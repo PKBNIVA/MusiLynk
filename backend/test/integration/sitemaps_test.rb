@@ -189,7 +189,7 @@ class SitemapsTest < ActionDispatch::IntegrationTest
     built = { "sitemap" => "<urlset/>", "urls" => 0 }
     # A separate Postgres session (the test pool pins one connection for every thread).
     config = ActiveRecord::Base.connection_db_config.configuration_hash
-    other = PG.connect(config[:url] || { host: config[:host], port: config[:port], dbname: config[:database], user: config[:username] })
+    other = PG.connect(**{ host: config[:host], port: config[:port], dbname: config[:database], user: config[:username], password: config[:password] }.compact)
     other.exec("SELECT pg_advisory_lock(#{Seo::Sitemap::LOCK_KEY})")
     writer = Thread.new { sleep 0.5; Rails.cache.write(Seo::Sitemap::LAST_GOOD_KEY, built) }
     assert_equal built, Seo::Sitemap.build_once!

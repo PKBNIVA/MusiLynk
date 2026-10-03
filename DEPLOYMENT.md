@@ -750,8 +750,11 @@ rollback below). Email provider rejections (4xx from Brevo) are logged as `email
 
 ## Backups and rollback
 
-Railway's current trial does not provide managed backups or point-in-time recovery, so
-`.github/workflows/db-backup.yml` takes a nightly (03:00 IST) off-Railway backup:
+Railway's current trial does not provide managed backups or point-in-time recovery (checked
+2026-10-03: no volume backups and no backup schedule on the Postgres volume), so
+`.github/workflows/db-backup.yml` takes a nightly (03:00 IST) off-Railway backup. A weekly in-app
+second copy (`BackupToR2Job`, off unless `BACKUP_BUCKET` is set) and the 10-step restore runbook
+are in `docs/ops/backups.md`. The nightly flow:
 
 1. `scripts/db/backup.sh` runs `pg_dump --format=custom`, records a SHA-256 checksum and a
    manifest of per-table row counts, and encrypts the dump with GPG (AES-256).

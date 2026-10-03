@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.5.0",
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "build": "vite build && node scripts/prerender-heads.mjs",
     "check:bundle": "node scripts/check-bundle-size.mjs",

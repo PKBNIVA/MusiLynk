@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_03_140100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_03_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1442,6 +1442,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_140100) do
     t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "variants", default: {}, null: false
     t.index ["public_url"], name: "index_uploads_on_public_url"
     t.index ["status", "created_at"], name: "index_uploads_on_status_and_created_at"
     t.index ["storage", "key"], name: "index_uploads_on_storage_and_key", unique: true

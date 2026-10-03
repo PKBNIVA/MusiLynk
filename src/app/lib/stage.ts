@@ -1,3 +1,4 @@
+import type { ImageSet } from './imageSet';
 // The Stage: types, API calls and small helpers shared by every Stage page/component.
 // See backend/docs/api-stage-feed.md for the full contract this file wraps.
 import { useCallback, useEffect, useState } from 'react';
@@ -38,6 +39,8 @@ export interface StageMedia {
   caption?: string;
   /** Public URL of the stored file, supplied by the API for every viewer. */
   url?: string | null;
+  /** Responsive variants of an image attachment once generated (backend ImageSet). */
+  image?: ImageSet | null;
 }
 
 export type SharedEntity =

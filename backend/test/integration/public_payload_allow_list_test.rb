@@ -69,6 +69,66 @@ class PublicPayloadAllowListTest < ActionDispatch::IntegrationTest
     assert_equal photo, response.parsed_body["talent"].first["photoUrl"]
   end
 
+  # R5: the responsive-image payloads are built from the Upload row, whose other columns (key, user_id,
+  # variants, generatedAt) are internal. Every `photo`, `image` and `thumbnail` object in the public
+  # talent, act and search payloads has exactly src, srcset, width and height.
+  IMAGE_SET_KEYS = %w[src srcset width height].freeze
+  IMAGE_INTERNAL_KEYS = %w[variants generatedAt key user_id].freeze
+
+  test "image sets in the public payloads are exactly src, srcset, width and height (R5)" do
+    key = "uploads/#{@musician.id}/#{SecureRandom.uuid}/face.jpg"
+    upload = Upload.create!(user: @musician, storage: "s3", key:, filename: "face.jpg", content_type: "image/jpeg", byte_size: 1000, status: "complete",
+      completed_at: Time.current, public_url: "https://media.example.test/#{key}",
+      variants: { "width" => 1200, "height" => 800, "formats" => { "webp" => [320, 768], "avif" => [320] }, "generatedAt" => "2026-10-03T10:00:00Z" })
+    @musician.profile.update!(photo_url: upload.public_url)
+    PortfolioItem.create!(user: @musician, kind: "image", title: "Stage", url: upload.public_url, thumbnail_url: upload.public_url, visibility: "public")
+    act = Act.create!(owner: @musician, name: "Allow List Band", act_type: "band", status: "active", currency: "INR", fee_basis: "event", city: "Mumbai", photo_url: upload.public_url)
+    seen = 0
+
+    get "/api/public/talent", params: { q: "drummer" }
+    assert_response :success
+    seen += assert_image_sets_only(response.parsed_body, "/api/public/talent")
+    get "/api/public/talent/#{@musician.id}"
+    assert_response :success
+    seen += assert_image_sets_only(response.parsed_body, "/api/public/talent/:id")
+    assert_equal IMAGE_SET_KEYS, response.parsed_body.dig("professional", "photo").keys
+    assert_equal IMAGE_SET_KEYS, response.parsed_body["portfolio"].first["image"].keys
+    get "/api/public/acts"
+    assert_response :success
+    seen += assert_image_sets_only(response.parsed_body, "/api/public/acts")
+    get "/api/public/acts/#{act.id}"
+    assert_response :success
+    seen += assert_image_sets_only(response.parsed_body, "/api/public/acts/:id")
+    assert_equal IMAGE_SET_KEYS, response.parsed_body.dig("act", "photo").keys
+    get "/api/search", params: { q: "drummer" }
+    assert_response :success
+    seen += assert_image_sets_only(response.parsed_body, "/api/search")
+    get "/api/candidates", headers: @headers, params: { q: "drummer" }
+    assert_response :success
+    seen += assert_image_sets_only(response.parsed_body, "/api/candidates")
+    assert_operator seen, :>=, 6, "the photo, image, thumbnail and act cover sets were all present"
+  end
+
+  # Walks the payload: every photo/image/thumbnail Hash has exactly the four keys, no internal key
+  # appears anywhere. Returns how many image sets were seen.
+  def assert_image_sets_only(node, where, path = "")
+    case node
+    when Hash
+      node.sum do |k, v|
+        assert_not_includes IMAGE_INTERNAL_KEYS, k, "#{where}#{path}.#{k} leaks an Upload column"
+        if %w[photo image thumbnail].include?(k) && v.is_a?(Hash)
+          assert_equal IMAGE_SET_KEYS.sort, v.keys.sort, "#{where}#{path}.#{k}"
+          assert_equal %w[avif webp], v["srcset"].keys.sort
+          1
+        else
+          assert_image_sets_only(v, where, "#{path}.#{k}")
+        end
+      end
+    when Array then node.sum { assert_image_sets_only(_1, where, "#{path}[]") }
+    else 0
+    end
+  end
+
   test "a hidden synthetic batch is not reachable by direct URL, a demo profile is" do
     hidden = create_user("Hidden QA Person", "hidden-qa-allow@example.com", batch: "local-qa")
     demo = create_user("Demo Batch Person", "demo-batch-allow@example.com", batch: "demo-20260926-1200")

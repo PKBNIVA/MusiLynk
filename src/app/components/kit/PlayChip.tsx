@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Play } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { WorkSamplePlayer, describeWorkSample } from '../WorkSamplePlayer';
+import { UploadImage } from '../media/UploadImage';
 import { WaveformStrip } from '../media/WaveformStrip';
 import { normalizePeaks } from '../../lib/coverArt';
 import type { PortfolioItem } from '../../lib/apiTypes';
@@ -40,7 +41,15 @@ export function PlayChipButton({ sample, onOpen }: { sample: PortfolioItem; onOp
       className="inline-flex h-8 max-w-full items-center gap-2 rounded-full border border-white/10 bg-white/[.06] pl-2.5 pr-3 text-xs text-slate-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
     >
       {sample.thumbnailUrl ? (
-        <img src={sample.thumbnailUrl} alt="" className="size-6 shrink-0 rounded object-cover" />
+        <UploadImage
+          image={sample.thumbnail}
+          src={sample.thumbnailUrl}
+          alt=""
+          placement="thumb"
+          width={24}
+          height={24}
+          className="size-6 shrink-0 rounded object-cover"
+        />
       ) : (
         <Play aria-hidden="true" size={13} className="shrink-0 fill-current text-violet-300" />
       )}

@@ -43,9 +43,13 @@ class UploadSweepJob < ApplicationJob
     delete_orphans(candidates, counts) if candidates.any?
   end
 
+  # A generated variant (`<key>/v/<width>.<ext>`, ImageVariants) belongs to its original's row.
+  VARIANT_SUFFIX = %r{/v/\d+\.(#{ImageVariants::FORMATS.keys.join('|')})\z}
+
   def delete_orphans(keys, counts)
-    tracked = Upload.where(storage: "s3", key: keys).pluck(:key)
-    (keys - tracked).each do |key|
+    originals = keys.map { _1.sub(VARIANT_SUFFIX, "") }
+    tracked = Upload.where(storage: "s3", key: originals.uniq).pluck(:key).to_set
+    keys.reject { tracked.include?(_1.sub(VARIANT_SUFFIX, "")) }.each do |key|
       next if linked_from_portfolio?(key)
       UploadStorage.delete("s3", key)
       counts[:orphanObjects] += 1

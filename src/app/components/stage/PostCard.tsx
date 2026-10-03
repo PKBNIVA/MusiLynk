@@ -21,6 +21,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { UserAvatar } from '../kit/UserAvatar';
+import { UploadImage } from '../media/UploadImage';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
@@ -562,7 +563,13 @@ function MediaGrid({ media }: { media: StagePost['media'] }) {
         return (
           <li key={`${m.uploadId}-${i}`} className="overflow-hidden rounded-xl border border-white/10 bg-black/20">
             {m.type === 'image' && url && (
-              <img src={url} alt={m.caption || ''} className="max-h-96 w-full object-cover" />
+              <UploadImage
+                image={m.image}
+                src={url}
+                alt={m.caption || ''}
+                placement={media.length > 1 ? 'postTile' : 'post'}
+                className="h-auto max-h-96 w-full object-cover"
+              />
             )}
             {m.type === 'audio' && url && (
               <audio controls src={url} className="w-full" aria-label={m.caption || 'Audio attachment'} />

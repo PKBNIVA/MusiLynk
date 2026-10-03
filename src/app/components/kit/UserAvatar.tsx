@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArtAvatar } from '../media/ArtAvatar';
+import { UploadImage } from '../media/UploadImage';
+import type { ImageSet } from '../../lib/imageSet';
 import { AVATAR_FONT as FONT, AVATAR_SIZES as SIZES, avatarHue, initialsOf, type AvatarSize } from '../../lib/avatar';
 
 export { avatarHue, initialsOf };
@@ -13,6 +15,8 @@ type Props = {
   className?: string;
   /** A photo the person uploaded (or their Google picture). Wins over everything else. */
   photoUrl?: string | null;
+  /** The photo's generated variants, when the API has them: a 56 px disc then downloads the 320 px copy, not the original. */
+  photo?: ImageSet | null;
   /** Draw generated art instead of initials. Demo accounts always get it (see `demo`). */
   art?: boolean;
   /** Demo/showcase account: art rather than a faceless disc, never a photo of anyone. */
@@ -34,6 +38,7 @@ export function UserAvatar({
   decorative = true,
   className = '',
   photoUrl,
+  photo,
   art = false,
   demo = false,
   genres,
@@ -52,13 +57,14 @@ export function UserAvatar({
         className={`inline-flex shrink-0 select-none overflow-hidden rounded-full bg-white/10 ${className}`}
         style={{ width: px, height: px }}
       >
-        <img
+        <UploadImage
+          image={photo?.src === photoUrl ? photo : null}
           src={photoUrl}
           alt=""
+          placement="avatar"
           width={px}
           height={px}
-          loading={eager ? 'eager' : 'lazy'}
-          decoding="async"
+          priority={eager}
           referrerPolicy="no-referrer"
           className="size-full object-cover"
           onError={() => setFailed(photoUrl)}

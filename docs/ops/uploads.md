@@ -8,7 +8,7 @@ creation, API tokens and CORS are in `DEPLOYMENT.md`, "Object storage — Cloudf
 
 ## Environment variables (names only)
 
-All on Railway, API service (`musilynk-api`). The worker needs none of these.
+All on Railway, API service (`musilynk-api`) **and** the worker service (`musilynk-worker`), which runs `ImageVariantsJob` against the bucket (see "Image variants").
 
 | Variable | Required | What it is |
 | --- | --- | --- |
@@ -61,6 +61,54 @@ done by code or by an agent.
 7. **Roll back.** Remove `UPLOADS_PUBLIC_BASE_URL` and redeploy; new uploads go back to
    `AWS_PUBLIC_BASE_URL`. Already-issued URLs on the custom domain keep working while the domain
    stays connected, so disconnect the domain only after no profile links to it.
+
+## Image variants
+
+Every finished image upload (JPEG, PNG, WebP; profile photos, act covers, image work samples, Stage
+photos) gets resized copies made in the background, so a phone showing a 56 px avatar no longer
+downloads the 512 px (or 5 MB) original:
+
+- **When.** `POST /api/uploads/:id/complete` enqueues `ImageVariantsJob` (queue `default`, the
+  worker service). The job downloads the original from the bucket, rotates it by its EXIF orientation,
+  strips the metadata and writes `<key>/v/<width>.webp` (and `<key>/v/<width>.avif` when the libvips
+  build can encode AV1, which the Dockerfile's `libvips42` can) for each width in
+  `backend/config/images.yml` that does not upscale the original, with
+  `Cache-Control: public, max-age=31536000, immutable` and the right `Content-Type`. The widths and
+  qualities produced are recorded in `uploads.variants` (jsonb). A failure retries three times, then
+  the row keeps empty variants and the original is served alone; Sentry gets the error.
+- **Originals.** The presign now signs the same `Cache-Control` (a header on the R2 `PUT`, a policy
+  field on the S3 `POST`), so new originals are stored immutable-cacheable too. Objects uploaded
+  before this keep whatever headers they had; the Cloudflare cache rule in step 3 above covers them.
+- **Payloads.** Wherever an upload is exposed, the old string field stays and an `ImageSet` is added
+  beside it: `photo` next to `photoUrl` (profiles) and `photo_url` (acts), `image`/`thumbnail` on work
+  samples, `image` on Stage post media and on the upload record. Shape:
+  `{ src, srcset: { avif: ["<url> 320w", ...], webp: [...] }, width, height }`; `null` until the job
+  has run. The front end (`src/app/components/media/UploadImage.tsx`) renders a `<picture>` with
+  `sizes` per placement and width/height set, lazy below the fold.
+- **Deletion.** `Upload#purge!` and the daily `UploadSweepJob` delete the variants with the original;
+  the bucket sweep treats `<key>/v/...` objects as belonging to `<key>`.
+- **Backfill (existing uploads).** `cd backend && bin/rails images:backfill` enqueues the job for
+  every finished bucket image without variants, 500 ids per batch (`BATCH=n`), prints the
+  environment and the count first, then progress; it is idempotent (a second run queues nothing
+  new). `FORCE=1` redoes uploads that already have variants (after changing the widths or
+  qualities); `LIMIT=n` stops after n uploads for a trial run. **Admin only, from a Railway shell on
+  the API service**, after the deploy that adds the column; in production it refuses to run without
+  `CONFIRM=images-backfill`, because every queued job lands on the worker's single-thread default
+  pool ahead of the cron sweeps. It has not been run against production by an agent: the owner runs
+  it (expect roughly 1 to 3 s per upload on the worker). Variants left by a run that stopped halfway
+  stay in the bucket until the original is purged, then the sweep removes them with it.
+- **Safety.** The job re-checks the downloaded object against its row (size, magic bytes), lets
+  libvips use only its JPEG/PNG/WebP loaders (`Vips.block_untrusted`), and refuses images over
+  `max_pixels` / `max_dimension` (config/images.yml) from the header, before decoding. Such files are
+  given up on at once (no retries) and logged as `image_variants_rejected`.
+- **Changing the widths or qualities.** Edit `backend/config/images.yml`, deploy, then
+  `bin/rails images:backfill FORCE=1`. Variants under widths you removed stay in the bucket until the
+  upload is purged (they are harmless; nothing links to them).
+- **Local development.** Disk-stored uploads (no `AWS_BUCKET`) get no variants: the pipeline is
+  bucket-only. `libvips` is needed where the worker runs (`apt-get install libvips42` on Debian,
+  `libvips42t64` on Ubuntu 24.04, which is also what the rails CI job installs); the `ruby-vips` gem binds it at runtime through FFI.
+
+No new environment variable: the feature is on wherever direct uploads are on, and off with them.
 
 ## How the code uses these
 

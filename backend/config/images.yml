@@ -1,0 +1,24 @@
+# Image variants (ImageVariantsJob, ImageVariants). Read once per process. How to change it:
+# docs/ops/uploads.md, "Image variants".
+
+# Max widths (px) generated for every finished image upload; smaller originals skip the widths that
+# would upscale them. The browser picks from these through srcset, so adding a width means a backfill
+# (`bin/rails images:backfill FORCE=1`); removing one leaves older variants in the bucket until the
+# upload is purged.
+widths: [320, 768, 1600]
+
+# Decode caps (ImageVariants.inspect!, read from the header before anything is decoded): an image over
+# either is rejected for good and keeps serving its original. 40 MP covers every phone camera; a
+# "decompression bomb" PNG declaring 100000x100000 is refused at the header.
+max_pixels: 40000000
+max_dimension: 10000
+
+# Encoder quality per format (libvips Q). AVIF is produced only when the libvips build has an AV1
+# encoder (checked once per process); otherwise WebP alone is served.
+quality:
+  webp: 80
+  avif: 60
+
+# Cache-Control on variants and, through the presign, on originals. Keys contain a UUID and a
+# replaced photo gets a new key, so an object never changes under its URL.
+cache_control: "public, max-age=31536000, immutable"

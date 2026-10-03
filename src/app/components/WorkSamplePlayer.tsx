@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { ExternalLink, FileText, Image as ImageIcon, Link2, Music, Video } from 'lucide-react';
 import { Badge } from './ui/badge';
 import type { MediaMetadata } from '../lib/apiTypes';
+import type { ImageSet } from '../lib/imageSet';
+import { UploadImage } from './media/UploadImage';
 
 type Sample = {
   id?: string;
@@ -11,6 +13,8 @@ type Sample = {
   description?: string | null;
   thumbnailUrl?: string | null;
   waveformUrl?: string | null;
+  image?: ImageSet | null;
+  thumbnail?: ImageSet | null;
   mediaMetadata?: MediaMetadata | null;
   tags?: string[];
   genres?: string[];
@@ -133,7 +137,13 @@ function MediaView({ sample, media }: { sample: Sample; media: WorkSampleMedia |
   useEffect(() => setFailed(false), [sample.url]);
   if (!media || media.kind === 'link') {
     return sample.thumbnailUrl ? (
-      <img src={sample.thumbnailUrl} alt="" className="w-full max-h-64 object-cover" />
+      <UploadImage
+        image={sample.thumbnail}
+        src={sample.thumbnailUrl}
+        alt=""
+        placement="card"
+        className="h-auto max-h-64 w-full object-cover"
+      />
     ) : null;
   }
   if (failed) {
@@ -192,11 +202,12 @@ function MediaView({ sample, media }: { sample: Sample; media: WorkSampleMedia |
       );
     case 'image':
       return (
-        <img
+        <UploadImage
+          image={sample.image}
           src={media.src}
           alt={sample.title}
-          loading="lazy"
-          className="w-full max-h-80 object-contain bg-black"
+          placement="card"
+          className="h-auto max-h-80 w-full bg-black object-contain"
           onError={() => setFailed(true)}
         />
       );

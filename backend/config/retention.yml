@@ -1,0 +1,21 @@
+# How long each kind of record is kept before RetentionSweepJob deletes it (nightly, `scheduled`
+# pool). The one place these windows live; the runbook is docs/ops/retention.md.
+#
+# Each rule: `days` after the moment named in `after` (what that moment is, per rule, is in
+# docs/ops/retention.md and app/services/retention.rb). A rule listed here must exist in
+# Retention::RULES and vice versa; the app refuses to boot the sweep otherwise.
+#
+# batch_size:     rows deleted per statement.
+# max_per_run:    rows (or files) one rule may delete in one nightly run; the rest wait for the
+#                 next night, so a first run on a large backlog never holds locks for long.
+batch_size: 1000
+max_per_run: 50000
+
+rules:
+  sign_in_codes:              { after: expired, days: 1 }
+  sessions:                   { after: expired, days: 7 }
+  notifications:              { after: read, days: 90 }
+  problem_report_screenshots: { after: created, days: 30 }
+  product_events:             { after: created, days: 180 }
+  erased_account_residue:     { after: erased, days: 30 }
+  good_jobs:                  { after: finished, days: 14 }

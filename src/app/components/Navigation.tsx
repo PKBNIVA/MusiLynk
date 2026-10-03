@@ -48,7 +48,7 @@ import { UserAvatar } from './kit/UserAvatar';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { SIGN_IN_CODE_TOAST } from '../lib/authToasts';
-import { apiGet } from '../lib/api';
+import { cachedGet } from '../lib/dataCache';
 import { UNREAD_CHANGED_EVENT, useVisiblePolling } from '../lib/usePolling';
 import { ProductTour } from './ProductTour';
 import { openProblemReport } from '../lib/problemReportEvent';
@@ -84,7 +84,7 @@ export function Navigation() {
   // Unread badges: fetched on mount and on route change, polled every 10 s while the tab is visible,
   // and refreshed immediately when a page reports that the viewer read something.
   const refreshUnread = () =>
-    apiGet<UnreadCounts>('/notifications/unread')
+    cachedGet<UnreadCounts>('/notifications/unread', { family: 'unread', force: true })
       .then((d) => {
         setUnread(Number(d.unread) || 0);
         setUnreadMessages(Number(d.unreadMessages) || 0);

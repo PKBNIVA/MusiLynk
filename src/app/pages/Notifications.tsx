@@ -5,6 +5,7 @@ import { Bell, CheckCircle2 } from 'lucide-react';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
+import { cachedGet, peek, sameData } from '../lib/dataCache';
 import { useAuth } from '../lib/authContext';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -77,11 +78,15 @@ export default function Notifications() {
   const [error, setError] = useState('');
   const [markingAll, setMarkingAll] = useState(false);
   const load = async () => {
-    setLoading(true);
+    type Page = { notifications?: Notification[]; unread?: number };
+    const cached = peek<Page>('/notifications');
+    if (cached)
+      setItems((current) => (sameData(current, cached.notifications || []) ? current : cached.notifications || []));
+    else setLoading(true);
     setError('');
     try {
-      const d = await apiGet<{ notifications?: Notification[]; unread?: number }>('/notifications');
-      setItems(d.notifications || []);
+      const d = await cachedGet<Page>('/notifications', { family: 'notifications', force: Boolean(cached) });
+      setItems((current) => (sameData(current, d.notifications || []) ? current : d.notifications || []));
     } catch (e: unknown) {
       setError(errorMessage(e, 'Unable to load notifications.'));
     } finally {

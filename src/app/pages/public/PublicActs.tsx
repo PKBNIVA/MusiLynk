@@ -103,6 +103,7 @@ export default function PublicActs() {
               loading={list.loadingMore}
               error={list.moreError}
               onLoadMore={list.loadMore}
+              onNear={list.prefetchMore}
               noun={NOUN}
             />
           </>

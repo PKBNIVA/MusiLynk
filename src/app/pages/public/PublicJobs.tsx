@@ -161,6 +161,7 @@ export default function PublicJobs() {
               loading={list.loadingMore}
               error={list.moreError}
               onLoadMore={list.loadMore}
+              onNear={list.prefetchMore}
             />
           </>
         ) : (

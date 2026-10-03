@@ -11,7 +11,8 @@ import { ShareMenu } from '../../components/ShareMenu';
 import { shareCopy } from '../../lib/share';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { apiGet, apiPost } from '../../lib/api';
+import { apiPost } from '../../lib/api';
+import { cachedGet, peek, subscribe } from '../../lib/dataCache';
 import { ShieldCheck, Flag } from 'lucide-react';
 import { ReportDialog } from '../../components/ReportDialog';
 import { useAuth } from '../../lib/authContext';
@@ -37,15 +38,16 @@ function musicGroupJsonLd(a: Act, id?: string) {
 export default function PublicAct({ shell }: { shell?: 'public' | 'workspace' } = {}) {
   const { id } = useParams(),
     { user } = useAuth();
-  const [a, setA] = useState<Act>(),
-    [loading, setLoading] = useState(true),
+  const actPath = `/public/acts/${encodeURIComponent(id || '')}`;
+  const [a, setA] = useState<Act | undefined>(() => peek<{ act: Act }>(actPath)?.act),
+    [loading, setLoading] = useState(() => peek(actPath) === undefined),
     [reporting, setReporting] = useState(false),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const load = useCallback(async () => {
-    setLoading(true);
+    if (peek(actPath) === undefined) setLoading(true);
     setError(null);
     try {
-      const d = await apiGet<{ act: Act }>(`/public/acts/${encodeURIComponent(id || '')}`);
+      const d = await cachedGet<{ act: Act }>(actPath, { family: 'record' });
       setA(d.act);
     } catch (e: unknown) {
       setA(undefined);
@@ -53,10 +55,11 @@ export default function PublicAct({ shell }: { shell?: 'public' | 'workspace' } 
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [actPath]);
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => subscribe(actPath, () => setA((current) => peek<{ act: Act }>(actPath)?.act ?? current)), [actPath]);
   usePageMeta(
     a?.name && `${a.name} — book ${a.act_type || 'live act'}`,
     a ? [a.tagline, a.bio].filter(Boolean).join(' ') || `Request a quote from ${a.name} on MusiLynk.` : undefined,

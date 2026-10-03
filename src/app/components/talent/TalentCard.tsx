@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { usePrefetchIntent } from '../../lib/useCachedGet';
 import { MapPin, ShieldCheck, Star, Zap } from 'lucide-react';
 import { DemoBadge } from '../DemoBadge';
 import { VerifiedBadge } from '../VerifiedBadge';
@@ -62,6 +63,10 @@ export function TalentCard({ person: c, index, to, aside, footer }: Props) {
     ),
     reply && <span key="reply">{reply}</span>,
   ].filter(Boolean);
+  // Hover, focus or a first touch on the card warms the cache for the profile (dataCache.ts).
+  const prefetchProfile = usePrefetchIntent(
+    to.startsWith('/professionals/') ? `/public/talent/${encodeURIComponent(c.id)}` : null,
+  );
   return (
     <Card
       data-list-item={index}
@@ -75,7 +80,11 @@ export function TalentCard({ person: c, index, to, aside, footer }: Props) {
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
               <h2 className="min-w-0 break-words text-lg font-semibold">
-                <Link to={to} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
+                <Link
+                  to={to}
+                  className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+                  {...prefetchProfile}
+                >
                   {c.name}
                 </Link>
               </h2>

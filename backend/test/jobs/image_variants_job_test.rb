@@ -13,10 +13,14 @@ class ImageVariantsJobTest < ActiveJob::TestCase
     @upload = Upload.create!(user: @user, storage: "s3", key: "uploads/#{@user.id}/abc/photo.jpg", filename: "photo.jpg", content_type: "image/jpeg",
       byte_size: File.size(FIXTURE), status: "complete", completed_at: Time.current, public_url: "https://media.example.test/uploads/#{@user.id}/abc/photo.jpg")
     @stored = {}
+    @scratch = Dir.mktmpdir("variants-test") # a fresh checkout has no backend/tmp
     ImageVariants.reset!
   end
 
-  teardown { ImageVariants.reset! }
+  teardown do
+    ImageVariants.reset!
+    FileUtils.rm_rf(@scratch)
+  end
 
   test "generates rotated, stripped WebP variants up to the original's width and records them" do
     with_fake_storage do
@@ -84,15 +88,11 @@ class ImageVariantsJobTest < ActiveJob::TestCase
   end
 
   test "an object whose bytes no longer match the row (swapped after complete) is rejected for good, not retried" do
-    png = Rails.root.join("tmp/variants-swapped-#{SecureRandom.hex(4)}.png").to_s
+    png = File.join(@scratch, "swapped.png")
     Vips::Image.black(8, 8).pngsave(png)
-    begin
-      with_fake_storage(png) do # the row says image/jpeg; the bucket now holds a PNG of the right size
-        @upload.update!(byte_size: File.size(png))
-        assert_no_enqueued_jobs(only: ImageVariantsJob) { ImageVariantsJob.perform_now(@upload.id) }
-      end
-    ensure
-      File.delete(png)
+    with_fake_storage(png) do # the row says image/jpeg; the bucket now holds a PNG of the right size
+      @upload.update!(byte_size: File.size(png))
+      assert_no_enqueued_jobs(only: ImageVariantsJob) { ImageVariantsJob.perform_now(@upload.id) }
     end
     assert_empty @stored
     assert_equal({}, @upload.reload.variants)
@@ -106,32 +106,24 @@ class ImageVariantsJobTest < ActiveJob::TestCase
     assert_empty @stored
 
     # Bytes that are not any allowed media type (an SVG renamed to .jpg): rejected before libvips sees it.
-    svg = Rails.root.join("tmp/variants-svg-#{SecureRandom.hex(4)}").to_s
+    svg = File.join(@scratch, "renamed.jpg")
     File.write(svg, "<svg xmlns='http://www.w3.org/2000/svg'><script>1</script></svg>")
-    begin
-      with_fake_storage(svg) do
-        @upload.update!(byte_size: 10_000)
-        opened = 0
-        Vips::Image.stub(:new_from_file, ->(*) { opened += 1 }) { ImageVariantsJob.perform_now(@upload.id) }
-        assert_equal 0, opened
-      end
-    ensure
-      File.delete(svg)
+    with_fake_storage(svg) do
+      @upload.update!(byte_size: 10_000)
+      opened = 0
+      Vips::Image.stub(:new_from_file, ->(*) { opened += 1 }) { ImageVariantsJob.perform_now(@upload.id) }
+      assert_equal 0, opened
     end
     assert_empty @stored
     assert_equal({}, @upload.reload.variants)
   end
 
   test "a PNG whose header declares an image over the caps is rejected at the header, before decoding" do
-    bomb = Rails.root.join("tmp/variants-bomb-#{SecureRandom.hex(4)}.png").to_s
+    bomb = File.join(@scratch, "bomb.png")
     File.binwrite(bomb, png_with_header(100_000, 100_000))
-    begin
-      with_fake_storage(bomb) do
-        @upload.update!(content_type: "image/png", byte_size: File.size(bomb))
-        assert_no_enqueued_jobs(only: ImageVariantsJob) { ImageVariantsJob.perform_now(@upload.id) }
-      end
-    ensure
-      File.delete(bomb) if File.exist?(bomb)
+    with_fake_storage(bomb) do
+      @upload.update!(content_type: "image/png", byte_size: File.size(bomb))
+      assert_no_enqueued_jobs(only: ImageVariantsJob) { ImageVariantsJob.perform_now(@upload.id) }
     end
     assert_empty @stored
     assert_equal({}, @upload.reload.variants)
@@ -154,11 +146,8 @@ class ImageVariantsJobTest < ActiveJob::TestCase
     assert_empty @stored
     error = assert_raises(ImageVariants::Rejected) { ImageVariants.inspect!(small, Upload.new(content_type: "image/jpeg", byte_size: 1_000)) }
     assert_match(/bytes are image\/png, upload says image\/jpeg/, error.message)
-    File.delete(small)
     assert_equal 40_000_000, ImageVariants.max_pixels
     assert_equal 10_000, ImageVariants.max_dimension
-  ensure
-    File.delete(bomb) if bomb && File.exist?(bomb)
   end
 
   test "libvips runs with untrusted loaders blocked and a small pool" do

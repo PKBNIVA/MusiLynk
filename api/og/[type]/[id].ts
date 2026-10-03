@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { Resvg } from '@resvg/resvg-js';
 import satori from 'satori';
 import { DEFAULT_API_ORIGIN, SIZE, fallbackResponse, fetchImage, fetchJson, respond } from '../../_lib/og.js';
+import { DEFAULT_PUBLIC_ORIGIN } from '../../../src/app/lib/siteMeta';
 import type { Deps } from '../../_lib/og.js';
 
 export const config = { runtime: 'nodejs' };
@@ -36,7 +37,7 @@ export default async function handler(
   req: IncomingMessage & { query?: Record<string, string | string[] | undefined> },
   res: ServerResponse,
 ): Promise<void> {
-  const url = new URL(req.url || '/', `https://${req.headers.host || 'musilynk.vercel.app'}`);
+  const url = new URL(req.url || '/', req.headers.host ? `https://${req.headers.host}` : DEFAULT_PUBLIC_ORIGIN);
   const request = new Request(url, { method: 'GET' });
   let response: Response;
   try {

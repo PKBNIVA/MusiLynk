@@ -17,66 +17,17 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { HERO_PHOTO, HERO_PHOTO_SIZES, HERO_PHOTO_WIDTHS, photoSrcSet } from '../src/app/lib/photo.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE_URL = (process.env.VITE_PUBLIC_URL || 'https://musilynk.vercel.app').replace(/\/+$/, '');
+import { BRAND_NAME } from '../src/app/lib/brand.ts';
+import { PUBLIC_PAGE_META, clipDescription, documentTitle, publicOrigin } from '../src/app/lib/siteMeta.ts';
+import { hirePageDescription, hirePageTitle, ratesPageDescription, ratesPageTitle } from '../src/app/lib/seoPages.ts';
 
-// path -> [title, description]. Written to match what each page's usePageMeta call sets.
-export const ROUTES = {
-  '/': [
-    'Hire verified musicians in Mumbai within 24 hours',
-    'Hire verified singers, session players, DJs and sound crew in Mumbai for recording sessions, weddings and gigs, within 24 hours. Musicians join free.',
-  ],
-  '/music-jobs': [
-    'Music jobs, gigs, sessions & auditions',
-    'Browse open music jobs, gigs, studio sessions, auditions and tours across performance, production and live events.',
-  ],
-  '/music-professionals': [
-    'Find musicians & music professionals',
-    'Search singers, instrumentalists, composers, engineers, technical directors, tour crew and managers on MusiLynk.',
-  ],
-  '/book-music': [
-    'Book singers, bands & live acts',
-    'Discover bookable singers, duos, bands and ensembles, compare lineups and request a quote for your event on MusiLynk.',
-  ],
-  '/urgent': [
-    'Need someone by tomorrow?',
-    'Post an urgent music hiring request and get matched with available, verified musicians and crew near you within hours.',
-  ],
-  '/join/hiring': [
-    'Join to hire musicians and crew',
-    'Studios, event and wedding companies, bands, labels and venues: create a free account in two minutes and find a verified musician in Mumbai within 24 hours.',
-  ],
-  '/join/musician': [
-    'Join as a musician or crew',
-    'Create a verified music portfolio in two minutes: pick your role, paste links to your YouTube, Instagram, SoundCloud or Spotify work, and get booked in Mumbai.',
-  ],
-  '/pricing': [
-    'Pricing',
-    'MusiLynk plans for music hiring and booking teams. Professionals build profiles and apply free; paid plans add capacity, seats and trials.',
-  ],
-  '/guide': [
-    'How to use MusiLynk',
-    'Step-by-step guides for music professionals, hiring teams, bands and event bookers on MusiLynk.',
-  ],
-  '/about': [
-    'About MusiLynk',
-    'MusiLynk connects musicians, bands and hiring teams for gigs, sessions and live bookings across India.',
-  ],
-  '/safety': [
-    'Trust & Safety',
-    'How MusiLynk verifies professionals, protects payments and keeps the marketplace safe.',
-  ],
-  '/credits': [
-    'Photo credits',
-    'The photographers and licences behind the pictures on MusiLynk, from Wikimedia Commons under Creative Commons and public-domain terms.',
-  ],
-  '/contact': ['Contact MusiLynk', 'Get in touch with the MusiLynk team.'],
-  '/community-guidelines': [
-    'Community guidelines',
-    'The standards MusiLynk expects from every musician, band and hiring team on the platform.',
-  ],
-  '/terms': ['Terms of service', "MusiLynk's terms of service."],
-  '/privacy': ['Privacy policy', "MusiLynk's privacy policy."],
-};
+const BASE_URL = publicOrigin();
+
+// path -> [title, description], from the same table the pages read (src/app/lib/siteMeta.ts), so the baked
+// head and the one usePageMeta sets after hydration are identical.
+export const ROUTES = Object.fromEntries(
+  Object.entries(PUBLIC_PAGE_META).map(([path, meta]) => [path, [meta.title, meta.description]]),
+);
 
 /** The `roles:` and `cities:` maps of backend/config/seo_pages.yml (flat `slug: Label` lines). */
 export function readSeoPages(yaml) {
@@ -96,24 +47,16 @@ export function readSeoPages(yaml) {
   return lists;
 }
 
-const lowerRole = (label) => (label === 'DJ' ? label : label.toLowerCase());
-
-/** path -> [title, description] for the hire and rates pages, as the pages set them client-side. */
+/** path -> [title, description] for the hire and rates pages, from the same builders the pages use (seoPages.ts). */
 export function seoPageRoutes({ roles, cities }) {
   const routes = {};
   for (const [roleSlug, role] of roles) {
     for (const [citySlug, city] of cities) {
-      routes[`/hire/${roleSlug}/${citySlug}`] = [
-        `Hire a verified ${lowerRole(role)} in ${city} | MusiLynk`,
-        `Browse verified ${lowerRole(role)}s in ${city} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`,
-      ];
+      routes[`/hire/${roleSlug}/${citySlug}`] = [hirePageTitle(role, city), hirePageDescription(role, city)];
     }
   }
   for (const [citySlug, city] of cities) {
-    routes[`/rates/${citySlug}`] = [
-      `What musicians charge in ${city} | MusiLynk`,
-      `Median session, show and day rates reported by verified and unverified musicians on MusiLynk in ${city}. A guide, not a quote.`,
-    ];
+    routes[`/rates/${citySlug}`] = [ratesPageTitle(city), ratesPageDescription(city)];
   }
   return routes;
 }
@@ -188,7 +131,7 @@ export async function loadRenderer(ssrDir) {
 }
 
 /** PageMeta.tsx cuts a description at 160 characters; do the same so the head matches the page. */
-const clip = (text) => (text.length > 160 ? `${text.slice(0, 157).trimEnd()}…` : text);
+const clip = clipDescription;
 
 /** The ld+json script carries PageMeta.tsx's data-page-meta marker, so the page's own JSON-LD replaces it
  *  on hydration instead of sitting next to it as a second, possibly different, copy. */
@@ -236,7 +179,7 @@ export function seoPageBreadcrumbs({ roles, cities }, baseUrl = BASE_URL) {
 }
 
 function pageHead({ title, description, canonical, image, jsonLd }) {
-  return `    <title>${title}</title>
+  return `    <title>${documentTitle(title, BRAND_NAME)}</title>
     <meta name="description" content="${description}">
     <link rel="canonical" href="${canonical}">
     <meta property="og:type" content="website">

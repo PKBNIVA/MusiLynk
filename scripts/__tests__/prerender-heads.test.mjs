@@ -63,7 +63,7 @@ describe('prerender-heads.mjs', () => {
     });
 
     const html = readFileSync(join(dist, 'pricing', 'index.html'), 'utf8');
-    expect(html).toContain('<title>Pricing</title>');
+    expect(html).toContain('<title>Pricing · MusiLynk</title>');
     expect(html).toContain('<link rel="canonical" href="https://musilynk.example/pricing">');
     expect(html).toContain('<meta property="og:url" content="https://musilynk.example/pricing">');
     expect(html).toContain('<div id="root"></div>');
@@ -126,7 +126,7 @@ describe('prerender-heads.mjs', () => {
     expect(html.match(/name="twitter:title"/g)).toHaveLength(1);
     expect(html).not.toContain('Default og title');
     expect(html).not.toContain('default.example');
-    expect(render(FAKE_INDEX, '/x', ['T', 'D'])).toContain('<title>T</title>');
+    expect(render(FAKE_INDEX, '/x', ['T', 'D'])).toContain('<title>T · MusiLynk</title>');
   });
 
   it('writes the photo credits page', () => {
@@ -135,7 +135,7 @@ describe('prerender-heads.mjs', () => {
       env: { ...process.env, VITE_PUBLIC_URL: 'https://musilynk.example' },
     });
     const html = readFileSync(join(dist, 'credits', 'index.html'), 'utf8');
-    expect(html).toContain('<title>Photo credits</title>');
+    expect(html).toContain('<title>Photo credits · MusiLynk</title>');
     expect(html).toContain('<link rel="canonical" href="https://musilynk.example/credits">');
   });
 

@@ -57,9 +57,19 @@ shell per record family (`professionals/shell.html`, `acts/shell.html`, `opportu
 served by `vercel.json` rewrites for every id). `main.tsx` hydrates when the marker matches the URL,
 otherwise it renders from scratch (a host serving the wrong file can never show a mismatch).
 
-Rules for a page that is pre-rendered: its first render must not read the browser (no
-`window`/`localStorage`/`Date.now()` in render; effects are fine), and it must render the same thing
-for a signed-out visitor before `/me` answers (the auth status is `loading` in both places). A lazily
+Rules for a page that is pre-rendered: its first render must not read the browser (no `window`,
+storage, the clock or the URL's query string in render), and it must render the same thing for a
+signed-out visitor before `/me` answers (the auth status is `loading` in both places). Anything the HTML
+cannot know is read behind `useHydrated()` (`src/app/lib/hydrated.ts`; false for the hydration render,
+true right after) or in an effect: `useUrlFilters` exposes `ready`, `/pricing` applies `?code=`, `?interval=`
+and the saved promo code after mount, `/urgent` fills in "tomorrow, 6 pm" and the `?role=&city=` prefill
+after mount. `src/__tests__/entry-server.test.tsx` checks the HTML carries no date and is the same with or
+without a query string.
+
+The per-page `<title>` and description come from one table, `PUBLIC_PAGE_META` in
+`src/app/lib/siteMeta.ts` (also `publicOrigin()`, `documentTitle()`, `clipDescription()`), read by the
+pages, by `prerender-heads.mjs` and by the OG image function; `src/__tests__/pageMetaParity.test.tsx` diffs
+the baked head against the DOM after hydration for every pre-rendered path. A lazily
 loaded part inside such a page (`React.lazy` + `Suspense`) renders behind `useMounted()`
 (`src/app/lib/clientOnly.ts`), so the HTML has no half-hydrated boundary for a state update to hit. Data
 still loads in the browser, so a page shows its frame and skeleton; the hire and rates pages take

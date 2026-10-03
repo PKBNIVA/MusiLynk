@@ -1,15 +1,10 @@
 import { BRAND_NAME } from '../../lib/brand';
+import { publicOrigin } from '../../lib/siteMeta';
 
-/** The public origin the JSON-LD names: VITE_PUBLIC_URL, else the live site. A constant on purpose, so the
- *  pre-rendered HTML and the browser agree byte for byte (window.location.origin differs on previews). */
-export const PUBLIC_ORIGIN = String(import.meta.env?.VITE_PUBLIC_URL || 'https://musilynk.vercel.app').replace(
-  /\/+$/,
-  '',
-);
-
-/** Organization and WebSite structured data for search engines (schema.org JSON-LD). */
+/** Organization and WebSite structured data for search engines (schema.org JSON-LD). The origin is the
+ *  configured public one (lib/siteMeta.ts), never window.location, so pre-rendered HTML and browser agree. */
 export function StructuredData({ description }: { description: string }) {
-  const origin = PUBLIC_ORIGIN;
+  const origin = publicOrigin();
   const data = [
     {
       '@context': 'https://schema.org',

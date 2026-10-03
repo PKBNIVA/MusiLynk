@@ -24,6 +24,20 @@ describe('entry-server render', () => {
     expect(a).toBe(b);
     expect(a).toMatch(/role="status">Loading .*profile/);
   });
+  it('bakes nothing that depends on the build-time clock, the query string or storage', async () => {
+    const html = await render('/urgent');
+    expect(html).toContain('Find a verified musician, fast');
+    // No datetime-local value or spelled-out date: the form takes "tomorrow, 6 pm" after mount.
+    expect(html).not.toMatch(/\d{4}-\d\d-\d\dT\d\d:\d\d/);
+    expect(html).not.toMatch(/\b\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w* \d{4}\b/);
+    expect(html.replace(/<svg[\s\S]*?<\/svg>/g, '')).not.toMatch(/\b(20\d\d)\b/); // no year outside the icons' SVG namespace
+    // The same HTML whatever the query string: filters and promo codes are applied after hydration.
+    expect(await render('/music-professionals?role=drummer&location=Mumbai')).toBe(
+      await render('/music-professionals'),
+    );
+    expect(await render('/pricing?code=FEST10&interval=annual')).toBe(await render('/pricing'));
+    expect(await render('/urgent?role=Drummer&city=Mumbai')).toBe(html);
+  });
   it('renders the not-found page for an unknown path', async () => {
     await expect(render('/__nope__/')).resolves.toContain('<');
   });

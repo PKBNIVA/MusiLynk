@@ -12,9 +12,18 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '..
 import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
-import { fromRateText, roleNoun } from '../../lib/landing';
+import { fromRateText } from '../../lib/landing';
 import { personLines } from '../../lib/personLine';
-import { hireHeading, hireLinkText, hirePagePath, seoCityName, seoRoleLabel } from '../../lib/seoPages';
+import {
+  hireHeading,
+  hireLinkText,
+  hirePageDescription,
+  hirePagePath,
+  hirePageTitle,
+  roleNoun,
+  seoCityName,
+  seoRoleLabel,
+} from '../../lib/seoPages';
 import type { Professional } from '../../lib/apiTypes';
 
 interface HirePageData {
@@ -56,12 +65,11 @@ export default function HirePage() {
 
   const knownRole = seoRoleLabel(role);
   const knownCity = seoCityName(city);
-  const title = data
-    ? `Hire a verified ${roleNoun(data.role.label)} in ${data.city.name} | MusiLynk`
-    : 'Hire on MusiLynk';
-  const description = data
-    ? `Browse verified ${roleNoun(data.role.label)}s in ${data.city.name} with real work you can review. Post an urgent request and hear back within hours, or browse the directory.`
-    : undefined;
+  // A listed role and city name the page from the first render (the pre-rendered head says the same);
+  // the API's labels take over once loaded, and an unknown or failed page falls back to a plain title.
+  const named = data ? [data.role.label, data.city.name] : knownRole && knownCity ? [knownRole, knownCity] : null;
+  const title = named ? hirePageTitle(named[0], named[1]) : 'Hire on MusiLynk';
+  const description = named ? hirePageDescription(named[0], named[1]) : undefined;
   const jsonLd = data
     ? [
         {

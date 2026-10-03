@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
+import { useHydrated } from './hydrated';
 
 /**
  * Search filters kept in the URL (?q=…&location=…), so a search can be reloaded, shared and
@@ -10,9 +11,14 @@ import { useSearchParams } from 'react-router';
  * module-level constant so its identity is stable. `update` and `clear` return whether the URL
  * changed (when it did not, a caller that wants a fresh search runs it itself). `update` pushes a new entry
  * (unless nothing changed, or `{ replace: true }` rewrites the current one); `clear` removes every key.
+ *
+ * `ready` is false for the one render that hydrates pre-rendered HTML (which cannot know the query
+ * string): `values` and `query` are then empty, and the effect that runs the search should wait for it.
  */
 export function useUrlFilters<K extends string>(keys: readonly K[]) {
-  const [params, setParams] = useSearchParams();
+  const [liveParams, setParams] = useSearchParams();
+  const ready = useHydrated();
+  const params = useMemo(() => (ready ? liveParams : new URLSearchParams()), [ready, liveParams]);
   const values = useMemo(
     () => Object.fromEntries(keys.map((key) => [key, params.get(key) || ''])) as Record<K, string>,
     [params, keys],
@@ -57,5 +63,5 @@ export function useUrlFilters<K extends string>(keys: readonly K[]) {
     [apply, keys],
   );
 
-  return { values, query, update, clear };
+  return { values, query, update, clear, ready };
 }

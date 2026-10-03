@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { usePageMeta } from '../components/PageMeta';
 import { useIdleReady } from '../App';
+import { PUBLIC_PAGE_META } from '../lib/siteMeta';
 import { SkipLink } from '../components/SkipLink';
 import { LandingFooter, LandingHeader } from '../components/landing/LandingHeader';
 import { LAUNCH_CITIES, LandingHero } from '../components/landing/LandingHero';
@@ -11,9 +12,7 @@ import { StructuredData } from '../components/landing/StructuredData';
 const LandingBelowFold = lazy(() => import('../components/landing/LandingBelowFold'));
 const belowFoldPlaceholder = <div aria-hidden="true" className="min-h-[70vh]" />;
 
-const TITLE = 'Hire verified musicians in Mumbai within 24 hours';
-const DESCRIPTION =
-  'Hire verified singers, session players, DJs and sound crew in Mumbai for recording sessions, weddings and gigs, within 24 hours. Musicians join free.';
+const { title: TITLE, description: DESCRIPTION } = PUBLIC_PAGE_META['/'];
 
 export default function LandingPage() {
   usePageMeta(TITLE, DESCRIPTION, { canonicalPath: '/', type: 'website' });

@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/button';
 import { apiGet } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { useAuth } from '../../lib/authContext';
-import { ratesPagePath, seoCityName } from '../../lib/seoPages';
+import { ratesPageDescription, ratesPagePath, ratesPageTitle, seoCityName } from '../../lib/seoPages';
 import { formatDate, formatMoney } from '../../lib/format';
 
 interface RateRange {
@@ -63,10 +63,10 @@ export default function RatesPage() {
     };
   }, [city]);
 
-  const title = data ? `What musicians charge in ${data.city.name} | MusiLynk` : 'Musician rates';
-  const description = data
-    ? `Median session, show and day rates reported by verified and unverified musicians on MusiLynk in ${data.city.name}. A guide, not a quote.`
-    : undefined;
+  // A listed city names the page from the first render (the pre-rendered head says the same).
+  const cityName = data?.city.name ?? seoCityName(city);
+  const title = cityName ? ratesPageTitle(cityName) : 'Musician rates';
+  const description = cityName ? ratesPageDescription(cityName) : undefined;
   const jsonLd = data
     ? [
         {

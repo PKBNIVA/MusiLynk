@@ -1,0 +1,83 @@
+require "test_helper"
+require_relative "../support/realtime_test_people"
+require "minitest/mock"
+
+# POST /api/cable/ticket and the broadcasts that follow writes (Realtime).
+class RealtimeTest < ActionDispatch::IntegrationTest
+  include ActionCable::TestHelper
+  include RealtimeTestPeople
+
+  setup do
+    @hirer, @hirer_session = person_with_session("Live Hirer", role: "employer")
+    @musician, @musician_session = person_with_session("Live Musician")
+    @conversation = Conversation.create!(candidate: @musician, employer: @hirer)
+  end
+
+  test "a signed-in user gets a ticket for the socket; strangers do not; it is rate-limited" do
+    post "/api/cable/ticket"
+    assert_response :unauthorized
+
+    post "/api/cable/ticket", headers: auth(@musician)
+    assert_response :created
+    body = response.parsed_body
+    assert_equal RealtimeTicket.ttl.to_i, body["expiresIn"]
+    assert_equal "ws://www.example.com/cable", body["url"]
+    assert_equal @musician, RealtimeTicket.user_for(body["ticket"])
+    assert_not_includes body["ticket"], @musician.id, "the ticket is signed, not a readable user id"
+
+    original = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    freeze_time
+    headers = auth(@hirer)
+    RealtimeTicket.tickets_per_minute.times { post "/api/cable/ticket", headers: }
+    assert_response :created
+    post "/api/cable/ticket", headers: headers
+    assert_response :too_many_requests
+  ensure
+    Rails.cache = original if original
+  end
+
+  test "a new message reaches the thread and the recipient's badge, with ids only" do
+    post "/api/conversations/#{@conversation.id}/messages", params: { body: "Soundcheck at 6?" }, headers: auth(@hirer), as: :json
+    assert_response :success
+    message = Message.order(:created_at).last
+    assert_broadcast_on(ConversationChannel.broadcasting_for(@conversation), { type: "message", id: message.id, conversationId: @conversation.id })
+    assert_broadcast_on(UserChannel.broadcasting_for(@musician), { type: "message", conversationId: @conversation.id })
+    assert_no_broadcasts(UserChannel.broadcasting_for(@hirer))
+  end
+
+  test "a new notification reaches its user" do
+    notification = Notification.create!(user: @musician, kind: "system", title: "Welcome")
+    assert_broadcast_on(UserChannel.broadcasting_for(@musician), { type: "notification", id: notification.id })
+  end
+
+  test "an urgent request's status, matching and responses reach the hirer's page" do
+    request = UrgentRequest.create!(requester: @hirer, title: "Drummer tonight", role_name: "Drummer", city: "Pune", start_at: 1.day.from_now, currency: "INR", status: "open")
+    stream = UrgentRequestChannel.broadcasting_for(request)
+    assert_no_broadcasts(stream)
+
+    UrgentMatchJob.perform_now(request.id)
+    assert_broadcast_on(stream, { type: "status", id: request.id, status: "open", matchStatus: "done" })
+
+    post "/api/urgent-requests/#{request.id}/respond", params: { message: "Free tonight" }, headers: auth(@musician), as: :json
+    assert_response :success
+    assert_broadcast_on(stream, { type: "response", id: request.id, status: "open", matchStatus: "done" })
+
+    request.reload.update!(status: "closed")
+    assert_broadcast_on(stream, { type: "status", id: request.id, status: "closed", matchStatus: "done" })
+  end
+
+  test "a failed broadcast never fails the write" do
+    UserChannel.stub(:broadcast_to, ->(*) { raise "adapter down" }) do
+      assert_difference("Notification.count") { Notification.create!(user: @musician, kind: "system", title: "Still saved") }
+    end
+  end
+
+  private
+
+  def auth(user)
+    raw = SecureRandom.urlsafe_base64(48)
+    user.sessions.create!(token_digest: Digest::SHA256.hexdigest(raw), expires_at: 30.days.from_now)
+    { "Authorization" => "Bearer #{raw}" }
+  end
+end

@@ -9,12 +9,21 @@ module Search
   #   #     mumbai|bombay                   (a city: matched against location fields only)]
   #
   # "in" is a stop word and "players" folds to "player". Words the vocabulary does not know match
-  # as word prefixes ("drum" finds "Drummer"); vocabulary terms match as whole words, with an
-  # optional plural ending.
+  # as word prefixes when they are long enough ("drumm" finds "Drummer"; Settings.prefix_min_length)
+  # and whole otherwise; vocabulary terms match as whole words (stemmed, so plurals match).
   #
-  # Matching is AND across tokens and OR within a token's alternatives (#condition). #score ranks
-  # a row by where each token hit: title/headline 100, skills/roles 60, description/bio 30,
-  # location 50, plus up to 20 for trigram similarity of the whole query to the title.
+  # Matching is AND across tokens and OR within a token's alternatives (#condition), against a
+  # Search::Document: a token becomes one full-text query on the row's weighted search_vector, which
+  # a GIN index serves. A phrase must be consecutive words; vocabulary terms and short words match
+  # whole words (English stemming folds plurals, so "singers" finds "Singer" but "dhol" never finds
+  # "dholak"); longer unknown words also match as word prefixes; a city matches the location (D)
+  # only. Devanagari spellings (गायक) are words like any other; alternatives with symbols ("a&r")
+  # or emoji match search_text by substring (trigram index).
+  #
+  # #score ranks a row by where each token hit: title/name/headline (A) 1100, roles/skills (B) 1060,
+  # anywhere else 1030, a city 1050, plus 10 when the word itself (not only a synonym) is there and
+  # up to 20 for trigram similarity of the whole query to the title. Every matched token adds at
+  # least 1,000, so in partial mode rows matching more words lead.
   class Query
     MAX_LENGTH = 100
     MAX_TOKENS = 8
@@ -27,18 +36,17 @@ module Search
     CODE_LIKE = /[;=<>{}\[\]$\\%_|`^~*]|--/
 
     # words: vocabulary alternatives, matched as whole words. prefixes: typed words, matched as
-    # word prefixes. location: a city, matched against location fields.
+    # word prefixes. location: a city, matched against the location (weight D) only.
     # known: the phrase is in the vocabulary (so it is never "corrected").
-    Token = Data.define(:text, :words, :prefixes, :location, :known) do
-      def initialize(text:, words:, prefixes:, location: false, known: true) = super
+    # weights: restricts a document match to these weights ("D" for a city, "AB" for a role filter).
+    # fuzzy: a word also matched by trigram word similarity (typo tolerance, see Search::Spelling).
+    Token = Data.define(:text, :words, :prefixes, :location, :known, :weights, :fuzzy) do
+      def initialize(text:, words:, prefixes:, location: false, known: true, weights: nil, fuzzy: nil)
+        super(text:, words:, prefixes:, location:, known:, weights: weights || (location ? "D" : nil), fuzzy:)
+      end
       def alternatives = (words + prefixes).uniq
       def location? = location
       def known? = known
-    end
-
-    # SQL text expressions by weight (columns, jsonb::text casts or scalar subqueries).
-    Fields = Data.define(:primary, :secondary, :tertiary, :location) do
-      def text = primary + secondary + tertiary
     end
 
     attr_reader :text, :tokens
@@ -87,6 +95,24 @@ module Search
       self.class.new([text, other.text].join(" "), tokens: tokens + other.tokens)
     end
 
+    # This query with every word matched against the location only (a "location" filter box).
+    def as_location = restrict("D", location: true)
+
+    # This query with every word restricted to the given document weights (e.g. "AB" for a role filter).
+    # The copy keeps what was typed, so an inert filter ("%") stays inert.
+    def restrict(weights, location: false)
+      dup.tap { _1.retoken(tokens.map { |token| token.with(weights:, location: location || token.location?) }) }
+    end
+
+    protected
+
+    def retoken(tokens)
+      @tokens = tokens
+      @tsqueries = nil
+    end
+
+    public
+
     # Something was typed but nothing searchable is left ("%", "' OR '1'='1"): matches no rows.
     def inert? = @typed && tokens.empty?
 
@@ -116,48 +142,110 @@ module Search
 
     # Rows matching every token (mode :all), or at least one (mode :partial; a query with any
     # non-location words must then match one of those, so a bare city never fills the list).
-    def condition(fields, mode: :all)
+    # `target` is a Search::Document (Search::Targets).
+    def condition(target, mode: :all)
       if mode == :partial
         # Stray one- and two-letter fragments ("1" from "<script>alert(1)") never carry a partial match.
         pool = tokens.reject(&:location?).select { _1.known? || _1.text.length >= 3 }.presence || tokens
-        "(#{pool.map { token_condition(_1, fields) }.join(' OR ')})"
+        "(#{pool.map { token_condition(_1, target) }.join(' OR ')})"
       else
-        "(#{tokens.map { token_condition(_1, fields) }.join(' AND ')})"
+        "(#{tokens.map { token_condition(_1, target) }.join(' AND ')})"
       end
     end
 
     # `scope` narrowed to rows matching every token; no rows for an inert query; unchanged when blank.
     # For structured filters (location, city, role), which never fall back to partial matches.
-    def filter(scope, fields)
+    def filter(scope, target)
       return scope.none if inert?
       return scope if blank?
-      scope.where(Arel.sql(condition(fields)))
+      scope.where(Arel.sql(condition(target)))
     end
 
     # A single token's condition (used to find the words that match nothing).
-    def token_condition(token, fields)
-      columns = token.location? && fields.location.any? ? fields.location : fields.text + fields.location
-      match(token, haystack(columns))
-    end
+    def token_condition(token, target) = document_condition(token, target)
 
-    # A relevance score: every matched token adds 1,000 (so rows matching more words come first
-    # in partial mode) plus its field weight, and trigram similarity to the title adds up to 20.
-    # Weights use a plain substring test: the WHERE clause has already applied the exact match.
-    def score(fields)
-      parts = tokens.map do |token|
-        if token.location?
-          "(CASE WHEN #{contains(token, haystack(fields.location.presence || fields.text))} THEN 1050 ELSE 0 END)"
-        else
-          branches = [[fields.primary, 1100], [fields.secondary, 1060], [fields.tertiary + fields.location, 1030]]
-          whens = branches.select { |columns, _| columns.any? }.map { |columns, weight| "WHEN #{contains(token, haystack(columns))} THEN #{weight}" }
-          "(CASE #{whens.join(' ')} ELSE 0 END)"
+    # A relevance score (see the class comment). `boost` (the query as typed, when this one was
+    # widened by a spelling fix) adds 500 to rows matching it, so exact matches stay ahead.
+    # `mode` is the match mode the rows were selected with (#condition).
+    def score(target, boost: nil, mode: :partial) = document_score(target, boost, mode == :all)
+
+    # The score as an ORDER BY term, best first.
+    def ranking(target, boost: nil, mode: :partial) = "(#{score(target, boost:, mode:)}) DESC"
+
+    # The tsquery an alternative list becomes, as SQL (nil when no alternative is a plain word), and
+    # the alternatives matched by substring instead (symbols such as "a&r", emoji).
+    # Whole words and phrases go through the English stemmer like the documents. A prefix is matched
+    # unstemmed against the documents' stems ("drumm" finds 'drummer') and also as a whole stemmed
+    # word ("producer" finds 'produc'); stemming the prefix itself would turn "table" into 'tabl':*,
+    # which finds "tabla".
+    # `weights` overrides the token's own restriction (the score asks "did it hit the title (A)?").
+    def tsquery(token, weights = token.weights)
+      @tsqueries ||= {}
+      @tsqueries[[token, weights]] ||= begin
+        restrict = weights.present? ? ":#{weights}" : ""
+        stemmed = []
+        prefixes = []
+        likes = []
+        [[token.words, false], [token.prefixes, true]].each do |list, prefix|
+          list.each do |alternative|
+            words = alternative.split(/[\s\-']+/).reject(&:empty?)
+            # Single letters ("a and r", "rock 'n' roll") would reduce to a stray lexeme: substring instead.
+            unless alternative.match?(TS_WORDS) && words.all? { _1.length > 1 }
+              likes << alternative
+              next
+            end
+            stemmed << words.map { "'#{_1}'#{restrict}" }.join(" <-> ")
+            prefixes << "'#{words.join(' ')}':*#{weights}" if prefix && words.one?
+          end
         end
+        parts = []
+        parts << "to_tsquery('#{Document::CONFIG}', #{quote(stemmed.uniq.join(' | '))})" if stemmed.any?
+        parts << "to_tsquery('simple', #{quote(prefixes.uniq.join(' | '))})" if prefixes.any?
+        [parts.any? ? "(#{parts.join(' || ')})" : nil, likes.uniq.map { quote("%#{ActiveRecord::Base.sanitize_sql_like(_1)}%") }]
       end
-      parts << "(20 * word_similarity(#{quote(text)}, COALESCE(#{fields.primary.first}, '')))" if fields.primary.any?
-      parts.join(" + ")
     end
 
     private
+
+    # Words a tsquery operand can carry as is: letters (any script: the parser keeps Devanagari
+    # words whole) and digits, with spaces, hyphens and apostrophes between words.
+    TS_WORDS = /\A[\p{L}\p{M}\p{N}]+(?:[\s\-']+[\p{L}\p{M}\p{N}]+)*\z/
+
+    def document_condition(token, document)
+      vector, text = token.location? ? [document.location_vector, document.location_text] : [document.vector, document.text]
+      tsquery_sql, likes = tsquery(token)
+      parts = []
+      parts << "#{vector} @@ #{tsquery_sql}" if tsquery_sql
+      parts << "#{text} LIKE ANY (ARRAY[#{likes.join(', ')}])" if likes.any?
+      parts << "#{document.text} %> #{quote(token.fuzzy)}" if token.fuzzy
+      parts.empty? ? "FALSE" : "(#{parts.join(' OR ')})"
+    end
+
+    # `matched`: every row already matches every token (mode :all), so a token's own condition need
+    # not be evaluated again for the lowest tier.
+    def document_score(document, boost, matched)
+      parts = tokens.map do |token|
+        condition = matched ? "TRUE" : document_condition(token, document)
+        next "(CASE WHEN #{condition} THEN 1050 ELSE 0 END)" if token.location?
+        tiers = { "A" => 1100, "B" => 1060 }.filter_map do |weight, points|
+          tiered, = tsquery(token, weight)
+          "WHEN #{document.vector} @@ #{tiered} THEN #{points}" if tiered
+        end
+        fuzzy = token.fuzzy ? " + (CASE WHEN #{document.text} %> #{quote(token.fuzzy)} THEN (20 * word_similarity(#{quote(token.fuzzy)}, #{document.text})) ELSE 0 END)" : ""
+        "(CASE #{[*tiers, "WHEN #{condition} THEN 1030"].join(' ')} ELSE 0 END)#{fuzzy}#{as_typed(token, document)}"
+      end
+      parts << "(20 * word_similarity(#{quote(text)}, COALESCE(#{document.title}, '')))"
+      parts << "(CASE WHEN #{boost.condition(document)} THEN 500 ELSE 0 END)" if boost && !boost.blank?
+      parts.join(" + ")
+    end
+
+    # 10 more when the row has the word as typed, not only a synonym or a broader term, so within a
+    # tier "harmonium" puts harmonium players ahead of the keyboardists it also searches.
+    def as_typed(token, document)
+      return "" if token.alternatives.size < 2 || !token.alternatives.include?(token.text)
+      typed, = tsquery(token.with(words: [token.text], prefixes: []))
+      typed ? " + (CASE WHEN #{document.vector} @@ #{typed} THEN 10 ELSE 0 END)" : ""
+    end
 
     def tokenize(text)
       words = text.split(" ").map { _1.gsub(EDGE_PUNCTUATION, "") }.reject(&:empty?)
@@ -202,10 +290,11 @@ module Search
       nil
     end
 
-    # An unknown word matches as a word prefix ("drum" finds "Drummer"); a two-letter one only as a
-    # whole word, so "ne" does not match every "new".
+    # An unknown word matches as a word prefix ("drumm" finds "Drummer"); a short one
+    # (Settings.prefix_min_length) only as a whole word, so "dhol" never matches every "dholak"
+    # and "ne" does not match every "new".
     def plain(word)
-      return Token.new(text: word, words: [word], prefixes: [], known: false) if word.length < 3
+      return Token.new(text: word, words: [word], prefixes: [], known: false) if word.length < Settings.prefix_min_length
       Token.new(text: word, words: [], prefixes: [word, self.class.singular(word)].uniq, known: false)
     end
 
@@ -222,43 +311,6 @@ module Search
       return word[0...-1] if word.end_with?("s")
       word
     end
-
-    # All `columns` as one text, so a token costs one regex per row rather than one per column.
-    def haystack(columns) = columns.one? ? "COALESCE(#{columns.first}, '')" : "concat_ws(' ; ', #{columns.join(', ')})"
-
-    # SQL: the token matches `expression`. ASCII alternatives become one case-insensitive regular
-    # expression anchored at word starts; other scripts (e.g. Devanagari) use a substring match.
-    def match(token, expression)
-      regex, likes = pattern(token)
-      conditions = []
-      conditions << "#{expression} ~* #{regex}" if regex
-      conditions << "lower(#{expression}) LIKE ANY (ARRAY[#{likes.join(', ')}])" if likes.any?
-      "(#{conditions.join(' OR ')})"
-    end
-
-    # SQL: some alternative of the token occurs in `expression` (case-insensitive substring).
-    def contains(token, expression)
-      likes = token.alternatives.map { quote("%#{ActiveRecord::Base.sanitize_sql_like(_1)}%") }
-      "(lower(#{expression}) LIKE ANY (ARRAY[#{likes.join(', ')}]))"
-    end
-
-    def pattern(token)
-      @patterns ||= {}
-      @patterns[token] ||= begin
-        whole, prefix = [token.words, token.prefixes].map { |list| list.select { _1.match?(ASCII) } }
-        # A word that ends in punctuation has no word end to anchor, so it matches as a prefix.
-        prefix += whole.reject { _1.match?(/[[:alnum:]]\z/) }
-        whole = whole.select { _1.match?(/[[:alnum:]]\z/) }
-        patterns = []
-        patterns << "\\m(?:#{whole.map { regex_escape(_1) }.join('|')})(?:s|es)?\\M" if whole.any?
-        patterns << "\\m(?:#{prefix.uniq.map { regex_escape(_1) }.join('|')})" if prefix.any?
-        likes = token.alternatives.reject { _1.match?(ASCII) }.map { quote("%#{ActiveRecord::Base.sanitize_sql_like(_1)}%") }
-        [patterns.any? ? quote(patterns.join("|")) : nil, likes]
-      end
-    end
-
-    # Escapes every character that is not a letter, digit or space for a PostgreSQL regex.
-    def regex_escape(text) = text.gsub(/[^a-z0-9 ]/i) { "\\#{_1}" }
 
     def quote(value) = ActiveRecord::Base.lease_connection.quote(value)
   end

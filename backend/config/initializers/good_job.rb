@@ -87,6 +87,12 @@ Rails.application.configure do
       class: "FounderReportJob",
       description: "Email the founders last week's numbers (organic accounts only) and what needs them"
     },
+    search_index_sweep: {
+      cron: "21 2 * * *",
+      class: "SearchIndexBackfillJob",
+      kwargs: { missing_only: true },
+      description: "Build the search documents of rows written without model callbacks (bulk inserts)"
+    },
     fast_responder_week: {
       # Monday 00:20 IST — after the week just ended, before that day's own urgent traffic.
       cron: "50 18 * * 0",

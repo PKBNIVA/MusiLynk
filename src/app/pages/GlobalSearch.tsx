@@ -1,9 +1,9 @@
 import { usePageMeta } from '../components/PageMeta';
 import { FormEvent, useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Briefcase, Music, PlayCircle, Search, Sparkles, Users } from 'lucide-react';
 import { PublicNav } from '../components/PublicNav';
-import { Input } from '../components/ui/input';
+import { SearchSuggestInput } from '../components/SearchSuggestInput';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -37,6 +37,7 @@ const isType = (value: string): value is ResultType => (TYPES as string[]).inclu
 
 export default function GlobalSearch() {
   const [sp, setSp] = useSearchParams();
+  const navigate = useNavigate();
   const query = sp.get('q') || '';
   const rawType = sp.get('type') || 'all';
   const selectedType = isType(rawType) ? rawType : 'all';
@@ -118,12 +119,16 @@ export default function GlobalSearch() {
             <label htmlFor="network-search" className="sr-only">
               Search MusiLynk
             </label>
-            <Search className="absolute left-3.5 top-3.5 text-slate-400" size={18} />
-            <Input
+            <Search className="pointer-events-none absolute left-3.5 top-3.5 z-10 text-slate-400" size={18} />
+            <SearchSuggestInput
               id="network-search"
               value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="h-12 border-white/15 bg-black/20 pl-11"
+              onValueChange={setQ}
+              onSelect={(suggestion) => {
+                if (suggestion.url) navigate(suggestion.url);
+                else searchFor(suggestion.query ?? suggestion.label);
+              }}
+              className="flex h-12 w-full min-w-0 rounded-xl border border-white/15 bg-black/20 py-2 pl-11 pr-3.5 text-base outline-none transition-[color,background-color,box-shadow,border-color] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
               placeholder="Role, instrument, genre, city or skill…"
             />
           </div>

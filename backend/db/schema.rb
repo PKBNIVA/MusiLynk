@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_03_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -105,10 +105,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_180000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "photo_url"
+    t.tsvector "search_vector"
+    t.text "search_text"
     t.index "((genres)::text) gin_trgm_ops", name: "index_acts_on_genres_text_trgm", using: :gin
     t.index ["bio"], name: "index_acts_on_bio", opclass: :gin_trgm_ops, using: :gin
     t.index ["name"], name: "index_acts_on_name", opclass: :gin_trgm_ops, using: :gin
     t.index ["owner_id"], name: "index_acts_on_owner_id"
+    t.index ["search_text"], name: "index_acts_on_search_text_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["search_vector"], name: "index_acts_on_search_vector", using: :gin
     t.index ["tagline"], name: "index_acts_on_tagline", opclass: :gin_trgm_ops, using: :gin
   end
 
@@ -765,11 +769,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_180000) do
     t.datetime "updated_at", null: false
     t.string "posted_as_type"
     t.string "posted_as_id"
+    t.tsvector "search_vector"
+    t.text "search_text"
     t.index "((skills)::text) gin_trgm_ops", name: "index_jobs_on_skills_text_trgm", using: :gin
     t.index ["company"], name: "index_jobs_on_company", opclass: :gin_trgm_ops, using: :gin
     t.index ["description"], name: "index_jobs_on_description", opclass: :gin_trgm_ops, using: :gin
     t.index ["employer_id"], name: "index_jobs_on_employer_id"
     t.index ["posted_as_type", "posted_as_id"], name: "index_jobs_on_posted_as_type_and_posted_as_id", where: "(posted_as_id IS NOT NULL)"
+    t.index ["search_text"], name: "index_jobs_on_search_text_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["search_vector"], name: "index_jobs_on_search_vector", using: :gin
     t.index ["status", "created_at"], name: "index_jobs_on_status_and_created_at"
     t.index ["title"], name: "index_jobs_on_title", opclass: :gin_trgm_ops, using: :gin
   end
@@ -879,10 +887,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_180000) do
     t.boolean "featured", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.tsvector "search_vector"
+    t.text "search_text"
     t.index "((genres)::text) gin_trgm_ops", name: "index_portfolio_items_on_genres_text_trgm", using: :gin
     t.index "((roles)::text) gin_trgm_ops", name: "index_portfolio_items_on_roles_text_trgm", using: :gin
     t.index "((tags)::text) gin_trgm_ops", name: "index_portfolio_items_on_tags_text_trgm", using: :gin
     t.index ["description"], name: "index_portfolio_items_on_description", opclass: :gin_trgm_ops, using: :gin
+    t.index ["search_text"], name: "index_portfolio_items_on_search_text_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["search_vector"], name: "index_portfolio_items_on_search_vector", using: :gin
     t.index ["title"], name: "index_portfolio_items_on_title", opclass: :gin_trgm_ops, using: :gin
     t.index ["user_id"], name: "index_portfolio_items_on_user_id"
   end
@@ -1061,10 +1073,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_180000) do
     t.string "photo_url"
     t.jsonb "event_types", default: [], null: false
     t.jsonb "push_preferences", default: {}, null: false
+    t.tsvector "search_vector"
+    t.text "search_text"
     t.index "((roles)::text) gin_trgm_ops", name: "index_profiles_on_roles_text_trgm", using: :gin
     t.index "((skills)::text) gin_trgm_ops", name: "index_profiles_on_skills_text_trgm", using: :gin
     t.index ["bio"], name: "index_profiles_on_bio", opclass: :gin_trgm_ops, using: :gin
     t.index ["headline"], name: "index_profiles_on_headline", opclass: :gin_trgm_ops, using: :gin
+    t.index ["search_text"], name: "index_profiles_on_search_text_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["search_vector"], name: "index_profiles_on_search_vector", using: :gin
   end
 
   create_table "promo_codes", id: :string, force: :cascade do |t|

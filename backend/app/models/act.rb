@@ -1,4 +1,6 @@
 class Act < ApplicationRecord
+  include SearchIndexed
+  search_document "acts", fields: %i[name act_type genres event_types languages tagline bio city]
   belongs_to :owner, class_name: "User"
   has_many :act_members, dependent: :destroy
   has_many :act_invites, dependent: :destroy

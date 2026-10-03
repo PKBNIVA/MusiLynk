@@ -4,7 +4,8 @@ require "test_helper"
 # phone-verification, vouching and password timestamps (and a search-only counter column) that
 # must never reach an anonymous visitor.
 class PublicPayloadAllowListTest < ActionDispatch::IntegrationTest
-  LEAKED_KEYS = %w[password_set_at consented_at phone_verified_at vouched_by_id email_verified profile_complete search_total].freeze
+  LEAKED_KEYS = %w[password_set_at consented_at phone_verified_at vouched_by_id email_verified profile_complete search_total
+    search_vector search_text searchVector searchText].freeze
 
   setup do
     @voucher = create_user("Voucher Person", "voucher-allow@example.com")
@@ -15,7 +16,7 @@ class PublicPayloadAllowListTest < ActionDispatch::IntegrationTest
     @headers = { "Authorization" => "Bearer #{session_for(@viewer)}" }
   end
 
-  test "the seven leaked keys are absent from every public talent endpoint" do
+  test "the internal keys are absent from every public talent endpoint" do
     get "/api/public/talent", params: { q: "drummer" }
     assert_response :success
     assert_operator response.parsed_body["talent"].length, :>=, 1

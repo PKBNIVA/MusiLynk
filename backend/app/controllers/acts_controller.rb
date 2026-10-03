@@ -2,7 +2,6 @@ class ActsController < ApplicationController
   include ListPaging
   LIST_PARAMS = %i[q city type genre eventType member limit cursor].freeze
   LIST_ORDER = ["acts.verified DESC", "acts.updated_at DESC", "acts.id ASC"].freeze
-  CITY_FIELDS = Search::Query::Fields.new(primary: [], secondary: [], tertiary: [], location: ["acts.city"])
   # Only "confirmed" exists today: public lineups show confirmed members and no flow sets another status.
   MEMBER_STATUSES = %w[confirmed].freeze
 
@@ -116,7 +115,7 @@ class ActsController < ApplicationController
     offset = list_offset
     return render_invalid_cursor if offset.nil?
     scope = public_visible(Act.includes(:act_members, owner: :profile).where(status: "active"))
-    scope = Search::Query.new(params[:city]).filter(scope, CITY_FIELDS)
+    scope = Search::Query.new(params[:city]).as_location.filter(scope, Search::Targets::ACTS)
     scope = scope.where("acts.act_type ILIKE ?", ActiveRecord::Base.sanitize_sql_like(params[:type].to_s.strip)) if params[:type].present?
     scope = scope.where("acts.genres::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:genre].to_s.strip)}%") if params[:genre].present?
     scope = scope.where("acts.event_types::text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:eventType].to_s.strip)}%") if params[:eventType].present?
@@ -132,7 +131,7 @@ class ActsController < ApplicationController
   end
 
   # Same rule as talent: non-demo synthetic QA batches are only visible to synthetic viewers.
-  def public_visible(scope) = current_user&.synthetic_batch.present? ? scope : SyntheticQa::Demo.publicly_listed(scope.joins(:owner))
+  def public_visible(scope) = current_user&.synthetic_batch.present? ? scope : SyntheticQa::Demo.publicly_listed_acts(scope)
 
   # A photo must be an image the caller uploaded (or the one the act already has); anything else is refused.
   def photo_allowed?(act)

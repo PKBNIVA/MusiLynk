@@ -1,0 +1,281 @@
+{
+ "talent": [
+  {
+   "id": "user_718f8bcd-f27c-4971-80f1-9063132ecf9d",
+   "name": "Darius Mistry",
+   "role": "jobseeker",
+   "headline": "Guitarist \u00b7 Rock & Blues \u00b7 10 years",
+   "location": "Mumbai",
+   "genres": [
+    "Rock",
+    "Blues"
+   ],
+   "instruments": [
+    "Electric Guitar",
+    "Acoustic Guitar"
+   ],
+   "roles": [
+    "Guitarist",
+    "Arranger"
+   ],
+   "verified": true,
+   "sessionRate": 8100,
+   "showRate": 26700,
+   "dayRate": 13800,
+   "hourlyRate": null,
+   "currency": "INR",
+   "photoUrl": null,
+   "demo": true,
+   "verification": {
+    "checks": [
+     "identity",
+     "work_links"
+    ],
+    "verifiedAt": "2026-09-28T17:46:04.000Z"
+   },
+   "openTo": [
+    "sessions",
+    "shows",
+    "touring"
+   ],
+   "skills": [
+    "Rhythm guitar",
+    "Lead guitar",
+    "Chord charts",
+    "Arranger"
+   ],
+   "availability": "Booking from next month"
+  },
+  {
+   "id": "user_2faea570-d0b7-4930-909c-3d18dc3df75b",
+   "name": "Aashna Grewal",
+   "role": "jobseeker",
+   "headline": "Singer \u00b7 Indie Pop & Pop \u00b7 6 years",
+   "location": "Mumbai",
+   "genres": [
+    "Indie Pop",
+    "Pop"
+   ],
+   "instruments": [
+    "Vocals"
+   ],
+   "roles": [
+    "Singer",
+    "Backing vocalist"
+   ],
+   "verified": true,
+   "sessionRate": 6400,
+   "showRate": 21100,
+   "dayRate": 10900,
+   "hourlyRate": null,
+   "currency": "INR",
+   "photoUrl": null,
+   "demo": true,
+   "verification": {
+    "checks": [
+     "identity",
+     "work_links"
+    ],
+    "verifiedAt": "2026-09-24T17:46:04.000Z"
+   },
+   "openTo": [
+    "sessions",
+    "shows",
+    "weddings"
+   ],
+   "skills": [
+    "Live vocals",
+    "Harmonies",
+    "Set list planning",
+    "Backing vocalist"
+   ],
+   "availability": "Booking from next month"
+  },
+  {
+   "id": "user_195e6840-aba2-4daf-b855-49cf4b4fbda1",
+   "name": "Tanmoy Chakraborty",
+   "role": "jobseeker",
+   "headline": "Keyboard player \u00b7 Western Classical & Classical \u00b7 9 years",
+   "location": "Mumbai",
+   "genres": [
+    "Western Classical",
+    "Classical"
+   ],
+   "instruments": [
+    "Keyboard",
+    "Piano"
+   ],
+   "roles": [
+    "Keyboard player",
+    "Arranger"
+   ],
+   "verified": true,
+   "sessionRate": 8200,
+   "showRate": 27100,
+   "dayRate": 13900,
+   "hourlyRate": null,
+   "currency": "INR",
+   "photoUrl": null,
+   "demo": true,
+   "verification": {
+    "checks": [
+     "identity",
+     "work_links"
+    ],
+    "verifiedAt": "2026-08-27T17:46:04.000Z"
+   },
+   "openTo": [
+    "sessions",
+    "shows",
+    "touring"
+   ],
+   "skills": [
+    "Chord charts",
+    "Arranging",
+    "Transposing",
+    "Sound patches",
+    "Arranger"
+   ],
+   "availability": "Available for the wedding season"
+  },
+  {
+   "id": "user_7f614ed9-ede1-4885-a962-c5b50409eb20",
+   "name": "Sukhdev Dhillon",
+   "role": "jobseeker",
+   "headline": "Dhol player \u00b7 Punjabi & Bhangra \u00b7 12 years",
+   "location": "Mumbai",
+   "genres": [
+    "Punjabi",
+    "Bhangra"
+   ],
+   "instruments": [
+    "Dhol"
+   ],
+   "roles": [
+    "Dhol player",
+    "Dholak player",
+    "Band leader",
+    "Band manager"
+   ],
+   "verified": true,
+   "sessionRate": 7900,
+   "showRate": 26100,
+   "dayRate": 13400,
+   "hourlyRate": null,
+   "currency": "INR",
+   "photoUrl": null,
+   "demo": true,
+   "verification": {
+    "checks": [
+     "identity",
+     "work_links"
+    ],
+    "verifiedAt": "2026-09-08T17:46:04.000Z"
+   },
+   "openTo": [
+    "shows",
+    "weddings",
+    "sessions"
+   ],
+   "skills": [
+    "Baraat rhythms",
+    "Stage entries",
+    "Playing with DJs",
+    "Dholak player"
+   ],
+   "availability": "Weekends open"
+  },
+  {
+   "id": "user_bc98d132-e749-46f2-b70f-41d54668f1a7",
+   "name": "Ryan D'Souza",
+   "role": "jobseeker",
+   "headline": "Violinist \u00b7 Pop & Rock \u00b7 3 years",
+   "location": "Mumbai",
+   "genres": [
+    "Pop",
+    "Rock"
+   ],
+   "instruments": [
+    "Violin"
+   ],
+   "roles": [
+    "Violinist",
+    "Session musician"
+   ],
+   "verified": true,
+   "sessionRate": 4800,
+   "showRate": 15800,
+   "dayRate": 8200,
+   "hourlyRate": null,
+   "currency": "INR",
+   "photoUrl": null,
+   "demo": true,
+   "verification": {
+    "checks": [
+     "identity",
+     "work_links"
+    ],
+    "verifiedAt": "2026-09-16T17:46:04.000Z"
+   },
+   "openTo": [
+    "sessions",
+    "shows",
+    "weddings"
+   ],
+   "skills": [
+    "Sight-reading",
+    "String arrangements",
+    "Overdubbing",
+    "Session musician"
+   ],
+   "availability": "Booking from next month"
+  },
+  {
+   "id": "user_5cb048d6-77c8-4282-a751-ca9b32fb0ad0",
+   "name": "Delna Chothia",
+   "role": "jobseeker",
+   "headline": "Sound engineer \u00b7 Rock & Pop \u00b7 12 years",
+   "location": "Mumbai",
+   "genres": [
+    "Rock",
+    "Pop"
+   ],
+   "instruments": [],
+   "roles": [
+    "Sound engineer",
+    "Monitor engineer",
+    "FOH engineer"
+   ],
+   "verified": true,
+   "sessionRate": 9600,
+   "showRate": 31700,
+   "dayRate": 16300,
+   "hourlyRate": null,
+   "currency": "INR",
+   "photoUrl": null,
+   "demo": true,
+   "verification": {
+    "checks": [
+     "identity",
+     "work_links"
+    ],
+    "verifiedAt": "2026-09-12T17:46:04.000Z"
+   },
+   "openTo": [
+    "shows",
+    "freelance",
+    "touring"
+   ],
+   "skills": [
+    "Live mixing",
+    "System tuning",
+    "Line checks",
+    "Monitor mixes",
+    "Monitor engineer"
+   ],
+   "availability": "Booking from next month"
+  }
+ ],
+ "nextCursor": "eyJvZmZzZXQiOjZ9",
+ "total": 70
+}

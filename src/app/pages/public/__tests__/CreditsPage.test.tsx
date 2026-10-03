@@ -67,18 +67,27 @@ describe('photo credits', () => {
 describe('public/img', () => {
   const imgDir = join(ROOT, 'public/img');
 
-  it('has an 800 and a 1600 variant for every credit (the hero also 640, 960, 1280) and no uncredited files', () => {
+  it('has every width of every credit in AVIF and WebP (the hero its own widths) and no uncredited files', () => {
     const expected = IMAGE_CREDITS.flatMap((c) =>
-      (c.file === HERO_PHOTO ? HERO_PHOTO_WIDTHS : PHOTO_WIDTHS).map((w) => `${c.file}-${w}.webp`),
+      (c.file === HERO_PHOTO ? HERO_PHOTO_WIDTHS : PHOTO_WIDTHS).flatMap((w) => [
+        `${c.file}-${w}.avif`,
+        `${c.file}-${w}.webp`,
+      ]),
     ).sort();
     expect(readdirSync(imgDir).sort()).toEqual(expected);
   });
 
-  it('keeps the set under 4 MB with each 1600 variant at most 160 KB', () => {
+  it('keeps the set under 8 MB with each 1600 variant at most 160 KB and each AVIF smaller than its WebP', () => {
+    // 2026-10-03: 7.0 MB with the AVIF variants (scripts/perf/build-photos.mjs); was 4 MB for WebP alone.
     const files = readdirSync(imgDir);
-    expect(files.reduce((sum, f) => sum + statSync(join(imgDir, f)).size, 0)).toBeLessThan(4 * 1024 * 1024);
+    expect(files.reduce((sum, f) => sum + statSync(join(imgDir, f)).size, 0)).toBeLessThan(8 * 1024 * 1024);
     for (const f of files.filter((name) => name.endsWith('-1600.webp'))) {
       expect(statSync(join(imgDir, f)).size, f).toBeLessThanOrEqual(160 * 1024);
+    }
+    for (const f of files.filter((name) => name.endsWith('.avif'))) {
+      expect(statSync(join(imgDir, f)).size, f).toBeLessThan(
+        statSync(join(imgDir, f.replace(/\.avif$/, '.webp'))).size,
+      );
     }
   });
 

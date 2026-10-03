@@ -184,9 +184,33 @@ function loadSentry(): Promise<boolean> {
     });
 }
 
+/** Longest the Sentry download waits after the page has loaded; a busy page still gets reporting. */
+const SENTRY_IDLE_TIMEOUT_MS = 3_000;
+/** Longest the page's own loading may hold the Sentry download back (a stalled image must not block it). */
+const SENTRY_LOAD_TIMEOUT_MS = 8_000;
+
+/** Runs `start` once the page has finished loading (first paint, hero image, route chunk) and the browser is idle. */
+function afterLoadAndIdle(start: () => void) {
+  let started = false;
+  const once = () => {
+    if (started) return;
+    started = true;
+    // Not every browser has requestIdleCallback (Safari), whatever the DOM typings say.
+    const idle: typeof window.requestIdleCallback | undefined = window.requestIdleCallback;
+    if (idle) idle(start, { timeout: SENTRY_IDLE_TIMEOUT_MS });
+    else window.setTimeout(start, 1_000);
+  };
+  if (document.readyState === 'complete') once();
+  else {
+    window.addEventListener('load', once, { once: true });
+    window.setTimeout(once, SENTRY_LOAD_TIMEOUT_MS);
+  }
+}
+
 /**
  * Starts error reporting. Without a DSN this does nothing at all. With one, early errors
- * are queued immediately and the Sentry chunk loads once the browser is idle.
+ * are queued immediately and the Sentry chunk (the largest lazy chunk) loads only after the
+ * page has finished loading and the browser is idle, so it never competes with the first paint.
  */
 export function initMonitoring() {
   if (!SENTRY_DSN || loading || typeof window === 'undefined') return;
@@ -194,13 +218,9 @@ export function initMonitoring() {
   window.addEventListener('unhandledrejection', onEarlyRejection);
   startWebVitals((vital) => reportWebVital(vital));
   loading = new Promise<boolean>((resolve) => {
-    const start = () => {
+    afterLoadAndIdle(() => {
       void loadSentry().then(resolve);
-    };
-    // Not every browser has requestIdleCallback (Safari), whatever the DOM typings say.
-    const idle: typeof window.requestIdleCallback | undefined = window.requestIdleCallback;
-    if (idle) idle(start, { timeout: 2_000 });
-    else window.setTimeout(start, 1_000);
+    });
   });
 }
 

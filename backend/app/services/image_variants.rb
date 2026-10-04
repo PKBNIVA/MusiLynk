@@ -16,6 +16,8 @@ module ImageVariants
   IMAGE_TYPES = %w[image/jpeg image/png image/webp].freeze
   # The libvips loader each type must come through (`vips-loader` header field).
   LOADERS = { "image/jpeg" => "jpegload", "image/png" => "pngload", "image/webp" => "webpload" }.freeze
+  # Ids per ActiveJob.perform_all_later insert in enqueue_backfill.
+  BACKFILL_BATCH = 500
 
   # The file is not the image the row describes, or is too large to decode. Final: no retry.
   class Rejected < StandardError; end
@@ -104,6 +106,31 @@ module ImageVariants
         end
       end
       { "width" => original.width, "height" => original.height, "formats" => produced.to_h }
+    end
+
+    # The finished bucket images that can have variants (Upload#variants_possible?, as a relation):
+    # without variants unless `force`, at most `limit` rows.
+    def backfill_scope(force: false, limit: nil)
+      scope = Upload.complete.where(content_type: IMAGE_TYPES, storage: "s3").where.not(public_url: nil)
+      scope = scope.where(variants: {}) unless force
+      scope = scope.limit(limit) if limit
+      scope
+    end
+
+    # Enqueues ImageVariantsJob (queue default) for every row of backfill_scope, `batch` ids per insert,
+    # and returns the number queued; yields the running total after each batch. Idempotent: a row
+    # with variants is not queued again (unless `force`), so a second run queues nothing new.
+    # Called by `bin/rails images:backfill` (which adds the production CONFIRM guard) and by the
+    # migration that follows the variants column (db/migrate/20261004090000_enqueue_image_variants_backfill.rb).
+    def enqueue_backfill(limit: nil, force: false, batch: BACKFILL_BATCH)
+      enqueued = 0
+      backfill_scope(force:, limit:).in_batches(of: batch).each do |relation|
+        ids = relation.pluck(:id)
+        ActiveJob.perform_all_later(ids.map { ImageVariantsJob.new(_1) })
+        enqueued += ids.length
+        yield enqueued if block_given?
+      end
+      enqueued
     end
 
     # Test seam: forget the per-process encoder probe and settings.

@@ -87,15 +87,21 @@ downloads the 512 px (or 5 MB) original:
   `sizes` per placement and width/height set, lazy below the fold.
 - **Deletion.** `Upload#purge!` and the daily `UploadSweepJob` delete the variants with the original;
   the bucket sweep treats `<key>/v/...` objects as belonging to `<key>`.
-- **Backfill (existing uploads).** `cd backend && bin/rails images:backfill` enqueues the job for
+- **Backfill (existing uploads).** The deploy that follows the variants column queues the job once
+  for every finished bucket image without variants, from the migration
+  `backend/db/migrate/20261004090000_enqueue_image_variants_backfill.rb` (it logs
+  `image_variants_backfill_enqueued` with the count; a queue it cannot reach logs
+  `image_variants_backfill_skipped` and never fails the deploy). The same logic is
+  `ImageVariants.enqueue_backfill`, which the manual task below calls for a retry, a `FORCE` run or
+  a trial. `cd backend && bin/rails images:backfill` enqueues the job for
   every finished bucket image without variants, 500 ids per batch (`BATCH=n`), prints the
   environment and the count first, then progress; it is idempotent (a second run queues nothing
   new). `FORCE=1` redoes uploads that already have variants (after changing the widths or
   qualities); `LIMIT=n` stops after n uploads for a trial run. **Admin only, from a Railway shell on
   the API service**, after the deploy that adds the column; in production it refuses to run without
   `CONFIRM=images-backfill`, because every queued job lands on the worker's single-thread default
-  pool ahead of the cron sweeps. It has not been run against production by an agent: the owner runs
-  it (expect roughly 1 to 3 s per upload on the worker). Variants left by a run that stopped halfway
+  pool ahead of the cron sweeps. The first production run is the migration's, not an agent's or a
+  shell's (expect roughly 1 to 3 s per upload on the worker). Variants left by a run that stopped halfway
   stay in the bucket until the original is purged, then the sweep removes them with it.
 - **Safety.** The job re-checks the downloaded object against its row (size, magic bytes), lets
   libvips use only its JPEG/PNG/WebP loaders (`Vips.block_untrusted`), and refuses images over

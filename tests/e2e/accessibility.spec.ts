@@ -15,9 +15,15 @@ import { CONVERSATION_ID, REPORT_JOB_ID, signInWithDialogFixtures } from './supp
 // The accessibility gate (CI job `accessibility` in .github/workflows/rails-and-web.yml). It runs axe-core's
 // WCAG 2.1 A/AA rules over every public route scripts/prerender-heads.mjs bakes a head or a body for, the
 // signed-in core screens against the mocked API, and the in-app dialogs, on the desktop and phone projects
-// plus the iphone-se / pixel-7 device matrix (playwright.config.ts). Any violation fails the route: a
-// serious or critical one always, a moderate or minor one unless it is listed in ACCEPTED below with the
-// design decision it waits on.
+// plus a small iphone-se smoke subset (playwright.config.ts). Any violation fails the route: a serious or
+// critical one always, a moderate or minor one unless it is listed in ACCEPTED below with the design
+// decision it waits on.
+//
+// Runtime is the budget (the CI job has to finish in under four minutes), and axe itself is the cost, about
+// one analyse per test. So: every route runs on chromium-desktop; chromium-mobile (Pixel 7) repeats all of
+// them except the prose-only pages tagged @desktop-only, which share one template with a page that does run
+// there; the 320 px iPhone SE project repeats only the tests tagged @smoke. Pixel 7 is the chromium-mobile
+// device already, so there is no separate pixel-7 project.
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
@@ -36,7 +42,10 @@ const describeViolation = (v: { impact?: string | null; id: string; help: string
 
 /** Runs axe over the page (or `scope` within it), attaches the findings and fails on any violation not accepted. */
 async function expectNoViolations(page: Page, testInfo: TestInfo, path: string, scope?: string) {
-  let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+  // resultTypes keeps axe from serialising the passing nodes it would otherwise return, which is most of
+  // its output on a populated page; only violations are read here. options() replaces the builder's options,
+  // so it must come before withTags (which sets runOnly) or the tag filter is silently dropped.
+  let builder = new AxeBuilder({ page }).options({ resultTypes: ['violations'] }).withTags(WCAG_TAGS);
   if (scope) builder = builder.include(scope);
   const { violations } = await builder.analyze();
   if (violations.length) {
@@ -88,6 +97,25 @@ const publicRoutes = [...accessibilityRoutes, ...metaRoutes, ...seoRoutes].filte
   ([, path], index, all) => all.findIndex(([, other]) => other === path) === index,
 );
 
+// Prose pages that share the legal/document template with /terms (which does run on phones), so a second
+// viewport adds an axe run and no new markup. Everything else runs on chromium-desktop and chromium-mobile.
+const DESKTOP_ONLY = new Set(['/privacy', '/refund-policy', '/accessibility', '/community-guidelines', '/credits']);
+// The iphone-se project's subset: one page per layout family, the narrowest-viewport risks (wrapping cards,
+// the nav menu, filter bars, the thread view).
+const SMOKE_PUBLIC = new Set([
+  '/',
+  '/search',
+  '/auth/jobseeker',
+  '/hire/drummer/mumbai',
+  recordPages['/professionals/:id'],
+]);
+const SMOKE_SIGNED_IN = new Set(['Musician dashboard', 'Messages with an open thread']);
+const publicTags = (path: string) => [
+  '@sweep',
+  ...(SMOKE_PUBLIC.has(path) ? ['@smoke'] : []),
+  ...(DESKTOP_ONLY.has(path) ? ['@desktop-only'] : []),
+];
+
 /** The literal paths of an exported array or object in scripts/prerender-heads.mjs. */
 function prerenderedPaths(source: string, name: string) {
   const block = source.match(new RegExp(`export const ${name} = [\\[{]([\\s\\S]*?)[\\]}];`));
@@ -96,7 +124,8 @@ function prerenderedPaths(source: string, name: string) {
 }
 
 test.describe('WCAG accessibility and colour contrast', () => {
-  test('every route prerender-heads.mjs writes is in this sweep', { tag: '@sweep' }, () => {
+  // A file check, not a page: one project is enough.
+  test('every route prerender-heads.mjs writes is in this sweep', { tag: '@desktop-only' }, () => {
     const source = readFileSync(join(process.cwd(), 'scripts', 'prerender-heads.mjs'), 'utf8');
     const swept = new Set(publicRoutes.map(([, path]) => path));
     const missing = [
@@ -110,7 +139,7 @@ test.describe('WCAG accessibility and colour contrast', () => {
   for (const [name, path] of publicRoutes) {
     test(
       `${name} has no automatically detectable WCAG A/AA violations`,
-      { tag: '@sweep' },
+      { tag: publicTags(path) },
       async ({ page }, testInfo) => {
         await openSettledPage(page, path, seoFixtures[path]);
         await settle(page);
@@ -127,7 +156,7 @@ test.describe('WCAG accessibility of the signed-in core screens', () => {
   for (const screen of signedInScreens) {
     test(
       `${screen.name} has no automatically detectable WCAG A/AA violations`,
-      { tag: '@sweep' },
+      { tag: SMOKE_SIGNED_IN.has(screen.name) ? ['@sweep', '@smoke'] : '@sweep' },
       async ({ page }, testInfo) => {
         await signInForAccessibility(page, screen.role);
         await page.goto(screen.path);

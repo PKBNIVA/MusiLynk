@@ -31,25 +31,19 @@ const adminSpecs = /[\\/]admin-[^\\/]*\.spec\.ts$/;
 const adminSiteUrl = localOrigin(3);
 // Mocked-API runs only: live and integration runs have no admin build to open.
 const adminSiteRun = !liveBaseUrl && !integrationRun && !appServerOnly;
-// Device matrix for the accessibility gate (tests/e2e/accessibility.spec.ts) only: the narrowest phone
-// the layout supports (iPhone SE, 320 px) and a current Android phone. Playwright's iPhone SE
-// descriptor defaults to WebKit, which CI does not install, so it runs in Chromium here; the
-// viewport, scale factor, touch and mobile emulation are what the sweep is after.
-// They repeat the route sweep (tests tagged @sweep) only; the dialog, form and interaction checks in that
-// spec run on chromium-desktop and chromium-mobile as before.
+// Device matrix for the accessibility gate (tests/e2e/accessibility.spec.ts) only: the narrowest phone the
+// layout supports (iPhone SE, 320 px), on a smoke subset of the route sweep (tests tagged @smoke) because
+// axe is the run time. Playwright's iPhone SE descriptor defaults to WebKit, which CI does not install, so
+// it runs in Chromium here; the viewport, scale factor, touch and mobile emulation are what the sweep is
+// after. The Pixel 7 half of the matrix is chromium-mobile (the same descriptor), which runs every route.
+// Prose pages tagged @desktop-only are skipped on chromium-mobile (see the comment in the spec).
 const accessibilitySpec = /[\\/]accessibility\.spec\.ts$/;
 const deviceProjects = [
   {
     name: 'iphone-se',
     testMatch: accessibilitySpec,
-    grep: /@sweep/,
+    grep: /@smoke/,
     use: { ...devices['iPhone SE'], defaultBrowserType: 'chromium' as const },
-  },
-  {
-    name: 'pixel-7',
-    testMatch: accessibilitySpec,
-    grep: /@sweep/,
-    use: { ...devices['Pixel 7'] },
   },
 ];
 
@@ -62,6 +56,7 @@ const browserProjects = [
   {
     name: 'chromium-mobile',
     testIgnore: [apiSpecs, adminSpecs],
+    grepInvert: /@desktop-only/,
     use: { ...devices['Pixel 7'] },
   },
   ...(fullMatrix

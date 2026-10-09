@@ -8,7 +8,7 @@ import { shareCopy } from '../../lib/share';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { apiGet } from '../../lib/api';
+import { cachedGet, peek, subscribe } from '../../lib/dataCache';
 import { errorMessage, errorStatus } from '../../lib/errors';
 import type { Job } from '../../lib/apiTypes';
 import { JobHero } from '../../components/JobHero';
@@ -21,14 +21,15 @@ import { jobPostingJsonLd } from './jobPostingJsonLd';
 export default function PublicOpportunity() {
   const { id } = useParams();
   const { isAuthenticated, status } = useAuth();
-  const [j, setJ] = useState<Job>(),
-    [loading, setLoading] = useState(true),
+  const jobPath = `/jobs/${encodeURIComponent(id || '')}`;
+  const [j, setJ] = useState<Job | undefined>(() => peek<{ job?: Job }>(jobPath)?.job),
+    [loading, setLoading] = useState(() => peek(jobPath) === undefined),
     [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const load = useCallback(async () => {
-    setLoading(true);
+    if (peek(jobPath) === undefined) setLoading(true);
     setError(null);
     try {
-      const d = await apiGet<{ job?: Job }>(`/jobs/${encodeURIComponent(id || '')}`);
+      const d = await cachedGet<{ job?: Job }>(jobPath, { family: 'record' });
       setJ(d.job);
     } catch (e: unknown) {
       setJ(undefined);
@@ -36,10 +37,11 @@ export default function PublicOpportunity() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [jobPath]);
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => subscribe(jobPath, () => setJ((current) => peek<{ job?: Job }>(jobPath)?.job ?? current)), [jobPath]);
   // Memoised: usePageMeta rewrites the head whenever this object changes identity.
   const jsonLd = useMemo(() => (j ? jobPostingJsonLd(j) : undefined), [j]);
   usePageMeta(

@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { apiGet } from './api';
+import { cachedGet } from './dataCache';
 import type { PortfolioItem } from './apiTypes';
 
 // Listings (candidates, applicants, directory) carry no portfolio, so each card asks for its
 // person's first public work sample. GET /public/talent/:id has no side effects (unlike
-// /candidates/:id, which writes a "profile view" row). Results are cached per person, requests
-// are de-duplicated and at most a few are in flight at once.
+// /candidates/:id, which writes a "profile view" row). The response goes through the client data
+// cache (the same entry the profile page reads, so opening a card's profile needs no request);
+// at most a few requests are in flight at once.
+// cache: the promise per person, so a card asked twice while loading resolves once.
 const cache = new Map<string, Promise<PortfolioItem | null>>();
 const MAX_IN_FLIGHT = 4;
 let inFlight = 0;
@@ -21,7 +23,7 @@ export function loadFirstSample(id: string): Promise<PortfolioItem | null> {
   const p = new Promise<PortfolioItem | null>((resolve) => {
     waiting.push(() => {
       inFlight++;
-      apiGet<{ portfolio?: PortfolioItem[] }>(`/public/talent/${encodeURIComponent(id)}`)
+      cachedGet<{ portfolio?: PortfolioItem[] }>(`/public/talent/${encodeURIComponent(id)}`, { family: 'record' })
         .then((d) => resolve(d.portfolio?.find((x) => x.url) || null))
         .catch(() => {
           cache.delete(id);

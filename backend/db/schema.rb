@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_09_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1074,7 +1074,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_100000) do
     t.boolean "email_notifications", default: true, null: false
     t.string "phone_e164"
     t.datetime "whatsapp_consented_at"
-    t.jsonb "email_preferences", default: {"digest"=>true, "product"=>true, "requests"=>true, "lifecycle"=>true}, null: false
+    t.jsonb "email_preferences", default: {"digest" => true, "product" => true, "requests" => true, "lifecycle" => true}, null: false
     t.boolean "share_verification_publicly", default: true, null: false
     t.string "photo_url"
     t.jsonb "event_types", default: [], null: false

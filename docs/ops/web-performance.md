@@ -81,6 +81,32 @@ yet), run `npm run build`, open it with `npm run check:perf`'s server or `vite p
 the Playwright list. Pages that depend on who is looking (search, sign-in, the workspace) stay
 client-rendered on purpose.
 
+## Client data cache (`src/app/lib/dataCache.ts`)
+
+A stale-while-revalidate cache in front of `apiGet`, one entry per GET path, owned by the signed-in identity
+(a sign-in, sign-out or "act as" change clears it). Concurrent reads of one path share one request. Lists
+(`usePagedList`) remember every page they showed, so Back shows them at once with no request while the
+first page is fresh; record pages (profile, act, opportunity) read the cache first; the inbox, thread and
+unread badge poll through it and re-render only when the data changed. Cards prefetch their page on
+hover/focus (desktop) or first touch (mobile), lists prefetch the next page within a screen of the bottom;
+both rate-limited.
+
+**TTLs and invalidation rules live in one file, `src/app/lib/dataCache.config.ts`**: `CACHE_TTL_MS` per
+family (`list` 60 s, `record` 120 s, `inbox`/`thread`/`unread` 0 = always revalidate but show memory
+first, `notifications`/`bookings` 15 s), `CACHE_MAX_AGE_MS`, the prefetch limits, and
+`INVALIDATE_ON_WRITE` (which cached paths a POST/PUT/PATCH/DELETE to a resource makes stale) and
+`INVALIDATE_ON_EVENT` (which cached paths a live update of a given type makes stale). Update path: change
+the number or the list there, in the PR that needs it, and say why in the PR.
+
+Realtime (Action Cable, `src/app/lib/realtime.ts`): every socket event reaches the cache first
+(`realtime.event`), which stales the paths `INVALIDATE_ON_EVENT` names for its type; a screen showing one
+of them refetches it at once. A new event type needs a line there. Pages can also call
+`realtime.invalidate(path)` or `realtime.update(path, fn)`; the `dataCache.ts` header documents the calls.
+
+Optimistic writes: sending a message shows the bubble at once ("Sending…") and reconciles with the server
+copy; a failure removes it, restores the draft and toasts. Booking status changes update the row at once
+and roll back with a toast on failure.
+
 ## Loading order
 
 - The HTML already holds the first screen of a pre-rendered page; the entry chunk hydrates it while the

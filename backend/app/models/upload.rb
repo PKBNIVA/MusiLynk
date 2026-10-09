@@ -16,6 +16,12 @@ class Upload < ApplicationRecord
   validates :byte_size, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_SIZE }
 
   scope :complete, -> { where(status: "complete") }
+  # The finished uploads among `urls` that carry generated variants (image or audio), for one lookup
+  # per page (ImageSet.from_uploads, AudioSet.from_uploads). An empty list runs no query.
+  scope :variants_by_url, ->(urls) {
+    urls = Array(urls).compact_blank.uniq
+    urls.empty? ? none : complete.where(public_url: urls).where.not(variants: {})
+  }
   scope :pending, -> { where(status: "pending") }
 
   def self.sanitize_filename(name)
@@ -56,10 +62,15 @@ class Upload < ApplicationRecord
   def complete? = status == "complete"
 
   def image? = ImageVariants.image?(content_type)
+  def audio? = AudioVariants.audio?(content_type)
 
   # Variants are generated for finished images in the bucket; disk (development) uploads and every
   # other media type keep serving the original alone.
   def variants_possible? = complete? && image? && storage == "s3" && public_url.present?
+
+  # Audio variants (preview clip, peaks, AAC transcode) are generated for finished bucket audio files
+  # of the types in config/audio.yml; disk uploads keep serving the original alone.
+  def audio_variants_possible? = complete? && audio? && storage == "s3" && public_url.present?
 
   # Public URL of one generated variant (ImageVariantsJob), or nil when that width x format was not
   # produced. Built from the URL the upload was issued with, so a later change of the read domain
@@ -73,10 +84,22 @@ class Upload < ApplicationRecord
   # The responsive-image payload (ImageSet), or nil without variants.
   def image_set = ImageSet.for(self)
 
-  # Bucket keys of the generated variants, for deletion with the original.
+  # Public URL of one generated audio variant (AudioVariantsJob: "preview", "full", "peaks"), or nil
+  # when it was not produced. Same URL rule as variant_url.
+  def audio_variant_url(name)
+    produced = variants.is_a?(Hash) ? Array(variants.dig("audio", "variants")) : []
+    return nil unless produced.include?(name.to_s) && public_url.to_s.end_with?(key)
+    public_url.delete_suffix(key) + AudioVariants.variant_key(key, name.to_s)
+  end
+
+  # The audio payload (AudioSet), or nil without audio variants.
+  def audio_set = AudioSet.for(self)
+
+  # Bucket keys of the generated variants (image and audio), for deletion with the original.
   def variant_keys
     return [] unless variants.is_a?(Hash)
-    Hash(variants["formats"]).flat_map { |format, widths| Array(widths).map { ImageVariants.variant_key(key, _1, format) } }
+    Hash(variants["formats"]).flat_map { |format, widths| Array(widths).map { ImageVariants.variant_key(key, _1, format) } } +
+      Array(variants.dig("audio", "variants")).map { AudioVariants.variant_key(key, _1) }
   end
 
   def referenced?
@@ -93,5 +116,5 @@ class Upload < ApplicationRecord
     destroy!
   end
 
-  def api_json = { id:, url: public_url, status:, contentType: content_type, byteSize: byte_size, filename:, image: image_set }
+  def api_json = { id:, url: public_url, status:, contentType: content_type, byteSize: byte_size, filename:, image: image_set, audio: audio_set }
 end

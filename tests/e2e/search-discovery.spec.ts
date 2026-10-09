@@ -110,10 +110,14 @@ test('public jobs: each filter is a history entry, so Back undoes one at a time 
   await expect(page).toHaveURL(/\/music-jobs\?kind=gig$/);
   await expect(page.getByLabel('Search opportunities')).toHaveValue('');
   await expect(page.getByRole('button', { name: 'Gigs' })).toHaveAttribute('aria-pressed', 'true');
+  const requestsBeforeBack = apiCalls(calls, '/api/jobs').length;
   await page.goBack();
   await expect(page).toHaveURL(/\/music-jobs$/);
   await expect(page.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
-  await expect.poll(() => apiCalls(calls, '/api/jobs').at(-1)?.search).toBe('');
+  // Back shows the unfiltered list it already fetched (client data cache); nothing is requested again.
+  await expect(page.getByTestId('result-count')).toHaveText('1 opportunity');
+  await page.waitForTimeout(300);
+  expect(apiCalls(calls, '/api/jobs').length).toBe(requestsBeforeBack);
 });
 
 test('a corrected misspelling is announced and an empty search suggests the fix (SRCH-07)', async ({ page }) => {

@@ -77,9 +77,30 @@ export function readToken() {
 
 function writeToken(token: string | null) {
   legacyTokenChecked = true;
+  const changed = readStored('local', TOKEN_KEY) !== token;
   writeStored('local', TOKEN_KEY, token);
   // Never leave a legacy copy behind that could resurrect a signed-out session.
   writeStored('session', TOKEN_KEY, null);
+  if (changed) announceIdentityChange();
+}
+
+// ---- Hooks for the client data cache (src/app/lib/dataCache.ts) ------------------------------------
+// The cache belongs to one identity: it clears itself when the token or the "act as" Page changes, in
+// this tab or another, and marks related GETs stale after every successful write.
+const identityListeners = new Set<() => void>();
+const writeListeners = new Set<(method: string, path: string) => void>();
+function announceIdentityChange() {
+  identityListeners.forEach((listener) => listener());
+}
+/** Fires after a sign-in, sign-out or "act as" change (any tab). Returns the unsubscribe. */
+export function onIdentityChange(listener: () => void) {
+  identityListeners.add(listener);
+  return () => identityListeners.delete(listener);
+}
+/** Fires after a successful POST, PUT, PATCH or DELETE with the method and API path. */
+export function onApiWrite(listener: (method: string, path: string) => void) {
+  writeListeners.add(listener);
+  return () => writeListeners.delete(listener);
 }
 
 class RequestDeadlineError extends Error {
@@ -333,6 +354,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
           parseFieldErrors(data.fields),
         );
       }
+      if (method !== 'GET') writeListeners.forEach((listener) => listener(method, path));
       return data;
     } catch (error) {
       if (error instanceof ApiError) throw error;
@@ -384,6 +406,7 @@ export function setActingAs(key: string | null) {
   const next = key && !key.startsWith('user:') ? key : null;
   if (next === getActingAs()) return;
   writeStored('local', ACT_AS_KEY, next);
+  announceIdentityChange();
   try {
     window.dispatchEvent(new CustomEvent(ACTING_AS_EVENT, { detail: next }));
   } catch {
@@ -402,10 +425,17 @@ export function hasAccessToken() {
 export function onAccessTokenChange(listener: (signedIn: boolean) => void) {
   const handler = (event: StorageEvent) => {
     // A null key means the other tab cleared all of localStorage.
-    if (event.key !== null && event.key !== TOKEN_KEY) return;
+    if (event.key !== null && event.key !== TOKEN_KEY && event.key !== ACT_AS_KEY) return;
     try {
       if (event.storageArea !== localStorage) return;
     } catch {
+      return;
+    }
+    if (event.key === ACT_AS_KEY) {
+      // Another tab switched the "act as" Page: this tab's cached data belongs to the old identity.
+      if (event.newValue) memoryStore.set(`local:${ACT_AS_KEY}`, event.newValue);
+      else memoryStore.delete(`local:${ACT_AS_KEY}`);
+      announceIdentityChange();
       return;
     }
     const token = event.key === null ? null : event.newValue;
@@ -415,6 +445,7 @@ export function onAccessTokenChange(listener: (signedIn: boolean) => void) {
     } else {
       memoryStore.delete(`local:${TOKEN_KEY}`);
     }
+    announceIdentityChange();
     listener(Boolean(token));
   };
   window.addEventListener('storage', handler);

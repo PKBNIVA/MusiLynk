@@ -24,9 +24,10 @@ class TalentController < ApplicationController
   def public_show
     candidate = listing_scope.find(params[:id])
     items = candidate.portfolio_items.where(visibility: "public").order(featured: :desc, sort_order: :asc).to_a
-    # One ImageSet lookup for the profile photo and the work samples' images together.
-    @image_sets = ImageSet.by_url(PortfolioItem.image_urls(items) + [candidate.profile&.photo_url])
-    PortfolioItem.preload_image_sets(items, sets: @image_sets)
+    # One upload lookup for the profile photo, the work samples' images and their audio variants together.
+    uploads = Upload.variants_by_url(PortfolioItem.image_urls(items) + PortfolioItem.audio_urls(items) + [candidate.profile&.photo_url]).to_a
+    @image_sets = ImageSet.from_uploads(uploads)
+    PortfolioItem.preload_image_sets(items, sets: @image_sets, audio: AudioSet.from_uploads(uploads))
     json = { professional: with_bookings(public_profile(candidate), candidate.id), portfolio: items.map(&:api_json) }.to_json
     return if public_cache!(:show, etag: json)
     render json: json

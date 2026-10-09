@@ -43,6 +43,7 @@ vi.mock('@rails/actioncable', () => ({
 vi.mock('../api', () => ({ apiPost: vi.fn() }));
 import { apiPost } from '../api';
 import { setRealtimeAvailable } from '../realtimeAvailability';
+import { isInvalidated, update as cacheUpdate } from '../dataCache';
 import {
   backoffDelay,
   CONNECTED_POLL_MS,
@@ -110,6 +111,17 @@ describe('realtime', () => {
     offB();
     expect(cable.created[0].unsubscribe).toHaveBeenCalled();
     expect(realtimeStatus()).toBe('idle');
+  });
+
+  it('tells the data cache first, so a listener that refetches reads past the stale entry', async () => {
+    cacheUpdate('/conversations', () => ({ conversations: [] }));
+    const seen: boolean[] = [];
+    subscribe('UserChannel', {}, () => seen.push(isInvalidated('/conversations')));
+    await flush();
+    cable.created[0].callbacks.received?.({ type: 'message', conversationId: 'c1' });
+    expect(seen).toEqual([true]);
+    cable.created[0].callbacks.received?.('not an event');
+    expect(seen).toEqual([true]);
   });
 
   it('reconnects after a drop with a new ticket and backoff, and polls at the usual pace meanwhile', async () => {

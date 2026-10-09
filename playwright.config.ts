@@ -20,13 +20,32 @@ process.env.QA_SENTRY_BASE_URL ??= sentryBuildUrl;
 process.env.QA_SENTRY_SINK_URL ??= sentrySinkUrl;
 const fullMatrix = process.env.QA_FULL_MATRIX === 'true';
 const integrationRun = process.env.QA_INTEGRATION === 'true';
+// QA_APP_SERVER_ONLY=true starts the app server alone (no Sentry stand-in, no Sentry build, no admin
+// build) and drops the admin project. The `accessibility` CI job (rails-and-web.yml) sets it because
+// tests/e2e/accessibility.spec.ts only ever opens the public build; locally it saves two extra builds.
+const appServerOnly = process.env.QA_APP_SERVER_ONLY === 'true';
 // Request-only specs (no browser): live API health and the signed-in live smoke.
 const apiSpecs = /(api-health|live-account-smoke)\.spec\.ts/;
 // Admin site specs (tests/e2e/admin-*.spec.ts) run against the admin build (VITE_APP_TARGET=admin).
 const adminSpecs = /[\\/]admin-[^\\/]*\.spec\.ts$/;
 const adminSiteUrl = localOrigin(3);
 // Mocked-API runs only: live and integration runs have no admin build to open.
-const adminSiteRun = !liveBaseUrl && !integrationRun;
+const adminSiteRun = !liveBaseUrl && !integrationRun && !appServerOnly;
+// Device matrix for the accessibility gate (tests/e2e/accessibility.spec.ts) only: the narrowest phone the
+// layout supports (iPhone SE, 320 px), on a smoke subset of the route sweep (tests tagged @smoke) because
+// axe is the run time. Playwright's iPhone SE descriptor defaults to WebKit, which CI does not install, so
+// it runs in Chromium here; the viewport, scale factor, touch and mobile emulation are what the sweep is
+// after. The Pixel 7 half of the matrix is chromium-mobile (the same descriptor), which runs every route.
+// Prose pages tagged @desktop-only are skipped on chromium-mobile (see the comment in the spec).
+const accessibilitySpec = /[\\/]accessibility\.spec\.ts$/;
+const deviceProjects = [
+  {
+    name: 'iphone-se',
+    testMatch: accessibilitySpec,
+    grep: /@smoke/,
+    use: { ...devices['iPhone SE'], defaultBrowserType: 'chromium' as const },
+  },
+];
 
 const browserProjects = [
   {
@@ -37,6 +56,7 @@ const browserProjects = [
   {
     name: 'chromium-mobile',
     testIgnore: [apiSpecs, adminSpecs],
+    grepInvert: /@desktop-only/,
     use: { ...devices['Pixel 7'] },
   },
   ...(fullMatrix
@@ -82,6 +102,7 @@ export default defineConfig({
       use: {},
     },
     ...browserProjects,
+    ...deviceProjects,
     ...(adminSiteRun
       ? [
           {
@@ -105,7 +126,7 @@ export default defineConfig({
         },
         // error-monitoring.spec.ts only (skipped in integration runs): a local stand-in for
         // Sentry's ingest endpoint, and the app built with a fake DSN pointing at it.
-        ...(integrationRun
+        ...(integrationRun || appServerOnly
           ? []
           : [
               {

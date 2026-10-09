@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
+import { usePrefetchIntent } from '../../lib/useCachedGet';
 import { MapPin, ShieldCheck } from 'lucide-react';
 import { DemoBadge } from '../DemoBadge';
 import { CoverArt } from '../media/CoverArt';
@@ -57,6 +58,8 @@ export function ActCover({
 
 /** One bookable act in a list: cover (photo or generated art), name, type · city, from-price, lineup size and genres. */
 export function ActCard({ act: a, index, to, nameSuffix, footer }: Props) {
+  // Hover, focus or a first touch warms the cache for the act page (dataCache.ts).
+  const prefetchAct = usePrefetchIntent(to.startsWith('/acts/') ? `/public/acts/${encodeURIComponent(a.id)}` : null);
   const members = a.members?.length || 0;
   const from = a.min_fee ? `from ${formatMoney(a.min_fee, a.currency || 'INR')}` : '';
   return (
@@ -70,7 +73,11 @@ export function ActCard({ act: a, index, to, nameSuffix, footer }: Props) {
       <div className="flex flex-1 flex-col p-5">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="min-w-0 text-lg font-semibold break-words" data-testid="act-name">
-            <Link to={to} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
+            <Link
+              to={to}
+              className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+              {...prefetchAct}
+            >
               {a.name}
             </Link>
             {nameSuffix && <span className="font-normal text-slate-400"> · {nameSuffix}</span>}

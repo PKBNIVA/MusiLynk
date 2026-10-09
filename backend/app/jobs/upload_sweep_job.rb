@@ -43,8 +43,9 @@ class UploadSweepJob < ApplicationJob
     delete_orphans(candidates, counts) if candidates.any?
   end
 
-  # A generated variant (`<key>/v/<width>.<ext>`, ImageVariants) belongs to its original's row.
-  VARIANT_SUFFIX = %r{/v/\d+\.(#{ImageVariants::FORMATS.keys.join('|')})\z}
+  # A generated variant (`<key>/v/<width>.<ext>`, ImageVariants; `<key>/v/preview.m4a` etc., AudioVariants)
+  # belongs to its original's row.
+  VARIANT_SUFFIX = %r{/v/(\d+\.(#{ImageVariants::FORMATS.keys.join('|')})|#{AudioVariants::VARIANTS.values.map { Regexp.escape(_1.first) }.join('|')})\z}
 
   def delete_orphans(keys, counts)
     originals = keys.map { _1.sub(VARIANT_SUFFIX, "") }

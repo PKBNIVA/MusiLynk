@@ -170,6 +170,20 @@ describe('hooks', () => {
     expect(seen.current?.name).toBe('Riya Studios');
   });
 
+  it('announces an identity change when another tab changes the act-as key', () => {
+    const heard = vi.fn();
+    const off = api.onIdentityChange(heard);
+    const stop = api.onAccessTokenChange(() => undefined);
+    window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated', storageArea: localStorage }));
+    expect(heard).not.toHaveBeenCalled();
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: 'musilynk_act_as', newValue: 'act:a1', storageArea: localStorage }),
+    );
+    expect(heard).toHaveBeenCalledTimes(1);
+    stop();
+    off();
+  });
+
   it('is empty when signed out or when loading fails', async () => {
     await act(async () => {
       root.render(<Harness />);

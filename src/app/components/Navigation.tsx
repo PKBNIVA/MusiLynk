@@ -48,7 +48,7 @@ import { UserAvatar } from './kit/UserAvatar';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { SIGN_IN_CODE_TOAST } from '../lib/authToasts';
-import { apiGet } from '../lib/api';
+import { cachedGet } from '../lib/dataCache';
 import { UNREAD_CHANGED_EVENT, useVisiblePolling } from '../lib/usePolling';
 import { useRealtime, useRealtimeInterval } from '../lib/realtime';
 import { ProductTour } from './ProductTour';
@@ -86,7 +86,7 @@ export function Navigation() {
   // notification or message) or when a page reports that the viewer read something, and polled
   // while the tab is visible: every 10 s, or every 30 s while the live connection is up.
   const refreshUnread = () =>
-    apiGet<UnreadCounts>('/notifications/unread')
+    cachedGet<UnreadCounts>('/notifications/unread', { family: 'unread', force: true })
       .then((d) => {
         setUnread(Number(d.unread) || 0);
         setUnreadMessages(Number(d.unreadMessages) || 0);

@@ -12,7 +12,7 @@ One file: `backend/config/job_queues.yml`.
 | --- | --- | ---: | --- |
 | 1 | `urgent` | 2 | `UrgentMatchJob`, `UrgentMatchSweepJob`, `WhatsappAlertJob`, and the urgent-alert email (`NotificationEmailJob` with template `urgent_request_alert`) and push (`PushDeliveryJob` with category `urgent`) |
 | 2 | `notifications`, `mailers` | 2 | Other notification and transactional email, web push, job-alert deliveries |
-| 3 | `default`, `scheduled` | 1 | Cron sweeps, digests' fan-out, `SitemapRefreshJob`, demo data, upload cleanup, `ImageVariantsJob` (one upload per run, 1 to 3 s) |
+| 3 | `default`, `scheduled` | 1 | Cron sweeps, digests' fan-out, `SitemapRefreshJob`, demo data, upload cleanup, `ImageVariantsJob` (one upload per run, 1 to 3 s), `AudioVariantsJob` (one upload per run; a WAV transcode takes seconds) |
 
 `urgent.email_templates` and `urgent.push_categories` in the same file list which email templates
 and push categories go to the urgent pool.

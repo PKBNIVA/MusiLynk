@@ -62,6 +62,8 @@ class UploadsController < ApplicationController
     upload.update!(status: "complete", completed_at: Time.current)
     # Resized WebP/AVIF copies are made in the background; the payload serves the original meanwhile.
     ImageVariantsJob.perform_later(upload.id) if upload.variants_possible?
+    # Likewise the audio preview clip, waveform peaks and (WAV) AAC transcode.
+    AudioVariantsJob.perform_later(upload.id) if upload.audio_variants_possible?
     render json: { upload: upload.api_json, url: upload.public_url }
   end
 

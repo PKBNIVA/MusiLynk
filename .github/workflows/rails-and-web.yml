@@ -48,6 +48,38 @@ jobs:
       # Vitest unit tests for src/app/lib with a coverage floor (see vitest.config.ts).
       - run: npm run test:unit -- --coverage
 
+  # The accessibility gate: axe-core WCAG 2.1 A/AA over every pre-rendered public route and the core signed-in
+  # screens against the mocked API (tests/e2e/accessibility.spec.ts), on desktop and a Pixel 7 phone, plus an
+  # iPhone SE smoke subset. A serious or critical violation always fails; the spec's ACCEPTED list is the only
+  # way to waive a moderate or minor one. Runs in parallel with the other jobs and is budgeted at under four
+  # minutes, so the spec keeps the device matrix to a smoke subset (see its header). QA_APP_SERVER_ONLY skips
+  # the Sentry and admin builds the other e2e specs need; the headless shell is the smallest Chromium.
+  accessibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      QA_APP_SERVER_ONLY: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium-headless-shell
+      - name: axe WCAG sweep
+        run: npx playwright test tests/e2e/accessibility.spec.ts --project=chromium-desktop --project=chromium-mobile --project=iphone-se --workers=4
+      - name: Upload failure evidence (axe-violations.json is attached to each failing test)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: accessibility-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
   rails:
     runs-on: ubuntu-latest
     services:
@@ -74,7 +106,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.3.6
+          ruby-version: 3.4.5
           bundler-cache: true
           working-directory: backend
       # Since Rails 8.0, db:migrate on an empty database loads db/schema.rb instead of
@@ -82,8 +114,9 @@ jobs:
       # file is re-dumped from migrations alone; the next step diffs it against the commit.
       # ImageVariantsJob encodes through libvips (ruby-vips binds the shared library at runtime);
       # test/jobs/image_variants_job_test.rb does a real encode. ubuntu-24.04 names it libvips42t64.
-      - name: Install libvips for the image variants tests
-        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libvips42t64
+      # AudioVariantsJob shells out to ffmpeg/ffprobe; test/jobs/audio_variants_job_test.rb does a real transcode.
+      - name: Install libvips and ffmpeg for the image and audio variants tests
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libvips42t64 ffmpeg
       - name: Run every migration on an empty database
         run: rm db/schema.rb && bin/rails db:migrate
       - name: Check db/schema.rb matches the migrations
@@ -114,7 +147,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.3.6
+          ruby-version: 3.4.5
           bundler-cache: true
           working-directory: backend
       # Fails on any warning not listed in config/brakeman.ignore (each entry carries a review note).
@@ -152,7 +185,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.3.6
+          ruby-version: 3.4.5
           bundler-cache: true
           working-directory: backend
       - uses: actions/setup-node@v7

@@ -109,11 +109,16 @@ test('public music jobs page pages through results and a new search starts over'
   await page.getByRole('button', { name: 'Load more opportunities' }).click();
   await expect(titles(page)).toHaveCount(4);
   await expect(page.locator('[data-job-item="2"]')).toBeFocused();
-  expect(queries.at(-1)!.get('cursor')).toBe('2');
+  // Load more asked for the second page. The client data layer may then prefetch the third (cursor 4)
+  // while the button is within a screen, so the last request is not necessarily the click's own.
+  const cursors = queries.map((q) => q.get('cursor'));
+  expect(cursors).toContain('2');
+  expect(cursors.filter((c) => c !== null && c !== '2' && c !== '4')).toEqual([]);
 
   await page.getByRole('button', { name: 'Gigs' }).click();
-  await expect.poll(() => queries.at(-1)!.get('kind')).toBe('gig');
-  expect(queries.at(-1)!.get('cursor')).toBeNull();
+  await expect.poll(() => queries.some((q) => q.get('kind') === 'gig')).toBe(true);
+  // A new search starts over: its first request has no cursor (a prefetch of its next page may follow).
+  expect(queries.find((q) => q.get('kind') === 'gig')!.get('cursor')).toBeNull();
   await expect(titles(page)).toHaveCount(2);
   await expect(page.getByText('Showing 2 of 5 opportunities')).toBeVisible();
 });

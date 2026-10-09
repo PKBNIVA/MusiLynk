@@ -187,6 +187,18 @@ describe('vercel.json crawler routing and headers', () => {
     ]);
   });
 
+  it('lets the app fetch audio peaks.json from the uploads read host, and no bare https:', () => {
+    const csp = config.headers
+      .flatMap((entry) => entry.headers)
+      .find((header) => header.key === 'Content-Security-Policy');
+    const connect = csp.value.match(/connect-src ([^;]*)/)[1].split(' ');
+    // The exact pub-<id>.r2.dev or media.<zone> host is an owner decision (docs/ops/uploads.md); until it is
+    // known, the r2.dev wildcard is the narrowest entry that covers the public development URL.
+    expect(connect).toContain('https://*.r2.dev');
+    expect(connect).not.toContain('https:');
+    expect(connect).not.toContain('*');
+  });
+
   it('never marks an asset immutable unless it is a hashed build file', () => {
     const immutable = config.headers.filter((entry) => entry.headers.some((header) => /immutable/.test(header.value)));
     expect(immutable.map((entry) => entry.source)).toEqual(['/assets/(.*)']);

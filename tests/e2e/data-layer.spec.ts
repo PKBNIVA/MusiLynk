@@ -214,3 +214,74 @@ test.describe('messages', () => {
     ).toBeVisible();
   });
 });
+
+test.describe('bookings', () => {
+  test('the list loads behind a skeleton; a status change shows at once and rolls back with a toast on failure', async ({
+    page,
+  }) => {
+    const statusPosts: unknown[] = [];
+    await page.addInitScript(() => {
+      localStorage.setItem('musilynk_access_token', 'qa-token');
+      localStorage.setItem('musilynk-tour-v2-jobseeker', 'done');
+    });
+    await page.route('**/api/**', async (route) => {
+      const request = route.request();
+      const path = new URL(request.url()).pathname.replace(/^.*\/api/, '');
+      const json = (body: unknown, status = 200) =>
+        route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+      if (path === '/me')
+        return json({
+          user: { id: ME, name: 'Act Owner', email: 'owner@example.invalid', role: 'jobseeker', status: 'active' },
+        });
+      if (path === '/bookings') {
+        // Slow enough to see the skeleton before the rows arrive.
+        await new Promise((r) => setTimeout(r, 600));
+        return json({
+          bookings: [
+            {
+              id: 'b1',
+              actName: 'The Night Owls',
+              status: 'requested',
+              event_type: 'wedding',
+              event_date: '2027-01-20',
+              city: 'Pune',
+              requesterName: 'Event Buyer',
+              isOwner: true,
+              isRequester: false,
+              allowedTransitions: ['declined'],
+              latestQuote: null,
+              paymentCount: 0,
+              depositPaid: false,
+              currency: 'INR',
+            },
+          ],
+        });
+      }
+      if (path === '/bookings/b1/status' && request.method() === 'POST') {
+        statusPosts.push(request.postDataJSON());
+        await new Promise((r) => setTimeout(r, 700));
+        return json({ error: 'This enquiry changed. Refresh and try again.', code: 'CONFLICT' }, 409);
+      }
+      return json({});
+    });
+
+    await page.goto('/jobseeker/bookings');
+    await expect(page.getByTestId('list-skeleton')).toBeVisible();
+    const card = page.getByTestId('booking-card');
+    await expect(card).toHaveCount(1);
+    await expect(page.getByTestId('list-skeleton')).toHaveCount(0);
+    await expect(card.getByText('Enquiry sent', { exact: true })).toBeVisible();
+
+    await card.getByRole('button', { name: 'Decline' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Decline' }).click();
+    // Optimistic: the row says Declined before the server answers ...
+    await expect(card.getByText('Declined', { exact: true })).toBeVisible();
+    // ... and goes back when it refuses, with a toast.
+    await expect(card.getByText('Enquiry sent', { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(card.getByText('Declined', { exact: true })).toHaveCount(0);
+    await expect(
+      page.locator('[data-sonner-toast][data-type="error"]').filter({ hasText: 'This enquiry changed' }),
+    ).toBeVisible();
+    expect(statusPosts).toEqual([{ status: 'declined' }]);
+  });
+});

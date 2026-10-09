@@ -28,6 +28,12 @@ peaks_points: 400
 # Seconds each ffmpeg/ffprobe run may take before it is killed and the upload is retried.
 ffmpeg_timeout_seconds: 180
 
+# Limits on each ffmpeg/ffprobe child (Process.spawn rlimit_as / rlimit_cpu): address space in bytes
+# and CPU seconds. A hostile file that tries to allocate past the first or spin past the second
+# is killed by the kernel instead of taking the worker down. ffmpeg also runs with -threads 1.
+rlimit_as_bytes: 2147483648
+rlimit_cpu_seconds: 300
+
 # Cache-Control on every variant. Keys contain a UUID and a replaced file gets a new key, so an
 # object never changes under its URL.
 cache_control: "public, max-age=31536000, immutable"

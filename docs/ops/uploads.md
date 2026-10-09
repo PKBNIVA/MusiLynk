@@ -25,8 +25,10 @@ Existing rows keep the URL they were issued with, so switching the variable chan
 old URLs keep working as long as the old origin still serves the bucket (an r2.dev subdomain or an
 older custom domain can stay connected alongside the new one).
 
-The Vercel CSP (`vercel.json`) already allows `img-src`/`media-src … https:`, so any `https://`
-read domain works without a CSP change. Nothing storage-related goes into Vercel `VITE_` variables.
+The Vercel CSP (`vercel.json`) allows `img-src`/`media-src … https:`, so any `https://` read domain
+works for images and audio. The waveform `peaks.json` is `fetch`ed, so it needs `connect-src`, which
+lists `https://*.r2.dev` (the public development URL). **A custom read domain (`media.<zone>`) must be
+added to `connect-src` in `vercel.json`** (and its test in `scripts/__tests__/vercel-config.test.mjs`). Nothing storage-related goes into Vercel `VITE_` variables.
 
 ## Putting an R2 public domain in front of the bucket (owner steps)
 
@@ -79,6 +81,9 @@ downloads the 512 px (or 5 MB) original:
 - **Originals.** The presign now signs the same `Cache-Control` (a header on the R2 `PUT`, a policy
   field on the S3 `POST`), so new originals are stored immutable-cacheable too. Objects uploaded
   before this keep whatever headers they had; the Cloudflare cache rule in step 3 above covers them.
+- **Limits on the tools.** Every ffmpeg/ffprobe call opens only the local `file` protocol
+  (`-protocol_whitelist file`), ffmpeg runs `-threads 1`, and each child is spawned with
+  `rlimit_as_bytes` (address space) and `rlimit_cpu_seconds` from `backend/config/audio.yml`.
 - **Payloads.** Wherever an upload is exposed, the old string field stays and an `ImageSet` is added
   beside it: `photo` next to `photoUrl` (profiles) and `photo_url` (acts), `image`/`thumbnail` on work
   samples, `image` on Stage post media and on the upload record. Shape:

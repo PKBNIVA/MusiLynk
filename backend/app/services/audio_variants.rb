@@ -42,6 +42,8 @@ module AudioVariants
     def full_bitrate = settings.fetch("full_bitrate").to_s
     def peaks_points = settings.fetch("peaks_points").to_i
     def timeout_seconds = settings.fetch("ffmpeg_timeout_seconds").to_i
+    def rlimit_as_bytes = settings.fetch("rlimit_as_bytes").to_i
+    def rlimit_cpu_seconds = settings.fetch("rlimit_cpu_seconds").to_i
     def cache_control = settings.fetch("cache_control").to_s.presence
 
     def audio?(content_type) = types.include?(content_type.to_s)
@@ -73,13 +75,13 @@ module AudioVariants
       produced = []
       demuxer = DEMUXERS.fetch(upload.content_type)
       preview = File.join(dir, "preview.m4a")
-      ffmpeg!(["-f", demuxer, "-i", path, "-t", preview_seconds.to_s, "-vn", "-map_metadata", "-1", "-c:a", "aac", "-b:a", preview_bitrate, "-movflags", "+faststart", preview])
+      ffmpeg!([*input_args(demuxer), "-i", path, "-t", preview_seconds.to_s, "-vn", "-map_metadata", "-1", "-c:a", "aac", "-b:a", preview_bitrate, "-movflags", "+faststart", preview])
       File.open(preview, "rb") { yield "preview", _1, content_type("preview") }
       produced << "preview"
 
       if full?(upload.content_type)
         full = File.join(dir, "full.m4a")
-        ffmpeg!(["-f", demuxer, "-i", path, "-vn", "-map_metadata", "-1", "-c:a", "aac", "-b:a", full_bitrate, "-movflags", "+faststart", full])
+        ffmpeg!([*input_args(demuxer), "-i", path, "-vn", "-map_metadata", "-1", "-c:a", "aac", "-b:a", full_bitrate, "-movflags", "+faststart", full])
         File.open(full, "rb") { yield "full", _1, content_type("full") }
         produced << "full"
       end
@@ -101,7 +103,7 @@ module AudioVariants
       peaks = Array.new(points, 0)
       index = 0
       consumed = 0
-      run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-f", demuxer, "-i", path, "-vn", "-ac", "1", "-ar", PCM_RATE.to_s, "-f", "s16le", "pipe:1"]) do |stdout|
+      run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-threads", "1", *input_args(demuxer), "-i", path, "-vn", "-ac", "1", "-ar", PCM_RATE.to_s, "-f", "s16le", "pipe:1"]) do |stdout|
         while (chunk = stdout.read(PCM_CHUNK))
           chunk.unpack("s<*").each do |sample|
             slot = [index / per_point, points - 1].min
@@ -120,7 +122,7 @@ module AudioVariants
     # all is not the audio its row describes (a truncated or hostile upload), so that is a Rejected,
     # not a retry; only a missing binary or a timeout stays a ToolFailed.
     def probe_duration(path, content_type)
-      out = run(["ffprobe", "-hide_banner", "-loglevel", "error", "-f", DEMUXERS.fetch(content_type), "-show_entries", "format=duration", "-of", "json", path], &:read)
+      out = run(["ffprobe", "-hide_banner", "-loglevel", "error", "-protocol_whitelist", "file", "-f", DEMUXERS.fetch(content_type), "-show_entries", "format=duration", "-of", "json", path], &:read)
       JSON.parse(out).dig("format", "duration")&.to_f
     rescue JSON::ParserError
       nil
@@ -129,14 +131,21 @@ module AudioVariants
       raise Rejected, "ffprobe cannot read the file: #{e.message}"
     end
 
+    # Input options for every ffmpeg read: only the local file protocol may be opened, so a reference
+    # inside a hostile file (playlist, concat, subfile, http) can never reach the network or other files.
+    def input_args(demuxer) = ["-protocol_whitelist", "file", "-f", demuxer]
+
+    # Spawn options bounding the child's memory (address space) and CPU time, from config/audio.yml.
+    def spawn_limits = { rlimit_as: rlimit_as_bytes, rlimit_cpu: rlimit_cpu_seconds }
+
     def ffmpeg!(args)
-      run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y", *args], &:read)
+      run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-threads", "1", "-y", *args], &:read)
     end
 
     # Runs a tool with no stdin, yields its stdout, kills it after `timeout_seconds`; raises ToolFailed
     # on a non-zero exit (with the first line of stderr, which names no secret) or a timeout.
     def run(command)
-      Open3.popen3(*command) do |stdin, stdout, stderr, waiter|
+      Open3.popen3(*command, **spawn_limits) do |stdin, stdout, stderr, waiter|
         stdin.close
         result = nil
         errors = +""

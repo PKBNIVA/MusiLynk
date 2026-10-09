@@ -170,6 +170,37 @@ class AudioVariantsJobTest < ActiveJob::TestCase
     assert_match(/not installed/, error.message)
   end
 
+  test "every ffmpeg and ffprobe call whitelists only the file protocol and ffmpeg runs one thread" do
+    commands = []
+    original = AudioVariants.method(:run)
+    AudioVariants.stub(:run, ->(command, &block) { commands << command; original.call(command, &block) }) do
+      with_fake_storage(WAV) { AudioVariantsJob.perform_now(@upload.id) }
+    end
+    assert_equal %w[ffprobe ffmpeg ffmpeg ffmpeg], commands.map(&:first), "probe, preview, full, peaks"
+    commands.each do |command|
+      index = command.index("-protocol_whitelist")
+      assert index, "#{command.first} has no -protocol_whitelist"
+      assert_equal "file", command[index + 1]
+      assert_operator index, :<, (command.index("-i") || command.length), "it is an input option, before -i"
+    end
+    commands.select { _1.first == "ffmpeg" }.each { assert_equal "1", _1[_1.index("-threads") + 1] }
+  end
+
+  test "every spawned tool gets the memory and CPU limits from config/audio.yml" do
+    assert_equal 2_147_483_648, AudioVariants.rlimit_as_bytes
+    assert_equal 300, AudioVariants.rlimit_cpu_seconds
+    received = nil
+    original = Open3.method(:popen3)
+    Open3.stub(:popen3, ->(*args, **opts, &block) { received = opts; original.call(*args, **opts, &block) }) do
+      AudioVariants.run(["true"], &:read)
+    end
+    assert_equal({ rlimit_as: 2_147_483_648, rlimit_cpu: 300 }, received)
+    # The kernel really applies it to the child (ulimit -v is in KiB).
+    AudioVariants.stub(:rlimit_as_bytes, 1_073_741_824) do
+      assert_equal "1048576", AudioVariants.run(["sh", "-c", "ulimit -v"], &:read).strip
+    end
+  end
+
   test "without bucket configuration on the worker the job logs and skips instead of failing" do
     downloads = 0
     UploadStorage.stub(:direct?, false) do

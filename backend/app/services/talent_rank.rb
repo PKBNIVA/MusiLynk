@@ -10,7 +10,7 @@
 # An empty profile therefore never outranks a populated one.
 #
 # Kept fresh by Profile and PortfolioItem callbacks (one UPDATE for the owner) and by the nightly
-# TalentRankJob, which also ages the sign-in recency. Every path runs the same SQL (#update_sql).
+# TalentRankJob (in id ranges of BATCH_SIZE), which also ages the sign-in recency. Every path runs the same SQL (#update_sql).
 module TalentRank
   HAS_SAMPLE_SQL = "EXISTS (SELECT 1 FROM portfolio_items ranked_samples WHERE ranked_samples.user_id = profiles.user_id AND ranked_samples.visibility = 'public' AND ranked_samples.kind IN ('audio', 'video') AND btrim(COALESCE(ranked_samples.url, '')) <> '')".freeze
   COMPLETENESS_SQL = [
@@ -24,17 +24,38 @@ module TalentRank
   SCORE_SQL = "((CASE WHEN profiles.verified THEN 10000 ELSE 0 END) + (CASE WHEN #{HAS_SAMPLE_SQL} THEN 1000 ELSE 0 END) + " \
               "#{COMPLETENESS_SQL} * 100 + (CASE WHEN #{HAS_RATES_SQL} THEN 10 ELSE 0 END) + #{RECENCY_SQL})".freeze
 
+  # Owners per UPDATE: a full refresh runs one short statement per id range, so profile writes never
+  # wait behind a table-wide lock (the single-statement version took 26 s at 55k profiles).
+  BATCH_SIZE = 1_000
+
   module_function
 
-  # One UPDATE that rewrites only the scores that changed; `user_ids` narrows it to those owners.
-  def update_sql(user_ids = nil)
-    owners = user_ids.nil? ? "" : " AND profiles.user_id IN (#{Array(user_ids).map { ActiveRecord::Base.lease_connection.quote(_1.to_s) }.join(', ').presence || 'NULL'})"
+  # One UPDATE that rewrites only the scores that changed, for the owners in `user_ids` and/or the
+  # inclusive `range` ([first_id, last_id]); every profile when neither is given.
+  def update_sql(user_ids = nil, range: nil)
+    quote = ->(value) { ActiveRecord::Base.lease_connection.quote(value.to_s) }
+    owners = +""
+    owners << " AND profiles.user_id IN (#{Array(user_ids).map(&quote).join(', ').presence || 'NULL'})" unless user_ids.nil?
+    owners << " AND profiles.user_id BETWEEN #{quote.(range.first)} AND #{quote.(range.last)}" if range
     "UPDATE profiles SET rank_score = #{SCORE_SQL} FROM users WHERE users.id = profiles.user_id#{owners} AND profiles.rank_score IS DISTINCT FROM #{SCORE_SQL}"
   end
 
-  # Recomputes the scores of `user_ids` (every profile when nil); returns the rows changed.
+  # Recomputes the scores of `user_ids` (every profile when nil), BATCH_SIZE owners per statement;
+  # returns the rows changed.
   def refresh!(user_ids = nil)
-    return 0 if user_ids && Array(user_ids).compact.empty?
-    ActiveRecord::Base.lease_connection.exec_update(update_sql(user_ids && Array(user_ids).compact.uniq))
+    connection = ActiveRecord::Base.lease_connection
+    if user_ids.nil?
+      changed = 0
+      last = nil
+      loop do
+        ids = connection.select_values("SELECT user_id FROM profiles#{" WHERE user_id > #{connection.quote(last)}" if last} ORDER BY user_id LIMIT #{BATCH_SIZE}")
+        break if ids.empty?
+        changed += connection.exec_update(update_sql(range: [ids.first, ids.last]))
+        last = ids.last
+      end
+      changed
+    else
+      Array(user_ids).compact.uniq.each_slice(BATCH_SIZE).sum { connection.exec_update(update_sql(_1)) }
+    end
   end
 end

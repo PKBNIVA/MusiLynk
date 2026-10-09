@@ -119,7 +119,9 @@ class NotificationsController < ApplicationController
     return nil if raw.blank?
     data = JSON.parse(Base64.urlsafe_decode64(raw.to_s))
     return :invalid unless data.is_a?(Hash) && data["i"].is_a?(String) && data["t"].is_a?(String)
-    { created_at: Time.iso8601(data["t"]), id: data["i"] }
+    created_at = ListPaging.cursor_time(data["t"])
+    return :invalid unless created_at && data["i"].length <= 64
+    { created_at:, id: data["i"] }
   rescue ArgumentError, JSON::ParserError, TypeError
     :invalid
   end

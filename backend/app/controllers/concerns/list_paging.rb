@@ -5,6 +5,19 @@
 module ListPaging
   PAGE_SIZE = 30
   MAX_PAGE_SIZE = 100
+  # Bounds for decoded keyset cursors: a tampered value outside them is INVALID_CURSOR (400), never a
+  # database error. Ranks are small packed integers (TalentRank); timestamps sit well inside Postgres' range.
+  MAX_CURSOR_RANK = 1_000_000
+  CURSOR_YEARS = (2000..2100).freeze
+
+  # An ISO 8601 cursor timestamp inside CURSOR_YEARS, or nil when it cannot be read or is out of range.
+  def self.cursor_time(raw)
+    return nil unless raw.is_a?(String) && raw.length <= 40
+    time = Time.iso8601(raw)
+    CURSOR_YEARS.cover?(time.utc.year) ? time : nil
+  rescue ArgumentError
+    nil
+  end
 
   private
 
@@ -39,7 +52,7 @@ module ListPaging
     return nil unless data.is_a?(Hash)
     if data.key?("k")
       key = data["k"]
-      valid = key.is_a?(Array) && key.length == 2 && key[0].is_a?(Integer) && key[1].is_a?(String) && key[1].length <= 64
+      valid = key.is_a?(Array) && key.length == 2 && key[0].is_a?(Integer) && key[0].between?(0, MAX_CURSOR_RANK) && key[1].is_a?(String) && key[1].length <= 64
       return valid ? { offset: 0, key: } : nil
     end
     offset = data["offset"]

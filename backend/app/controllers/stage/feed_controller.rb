@@ -23,6 +23,7 @@ module Stage
     def index
       user = current_user
       cursor = decode_cursor(params[:cursor])
+      return render_error("This list position is no longer valid. Reload the feed.", :bad_request, "INVALID_CURSOR") if cursor == :invalid
       # Follows and blocks are read once for the whole page (one query each), not once per post.
       blocked = blocked_user_ids(user)
       shown = ->(posts) { visible_to(posts, user).reject { blocked.include?(_1.created_by_user_id) } }
@@ -108,21 +109,24 @@ module Stage
     # The cursor is the (created_at, id) of the last post read, opaque to clients.
     def encode_cursor(post) = Base64.urlsafe_encode64({ t: post.created_at.utc.iso8601(6), i: post.id }.to_json)
 
-    # { created_at:, id: } or nil (first page). The pre-R4 cursor ({ i: id, o: offset }) is still
-    # read for one release: it continues after that post's (created_at, id).
+    # { created_at:, id: } after a valid cursor, nil on the first page (or for a pre-R4 cursor whose post
+    # is gone), :invalid when it cannot be read or holds out-of-range values. The pre-R4 cursor
+    # ({ i: id, o: offset }) is still read for one release: it continues after that post's (created_at, id).
     def decode_cursor(raw)
-      return nil if raw.blank? || !raw.is_a?(String)
+      return nil if raw.blank?
+      return :invalid unless raw.is_a?(String)
       data = JSON.parse(Base64.urlsafe_decode64(raw))
-      return nil unless data.is_a?(Hash) && data["i"].is_a?(String)
+      return :invalid unless data.is_a?(Hash) && data["i"].is_a?(String) && data["i"].length <= 64
       if data.key?("t")
-        created_at = Time.iso8601(data["t"].to_s)
-        return { created_at:, id: data["i"] }
+        created_at = ListPaging.cursor_time(data["t"])
+        return created_at ? { created_at:, id: data["i"] } : :invalid
       end
+      return :invalid unless data["o"].is_a?(Integer)
       deprecated_offset_cursor!
       created_at = Post.where(id: data["i"]).pick(:created_at)
       created_at ? { created_at:, id: data["i"] } : nil
     rescue ArgumentError, JSON::ParserError, TypeError
-      nil
+      :invalid
     end
 
     def deprecated_offset_cursor!

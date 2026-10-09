@@ -57,7 +57,9 @@ Query params: `cursor` (optional, opaque string from a previous response).
 ```
 
 `nextCursor` is opaque (base64 of the last post read: its `created_at` and `id`). The pre-R4
-cursor (`{i, o}`) is still read for one release (logged as `deprecated_offset_cursor`). Clients
+cursor (`{i, o}`) is still read for one release (logged as `deprecated_offset_cursor`); if its post no
+longer exists the feed restarts at page one. A cursor that cannot be read, or whose timestamp is
+outside 2000-2100, is `400 INVALID_CURSOR` (the feed no longer silently serves page one). Clients
 still show each post once. Each `media` item carries the
 public `url` of the author's finished upload (omitted when it cannot be resolved).
 

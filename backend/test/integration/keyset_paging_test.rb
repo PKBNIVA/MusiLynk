@@ -47,6 +47,38 @@ class KeysetPagingTest < ActionDispatch::IntegrationTest
     assert_equal 100, user.profile.reload.rank_score
   end
 
+  test "a full TalentRank.refresh! works in id batches and matches a single statement" do
+    stub_const_batch = 2
+    people = 5.times.map { |n| make_user("Batch #{n}", profile: FULL.merge(session_rate: n.even? ? 4000 : 0)) }
+    expected = people.map { _1.profile.reload.rank_score }
+    Profile.update_all(rank_score: 0)
+    statements = []
+    counter = ->(*, payload) { statements << payload[:sql] if payload[:sql].start_with?("UPDATE profiles SET rank_score") }
+    original = TalentRank::BATCH_SIZE
+    TalentRank.send(:remove_const, :BATCH_SIZE)
+    TalentRank.const_set(:BATCH_SIZE, stub_const_batch)
+    begin
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { TalentRank.refresh! }
+    ensure
+      TalentRank.send(:remove_const, :BATCH_SIZE)
+      TalentRank.const_set(:BATCH_SIZE, original)
+    end
+    assert_operator statements.length, :>=, Profile.count / stub_const_batch, "one UPDATE per id range, not one for the table"
+    assert_equal expected, people.map { _1.profile.reload.rank_score }
+  end
+
+  test "the migration's frozen backfill SQL scores profiles exactly as TalentRank does" do
+    require Rails.root.join("db/migrate/20261009100000_add_rank_score_to_profiles")
+    people = 3.times.map { |n| make_user("Frozen #{n}", profile: FULL.merge(session_rate: n.zero? ? 4000 : 0, verified: n == 1)) }
+    make_item(people.first)
+    expected = people.map { _1.profile.reload.rank_score }
+    Profile.update_all(rank_score: 0)
+    migration = AddRankScoreToProfiles.new
+    ids = Profile.order(:user_id).pluck(:user_id)
+    ActiveRecord::Base.connection.execute(migration.send(:backfill_sql, ids.first, ids.last))
+    assert_equal expected, people.map { _1.profile.reload.rank_score }
+  end
+
   # --- talent --------------------------------------------------------------------------------
 
   test "the talent directory walks every row once by keyset, even when a profile is added mid-scroll" do
@@ -89,7 +121,7 @@ class KeysetPagingTest < ActionDispatch::IntegrationTest
     assert_equal full_order.drop(2), response.parsed_body["talent"].pluck("id") & full_order
     assert_match(/"event":"deprecated_offset_cursor","list":"talent"/, logged)
 
-    [{ k: ["high", "x"] }, { k: [1] }, { k: [1, 2] }].each do |bad|
+    [{ k: ["high", "x"] }, { k: [1] }, { k: [1, 2] }, { k: [10**30, "a"] }, { k: [-1, "a"] }, { k: [2**31, "a"] }, { k: [1, "a" * 65] }].each do |bad|
       get "/api/public/talent", params: { cursor: Base64.urlsafe_encode64(bad.to_json, padding: false) }
       assert_response :bad_request
       assert_equal "INVALID_CURSOR", response.parsed_body["code"]
@@ -166,6 +198,28 @@ class KeysetPagingTest < ActionDispatch::IntegrationTest
     assert_includes served, oldest.id
   end
 
+  test "the feed rejects malformed or out-of-range cursors with INVALID_CURSOR instead of serving page one" do
+    viewer = make_user("Bad Cursor Viewer", profile: {})
+    headers = auth(viewer)
+    bad = [
+      "garbage",
+      Base64.urlsafe_encode64({ i: "nope" }.to_json),
+      Base64.urlsafe_encode64({ t: Time.current.utc.iso8601(6), i: 5 }.to_json),
+      Base64.urlsafe_encode64({ t: "not a time", i: "x" }.to_json),
+      Base64.urlsafe_encode64({ t: "-4800-01-01T00:00:00Z", i: "x" }.to_json),
+      Base64.urlsafe_encode64({ t: "294277-01-01T00:00:00Z", i: "x" }.to_json),
+      Base64.urlsafe_encode64([1, 2].to_json),
+      Base64.urlsafe_encode64({ t: Time.current.utc.iso8601(6), i: "x" * 65 }.to_json)
+    ]
+    bad.each do |cursor|
+      get "/api/stage/feed", params: { cursor: }, headers: headers
+      assert_response :bad_request, "cursor #{cursor}"
+      assert_equal "INVALID_CURSOR", response.parsed_body["code"]
+    end
+    get "/api/stage/feed?cursor[]=x", headers: headers
+    assert_response :bad_request
+  end
+
   test "the feed still reads the pre-R4 cursor ({ i, o }) for one release" do
     viewer = make_user("Legacy Viewer", profile: {})
     author = make_user("Legacy Author", profile: {})
@@ -221,6 +275,11 @@ class KeysetPagingTest < ActionDispatch::IntegrationTest
     assert_equal "INVALID_CURSOR", response.parsed_body["code"]
     get "/api/notifications?cursor[]=x", headers: headers
     assert_response :bad_request
+    ["-4800-01-01T00:00:00Z", "294277-01-01T00:00:00Z", "1999-12-31T23:59:59Z", "2101-01-01T00:00:00Z"].each do |t|
+      get "/api/notifications", params: { cursor: Base64.urlsafe_encode64({ t:, i: "x" }.to_json, padding: false) }, headers: headers
+      assert_response :bad_request, "cursor time #{t}"
+      assert_equal "INVALID_CURSOR", response.parsed_body["code"]
+    end
 
     get "/api/notifications", params: { limit: 2 }, headers: headers
     cursor = response.parsed_body["nextCursor"]

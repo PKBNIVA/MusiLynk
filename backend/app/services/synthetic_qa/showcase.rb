@@ -127,6 +127,8 @@ module SyntheticQa
         create_bookings_and_reviews
         create_conversations
         create_posts
+        # update_columns skips the Profile callback, so refresh the ranks of the verified profiles here.
+        TalentRank.refresh!(@people.map { _1.user.id })
       end
       Rails.logger.info({ event: "demo_showcase.seeded", batch:, **@counts }.to_json)
       result(skipped: false)

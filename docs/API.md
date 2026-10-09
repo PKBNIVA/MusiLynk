@@ -149,7 +149,7 @@ Every `q` (global search, jobs, talent, candidates, acts) goes through `Search::
   words first: `matchMode: "partial"`. Browsing without `q`: `total` is exact up to 1,000, estimated past it.
 - Code-like input (`; = < > { } $ % _ …`) is matched exactly (no correction, no partial); input with
   nothing searchable left (`%`, `' OR '1'='1`) matches no rows.
-- Paging: `limit` (1–100, default 30) and the opaque `cursor` from `nextCursor`; a bad cursor is 400 `INVALID_CURSOR`.
+- Paging: `limit` (1–100, default 30) and the opaque `cursor` from `nextCursor`; a bad cursor is 400 `INVALID_CURSOR` (on every paged list, the Stage feed included): unreadable, a timestamp outside 2000-2100, or a rank outside 0..1,000,000.
 - The talent lists (`/public/talent`, `/candidates`) without `q` page by keyset on `(rank_score, id)`: the cursor holds the last row's key, so a profile added mid-scroll never repeats a row. `rank_score` (TalentRank) packs verified, playable sample, completeness, rates and sign-in recency; it is kept by model callbacks and the nightly `TalentRankJob`. A typed search (`q`) keeps an offset cursor; an offset cursor on a browse is still served for one release (logged as `deprecated_offset_cursor`).
 
 ### Talent discovery

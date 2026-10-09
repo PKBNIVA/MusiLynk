@@ -134,6 +134,7 @@ class ShowcaseSeedTest < ActionDispatch::IntegrationTest
 
   def assert_verification
     assert_equal 33, Profile.where(user_id: musicians.select(:id), verified: true).count
+    assert_equal 0, Profile.where(user_id: musicians.select(:id), verified: true).where("rank_score < 10000").count, "verified showcase profiles carry their rank without waiting for the nightly job"
     approved = VerificationRequest.where(user_id: musicians.select(:id))
     assert_equal 33, approved.count
     assert_equal ["approved"], approved.distinct.pluck(:status)

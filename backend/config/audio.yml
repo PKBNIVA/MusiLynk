@@ -1,0 +1,33 @@
+# Audio variants (AudioVariantsJob, AudioVariants). Read once per process. How to change it:
+# docs/ops/uploads.md, "Audio variants".
+
+# Upload types the pipeline handles. Only types MediaTypeSniffer accepts can appear here; m4a
+# (audio/mp4) and ogg (audio/ogg) wait on the sniffer learning their magic bytes.
+types: [audio/mpeg, audio/wav]
+
+# Caps checked after download (AudioVariants.inspect!) before anything is transcoded: a file over
+# either is rejected for good and keeps serving its original. 100 MB matches Upload::MAX_SIZE;
+# 30 minutes covers any work sample (a full album upload is not one).
+max_bytes: 104857600
+max_duration_seconds: 1800
+
+# The 30 s preview clip every audio upload gets (`<key>/v/preview.m4a`, AAC-LC): what the player
+# fetches first, so the first bytes to play are about 240 KB rather than the WAV's megabytes.
+preview_seconds: 30
+preview_bitrate: 64k
+
+# A full-length AAC transcode (`<key>/v/full.m4a`) for these uncompressed originals only; an MP3
+# original is already small and plays natively, so it is served as the full track itself.
+full_for: [audio/wav]
+full_bitrate: 128k
+
+# Waveform peaks (`<key>/v/peaks.json`): this many 0..1 values over the whole track, computed from
+# decoded mono PCM in chunks (never the whole file in memory).
+peaks_points: 400
+
+# Seconds each ffmpeg/ffprobe run may take before it is killed and the upload is retried.
+ffmpeg_timeout_seconds: 180
+
+# Cache-Control on every variant. Keys contain a UUID and a replaced file gets a new key, so an
+# object never changes under its URL.
+cache_control: "public, max-age=31536000, immutable"

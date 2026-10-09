@@ -12,7 +12,7 @@ pools:
   # Notification and transactional email, web push, job-alert deliveries.
   - queues: [notifications, mailers]
     threads: 2
-  # Everything else: cron sweeps, digests' fan-out, demo data, uploads cleanup, image variants, the weekly BackupToR2Job.
+  # Everything else: cron sweeps, digests' fan-out, demo data, uploads cleanup, image and audio variants, the weekly BackupToR2Job.
   - queues: [default, scheduled]
     threads: 1
 

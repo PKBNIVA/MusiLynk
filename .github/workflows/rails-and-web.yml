@@ -82,8 +82,9 @@ jobs:
       # file is re-dumped from migrations alone; the next step diffs it against the commit.
       # ImageVariantsJob encodes through libvips (ruby-vips binds the shared library at runtime);
       # test/jobs/image_variants_job_test.rb does a real encode. ubuntu-24.04 names it libvips42t64.
-      - name: Install libvips for the image variants tests
-        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libvips42t64
+      # AudioVariantsJob shells out to ffmpeg/ffprobe; test/jobs/audio_variants_job_test.rb does a real transcode.
+      - name: Install libvips and ffmpeg for the image and audio variants tests
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libvips42t64 ffmpeg
       - name: Run every migration on an empty database
         run: rm db/schema.rb && bin/rails db:migrate
       - name: Check db/schema.rb matches the migrations

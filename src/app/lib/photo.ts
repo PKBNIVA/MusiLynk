@@ -16,6 +16,27 @@ export const HERO_PHOTO_WIDTHS = [480, 768, 1200, 1600] as const;
  * HTML preload (scripts/prerender-heads.mjs) must use the same value or the browser downloads two files. */
 export const HERO_PHOTO_SIZES = '(min-width: 1024px) 42vw, 100vw';
 
+/** How wide a <PhotoHeader> (hire, rates, pricing, urgent pages) renders; shared with its HTML preload. */
+export const PHOTO_HEADER_SIZES = '(min-width: 1152px) 1152px, 100vw';
+/** The photo behind each hire page and role tile, keyed by the SEO role slug (seoPages.ts). */
+export const ROLE_PHOTOS: Readonly<Record<string, string>> = {
+  drummer: 'drummer-stage',
+  guitarist: 'guitarist-stage',
+  bassist: 'rehearsal-room',
+  'keyboard-player': 'keyboard-player',
+  singer: 'carnatic-vocalist',
+  'tabla-player': 'tabla-kolkata',
+  'dhol-player': 'wedding-band',
+  violinist: 'violinist',
+  saxophonist: 'saxophonist',
+  dj: 'dj-goa',
+  'sound-engineer': 'sound-desk',
+  'music-producer': 'recording-studio',
+};
+/** The photo an unknown role falls back to, and the one every rates page uses. */
+export const ROLE_PHOTO_FALLBACK = 'rehearsal-room';
+export const RATES_HEADER_PHOTO = 'recording-studio';
+
 const ALL_WIDTHS: readonly number[] = [...new Set<number>([...PHOTO_WIDTHS, ...HERO_PHOTO_WIDTHS])];
 const LARGEST = PHOTO_WIDTHS[PHOTO_WIDTHS.length - 1];
 

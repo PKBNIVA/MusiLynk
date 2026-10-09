@@ -309,3 +309,17 @@ belong to the search rework, which owns `Search::Query`, `Search::Runner` and th
   in development and tests and is logged in production.
 - Development tags every SQL statement with its controller and action (`query_log_tags`) and logs
   statements over 100 ms (`config/initializers/slow_query_log.rb`).
+
+### Talent rank and keyset paging (R4, 2026-10-09)
+
+The talent ranking (verified, playable sample, completeness, rates, sign-in recency) is precomputed
+into `profiles.rank_score` (`TalentRank`; kept by Profile/PortfolioItem callbacks and the nightly
+`TalentRankJob`) and indexed as `(rank_score DESC, user_id DESC)`. Browsing the directory, the Stage
+feed and notifications page by keyset (`(rank_score, id)` / `(created_at, id)`), so a deep page
+costs the same as the first. EXPLAIN ANALYZE on the `ml_scout` volume (55k profiles):
+
+| Talent page | Before | After |
+| --- | ---: | ---: |
+| first page | 258 ms (Incremental Sort of 43.5k rows) | 0.21 ms (Index Only Scan, no sort) |
+| row 3,000 | 507 ms (offset) | 0.29 ms (keyset) |
+| row 30,000 | 1,246 ms (offset) | 0.27 ms (keyset) |

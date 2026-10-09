@@ -23,7 +23,19 @@ const serverBody = (overrides: Record<string, unknown> = {}) => ({
     cancellation: { fullRefundDays: 10, partialRefundDays: 3, partialRefundPercent: 40 },
     plainEnglish: ['x'],
   },
-  plans: [{ code: 'pro', name: 'Pro', monthly: 2999, annual: 29990, trialDays: 7, activePosts: 10, seats: 2, shortlist: 250, bookings: 20 }],
+  plans: [
+    {
+      code: 'pro',
+      name: 'Pro',
+      monthly: 2999,
+      annual: 29990,
+      trialDays: 7,
+      activePosts: 10,
+      seats: 2,
+      shortlist: 250,
+      bookings: 20,
+    },
+  ],
   limits: {
     maxLiveSessions: 5,
     publicPortfolioItemsShown: 8,
@@ -37,7 +49,11 @@ const serverBody = (overrides: Record<string, unknown> = {}) => ({
     jobMaxRoles: 6,
     pushSubscriptionsPerUser: 10,
   },
-  catalog: { launchCities: ['Mumbai', 'Pune'], cities: [{ slug: 'pune', name: 'Pune' }], hireRoles: [{ slug: 'dj', label: 'DJ' }] },
+  catalog: {
+    launchCities: ['Mumbai', 'Pune'],
+    cities: [{ slug: 'pune', name: 'Pune' }],
+    hireRoles: [{ slug: 'dj', label: 'DJ' }],
+  },
   features: { stage: false, resumes: true },
   generatedAt: '2026-10-09T13:00:00Z',
   ...overrides,
@@ -52,7 +68,11 @@ describe('publicConfig', () => {
     expect(publicConfigLoaded()).toBe(false);
     expect(getPublicConfig()).toBe(FALLBACK_CONFIG);
     expect(FALLBACK_CONFIG.plans.map((p) => p.code)).toEqual(['free', 'pro', 'studio', 'enterprise']);
-    expect(FALLBACK_CONFIG.fees.cancellation).toEqual({ fullRefundDays: 7, partialRefundDays: 2, partialRefundPercent: 50 });
+    expect(FALLBACK_CONFIG.fees.cancellation).toEqual({
+      fullRefundDays: 7,
+      partialRefundDays: 2,
+      partialRefundPercent: 50,
+    });
     expect(FALLBACK_CONFIG.limits.maxLiveSessions).toBe(10);
     expect(FALLBACK_CONFIG.catalog.cities[0]).toEqual({ slug: 'mumbai', name: 'Mumbai' });
     expect(FALLBACK_CONFIG.features).toEqual({ stage: true, resumes: false });
@@ -64,7 +84,10 @@ describe('publicConfig', () => {
     const features = await import('../features');
     const [a, b] = await Promise.all([loadPublicConfig(), loadPublicConfig()]);
     expect(apiGet).toHaveBeenCalledTimes(1);
-    expect(apiGet).toHaveBeenCalledWith('/public/config', expect.objectContaining({ viaEdge: true, skipAuthRedirect: true }));
+    expect(apiGet).toHaveBeenCalledWith(
+      '/public/config',
+      expect.objectContaining({ viaEdge: true, skipAuthRedirect: true }),
+    );
     expect(a).toBe(b);
     expect(publicConfigLoaded()).toBe(true);
     expect(getPublicConfig().fees.platformFeePercent).toBe(5);
@@ -76,7 +99,10 @@ describe('publicConfig', () => {
   });
 
   it('keeps the fallback when the request fails or the body is not a config, and retries later', async () => {
-    apiGet.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ unrelated: true }).mockResolvedValueOnce(serverBody());
+    apiGet
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ unrelated: true })
+      .mockResolvedValueOnce(serverBody());
     const { loadPublicConfig, getPublicConfig, publicConfigLoaded, FALLBACK_CONFIG } = await load();
     expect(await loadPublicConfig()).toBe(FALLBACK_CONFIG);
     expect(await loadPublicConfig()).toBe(FALLBACK_CONFIG);

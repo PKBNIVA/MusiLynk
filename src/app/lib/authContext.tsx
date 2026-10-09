@@ -171,13 +171,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [],
   );
   const login = async (email: string, password: string) => {
-    const d = await apiPost<{ user: User; accessToken: string; realtime?: boolean; features?: Record<string, boolean> } | SecondFactorChallenge>(
-      '/auth/login',
-      {
-        email,
-        password,
-      },
-    );
+    const d = await apiPost<
+      | { user: User; accessToken: string; realtime?: boolean; features?: Record<string, boolean> }
+      | SecondFactorChallenge
+    >('/auth/login', {
+      email,
+      password,
+    });
     if (isSecondFactorChallenge(d)) return d;
     generation.current += 1;
     setAccessToken(d.accessToken);
@@ -189,7 +189,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return d.user;
   };
   const register = async (payload: RegisterPayload) => {
-    const d = await apiPost<{ user: User; accessToken: string; realtime?: boolean; features?: Record<string, boolean> }>('/auth/register', payload);
+    const d = await apiPost<{
+      user: User;
+      accessToken: string;
+      realtime?: boolean;
+      features?: Record<string, boolean>;
+    }>('/auth/register', payload);
     generation.current += 1;
     setAccessToken(d.accessToken);
     rememberSessionRole(d.user.role);
@@ -201,7 +206,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
   /* Email sign-in code: same response as /auth/login; creates the account when the code was requested as a sign-up. */ const verifyCode =
     async (email: string, code: string) => {
-      const d = await apiPost<{ user: User; accessToken: string; realtime?: boolean; features?: Record<string, boolean> }>('/auth/otp/verify', {
+      const d = await apiPost<{
+        user: User;
+        accessToken: string;
+        realtime?: boolean;
+        features?: Record<string, boolean>;
+      }>('/auth/otp/verify', {
         email,
         code,
       });
@@ -215,7 +225,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return d.user;
     };
   const completeSecondFactor = async (challengeToken: string, code: string) => {
-    const d = await apiPost<{ user: User; accessToken: string; realtime?: boolean; features?: Record<string, boolean> }>('/auth/second-factor', {
+    const d = await apiPost<{
+      user: User;
+      accessToken: string;
+      realtime?: boolean;
+      features?: Record<string, boolean>;
+    }>('/auth/second-factor', {
       challengeToken,
       code,
     });

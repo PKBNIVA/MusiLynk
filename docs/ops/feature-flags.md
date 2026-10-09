@@ -44,9 +44,9 @@ Set the env variable on the API service (Railway, `musilynk-api` and `musilynk-w
 FEATURE_STAGE=false     # off for everyone, allowlist included; true/1/on = on for everyone
 ```
 
-`FEATURE_<NAME>` is read per request, so a restart of the service is all it takes; the edge copy
-of `/api/public/config` refreshes within five minutes (s-maxage 300), signed-in people see it on
-their next `/me`. Any value other than true/1/on/false/0/off is ignored. Every `FEATURE_*`
+`FEATURE_<NAME>` is read on every request (no code deploy, no CI run); Railway restarts the
+service when a variable changes, so allow a minute. The edge copy of `/api/public/config`
+refreshes within five minutes (s-maxage 300); signed-in people see it on their next `/me`. Any value other than true/1/on/false/0/off is ignored. Every `FEATURE_*`
 variable is optional; unset means "as the file says". Remove the variable once the file is edited.
 
 ## Rolling out

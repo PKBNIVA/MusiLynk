@@ -176,6 +176,17 @@ describe('vercel.json crawler routing and headers', () => {
     expect(csp.value).toMatch(/script-src 'self'/);
   });
 
+  it('allows the Cloudflare Turnstile script and challenge frame, and nothing else from Cloudflare', () => {
+    const csp = config.headers
+      .flatMap((entry) => entry.headers)
+      .find((header) => header.key === 'Content-Security-Policy');
+    const directive = (name) => csp.value.match(new RegExp(`${name} ([^;]*)`))[1].split(' ');
+    expect(directive('script-src')).toContain('https://challenges.cloudflare.com');
+    expect(directive('frame-src')).toContain('https://challenges.cloudflare.com');
+    expect(directive('connect-src')).not.toContain('https://challenges.cloudflare.com');
+    expect(csp.value).not.toMatch(/\*\.cloudflare\.com/);
+  });
+
   it('lets the app open the real-time socket on the API host, and no other socket', () => {
     const csp = config.headers
       .flatMap((entry) => entry.headers)

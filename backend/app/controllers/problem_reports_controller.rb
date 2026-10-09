@@ -85,18 +85,18 @@ class ProblemReportsController < ApplicationController
   # Site-wide and per-address daily caps for signed-out reports: same counters as throttle!,
   # keyed by the site and by the hashed address instead of the IP.
   def within_site_limit?
-    within_counter_limit?("problem-report-site", "site")
+    within_counter_limit?("problem-report-site", "site", SIGNED_OUT_SITE_PER_DAY)
   end
 
   def within_email_limit?(email)
-    within_counter_limit?("problem-report-email", digest(email))
+    within_counter_limit?("problem-report-email", digest(email), SIGNED_OUT_EMAIL_PER_DAY)
   end
 
-  def within_counter_limit?(bucket, identifier)
+  def within_counter_limit?(bucket, identifier, limit)
     period = RateLimits.period(bucket)
     count = rate_limit_count(bucket, "rate:#{bucket}:#{identifier}:#{Time.current.to_i / period.to_i}", 1, period)
     return false if count == :unavailable
-    return true if count.nil? || count <= RateLimits.limit(bucket)
+    return true if count.nil? || count <= limit
 
     render_too_many_requests(bucket, period)
     false

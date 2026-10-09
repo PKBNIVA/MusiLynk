@@ -427,10 +427,11 @@ export function AccountStep({
         )}
       </div>
       <FormError message={formError} />
+      <TurnstileWidget key={turnstileRound} action="sign-up" onToken={setTurnstileToken} />
       <Button
         type="submit"
         size="lg"
-        disabled={loading}
+        disabled={loading || awaitingTurnstile}
         className="w-full border-0 bg-gradient-to-r from-fuchsia-700 to-violet-700 text-base text-white hover:from-fuchsia-600 hover:to-violet-600"
       >
         {method === 'code' && <Mail aria-hidden="true" size={17} />}

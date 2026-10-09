@@ -17,10 +17,13 @@ Page) is not exposed in the API; it exists for audit and moderation only.
 
 ## GET /api/stage/feed
 
-Cursor-paginated, ranked feed: posts from people and Pages you follow (plus your own),
-blended with posts matching your city/genres, then trending posts (applause + comments in
-the last 72h, time-decayed). Excludes blocked users (both ways), hidden/deleted posts, and
-followers-only posts you cannot see.
+Keyset-paginated, ranked feed. Pages walk the posts newest first by `(created_at, id)`: each page
+is the next 20 visible posts older than the cursor, ranked within that window: posts from people
+and Pages you follow (plus your own), then posts matching your city/genres, then trending posts
+(applause + comments in the last 72h, time-decayed). Pinned posts lead the first page. Excludes
+blocked users (both ways), hidden/deleted posts, and followers-only posts you cannot see. Every
+post is reachable (there is no candidate pool), and a post published mid-scroll never shifts a
+later page.
 
 Query params: `cursor` (optional, opaque string from a previous response).
 
@@ -53,8 +56,11 @@ Query params: `cursor` (optional, opaque string from a previous response).
 }
 ```
 
-`nextCursor` is opaque (the last post served and its position); the ranking is time-decayed, so a
-post can reappear on a later page. Clients show each post once. Each `media` item carries the
+`nextCursor` is opaque (base64 of the last post read: its `created_at` and `id`). The pre-R4
+cursor (`{i, o}`) is still read for one release (logged as `deprecated_offset_cursor`); if its post no
+longer exists the feed restarts at page one. A cursor that cannot be read, or whose timestamp is
+outside 2000-2100, is `400 INVALID_CURSOR` (the feed no longer silently serves page one). Clients
+still show each post once. Each `media` item carries the
 public `url` of the author's finished upload (omitted when it cannot be resolved).
 
 ## POST /api/stage/posts

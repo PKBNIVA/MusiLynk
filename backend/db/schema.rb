@@ -827,6 +827,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_110000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["read_at"], name: "index_notifications_on_read_at_when_read", where: "(read_at IS NOT NULL)"
+    t.index ["user_id", "created_at", "id"], name: "index_notifications_on_user_id_and_created_at_and_id", order: { created_at: :desc, id: :desc }
     t.index ["user_id", "read_at", "created_at"], name: "index_notifications_on_user_id_and_read_at_and_created_at"
     t.index ["user_id"], name: "index_notifications_on_user_id"
   end
@@ -1081,6 +1082,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_110000) do
     t.tsvector "search_vector"
     t.text "search_text"
     t.integer "profile_view_count", default: 0, null: false
+    t.integer "rank_score", default: 0, null: false
     t.index "((event_types)::text) gin_trgm_ops", name: "index_profiles_on_event_types_text_trgm", using: :gin
     t.index "((genres)::text) gin_trgm_ops", name: "index_profiles_on_genres_text_trgm", using: :gin
     t.index "((instruments)::text) gin_trgm_ops", name: "index_profiles_on_instruments_text_trgm", using: :gin
@@ -1091,6 +1093,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_110000) do
     t.index ["bio"], name: "index_profiles_on_bio", opclass: :gin_trgm_ops, using: :gin
     t.index ["headline"], name: "index_profiles_on_headline", opclass: :gin_trgm_ops, using: :gin
     t.index ["location"], name: "index_profiles_on_location_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["rank_score", "user_id"], name: "index_profiles_on_rank_score_and_user_id", order: :desc
     t.index ["search_text"], name: "index_profiles_on_search_text_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["search_vector"], name: "index_profiles_on_search_vector", using: :gin
   end

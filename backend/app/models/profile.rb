@@ -8,6 +8,10 @@ class Profile < ApplicationRecord
 
   self.primary_key = :user_id
   belongs_to :user
+  # The directory ranking (TalentRank) reads these; recompute this profile's rank_score when they change.
+  RANK_ATTRIBUTES = %w[verified headline bio location skills genres session_rate show_rate day_rate hourly_rate].freeze
+  after_commit -> { TalentRank.refresh!([user_id]) }, on: :create
+  after_commit -> { TalentRank.refresh!([user_id]) if (previous_changes.keys & RANK_ATTRIBUTES).any? }, on: :update
   include SearchIndexed
   search_document "talent", key: :user_id,
     fields: %i[headline location bio roles skills instruments genres credits gear software event_types open_to languages]

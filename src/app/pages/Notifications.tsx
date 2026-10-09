@@ -18,6 +18,7 @@ import { formatWhen } from '../lib/format';
 
 type Role = 'jobseeker' | 'employer';
 type Item = Notification;
+type NotificationsPage = { notifications?: Notification[]; unread?: number; nextCursor?: string | null };
 
 // Role-neutral links stored by the API (see backend Notifier) mapped to routes that exist for each workspace.
 const SHARED: Record<string, string> = {
@@ -78,22 +79,44 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [markingAll, setMarkingAll] = useState(false);
+  // Keyset paging: the API serves the newest page and a `nextCursor` for the next older one.
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const load = async () => {
-    type Page = { notifications?: Notification[]; unread?: number };
-    const cached = peek<Page>('/notifications');
+    const cached = peek<NotificationsPage>('/notifications');
     if (cached)
       setItems((current) => (sameData(current, cached.notifications || []) ? current : cached.notifications || []));
     else setLoading(true);
     setError('');
     try {
-      const d = await cachedGet<Page>('/notifications', { family: 'notifications', force: Boolean(cached) });
+      const d = await cachedGet<NotificationsPage>('/notifications', {
+        family: 'notifications',
+        force: Boolean(cached),
+      });
       setItems((current) => (sameData(current, d.notifications || []) ? current : d.notifications || []));
+      setCursor(d.nextCursor || null);
     } catch (e: unknown) {
       setError(errorMessage(e, 'Unable to load notifications.'));
     } finally {
       setLoading(false);
     }
   };
+  async function loadMore() {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const d = await apiGet<NotificationsPage>(`/notifications?cursor=${encodeURIComponent(cursor)}`);
+      setItems((prev) => {
+        const seen = new Set(prev.map((n) => n.id));
+        return [...prev, ...(d.notifications || []).filter((n) => !seen.has(n.id))];
+      });
+      setCursor(d.nextCursor || null);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, 'Unable to load older notifications'));
+    } finally {
+      setLoadingMore(false);
+    }
+  }
   useEffect(() => {
     void load();
   }, []);
@@ -268,6 +291,18 @@ export default function Notifications() {
                 );
               })}
             </ul>
+          )}
+          {!loading && !error && cursor && (
+            <div className="text-center pt-2">
+              <Button
+                variant="outline"
+                data-testid="notifications-load-more"
+                disabled={loadingMore}
+                onClick={() => void loadMore()}
+              >
+                {loadingMore ? 'Loading…' : 'Load older notifications'}
+              </Button>
+            </div>
           )}
         </div>
       </main>

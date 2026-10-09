@@ -113,6 +113,32 @@ describe('Notifications', () => {
     expect(card().getAttribute('data-read')).toBe('false');
     expect(toast.error).toHaveBeenCalledWith('Unable to mark notification as read. Try again.');
   });
+
+  it('loads older notifications with the keyset cursor and shows each one once', async () => {
+    get.mockImplementation(async (path) => {
+      if (path === '/notifications') return { notifications: [note('n3'), note('n2')], nextCursor: 'c1' };
+      if (path === '/notifications?cursor=c1') return { notifications: [note('n2'), note('n1')], nextCursor: null };
+      if (path === '/notifications/preferences') return { emailNotifications: true };
+      throw new Error(`unexpected GET ${path}`);
+    });
+    await mount('/notifications', '/notifications', <Notifications />);
+    await settle();
+    const ids = () => [...container.querySelectorAll('[data-testid="notification"]')].map((el) => el.textContent);
+    expect(ids()).toHaveLength(2);
+
+    await click(container.querySelector<HTMLElement>('[data-testid="notifications-load-more"]')!);
+    await settle();
+    expect(ids()).toHaveLength(3);
+    expect(get).toHaveBeenCalledWith('/notifications?cursor=c1');
+    expect(container.querySelector('[data-testid="notifications-load-more"]')).toBeNull();
+  });
+
+  it('offers no "load older" button when the first page is the whole list', async () => {
+    serve([note('n1')]);
+    await mount('/notifications', '/notifications', <Notifications />);
+    await settle();
+    expect(container.querySelector('[data-testid="notifications-load-more"]')).toBeNull();
+  });
 });
 
 describe('Job details', () => {

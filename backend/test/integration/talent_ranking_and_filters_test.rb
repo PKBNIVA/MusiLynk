@@ -24,6 +24,7 @@ class TalentRankingAndFiltersTest < ActionDispatch::IntegrationTest
     login_old.update_columns(last_login_at: 10.days.ago)
     login_new.update_columns(last_login_at: 1.hour.ago)
     [rates_only, complete, partial, private_sample, empty, verified, sampled].each { _1.update_columns(last_login_at: nil) }
+    TalentRank.refresh! # sign-in recency is aged by the nightly TalentRankJob, not on each sign-in
 
     get "/api/public/talent", params: { limit: 50 }
     assert_response :success
@@ -48,6 +49,7 @@ class TalentRankingAndFiltersTest < ActionDispatch::IntegrationTest
     make_item(audio)
     make_item(video, kind: "video", url: "https://example.com/clip.mp4")
     [plain, only_image, only_project, no_link, audio, video].each { _1.update_columns(last_login_at: nil) }
+    TalentRank.refresh! # update_columns skips the rank callbacks; the nightly TalentRankJob repairs such drift
 
     get "/api/public/talent", params: { limit: 50 }
     assert_response :success

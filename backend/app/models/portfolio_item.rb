@@ -24,6 +24,10 @@ class PortfolioItem < ApplicationRecord
   after_commit -> { ShowcaseSync.item(self) }, on: :create
   after_commit -> { ShowcaseSync.item(self) if (previous_changes.keys & SYNC_ATTRIBUTES).any? }, on: :update
   after_destroy_commit -> { ShowcaseSync.forget_item(id) }
+  # A playable public sample and having any sample at all both feed the owner's rank (TalentRank).
+  RANK_ATTRIBUTES = %w[user_id kind visibility url].freeze
+  after_commit -> { TalentRank.refresh!([user_id]) }, on: %i[create destroy]
+  after_commit -> { TalentRank.refresh!(previous_changes.fetch("user_id", [user_id]) | [user_id]) if (previous_changes.keys & RANK_ATTRIBUTES).any? }, on: :update
 
   # `image` is the responsive payload (ImageSet) of an uploaded image sample, `thumbnail` that of an
   # uploaded thumbnail, `audio` the preview/peaks payload (AudioSet) of an uploaded audio sample; all

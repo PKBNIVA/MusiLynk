@@ -202,7 +202,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:get, "/api/notifications/unsubscribe/preferences", :public, { ok: [400], params: { token: "not-a-token" }, note: "valid tokens are covered in email_preferences_test" }],
     [:patch, "/api/notifications/unsubscribe/preferences", :public, { ok: [400], params: { token: "not-a-token", emailNotifications: false } }],
     [:post, "/api/email/webhook/brevo", :public, { ok: [401, 503], note: "a call without the shared secret is refused; events are covered in email_suppression_test" }],
-    [:get, "/api/notifications", :any, { keys: %w[notifications unread] }],
+    [:get, "/api/notifications", :any, { keys: %w[notifications unread nextCursor] }],
     [:patch, "/api/notifications/{notification}", :any, { idor: true, missing: :notification }],
     [:put, "/api/notifications/{notification}", :any, { idor: true }],
     # Uses draft_job (not :shared[:job]) because the world already seeds an open report by `js`

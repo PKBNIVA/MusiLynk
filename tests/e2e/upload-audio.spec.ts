@@ -20,7 +20,12 @@ const WAV = readFileSync(new URL('../../backend/test/fixtures/files/audio-sample
 const PEAKS = JSON.stringify({ version: 1, duration: 2, peaks: Array.from({ length: 400 }, (_, i) => (i % 40) / 40) });
 
 const professional = { ...fixtureTalent[0], demo: false };
-const sample = { ...fixtureSamples[professional.id][0], url: ORIGINAL, audio, mediaMetadata: { contentType: 'audio/wav' } };
+const sample = {
+  ...fixtureSamples[professional.id][0],
+  url: ORIGINAL,
+  audio,
+  mediaMetadata: { contentType: 'audio/wav' },
+};
 
 async function mockProfile(page: import('@playwright/test').Page) {
   const requested: string[] = [];
@@ -38,7 +43,11 @@ async function mockProfile(page: import('@playwright/test').Page) {
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === `/api/public/talent/${professional.id}`) {
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ professional, portfolio: [sample] }) });
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ professional, portfolio: [sample] }),
+      });
     }
     if (path === '/api/me') return route.fulfill({ status: 401, contentType: 'application/json', body: '{}' });
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
@@ -46,7 +55,9 @@ async function mockProfile(page: import('@playwright/test').Page) {
   return requested;
 }
 
-test('a work sample starts playing from the preview clip, shows the waveform and can switch to the full track', async ({ page }) => {
+test('a work sample starts playing from the preview clip, shows the waveform and can switch to the full track', async ({
+  page,
+}) => {
   const requested = await mockProfile(page);
   await page.goto(`/professionals/${professional.id}`);
   const player = page.getByTestId('audio-player').first();

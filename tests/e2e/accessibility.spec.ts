@@ -248,6 +248,8 @@ test.describe('Phase 3 UX regressions', () => {
 
   test('a plain footer link with no hover styling of its own still shows hover feedback (P3-05)', async ({ page }) => {
     await openSettledPage(page, '/about');
+    // The page is a lazy route: under load the loading text can be gone a beat before <main> is rendered.
+    await expect(page.locator('main')).toBeVisible();
     // The legal pages' related-page chips now carry their own hover classes, so add a bare link
     // to check the global fallback rule itself.
     await page.evaluate(() => {

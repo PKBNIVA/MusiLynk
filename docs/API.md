@@ -124,7 +124,7 @@ the caller owns and are tracked in `api_query_budget_test.rb` (`UNBOUNDED`).
 | PATCH/PUT/DELETE | `/portfolio/:id` | jobseeker (own) | as create (`type` currently required on update) | `{item}` / `{ok}` |
 | POST | `/uploads/presign` | any | `filename, contentType (audio/mpeg, audio/wav, video/mp4, image/jpeg\|png\|webp, application/pdf), size ≤ 100 MB` | `{mode: direct, uploadUrl, method, headers, publicUrl}` or `{mode: proxied, uploadUrl}`; 422 |
 | PUT | `/uploads/local` | any | raw body, `Content-Type`, `X-Filename` | 201 `{url}`; 422 type/size/content sniff; 403 when disabled |
-| GET | `/notifications` | any | — | `{notifications: [{id, type, title, body, link, readAt, createdAt}], unread}`; ≤ 100 |
+| GET | `/notifications` | any | `limit` (1–100, default 30), `cursor` | `{notifications: [{id, type, title, body, link, readAt, createdAt}], unread, nextCursor}`; newest first, keyset-paged on `(created_at, id)`; a bad cursor is 400 `INVALID_CURSOR` |
 | GET | `/notifications/unread` | any | — | `{unread}` |
 | PATCH/PUT | `/notifications/:id` | any (own) | `read: false` to unread | `{ok}` |
 | POST | `/reports` | any | `entityType (≤40), entityId (≤120), reason (≤200), details (≤5000)` — strings | 201 `{id}`; 422 `INVALID_REPORT`; 429 |
@@ -150,6 +150,7 @@ Every `q` (global search, jobs, talent, candidates, acts) goes through `Search::
 - Code-like input (`; = < > { } $ % _ …`) is matched exactly (no correction, no partial); input with
   nothing searchable left (`%`, `' OR '1'='1`) matches no rows.
 - Paging: `limit` (1–100, default 30) and the opaque `cursor` from `nextCursor`; a bad cursor is 400 `INVALID_CURSOR`.
+- The talent lists (`/public/talent`, `/candidates`) without `q` page by keyset on `(rank_score, id)`: the cursor holds the last row's key, so a profile added mid-scroll never repeats a row. `rank_score` (TalentRank) packs verified, playable sample, completeness, rates and sign-in recency; it is kept by model callbacks and the nightly `TalentRankJob`. A typed search (`q`) keeps an offset cursor; an offset cursor on a browse is still served for one release (logged as `deprecated_offset_cursor`).
 
 ### Talent discovery
 

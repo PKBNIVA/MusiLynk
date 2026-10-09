@@ -116,6 +116,55 @@ downloads the 512 px (or 5 MB) original:
 
 No new environment variable: the feature is on wherever direct uploads are on, and off with them.
 
+## Audio variants
+
+Every finished audio upload (MP3 and WAV today; the types in `backend/config/audio.yml`) gets a short
+preview clip, waveform peaks and, for WAV, a compressed full-length copy, made in the background, so
+the work-sample player starts on a ~240 KB clip instead of a multi-megabyte original:
+
+- **When.** `POST /api/uploads/:id/complete` enqueues `AudioVariantsJob` (queue `default`, the worker
+  service) next to the image job. The worker downloads the original, and writes under the original's key:
+  `<key>/v/preview.m4a` (the first `preview_seconds`, AAC-LC at `preview_bitrate`), `<key>/v/full.m4a`
+  (the whole track at `full_bitrate`, only for the types in `full_for`, i.e. WAV; an MP3 is already small
+  and is its own full track) and `<key>/v/peaks.json` (`peaks_points` values in 0..1 over the track,
+  computed from streamed mono PCM, never the whole file in memory). All carry
+  `Cache-Control: public, max-age=31536000, immutable`. What was produced and the duration go to
+  `uploads.variants["audio"]`. A storage or ffmpeg failure retries three times, then the row keeps empty
+  variants and the original is served alone; Sentry gets the error.
+- **Payloads.** Wherever an upload is exposed an `audio` object is added beside the old `url` string:
+  `audio` on work samples (talent detail, own portfolio, candidates, portfolio pages) and on the upload
+  record. Shape: `{ preview, full, peaks, duration }` (URLs; `full` is `null` for an MP3; `duration` in
+  seconds); `null` until the job has run and for links. The front end plays `preview` first, draws
+  `peaks`, and switches to `full` (or the original) when the listener plays past the clip.
+- **Safety.** The bytes are not trusted: the job re-checks the downloaded object against its row (size
+  not above `byte_size`, magic bytes equal to the declared type), refuses files over `max_bytes` or
+  `max_duration_seconds` (config/audio.yml) from the ffprobe header before any decode, and runs
+  `ffmpeg` with `-nostdin`, the demuxer fixed by the declared type (never ffmpeg's own guess) and a
+  `ffmpeg_timeout_seconds` kill. A rejected file is given up on at once (no retries) and logged as
+  `audio_variants_rejected`; a file ffprobe cannot parse counts as rejected, a missing binary or a
+  timeout as a retry.
+- **Deletion.** `Upload#purge!` and the daily `UploadSweepJob` delete the variants with the original; the
+  bucket sweep treats `<key>/v/preview.m4a`, `full.m4a` and `peaks.json` as belonging to `<key>`.
+- **Backfill (existing uploads).** The deploy that adds the job queues it once for every finished
+  bucket audio file without variants, from the migration
+  `backend/db/migrate/20261009110000_enqueue_audio_variants_backfill.rb` (logs
+  `audio_variants_backfill_enqueued` with the count; a queue it cannot reach logs
+  `audio_variants_backfill_skipped` and never fails the deploy). The same logic is
+  `AudioVariants.enqueue_backfill`, which `cd backend && bin/rails audio:backfill` calls for a retry, a
+  `FORCE=1` run (after changing config/audio.yml) or a `LIMIT=n` trial; 500 ids per batch (`BATCH=n`),
+  idempotent, **admin only, from a Railway shell on the API service**, and in production it refuses to
+  run without `CONFIRM=audio-backfill`, because each queued job lands on the worker's single-thread
+  default pool ahead of the cron sweeps (a WAV transcode takes seconds). The first production run is
+  the migration's.
+- **Changing the caps, bitrates or peaks.** Edit `backend/config/audio.yml`, deploy, then
+  `bin/rails audio:backfill FORCE=1`. Files over a lowered cap stay unprocessed and keep their original.
+- **Needs ffmpeg.** `ffmpeg` and `ffprobe` must be on the worker's PATH: the Dockerfile installs
+  `ffmpeg` (Debian bookworm), the rails CI job installs it with `libvips42t64`. Where it is missing the
+  job logs `ffmpeg is not installed on this worker` and retries, then gives up with the original in
+  use; nothing else is affected. Disk-stored uploads (no `AWS_BUCKET`) get no variants.
+
+No new environment variable: the feature is on wherever direct uploads are on, and off with them.
+
 ## How the code uses these
 
 `backend/app/services/upload_storage.rb`: `read_base_url` is `UPLOADS_PUBLIC_BASE_URL`, then

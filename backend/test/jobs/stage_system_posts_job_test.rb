@@ -79,17 +79,27 @@ class StageSystemPostsJobTest < ActiveJob::TestCase
   test "posts and pins the weekly roundup only on Monday 10:00 IST, and only once" do
     monday_ten_ist = ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-09-28 10:15")
 
-    StageSystemPostsJob.perform_now(monday_ten_ist)
-    StageSystemPostsJob.perform_now(monday_ten_ist + 5.minutes)
+    # Post#pinned? compares pinned_until with the real clock, and the roundup pins for 7 days, so
+    # without a frozen clock this assertion silently expired on 2026-10-05 (the date-dependent CI
+    # failure). Freeze "now" at the moment the job runs, the way the hourly cron would see it.
+    post = nil
+    travel_to(monday_ten_ist) do
+      StageSystemPostsJob.perform_now(monday_ten_ist)
+      StageSystemPostsJob.perform_now(monday_ten_ist + 5.minutes)
 
-    posts = Post.where(system_kind: "weekly_roundup")
-    assert_equal 1, posts.count
-    post = posts.first
-    assert post.pinned?
-    assert_includes post.body, "Comment with your roles"
+      posts = Post.where(system_kind: "weekly_roundup")
+      assert_equal 1, posts.count
+      post = posts.first
+      assert post.pinned?
+      assert_includes post.body, "Comment with your roles"
 
-    not_monday_ten = ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-09-29 10:15")
-    StageSystemPostsJob.perform_now(not_monday_ten)
-    assert_equal 1, Post.where(system_kind: "weekly_roundup").count
+      not_monday_ten = ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-09-29 10:15")
+      StageSystemPostsJob.perform_now(not_monday_ten)
+      assert_equal 1, Post.where(system_kind: "weekly_roundup").count
+    end
+
+    # The pin runs through the end of the following Sunday (IST), then lapses.
+    travel_to(ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-10-04 23:30")) { assert post.reload.pinned? }
+    travel_to(ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-10-05 00:30")) { assert_not post.reload.pinned? }
   end
 end

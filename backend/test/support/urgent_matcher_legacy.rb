@@ -1,12 +1,12 @@
-# The Ruby-side ranking that UrgentMatcher::Query replaced (R7, Oct 2026): it loaded every
-# discoverable musician in the city in batches of 1,000 and scored each one in Ruby.
+# TEST-ONLY. The Ruby-side ranking that UrgentMatcher::Query replaced (R7, Oct 2026): it loaded
+# every discoverable musician in the city in batches of 1,000 and scored each one in Ruby.
 #
-# Kept ONLY as the oracle for test/services/urgent_matcher_parity_test.rb, which checks that the
-# SQL ranking gives the same scores and reasons on a seeded sample. Nothing in the app calls it.
-# Delete this file and the Legacy half of that test in the follow-up once the SQL ranking has
-# run in production for a while. Behaviour is the old code's, verbatim, except that the weights,
-# the activity window and the default duration are read from config/urgent.yml like the new code,
-# so the two stay comparable when the founder retunes them.
+# Lives in test/support, not app/, so it never ships: it is only the oracle for
+# test/services/urgent_matcher_parity_test.rb, which checks that the SQL ranking gives the same
+# scores and reasons on a seeded sample. Delete this file and that test's Legacy half once the SQL
+# ranking has run in production for a while. Behaviour is the old code's, verbatim, except that
+# the weights, the activity window and the default duration are read from config/urgent.yml like
+# the new code, so the two stay comparable when the founder retunes them.
 class UrgentMatcher::Legacy
   def self.call(request) = new(request).ranked_candidates
 
@@ -24,9 +24,6 @@ class UrgentMatcher::Legacy
     end
     scored.sort_by { |c| -c.score }.first(UrgentConfig.candidate_limit)
   end
-
-  # The signals the parity test sorts ties by (the SQL ranking orders ties by last sign-in, then id).
-  def last_seen_for(user) = last_seen_at(user)
 
   private
 

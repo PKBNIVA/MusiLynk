@@ -15,10 +15,11 @@ import { JobHero } from '../../components/JobHero';
 import { SimilarJobs } from '../../components/SimilarJobs';
 import { useAuth } from '../../lib/authContext';
 import { ShareToStageButton } from '../../components/stage/ShareToStageButton';
-import { FEATURE_STAGE } from '../../lib/features';
+import { useFeature } from '../../lib/features';
 import { jobPostingJsonLd } from './jobPostingJsonLd';
 
 export default function PublicOpportunity() {
+  const FEATURE_STAGE = useFeature('stage');
   const { id } = useParams();
   const { isAuthenticated, status } = useAuth();
   const [j, setJ] = useState<Job>(),

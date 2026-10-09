@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 # Every rate limit comes from config/rate_limits.yml (RateLimits) through the UserRateLimit
 # concern. These tests pin: the config's shape, that each stranger-callable endpoint answers 429
@@ -68,15 +69,18 @@ class RateLimitsTest < ActionDispatch::IntegrationTest
     test "#{bucket} answers 429 after #{bucket}'s configured limit from one IP" do
       limit = RateLimits.limit(bucket)
       limit.times do
-        public_send(verb, path, params: body, env: { "REMOTE_ADDR" => IP }, as: :json)
+        call(verb, path, body, IP)
         assert_not_equal 429, response.status, "#{bucket}: throttled before its limit"
+        # A 404 means the request died before the throttle (missing params), except for the invite
+        # preview, whose normal answer to an unknown token is 404 INVITE_NOT_FOUND after the throttle.
+        assert_not_equal 404, response.status, "#{bucket}: the request never reached the throttle" unless response.parsed_body["code"] == "INVITE_NOT_FOUND"
       end
-      public_send(verb, path, params: body, env: { "REMOTE_ADDR" => IP }, as: :json)
+      call(verb, path, body, IP)
       assert_response :too_many_requests
       assert_equal "Too many requests. Try again later.", response.parsed_body["error"]
       assert_operator response.headers["Retry-After"].to_i, :>, 0
       # Another network is unaffected.
-      public_send(verb, path, params: body, env: { "REMOTE_ADDR" => "198.51.100.1" }, as: :json)
+      call(verb, path, body, "198.51.100.1")
       assert_not_equal 429, response.status
     end
   end
@@ -194,7 +198,21 @@ class RateLimitsTest < ActionDispatch::IntegrationTest
 
   private
 
+  def call(verb, path, body, ip)
+    options = { params: body, env: { "REMOTE_ADDR" => ip } }
+    options[:as] = :json unless verb == :get
+    public_send(verb, path, **options)
+  end
+
   def with_email_delivery(&)
     with_env("EMAIL_DELIVERY_WEBHOOK" => "https://email-hook.example.invalid/send", "BREVO_API_KEY" => nil, "RESEND_API_KEY" => nil, &)
+  end
+
+  def with_env(values)
+    previous = values.to_h { |key, _| [key, ENV[key]] }
+    values.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    yield
+  ensure
+    previous.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
   end
 end

@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 # Cloudflare Turnstile on sign-up and OTP request (Turnstile, AuthController#turnstile_passed?).
 # The verifier is stubbed: no test talks to Cloudflare.
@@ -119,5 +120,13 @@ class TurnstileTest < ActionDispatch::IntegrationTest
     with_env("TURNSTILE_SECRET_KEY" => "secret") do
       Turnstile.stub(:verify, verifier, &)
     end
+  end
+
+  def with_env(values)
+    previous = values.to_h { |key, _| [key, ENV[key]] }
+    values.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    yield
+  ensure
+    previous.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
   end
 end

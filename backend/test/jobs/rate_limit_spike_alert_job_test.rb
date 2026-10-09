@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 class RateLimitSpikeAlertJobTest < ActiveSupport::TestCase
   setup do

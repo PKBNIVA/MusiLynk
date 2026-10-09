@@ -110,7 +110,13 @@ describe('AudioPlayer', () => {
     mockCanvas();
     show(
       <WorkSamplePlayer
-        sample={{ title: 'Live take', url: original, type: 'audio', audio: set, mediaMetadata: { contentType: 'audio/wav' } }}
+        sample={{
+          title: 'Live take',
+          url: original,
+          type: 'audio',
+          audio: set,
+          mediaMetadata: { contentType: 'audio/wav' },
+        }}
       />,
     );
     await flush();

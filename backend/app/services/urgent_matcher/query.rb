@@ -63,7 +63,7 @@ class UrgentMatcher::Query
   def city_pattern = "%#{ActiveRecord::Base.sanitize_sql_like(city)}%"
   def start_at = @request.start_at
   def window_end = @request.end_at || start_at + UrgentConfig.default_duration
-  def connection = ActiveRecord::Base.connection
+  def connection = ActiveRecord::Base.lease_connection
   def quote(value) = connection.quote(value)
 
   def run(where:, prefilter:, require_match:, limit:)

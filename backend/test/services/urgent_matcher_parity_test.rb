@@ -124,33 +124,45 @@ class UrgentMatcherParityTest < ActiveSupport::TestCase
       email_verified: true, profile_complete:)
   end
 
-  # Deterministic: the same 90 people on every run.
+  # Deterministic: the same 90 people on every run. Profiles, sessions and windows are bulk-inserted
+  # (no callbacks, one statement each): creating them one by one costs ~60 ms a profile.
   def seed_musicians
     rng = Random.new(20_261_009)
     pick = ->(list) { list[rng.rand(list.size)] }
+    profiles = []
+    sessions = []
+    windows = []
     90.times do |i|
       user = make_user("Musician #{i}", "jobseeker")
-      user.create_profile!(headline: pick.(HEADLINES), location: pick.(LOCATIONS), verified: rng.rand < 0.3,
-        roles: Array.new(rng.rand(0..2)) { pick.(ROLES) }.uniq, instruments: Array.new(rng.rand(0..2)) { pick.(INSTRUMENTS) }.uniq)
+      profiles << { user_id: user.id, headline: pick.(HEADLINES), location: pick.(LOCATIONS), verified: rng.rand < 0.3,
+                    roles: Array.new(rng.rand(0..2)) { pick.(ROLES) }.uniq, instruments: Array.new(rng.rand(0..2)) { pick.(INSTRUMENTS) }.uniq }
       case rng.rand(4)
-      when 0 then Session.create!(user:, token_digest: SecureRandom.hex(20), last_seen_at: rng.rand(1..20).days.ago, expires_at: 1.day.from_now)
-      when 1 then Session.create!(user:, token_digest: SecureRandom.hex(20), last_seen_at: rng.rand(40..200).days.ago, expires_at: 1.day.from_now)
+      when 0 then sessions << session_row(user, rng.rand(1..20).days.ago)
+      when 1 then sessions << session_row(user, rng.rand(40..200).days.ago)
       end
-      add_window(user, rng)
+      windows << window_row(user, rng)
     end
     # People the matcher must leave out whatever they list, and one with no profile at all.
-    make_user("Suspended", "jobseeker", status: "suspended").create_profile!(location: "Mumbai", roles: ["Drummer"], verified: true)
-    make_user("Incomplete", "jobseeker", profile_complete: false).create_profile!(location: "Mumbai", roles: ["Drummer"])
-    make_user("Another hirer", "employer").create_profile!(location: "Mumbai", roles: ["Drummer"])
+    [make_user("Suspended", "jobseeker", status: "suspended"), make_user("Incomplete", "jobseeker", profile_complete: false),
+     make_user("Another hirer", "employer"), @hirer].each do |user|
+      profiles << { user_id: user.id, headline: "Also a drummer", location: "Mumbai", roles: ["Drummer"], instruments: [], verified: true }
+    end
     make_user("No profile", "jobseeker")
-    @hirer.create_profile!(headline: "Also a drummer", location: "Mumbai", roles: ["Drummer"])
+
+    Profile.insert_all!(profiles)
+    Session.insert_all!(sessions)
+    AvailabilityWindow.insert_all!(windows.compact)
+  end
+
+  def session_row(user, last_seen_at)
+    { id: SecureRandom.uuid, user_id: user.id, token_digest: SecureRandom.hex(20), last_seen_at:, expires_at: 1.day.from_now }
   end
 
   # Every kind of window, placed around the request: blocking and overlapping, blocking and clear of
   # it, available and covering it, available but too short, and none.
-  def add_window(user, rng)
+  def window_row(user, rng)
     s = @start
-    window = case rng.rand(8)
+    kind, from, to = case rng.rand(8)
     when 0 then [:unavailable, s - 1.hour, s + 1.hour]
     when 1 then [:booked, s + 2.hours, s + 8.hours]
     when 2 then [:hold, s - 5.hours, s + 30.minutes]
@@ -159,7 +171,6 @@ class UrgentMatcherParityTest < ActiveSupport::TestCase
     when 5 then [:available, s, s + 1.hour]
     when 6 then [:unavailable, s - 9.hours, s - 1.minute]
     end
-    # Saved unvalidated: a window that already started is still a window the matcher must weigh.
-    AvailabilityWindow.new(user:, status: window[0].to_s, start_at: window[1], end_at: window[2]).save!(validate: false) if window
+    { id: SecureRandom.uuid, user_id: user.id, status: kind.to_s, start_at: from, end_at: to } if kind
   end
 end

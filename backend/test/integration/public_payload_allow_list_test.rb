@@ -109,8 +109,39 @@ class PublicPayloadAllowListTest < ActionDispatch::IntegrationTest
     assert_operator seen, :>=, 6, "the photo, image, thumbnail and act cover sets were all present"
   end
 
-  # Walks the payload: every photo/image/thumbnail Hash has exactly the four keys, no internal key
-  # appears anywhere. Returns how many image sets were seen.
+  # R6: the audio payload is built from the Upload row too. Every `audio` object on a work sample in
+  # the public talent payloads has exactly preview, full, peaks and duration.
+  AUDIO_SET_KEYS = %w[preview full peaks duration].freeze
+
+  test "audio sets in the public payloads are exactly preview, full, peaks and duration (R6)" do
+    key = "uploads/#{@musician.id}/#{SecureRandom.uuid}/take.wav"
+    upload = Upload.create!(user: @musician, storage: "s3", key:, filename: "take.wav", content_type: "audio/wav", byte_size: 1000, status: "complete",
+      completed_at: Time.current, public_url: "https://media.example.test/#{key}",
+      variants: { "audio" => { "duration" => 185.2, "variants" => %w[preview full peaks], "peaks" => 400 }, "generatedAt" => "2026-10-09T10:00:00Z" })
+    PortfolioItem.create!(user: @musician, kind: "audio", title: "Take", url: upload.public_url, visibility: "public")
+    PortfolioItem.create!(user: @musician, kind: "audio", title: "Link", url: "https://soundcloud.com/someone/track", visibility: "public")
+
+    get "/api/public/talent/#{@musician.id}"
+    assert_response :success
+    assert_image_sets_only(response.parsed_body, "/api/public/talent/:id")
+    samples = response.parsed_body["portfolio"]
+    uploaded = samples.find { _1["url"] == upload.public_url }
+    assert_equal AUDIO_SET_KEYS, uploaded["audio"].keys
+    assert_equal "#{upload.public_url}/v/preview.m4a", uploaded.dig("audio", "preview")
+    assert_equal "#{upload.public_url}/v/full.m4a", uploaded.dig("audio", "full")
+    assert_equal "#{upload.public_url}/v/peaks.json", uploaded.dig("audio", "peaks")
+    assert_in_delta 185.2, uploaded.dig("audio", "duration")
+    linked = samples.find { _1["url"].start_with?("https://soundcloud.com") }
+    assert linked.key?("audio")
+    assert_nil linked["audio"]
+
+    get "/api/candidates/#{@musician.id}", headers: @headers
+    assert_response :success
+    assert_equal AUDIO_SET_KEYS, response.parsed_body["portfolio"].find { _1["url"] == upload.public_url }["audio"].keys
+  end
+
+  # Walks the payload: every photo/image/thumbnail Hash has exactly the four keys, every audio Hash
+  # exactly preview/full/peaks/duration, no internal key appears anywhere. Returns how many sets were seen.
   def assert_image_sets_only(node, where, path = "")
     case node
     when Hash
@@ -119,6 +150,9 @@ class PublicPayloadAllowListTest < ActionDispatch::IntegrationTest
         if %w[photo image thumbnail].include?(k) && v.is_a?(Hash)
           assert_equal IMAGE_SET_KEYS.sort, v.keys.sort, "#{where}#{path}.#{k}"
           assert_equal %w[avif webp], v["srcset"].keys.sort
+          1
+        elsif k == "audio" && v.is_a?(Hash)
+          assert_equal AUDIO_SET_KEYS.sort, v.keys.sort, "#{where}#{path}.#{k}"
           1
         else
           assert_image_sets_only(v, where, "#{path}.#{k}")

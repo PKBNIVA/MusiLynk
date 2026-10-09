@@ -26,24 +26,42 @@ class PortfolioItem < ApplicationRecord
   after_destroy_commit -> { ShowcaseSync.forget_item(id) }
 
   # `image` is the responsive payload (ImageSet) of an uploaded image sample, `thumbnail` that of an
-  # uploaded thumbnail; both nil for links and uploads without variants. Call
-  # PortfolioItem.preload_image_sets on a list first, or each item costs a lookup.
-  def api_json = attributes.transform_keys { _1.camelize(:lower) }.merge(type: kind, image: image_sets[url], thumbnail: image_sets[thumbnail_url])
+  # uploaded thumbnail, `audio` the preview/peaks payload (AudioSet) of an uploaded audio sample; all
+  # nil for links and uploads without variants. Call PortfolioItem.preload_image_sets on a list first,
+  # or each item costs a lookup.
+  def api_json = attributes.transform_keys { _1.camelize(:lower) }.merge(type: kind, image: image_sets[url], thumbnail: image_sets[thumbnail_url], audio: audio_sets[url])
 
-  # Resolves the variants of every item's image and thumbnail URLs in one query (or hands the items
-  # a lookup already made, `sets`, so a page can resolve them together with other URLs). Returns the items.
-  def self.preload_image_sets(items, sets: nil)
+  # Resolves the variants of every item's image, thumbnail and audio URLs in one query (or hands the
+  # items lookups already made, `sets` and `audio`, so a page can resolve them together with other
+  # URLs; see TalentController#public_show). Returns the items.
+  def self.preload_image_sets(items, sets: nil, audio: nil)
     items = Array(items)
+    if sets.nil? && audio.nil?
+      uploads = Upload.variants_by_url(image_urls(items) + audio_urls(items)).to_a
+      sets = ImageSet.from_uploads(uploads)
+      audio = AudioSet.from_uploads(uploads)
+    end
     sets ||= ImageSet.by_url(image_urls(items))
-    items.each { _1.instance_variable_set(:@image_sets, sets) }
+    audio ||= AudioSet.by_url(audio_urls(items))
+    items.each do |item|
+      item.instance_variable_set(:@image_sets, sets)
+      item.instance_variable_set(:@audio_sets, audio)
+    end
   end
 
   # The URLs whose variants api_json needs: uploaded image samples and uploaded thumbnails.
   def self.image_urls(items) = Array(items).flat_map { [_1.kind == "image" ? _1.url : nil, _1.thumbnail_url] }.compact_blank
+  # The URLs whose audio variants api_json needs: uploaded audio samples (links are skipped by the lookup).
+  def self.audio_urls(items) = Array(items).filter_map { _1.url if _1.kind == "audio" }.compact_blank
 
   def image_sets
     return @image_sets if defined?(@image_sets)
     @image_sets = ImageSet.by_url([kind == "image" ? url : nil, thumbnail_url])
+  end
+
+  def audio_sets
+    return @audio_sets if defined?(@audio_sets)
+    @audio_sets = AudioSet.by_url([kind == "audio" ? url : nil])
   end
 
   def self.storage_url?(value)

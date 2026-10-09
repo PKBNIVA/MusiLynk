@@ -3,7 +3,9 @@ import { ExternalLink, FileText, Image as ImageIcon, Link2, Music, Video } from 
 import { Badge } from './ui/badge';
 import type { MediaMetadata } from '../lib/apiTypes';
 import type { ImageSet } from '../lib/imageSet';
+import type { AudioSet } from '../lib/audioSet';
 import { UploadImage } from './media/UploadImage';
+import { AudioPlayer } from './media/AudioPlayer';
 
 type Sample = {
   id?: string;
@@ -15,6 +17,7 @@ type Sample = {
   waveformUrl?: string | null;
   image?: ImageSet | null;
   thumbnail?: ImageSet | null;
+  audio?: AudioSet | null;
   mediaMetadata?: MediaMetadata | null;
   tags?: string[];
   genres?: string[];
@@ -182,23 +185,13 @@ function MediaView({ sample, media }: { sample: Sample; media: WorkSampleMedia |
       );
     case 'audio':
       return (
-        <div className="p-4">
-          {sample.waveformUrl && (
-            <img
-              src={sample.waveformUrl}
-              alt="Audio waveform"
-              className="w-full h-20 object-cover opacity-70 rounded-lg mb-3"
-            />
-          )}
-          <audio
-            controls
-            preload="metadata"
-            className="w-full"
-            src={media.src}
-            onError={() => setFailed(true)}
-            aria-label={sample.title}
-          />
-        </div>
+        <AudioPlayer
+          src={media.src}
+          audio={sample.audio}
+          title={sample.title}
+          waveformUrl={sample.waveformUrl}
+          onError={() => setFailed(true)}
+        />
       );
     case 'image':
       return (

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Photo } from '../media/Photo';
+import { PHOTO_HEADER_SIZES } from '../../lib/photo';
 import { editorialPhoto } from './photos';
 
 /**
@@ -32,7 +33,7 @@ export function PhotoHeader({
         alt=""
         width={image.width}
         height={image.height}
-        sizes="(min-width: 1152px) 1152px, 100vw"
+        sizes={PHOTO_HEADER_SIZES}
         priority
         className="absolute inset-0 -z-10 size-full object-cover"
       />

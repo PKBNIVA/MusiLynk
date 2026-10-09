@@ -79,10 +79,11 @@ class StageSystemPostsJobTest < ActiveJob::TestCase
   test "posts and pins the weekly roundup only on Monday 10:00 IST, and only once" do
     monday_ten_ist = ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-09-28 10:15")
 
-    # Post#pinned? compares pinned_until with Time.current, and the pin lasts six days past the
-    # fixed Monday above, so the clock has to sit at that Monday too (unfrozen, this assertion
-    # started failing on 5 Oct 2026 regardless of the Ruby version).
-    travel_to monday_ten_ist do
+    # Post#pinned? compares pinned_until with the real clock, and the roundup pins for 7 days, so
+    # without a frozen clock this assertion silently expired on 2026-10-05 (the date-dependent CI
+    # failure). Freeze "now" at the moment the job runs, the way the hourly cron would see it.
+    post = nil
+    travel_to(monday_ten_ist) do
       StageSystemPostsJob.perform_now(monday_ten_ist)
       StageSystemPostsJob.perform_now(monday_ten_ist + 5.minutes)
 
@@ -96,5 +97,9 @@ class StageSystemPostsJobTest < ActiveJob::TestCase
       StageSystemPostsJob.perform_now(not_monday_ten)
       assert_equal 1, Post.where(system_kind: "weekly_roundup").count
     end
+
+    # The pin runs through the end of the following Sunday (IST), then lapses.
+    travel_to(ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-10-04 23:30")) { assert post.reload.pinned? }
+    travel_to(ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-10-05 00:30")) { assert_not post.reload.pinned? }
   end
 end

@@ -99,6 +99,12 @@ module RelevanceCorpus
       PortfolioItem.create!(user: people.fetch(owner), kind: "audio", title:, tags:, genres:, instruments:, visibility: "public",
         url: "https://example.com/sample-#{index}.mp3", updated_at: now - index.hours)
     end
+    # Equal-relevance ties break on profiles.rank_score (TalentRank). Its sign-in recency counts in bands
+    # and all these people fall in one, so append the listing position as the last digits: the earlier-listed
+    # person wins a tie, the order the hour-by-hour last_login_at gave before R4, instead of the random user id.
+    people.each_value.with_index do |user, index|
+      user.profile.reload.update_columns(rank_score: (user.profile.rank_score * 100) + (people.size - index))
+    end
     people
   end
 end

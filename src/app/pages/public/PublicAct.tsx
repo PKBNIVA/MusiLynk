@@ -95,7 +95,7 @@ export default function PublicAct({ shell }: { shell?: 'public' | 'workspace' } 
       {workspace ? <Navigation /> : <PublicNav />}
       <main className={`max-w-5xl mx-auto px-5 pb-12 ${workspace ? 'pt-28' : 'pt-12'}`}>
         <Card className="gap-0 overflow-hidden border-white/10 bg-white/[.055] p-0">
-          <ActCover act={a} height={220} />
+          <ActCover act={a} height={220} placement="header" />
           <CardContent className="p-6 md:p-8">
             <div className="flex gap-2 items-center">
               <Badge>{optionLabel(a.act_type)}</Badge>

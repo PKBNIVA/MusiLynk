@@ -4,6 +4,7 @@ import { usePrefetchIntent } from '../../lib/useCachedGet';
 import { MapPin, ShieldCheck } from 'lucide-react';
 import { DemoBadge } from '../DemoBadge';
 import { CoverArt } from '../media/CoverArt';
+import { UploadImage } from '../media/UploadImage';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
 import { formatMoney } from '../../lib/format';
@@ -20,18 +21,30 @@ type Props = {
   footer?: ReactNode;
 };
 
-/** The act's picture: its uploaded photo (never on a demo act) or generated cover art. */
-export function ActCover({ act, height }: { act: Act; height: number }) {
+/**
+ * The act's picture: its uploaded photo (never on a demo act) or generated cover art. The photo is a
+ * `<picture>` of the generated variants sized for a card (or the page header on the act's own page).
+ */
+export function ActCover({
+  act,
+  height,
+  placement = 'card',
+}: {
+  act: Act;
+  height: number;
+  placement?: 'card' | 'header';
+}) {
   const [failed, setFailed] = useState(false);
   const photo = !act.demo && act.photo_url && !failed ? act.photo_url : null;
   return (
     <div className="relative w-full overflow-hidden bg-white/5" style={{ height }} data-testid="act-cover">
       {photo ? (
-        <img
+        <UploadImage
+          image={act.photo?.src === photo ? act.photo : null}
           src={photo}
           alt=""
-          loading="lazy"
-          decoding="async"
+          placement={placement}
+          priority={placement === 'header'}
           referrerPolicy="no-referrer"
           className="size-full object-cover"
           onError={() => setFailed(true)}

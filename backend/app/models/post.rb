@@ -140,14 +140,17 @@ class Post < ApplicationRecord
     }
   end
 
-  # The stored media entries ({uploadId, type, caption}) plus each one's public `url`, looked up
-  # from the finished Upload the author owns, so every viewer (not just the uploading browser
-  # session) can render the file.
+  # The stored media entries ({uploadId, type, caption}) plus each one's public `url` (and, for an
+  # image with generated variants, its `image` ImageSet), looked up from the finished Upload the
+  # author owns, so every viewer (not just the uploading browser session) can render the file.
   def media_json
     items = Array(media).map { _1.is_a?(Hash) ? _1.stringify_keys : _1 }
     return items if items.empty? || created_by_user_id.blank?
     urls = @media_urls || Post.media_urls_for([self])
-    items.map { |item| item.is_a?(Hash) && urls[item["uploadId"]].present? ? item.merge("url" => urls[item["uploadId"]]) : item }
+    items.map do |item|
+      found = item.is_a?(Hash) ? urls[item["uploadId"]] : nil
+      found ? item.merge("url" => found[:url], "image" => found[:image]) : item
+    end
   end
 
   # Resolves the media urls of a whole page of posts in one query, so serialising N posts does
@@ -182,15 +185,17 @@ class Post < ApplicationRecord
     posts.each { _1.instance_variable_set(:@media_urls, urls) }
   end
 
-  # {upload_id => public_url} for the finished uploads that the posts' own authors attached.
+  # {upload_id => {url:, image:}} for the finished uploads that the posts' own authors attached:
+  # the public URL and, when variants exist, the ImageSet payload.
   def self.media_urls_for(posts)
     pairs = posts.filter_map do |post|
       next if post.created_by_user_id.blank?
       Array(post.media).filter_map { |item| [item["uploadId"] || item[:uploadId], post.created_by_user_id] if item.is_a?(Hash) }
     end.flatten(1).reject { _1.first.blank? }
     return {} if pairs.empty?
-    Upload.complete.where(id: pairs.map(&:first).uniq, user_id: pairs.map(&:last).uniq).pluck(:id, :user_id, :public_url)
-      .select { |id, user_id, _| pairs.include?([id, user_id]) }.to_h { |id, _, url| [id, url] }
+    Upload.complete.where(id: pairs.map(&:first).uniq, user_id: pairs.map(&:last).uniq)
+      .select { |upload| pairs.include?([upload.id, upload.user_id]) }
+      .to_h { |upload| [upload.id, { url: upload.public_url, image: upload.image_set }] }
   end
 
   def event_json

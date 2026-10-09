@@ -147,6 +147,7 @@ class Portfolio < ApplicationRecord
     end
     return json unless members
     members = members.select { |item, _| item.visibility == "public" } if public_view
+    PortfolioItem.preload_image_sets(members.map(&:first))
     json.merge(itemCount: members.length, items: members.map { |item, source| { itemId: item.id, source:, item: item.api_json } })
   end
 

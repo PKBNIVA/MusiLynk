@@ -16,6 +16,8 @@ gem "web-push", "~> 3.1"
 gem "redis", "~> 6.0"
 gem "good_job", "~> 4.13"
 gem "solid_cache", "~> 1.0"
+# Action Cable adapter on the existing Postgres when no REDIS_URL is set (config/cable.yml).
+gem "solid_cable", "~> 3.0"
 gem "sentry-ruby", "~> 7.1"
 gem "sentry-rails", "~> 7.0"
 # One JSON line per request in production instead of Rails' multi-line request log (config/initializers/lograge.rb).
@@ -24,6 +26,8 @@ gem "bootsnap", require: false
 # Pure-Ruby QR codes for the verified-share cards (ShareCard). No headless browser or
 # ImageMagick is available in the production image, so the card is rendered as inline SVG.
 gem "rqrcode", "~> 3.2"
+# Image variants (ImageVariantsJob): libvips through ruby-vips; the Dockerfile installs libvips42.
+gem "image_processing", "~> 1.14"
 
 group :development, :test do
   gem "debug", platforms: %i[mri windows], require: "debug/prelude"

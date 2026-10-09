@@ -18,6 +18,8 @@ import { useAuth } from '../lib/authContext';
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { errorCode, errorMessage as messageOf, errorStatus } from '../lib/errors';
 import { announceUnreadChanged, useVisiblePolling } from '../lib/usePolling';
+import { byTime, mergeMessages } from '../lib/messageMerge';
+import { useRealtime, useRealtimeInterval } from '../lib/realtime';
 import { linkify } from '../lib/linkify';
 import { formatWhen, formatNumber } from '../lib/format';
 import type { Conversation, Message, MessagePage } from '../lib/apiTypes';
@@ -25,13 +27,14 @@ import type { Conversation, Message, MessagePage } from '../lib/apiTypes';
 const MESSAGE_MAX_LENGTH = 5000;
 const THREAD_POLL_MS = 3_000;
 const INBOX_POLL_MS = 10_000;
+/** Id prefix of a sent message the server has not confirmed yet (optimistic). */
+const PENDING_PREFIX = 'pending-';
 
 const errorMessage = (e: unknown, fallback: string) => {
   if (errorStatus(e) === 429)
     return 'You’re sending messages too quickly. Wait a few minutes, then try again — your draft is saved.';
   return messageOf(e, fallback);
 };
-const byTime = (a: Message, b: Message) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
 const formatTime = (value?: string | null) => formatWhen(value);
 const isDesktop = () =>
   typeof window !== 'undefined' &&
@@ -180,7 +183,10 @@ export default function Messages() {
       }
       // A silent (polling) fetch of a thread already in view only needs what's new: the `after`
       // cursor keeps the fast 3s poll cheap instead of re-fetching the whole history each time.
-      const cursor = silent ? msgsRef.current[msgsRef.current.length - 1]?.id : undefined;
+      // An optimistic bubble ("pending-…") is not on the server yet, so it is never the cursor.
+      const cursor = silent
+        ? [...msgsRef.current].reverse().find((m) => !m.id.startsWith(PENDING_PREFIX))?.id
+        : undefined;
       const threadPath = `/conversations/${id}/messages`;
       // A thread opened before shows its last known messages at once while the request refreshes them.
       const cached = !cursor ? peek<MessagePage>(threadPath) : undefined;
@@ -203,12 +209,10 @@ export default function Messages() {
           if (server.length)
             updateCache<MessagePage>(threadPath, (page) => ({
               ...(page as MessagePage),
-              messages: [...(page?.messages || []).filter((m) => !server.some((s) => s.id === m.id)), ...server].sort(
-                byTime,
-              ),
+              messages: mergeMessages(page?.messages || [], server),
             }));
           setMsgs((prev) => {
-            const merged = [...prev.filter((m) => !server.some((s) => s.id === m.id)), ...server].sort(byTime);
+            const merged = mergeMessages(prev, server);
             // theirReadAt: the counterpart may have read an earlier message of ours that this
             // cursor-limited response otherwise wouldn't include again.
             if (!d.theirReadAt) return merged;
@@ -264,8 +268,20 @@ export default function Messages() {
     if (activeId) void loadThread(activeId);
     else setThreadState('idle');
   }, [activeId, loadThread]);
-  useVisiblePolling(() => activeRef.current && loadThread(activeRef.current, true), THREAD_POLL_MS, Boolean(activeId));
-  useVisiblePolling(loadConvs, INBOX_POLL_MS);
+  // Live updates fetch what is new at once; polling stays as the fallback, every 30 s while the
+  // socket is up and at the usual pace when it is not.
+  useRealtime('ConversationChannel', activeId ? { id: activeId } : null, (event) => {
+    if (event.type === 'message' && activeRef.current && event.conversationId === activeRef.current) {
+      void loadThread(activeRef.current, true);
+    }
+  });
+  useRealtime('UserChannel', {}, (event) => {
+    if (event.type === 'message') void loadConvs();
+  });
+  const threadPollMs = useRealtimeInterval(THREAD_POLL_MS);
+  const inboxPollMs = useRealtimeInterval(INBOX_POLL_MS);
+  useVisiblePolling(() => activeRef.current && loadThread(activeRef.current, true), threadPollMs, Boolean(activeId));
+  useVisiblePolling(loadConvs, inboxPollMs);
 
   useLayoutEffect(() => {
     const el = scroller.current;
@@ -367,7 +383,7 @@ export default function Messages() {
     setSendError('');
     // Optimistic: the message appears at once and the box clears; on failure it is removed and the text restored.
     const pending: Message = {
-      id: `pending-${Date.now()}`,
+      id: `${PENDING_PREFIX}${Date.now()}`,
       senderId: user?.id || '',
       body,
       createdAt: new Date().toISOString(),
@@ -380,11 +396,12 @@ export default function Messages() {
       const d = await apiPost<{ message: Message }>(`/conversations/${id}/messages`, { body });
       if (activeRef.current === id) {
         stickToBottom.current = true;
-        setMsgs((xs) => [...xs.filter((m) => m.id !== pending.id && m.id !== d.message.id), d.message].sort(byTime));
+        // Reconcile: the server copy replaces the optimistic one (a live update may have brought it already).
+        setMsgs((xs) => mergeMessages(xs.filter((m) => m.id !== pending.id), [d.message]));
       } else setMsgs((xs) => xs.filter((m) => m.id !== pending.id));
       updateCache<MessagePage>(`/conversations/${id}/messages`, (page) => ({
         ...(page as MessagePage),
-        messages: [...(page?.messages || []).filter((m) => m.id !== d.message.id), d.message].sort(byTime),
+        messages: mergeMessages(page?.messages || [], [d.message]),
       }));
       setConvs((prev) => {
         const row = prev.find((c) => c.id === id);
@@ -723,9 +740,9 @@ export default function Messages() {
                           key={m.id}
                           data-testid="message"
                           data-mine={mine ? 'true' : 'false'}
-                          data-pending={m.id.startsWith('pending-') ? 'true' : undefined}
-                          aria-busy={m.id.startsWith('pending-') || undefined}
-                          className={`max-w-[85%] md:max-w-[75%] w-fit rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-violet-600' : 'bg-white/10'} ${m.id.startsWith('pending-') ? 'opacity-70' : ''}`}
+                          data-pending={m.id.startsWith(PENDING_PREFIX) ? 'true' : undefined}
+                          aria-busy={m.id.startsWith(PENDING_PREFIX) || undefined}
+                          className={`max-w-[85%] md:max-w-[75%] w-fit rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-violet-600' : 'bg-white/10'} ${m.id.startsWith(PENDING_PREFIX) ? 'opacity-70' : ''}`}
                         >
                           <div
                             className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
@@ -741,7 +758,7 @@ export default function Messages() {
                             <time dateTime={m.createdAt}>{formatTime(m.createdAt)}</time>
                             {mine && m.id === lastMineId && (
                               <span data-testid="read-receipt">
-                                {m.id.startsWith('pending-')
+                                {m.id.startsWith(PENDING_PREFIX)
                                   ? 'Sending…'
                                   : m.readAt
                                     ? `Seen ${formatTime(m.readAt)}`

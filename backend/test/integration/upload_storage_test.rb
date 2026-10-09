@@ -57,7 +57,7 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
       assert_response :success
       body = response.parsed_body
       assert_equal "PUT", body["method"]
-      assert_match(/X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost/, body["uploadUrl"])
+      assert_match(/X-Amz-SignedHeaders=cache-control%3Bcontent-length%3Bcontent-type%3Bhost/, body["uploadUrl"]) # Cache-Control joined the signature with image variants (R5)
       assert body["uploadUrl"].start_with?("https://acct.r2.cloudflarestorage.com/musilynk-test/uploads/")
       assert_equal "https://media.example.test/#{Upload.last.key}", body["publicUrl"]
     end
@@ -136,6 +136,65 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
       perform_enqueued_jobs { delete "/api/portfolio/#{second}", headers: auth }
       assert_not @objects.key?(upload.key)
       assert_not Upload.exists?(upload.id)
+    end
+  end
+
+  test "presigned uploads carry the immutable Cache-Control: a POST policy field, a signed PUT header" do
+    with_bucket do
+      post "/api/uploads/presign", params: { filename: "a.png", contentType: "image/png", size: 10 }, headers: auth, as: :json
+      assert_response :success
+      assert_equal "public, max-age=31536000, immutable", response.parsed_body.dig("fields", "Cache-Control")
+      assert_includes Base64.decode64(response.parsed_body.dig("fields", "policy")), "\"Cache-Control\":\"public, max-age=31536000, immutable\""
+    end
+    with_bucket(endpoint: "https://acct.r2.cloudflarestorage.com", public_base: "https://media.example.test") do
+      post "/api/uploads/presign", params: { filename: "a.png", contentType: "image/png", size: 10 }, headers: auth, as: :json
+      assert_response :success
+      assert_equal "public, max-age=31536000, immutable", response.parsed_body.dig("headers", "Cache-Control")
+      assert_equal "image/png", response.parsed_body.dig("headers", "Content-Type")
+      assert_match(/X-Amz-SignedHeaders=cache-control%3Bcontent-length%3Bcontent-type%3Bhost/, response.parsed_body["uploadUrl"])
+    end
+  end
+
+  test "completing an image upload queues its variants; audio does not; purging deletes the variants too" do
+    with_bucket do
+      assert_no_enqueued_jobs(only: ImageVariantsJob) { completed_direct_upload }
+      image = presign("pic.png", "image/png", PNG.bytesize)
+      @objects[image.key] = { body: PNG, type: "image/png" }
+      assert_enqueued_with(job: ImageVariantsJob, args: [image.id]) do
+        post "/api/uploads/#{image.id}/complete", headers: auth
+        assert_response :success
+      end
+      assert_nil response.parsed_body.dig("upload", "image"), "no variants yet: the original serves alone"
+      # Completing again is idempotent and does not queue a second job.
+      assert_no_enqueued_jobs(only: ImageVariantsJob) { post "/api/uploads/#{image.id}/complete", headers: auth }
+
+      UploadStorage.put_object("#{image.key}/v/320.webp", body: StringIO.new("w"), content_type: "image/webp", cache_control: ImageVariants.cache_control)
+      assert_equal "public, max-age=31536000, immutable", @objects["#{image.key}/v/320.webp"][:cache_control]
+      image.update!(variants: { "width" => 10, "height" => 10, "formats" => { "webp" => [320] } })
+      Dir.mktmpdir do |dir|
+        assert_equal PNG, File.binread(UploadStorage.download(image.key, File.join(dir, "o")))
+      end
+
+      delete "/api/uploads/#{image.id}", headers: auth
+      assert_response :success
+      assert_not @objects.key?(image.key)
+      assert_not @objects.key?("#{image.key}/v/320.webp")
+    end
+  end
+
+  test "the bucket sweep keeps the variants of a tracked upload and removes those of an untracked one" do
+    with_bucket do
+      kept = completed_direct_upload
+      @objects["#{kept.key}/v/320.webp"] = { body: "w", type: "image/webp", at: 3.days.ago }
+      @objects["#{kept.key}/v/320.avif"] = { body: "a", type: "image/avif", at: 3.days.ago }
+      @objects["uploads/legacy/gone.jpg/v/768.webp"] = { body: "w", type: "image/webp", at: 3.days.ago }
+      create_sample(kept.public_url)
+      Upload.where(id: kept.id).update_all(created_at: 2.days.ago)
+
+      counts = UploadSweepJob.perform_now
+
+      assert_equal 1, counts[:orphanObjects]
+      assert_equal [kept.key, "#{kept.key}/v/320.avif", "#{kept.key}/v/320.webp"].sort, @objects.keys.sort
     end
   end
 
@@ -262,10 +321,18 @@ class UploadStorageTest < ActionDispatch::IntegrationTest
     })
     client.stub_responses(:get_object, lambda { |context|
       object = objects[context.params[:key]] or next "NoSuchKey"
-      last = context.params[:range].to_s[/-(\d+)\z/, 1].to_i
-      { body: object[:body].byteslice(0, last + 1) }
+      last = context.params[:range].to_s[/-(\d+)\z/, 1]
+      { body: last ? object[:body].byteslice(0, last.to_i + 1) : object[:body] }
     })
     client.stub_responses(:delete_object, ->(context) { objects.delete(context.params[:key]) && {} || {} })
+    client.stub_responses(:delete_objects, lambda { |context|
+      context.params[:delete][:objects].each { objects.delete(_1[:key]) }
+      {}
+    })
+    client.stub_responses(:put_object, lambda { |context|
+      objects[context.params[:key]] = { body: context.params[:body].read.b, type: context.params[:content_type], cache_control: context.params[:cache_control] }
+      {}
+    })
     client.stub_responses(:list_objects_v2, lambda { |_context|
       { contents: objects.map { |key, object| { key:, last_modified: object[:at] || Time.current } }, is_truncated: false }
     })

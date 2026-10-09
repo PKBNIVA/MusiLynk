@@ -33,7 +33,11 @@ class TalentController < ApplicationController
 
   def public_show
     candidate = listing_scope.find(params[:id])
-    json = { professional: with_bookings(public_profile(candidate), candidate.id), portfolio: candidate.portfolio_items.where(visibility: "public").order(featured: :desc, sort_order: :asc).map(&:api_json) }.to_json
+    items = candidate.portfolio_items.where(visibility: "public").order(featured: :desc, sort_order: :asc).to_a
+    # One ImageSet lookup for the profile photo and the work samples' images together.
+    @image_sets = ImageSet.by_url(PortfolioItem.image_urls(items) + [candidate.profile&.photo_url])
+    PortfolioItem.preload_image_sets(items, sets: @image_sets)
+    json = { professional: with_bookings(public_profile(candidate), candidate.id), portfolio: items.map(&:api_json) }.to_json
     return if public_cache!(:show, etag: json)
     render json: json
   end
@@ -49,7 +53,7 @@ class TalentController < ApplicationController
     return unless authenticate!("jobseeker", "employer")
     candidate = listing_scope.find(params[:id])
     RecentActivity.create!(user: current_user, kind: "profile_view", entity_id: candidate.id, label: candidate.name)
-    render json: { candidate: with_bookings(public_profile(candidate), candidate.id), portfolio: candidate.portfolio_items.where(visibility: "public").map(&:api_json) }
+    render json: { candidate: with_bookings(public_profile(candidate), candidate.id), portfolio: PortfolioItem.preload_image_sets(candidate.portfolio_items.where(visibility: "public")).map(&:api_json) }
   end
 
   def compare
@@ -63,7 +67,7 @@ class TalentController < ApplicationController
         { startAt: window.start_at, endAt: window.end_at, status: window.status, city: window.city }
       end
       public_profile(candidate).merge(
-        "portfolio" => candidate.portfolio_items.where(visibility: "public").limit(8).map(&:api_json),
+        "portfolio" => PortfolioItem.preload_image_sets(candidate.portfolio_items.where(visibility: "public").limit(8)).map(&:api_json),
         "availability" => availability,
         "shortlisted" => shortlisted.include?(candidate.id)
       )

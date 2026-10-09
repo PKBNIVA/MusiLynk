@@ -55,6 +55,30 @@ class Upload < ApplicationRecord
 
   def complete? = status == "complete"
 
+  def image? = ImageVariants.image?(content_type)
+
+  # Variants are generated for finished images in the bucket; disk (development) uploads and every
+  # other media type keep serving the original alone.
+  def variants_possible? = complete? && image? && storage == "s3" && public_url.present?
+
+  # Public URL of one generated variant (ImageVariantsJob), or nil when that width x format was not
+  # produced. Built from the URL the upload was issued with, so a later change of the read domain
+  # (UPLOADS_PUBLIC_BASE_URL) leaves old rows pointing where their original still is.
+  def variant_url(width, format)
+    widths = variants.is_a?(Hash) ? Array(variants.dig("formats", format.to_s)) : []
+    return nil unless widths.include?(width.to_i) && public_url.to_s.end_with?(key)
+    public_url.delete_suffix(key) + ImageVariants.variant_key(key, width.to_i, format)
+  end
+
+  # The responsive-image payload (ImageSet), or nil without variants.
+  def image_set = ImageSet.for(self)
+
+  # Bucket keys of the generated variants, for deletion with the original.
+  def variant_keys
+    return [] unless variants.is_a?(Hash)
+    Hash(variants["formats"]).flat_map { |format, widths| Array(widths).map { ImageVariants.variant_key(key, _1, format) } }
+  end
+
   def referenced?
     (public_url.present? && PortfolioItem.where(url: public_url).or(PortfolioItem.where(thumbnail_url: public_url)).or(PortfolioItem.where(waveform_url: public_url)).exists?) ||
       (public_url.present? && (Profile.exists?(photo_url: public_url) || Act.exists?(photo_url: public_url))) ||
@@ -65,9 +89,9 @@ class Upload < ApplicationRecord
 
   # Deletes the stored object, then the row. Safe to repeat.
   def purge!
-    UploadStorage.delete(storage, key)
+    UploadStorage.delete(storage, key, variant_keys)
     destroy!
   end
 
-  def api_json = { id:, url: public_url, status:, contentType: content_type, byteSize: byte_size, filename: }
+  def api_json = { id:, url: public_url, status:, contentType: content_type, byteSize: byte_size, filename:, image: image_set }
 end

@@ -186,6 +186,7 @@ export default function PublicProfile({ shell }: { shell?: 'public' | 'workspace
                 name={c.name}
                 size="xl"
                 photoUrl={c.photoUrl}
+                photo={c.photo}
                 demo={c.demo}
                 genres={c.genres}
                 eager

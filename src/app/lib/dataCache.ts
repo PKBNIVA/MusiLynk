@@ -11,19 +11,22 @@
  * - `subscribe(path, listener)` is how `useCachedGet` re-renders; listeners fire only when the data changed
  *   (deep equality), so polling that returns the same page re-renders nothing.
  *
- * Realtime (R2, Action Cable, owned by the `claude/r2-cable` branch): on a socket event call
+ * Realtime (Action Cable, src/app/lib/realtime.ts): every socket event goes through `realtime.event(e)`
+ * before the page's own listeners run, which marks the paths INVALIDATE_ON_EVENT names for `e.type` stale
+ * (a screen showing one refetches it at once). Pages can also call
  *   `realtime.invalidate(path)`            — mark a cached GET stale and refetch it if a screen shows it;
  *   `realtime.update(path, (data) => next)` — patch the cached data in place (e.g. append a message) and
  *                                             re-render subscribers at once, no request.
  * `path` is the API path as a page requests it, e.g. '/conversations', '/conversations/<id>/messages',
  * '/notifications/unread'. A prefix works for `invalidate` ('/conversations' covers every thread).
- * Sockets themselves are not implemented here.
+ * The socket itself lives in realtime.ts; this file never opens one.
  */
 import * as apiModule from './api';
 import { apiGet, type ApiOptions } from './api';
 import {
   CACHE_MAX_AGE_MS,
   CACHE_TTL_MS,
+  INVALIDATE_ON_EVENT,
   INVALIDATE_ON_WRITE,
   PREFETCH_MAX_IN_FLIGHT,
   PREFETCH_MIN_INTERVAL_MS,
@@ -93,6 +96,11 @@ export function peek<T>(path: string): T | undefined {
   const entry = entries.get(path);
   if (!entry) return undefined;
   return status(entry).has ? (entry.data as T) : undefined;
+}
+
+/** True when `path` was marked stale by `invalidate` (a write, a live update) and not refetched since. */
+export function isInvalidated(path: string): boolean {
+  return Boolean(entries.get(path)?.stale);
 }
 
 /** True when `path` is cached and still inside its TTL (a read would make no request). */
@@ -254,8 +262,14 @@ try {
   /* partial api mock in a unit test */
 }
 
-/** The surface the realtime layer (Action Cable, R2) drives; see the file header. */
-export const realtime = { invalidate, update };
+/** A live update arrived (realtime.ts calls this for every socket message): stale the paths it touches. */
+export function invalidateForEvent(event: { type?: string; id?: string; conversationId?: string }) {
+  const prefixes = typeof event.type === 'string' ? INVALIDATE_ON_EVENT[event.type] : undefined;
+  prefixes?.forEach(invalidate);
+}
+
+/** The surface the realtime layer (Action Cable, realtime.ts) drives; see the file header. */
+export const realtime = { event: invalidateForEvent, invalidate, update };
 
 /** Test hook: a fresh cache and prefetch budget. */
 export function resetDataCacheForTests() {

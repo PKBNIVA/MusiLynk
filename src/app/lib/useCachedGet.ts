@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { cachedGet, peek, prefetch, subscribe, type CachedGetOptions } from './dataCache';
+import { cachedGet, isInvalidated, peek, prefetch, subscribe, type CachedGetOptions } from './dataCache';
 import type { CacheFamily } from './dataCache.config';
 import { useLatestCallback } from './useLatestCallback';
 
@@ -21,7 +21,9 @@ export function useCachedGet<T>(path: string | null, options: { family?: CacheFa
     const force = forceArg === true;
     if (!path) return;
     try {
-      const data = await cachedGet<T>(path, { ...options, family, force });
+      const resolved = await cachedGet<T>(path, { ...options, family, force });
+      // A stale answer resolves at once while its refresh runs; if the refresh already landed, show that.
+      const data = peek<T>(path) ?? resolved;
       setState((current) =>
         current.data === data && !current.loading && !current.error
           ? current
@@ -44,10 +46,12 @@ export function useCachedGet<T>(path: string | null, options: { family?: CacheFa
     );
     void load();
     // The cache tells us when this path changed (a refresh, a write, realtime.update): re-read it.
+    // When it was marked stale (a write, a live update, realtime.invalidate), refetch: this screen shows it.
     return subscribe(path, () => {
       const next = peek<T>(path);
-      if (next === undefined) void load();
-      else setState((current) => (current.data === next ? current : { data: next, error: undefined, loading: false }));
+      if (next === undefined || isInvalidated(path)) void load();
+      if (next !== undefined)
+        setState((current) => (current.data === next ? current : { data: next, error: undefined, loading: false }));
     });
   }, [path, load]);
   const refresh = useCallback(() => load(true), [load]);

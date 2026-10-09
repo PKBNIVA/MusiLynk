@@ -397,7 +397,12 @@ export default function Messages() {
       if (activeRef.current === id) {
         stickToBottom.current = true;
         // Reconcile: the server copy replaces the optimistic one (a live update may have brought it already).
-        setMsgs((xs) => mergeMessages(xs.filter((m) => m.id !== pending.id), [d.message]));
+        setMsgs((xs) =>
+          mergeMessages(
+            xs.filter((m) => m.id !== pending.id),
+            [d.message],
+          ),
+        );
       } else setMsgs((xs) => xs.filter((m) => m.id !== pending.id));
       updateCache<MessagePage>(`/conversations/${id}/messages`, (page) => ({
         ...(page as MessagePage),

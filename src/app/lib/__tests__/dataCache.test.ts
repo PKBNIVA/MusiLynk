@@ -122,6 +122,39 @@ describe('invalidate, update and writes', () => {
     expect(cache.isFresh('/widgets/1')).toBe(false);
   });
 
+  it('a live update (socket event) makes the paths INVALIDATE_ON_EVENT names stale; other types change nothing', async () => {
+    apiGet.mockResolvedValue({ ok: true });
+    await cache.cachedGet('/conversations', { family: 'list' });
+    await cache.cachedGet('/conversations/c1/messages', { family: 'list' });
+    await cache.cachedGet('/notifications/unread', { family: 'list' });
+    await cache.cachedGet('/notifications', { family: 'list' });
+    await cache.cachedGet('/jobs', { family: 'list' });
+    const thread = vi.fn();
+    cache.subscribe('/conversations/c1/messages', thread);
+
+    cache.realtime.event({ type: 'ping' });
+    cache.realtime.event({});
+    expect(thread).not.toHaveBeenCalled();
+    expect(cache.isInvalidated('/conversations')).toBe(false);
+
+    cache.realtime.event({ type: 'message', conversationId: 'c1' });
+    expect(thread).toHaveBeenCalledTimes(1);
+    expect(cache.isInvalidated('/conversations')).toBe(true);
+    expect(cache.isInvalidated('/conversations/c1/messages')).toBe(true);
+    expect(cache.isInvalidated('/notifications/unread')).toBe(true);
+    expect(cache.isInvalidated('/notifications')).toBe(false);
+    expect(cache.isInvalidated('/jobs')).toBe(false);
+    // Memory is still shown while the refetch runs; the refetch clears the mark.
+    expect(cache.peek('/conversations')).toEqual({ ok: true });
+    await cache.cachedGet('/conversations', { family: 'list' });
+    await vi.waitFor(() => expect(cache.isInvalidated('/conversations')).toBe(false));
+
+    cache.realtime.event({ type: 'notification', id: 'n1' });
+    expect(cache.isInvalidated('/notifications')).toBe(true);
+    expect(cache.isInvalidated('/jobs')).toBe(false);
+    expect(apiGet).toHaveBeenCalledTimes(6);
+  });
+
   it('forgets everything when the identity changes', async () => {
     apiGet.mockResolvedValue({ me: 1 });
     await cache.cachedGet('/me', { family: 'record' });

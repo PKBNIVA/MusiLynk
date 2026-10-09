@@ -42,3 +42,15 @@ export const INVALIDATE_ON_WRITE: Record<string, readonly string[]> = {
   jobs: ['/jobs'],
   applications: ['/jobs', '/applications'],
 };
+
+/**
+ * Which cached paths a live update (Action Cable, src/app/lib/realtime.ts) makes stale, by the event
+ * `type` the API broadcasts (backend/app/services/realtime.rb). Keys of the paths are matched as prefixes;
+ * a screen showing one of them refetches it at once, everything else refetches when next read.
+ */
+export const INVALIDATE_ON_EVENT: Record<string, readonly string[]> = {
+  message: ['/conversations', '/notifications/unread'],
+  notification: ['/notifications'],
+  status: ['/urgent-requests'],
+  response: ['/urgent-requests'],
+};

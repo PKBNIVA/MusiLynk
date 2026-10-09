@@ -15,7 +15,7 @@ class LibraryImportsController < ApplicationController
   LIST_FIELDS = %i[roles genres instruments].freeze
 
   def create
-    return unless throttle!("library-import", limit: 30, period: 1.hour)
+    return unless throttle!("library-import")
 
     profile = current_user.profile || current_user.create_profile!
     result = ApplicationRecord.transaction do

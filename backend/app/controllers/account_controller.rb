@@ -6,13 +6,13 @@ class AccountController < ApplicationController
   include ConsumesSignInCodes
   include UserRateLimit
 
-  EXPORTS_PER_HOUR = 5
-  DELETE_ATTEMPTS_PER_HOUR = 10
+  EXPORTS_PER_HOUR = RateLimits.limit("account-export")
+  DELETE_ATTEMPTS_PER_HOUR = RateLimits.limit("account-delete")
   EMAIL_CHANGE_PURPOSE = :account_email_change
-  EMAIL_CHANGE_REQUESTS_PER_HOUR = 5
-  CONFIRM_FAILURES_PER_USER = 10
-  PASSWORD_FAILURES_PER_USER = 10
-  FAILURE_PERIOD = 15.minutes
+  EMAIL_CHANGE_REQUESTS_PER_HOUR = RateLimits.limit("account-email-change")
+  CONFIRM_FAILURES_PER_USER = RateLimits.limit("account-email-confirm-failure", :user)
+  PASSWORD_FAILURES_PER_USER = RateLimits.limit("account-password-failure", :user)
+  FAILURE_PERIOD = RateLimits.period("account-password-failure")
   EMAIL_CHANGE_MESSAGE = "We emailed a 6-digit code to the new address. Enter it here to finish the change. It expires in 10 minutes.".freeze
   EMAIL_CHANGE_EXPIRED_MESSAGE = "This email change has expired or was started by someone else. Start again.".freeze
   EMAIL_UNDELIVERABLE_MESSAGE = "That address can't receive mail (a reserved domain such as .local or .invalid). Use a real mailbox.".freeze
@@ -24,7 +24,7 @@ class AccountController < ApplicationController
 
   # GET /api/account/export
   def export
-    return unless within_user_rate_limit?("account-export", limit: EXPORTS_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("account-export")
 
     export = AccountExport.new(current_user)
     audit!("account.export", current_user)
@@ -48,7 +48,7 @@ class AccountController < ApplicationController
   # The code goes to the new address, so completing the change proves that mailbox
   # works before the account's future sign-in codes and notices start going there.
   def request_email_change
-    return unless within_user_rate_limit?("account-email-change", limit: EMAIL_CHANGE_REQUESTS_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("account-email-change")
     email = params[:email].to_s.strip.downcase
     return render_error("Enter a valid email address.", :unprocessable_content, "INVALID_EMAIL") unless email.match?(URI::MailTo::EMAIL_REGEXP) && email.length <= 254
     return render_error(EMAIL_UNCHANGED_MESSAGE, :unprocessable_content, "EMAIL_UNCHANGED") if email == current_user.email
@@ -124,7 +124,7 @@ class AccountController < ApplicationController
   # The user types their own email address to confirm; this also stops a stray
   # request from an old tab deleting the account without the user seeing it.
   def destroy
-    return unless within_user_rate_limit?("account-delete", limit: DELETE_ATTEMPTS_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("account-delete")
     unless params[:confirmEmail].is_a?(String) && params[:confirmEmail].strip.casecmp?(current_user.email)
       return render_error("Type your account email exactly to confirm.", :unprocessable_content, "CONFIRMATION_MISMATCH")
     end

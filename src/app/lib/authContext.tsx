@@ -87,6 +87,8 @@ export interface RegisterPayload extends StarterPayload {
   role: 'jobseeker' | 'employer';
   /** The sign-up's "I agree to the Terms and Privacy Policy" box; recorded as consented_at. */
   consent?: boolean;
+  /** Cloudflare Turnstile token, when the build has a site key (TurnstileWidget). */
+  turnstileToken?: string;
 }
 /** Hydration status for the stored session: 'loading' until the boot-time /me call (or its
  * absence) resolves, then 'signedIn' or 'signedOut'. Header/nav components branch on this

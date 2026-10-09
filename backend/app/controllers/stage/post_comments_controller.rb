@@ -3,7 +3,7 @@ module Stage
     include UserRateLimit
 
     skip_before_action :require_login, only: :index
-    LIMIT_PER_HOUR = 60
+    LIMIT_PER_HOUR = RateLimits.limit("stage.comments")
 
     def index
       post = find_post!(params[:post_id])
@@ -12,7 +12,7 @@ module Stage
     end
 
     def create
-      return unless within_user_rate_limit?("stage.comments", limit: LIMIT_PER_HOUR, period: 1.hour)
+      return unless within_user_rate_limit?("stage.comments")
       post = find_post!(params[:post_id])
       actor = current_actor
       return unless actor

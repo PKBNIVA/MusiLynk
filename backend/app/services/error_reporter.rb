@@ -28,6 +28,23 @@ module ErrorReporter
     nil
   end
 
+  # A condition worth an alert that is not an exception (a 429 spike, a budget crossed). Same
+  # scrubbing, tags, level and fingerprint rules as `capture`; nil when disabled or on failure.
+  def message(text, tags: {}, level: :warning, fingerprint: nil, **context)
+    return nil unless enabled?
+
+    Sentry.with_scope do |scope|
+      scope.set_level(level)
+      scope.set_fingerprint(Array(fingerprint).map(&:to_s)) if fingerprint.present?
+      scope.set_tags(ErrorScrubber.scrub(tags.transform_values(&:to_s)))
+      scope.set_extras(ErrorScrubber.scrub(context)) if context.any?
+      Sentry.capture_message(text.to_s)
+    end
+  rescue StandardError => error
+    Rails.logger.warn({ event: "error_report_failed", error: error.class.name }.to_json)
+    nil
+  end
+
   # A background job gave up (discarded, retries exhausted or unhandled). Only the class
   # and id are sent: job arguments can hold encrypted tokens or email addresses.
   def capture_job_failure(job, exception)

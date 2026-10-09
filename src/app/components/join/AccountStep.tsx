@@ -16,6 +16,8 @@ import { errorCode, errorMessage, errorStatus } from '../../lib/errors';
 import { useSubmitOnce } from '../../lib/formErrors';
 import { compactStarter, hasStarter, type StarterPayload } from '../../lib/onboarding';
 import { checkPasswordStrength } from '../../lib/passwordStrength';
+import { TurnstileWidget } from '../auth/TurnstileWidget';
+import { turnstileSiteKey } from '../../lib/turnstile';
 
 type AccountField = 'name' | 'email' | 'password' | 'consent';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,6 +57,14 @@ export function AccountStep({
   onDone: (user: User) => void;
 }) {
   const { register, verifyCode, setUser } = useAuth();
+  /* Turnstile token for sign-up; the widget remounts (new key) after each attempt because a token is single-use. */
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileRound, setTurnstileRound] = useState(0);
+  const awaitingTurnstile = turnstileSiteKey() !== null && !turnstileToken;
+  function spendTurnstile() {
+    setTurnstileToken(null);
+    setTurnstileRound((round) => round + 1);
+  }
   const location = useLocation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -161,12 +171,14 @@ export function AccountStep({
         password,
         role,
         consent: true,
+        turnstileToken: turnstileToken ?? undefined,
         ...compactStarter(starter()),
       });
       onDone(user);
     } catch (caught: unknown) {
       showApiError(caught, 'Your account could not be created. Try again.');
     } finally {
+      spendTurnstile();
       setLoading(false);
     }
   }
@@ -176,7 +188,13 @@ export function AccountStep({
     setLoading(true);
     setFormError('');
     try {
-      const response = await requestSignInCode({ email: email.trim(), name: accountName(), role, consent: true });
+      const response = await requestSignInCode({
+        email: email.trim(),
+        name: accountName(),
+        role,
+        consent: true,
+        turnstileToken: turnstileToken ?? undefined,
+      });
       setDebugCode(response.debugCode);
       setCode('');
       setCodeStep(true);
@@ -190,6 +208,7 @@ export function AccountStep({
         focusField('join-password');
       } else showApiError(caught, 'We could not send a code. Try again.');
     } finally {
+      spendTurnstile();
       setLoading(false);
     }
   }

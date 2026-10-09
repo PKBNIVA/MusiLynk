@@ -2,7 +2,7 @@ class ConversationsController < ApplicationController
   include UserRateLimit
   include ScalarParams
 
-  CREATE_LIMIT_PER_HOUR = 20
+  CREATE_LIMIT_PER_HOUR = RateLimits.limit("conversation")
   PREVIEW_LENGTH = 200 # must match LEFT(messages.body, 200) below
   # Latest message columns per conversation, served by the messages(conversation_id, created_at) index.
   # Plain constant SQL (no interpolation) so static analysis can see nothing user-controlled reaches it.
@@ -35,7 +35,7 @@ class ConversationsController < ApplicationController
 
   def create
     return unless require_scalar_params!(:jobId, :bookingId, :candidateId, :employerId)
-    return unless within_user_rate_limit?("conversation", limit: CREATE_LIMIT_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("conversation")
     return create_for_booking if params[:bookingId].present?
 
     job = Job.find_by(id: params[:jobId])

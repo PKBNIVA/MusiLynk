@@ -2,7 +2,7 @@ class OrganizationsController < ApplicationController
   include UserRateLimit
 
   # Inviting by email reveals whether an address has an account and notifies the person.
-  MEMBER_INVITES_PER_HOUR = 30
+  MEMBER_INVITES_PER_HOUR = RateLimits.limit("org-member-invite")
   # Roles offered by the Workspace page. "owner" is only ever set when a workspace is created.
   ASSIGNABLE_ROLES = %w[admin recruiter booker finance member].freeze
   MANAGER_ROLES = %w[owner admin].freeze
@@ -31,7 +31,7 @@ class OrganizationsController < ApplicationController
   def add_member
     org = manageable
     return if performed?
-    return unless within_user_rate_limit?("org-member-invite", limit: MEMBER_INVITES_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("org-member-invite")
     role = params[:role].presence || "member"
     return render_error("Choose one of: #{ASSIGNABLE_ROLES.join(', ')}.", :bad_request, "INVALID_ROLE") unless ASSIGNABLE_ROLES.include?(role)
     return render_error("Only the workspace owner can grant admin access.", :forbidden) if role == "admin" && @membership.role != "owner"

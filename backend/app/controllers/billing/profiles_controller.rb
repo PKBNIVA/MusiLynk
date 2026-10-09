@@ -12,7 +12,7 @@ module Billing
     end
 
     def update
-      return unless within_user_rate_limit?("billing-profile", limit: 30, period: 1.hour)
+      return unless within_user_rate_limit?("billing-profile")
 
       profile = BillingProfile.save_for(current_user, permitted)
       return render_error("Check the highlighted billing details.", :unprocessable_content, "VALIDATION_FAILED", fields: profile.errors.to_hash) if profile.errors.any?

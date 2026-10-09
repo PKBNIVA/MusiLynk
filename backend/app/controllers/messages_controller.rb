@@ -2,7 +2,7 @@ class MessagesController < ApplicationController
   include UserRateLimit
 
   HISTORY_LIMIT = 200
-  SEND_LIMIT_PER_HOUR = 120
+  SEND_LIMIT_PER_HOUR = RateLimits.limit("message")
   MAX_LENGTH = 5_000
 
   before_action -> { authenticate! }
@@ -56,7 +56,7 @@ class MessagesController < ApplicationController
     if UserBlock.between?(current_user, counterpart)
       return render_error("You can't send messages in this conversation.", :forbidden, "MESSAGING_BLOCKED")
     end
-    return unless within_user_rate_limit?("message", limit: SEND_LIMIT_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("message")
 
     message = Message.transaction do
       # Lock the conversation first. Saving a message checks the conversation row (foreign key) and

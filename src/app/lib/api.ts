@@ -446,6 +446,8 @@ export interface SignInCodeRequest {
   role?: 'jobseeker' | 'employer';
   /** Sign-up only: the Terms and Privacy Policy box, carried to the account the code creates. */
   consent?: boolean;
+  /** Cloudflare Turnstile token, when the build has a site key (TurnstileWidget). */
+  turnstileToken?: string;
 }
 export interface SignInCodeResponse {
   ok: boolean;

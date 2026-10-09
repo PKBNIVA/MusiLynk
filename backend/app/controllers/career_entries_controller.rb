@@ -4,7 +4,7 @@ class CareerEntriesController < ApplicationController
   include UserRateLimit
   include ScalarParams
 
-  CREATES_PER_HOUR = 120
+  CREATES_PER_HOUR = RateLimits.limit("career-entry-create")
   DATE_FORMAT = /\A(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?\z/
 
   before_action -> { authenticate!("jobseeker", "employer") }
@@ -18,7 +18,7 @@ class CareerEntriesController < ApplicationController
 
   def create
     return unless require_scalar_params!(:kind, :startOn, :endOn, :position)
-    return unless within_user_rate_limit?("career-entry-create", limit: CREATES_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("career-entry-create")
     entry = current_user.career_entries.build(kind: params[:kind].to_s)
     return unless assign_fields(entry)
     CareerEntry.transaction do

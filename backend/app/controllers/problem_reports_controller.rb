@@ -8,12 +8,12 @@ class ProblemReportsController < ApplicationController
 
   SCREENSHOT_TYPES = %w[image/png image/jpeg image/webp].freeze
   SCREENSHOT_MAX = 4.megabytes
-  SIGNED_IN_PER_HOUR = 10
-  SIGNED_IN_IP_PER_HOUR = 40
-  SIGNED_OUT_IP_PER_HOUR = 3
-  SIGNED_OUT_IP_PER_DAY = 8
-  SIGNED_OUT_EMAIL_PER_DAY = 3
-  SIGNED_OUT_SITE_PER_DAY = 100
+  SIGNED_IN_PER_HOUR = RateLimits.limit("problem-report")
+  SIGNED_IN_IP_PER_HOUR = RateLimits.limit("problem-report-ip-signed-in")
+  SIGNED_OUT_IP_PER_HOUR = RateLimits.limit("problem-report-ip")
+  SIGNED_OUT_IP_PER_DAY = RateLimits.limit("problem-report-ip-day")
+  SIGNED_OUT_EMAIL_PER_DAY = RateLimits.limit("problem-report-email")
+  SIGNED_OUT_SITE_PER_DAY = RateLimits.limit("problem-report-site")
 
   def create
     return unless authenticate_if_present
@@ -72,29 +72,33 @@ class ProblemReportsController < ApplicationController
 
   def within_limits?
     if current_user
-      return false unless throttle!("problem-report-ip", limit: SIGNED_IN_IP_PER_HOUR, period: 1.hour)
+      return false unless throttle!("problem-report-ip-signed-in")
 
-      within_user_rate_limit?("problem-report", limit: SIGNED_IN_PER_HOUR, period: 1.hour)
+      within_user_rate_limit?("problem-report")
     else
-      throttle!("problem-report-ip", limit: SIGNED_OUT_IP_PER_HOUR, period: 1.hour) &&
-        throttle!("problem-report-ip-day", limit: SIGNED_OUT_IP_PER_DAY, period: 1.day) &&
+      throttle!("problem-report-ip") &&
+        throttle!("problem-report-ip-day") &&
         within_site_limit?
     end
   end
 
+  # Site-wide and per-address daily caps for signed-out reports: same counters as throttle!,
+  # keyed by the site and by the hashed address instead of the IP.
   def within_site_limit?
-    count = Rails.cache.increment("rate:problem-report-site:#{Time.current.to_i / 1.day.to_i}", 1, expires_in: 1.day)
-    return true if count.nil? || count <= SIGNED_OUT_SITE_PER_DAY
-
-    render_too_many_requests
-    false
+    within_counter_limit?("problem-report-site", "site")
   end
 
   def within_email_limit?(email)
-    count = Rails.cache.increment("rate:problem-report-email:#{digest(email)}:#{Time.current.to_i / 1.day.to_i}", 1, expires_in: 1.day)
-    return true if count.nil? || count <= SIGNED_OUT_EMAIL_PER_DAY
+    within_counter_limit?("problem-report-email", digest(email))
+  end
 
-    render_too_many_requests
+  def within_counter_limit?(bucket, identifier)
+    period = RateLimits.period(bucket)
+    count = rate_limit_count(bucket, "rate:#{bucket}:#{identifier}:#{Time.current.to_i / period.to_i}", 1, period)
+    return false if count == :unavailable
+    return true if count.nil? || count <= RateLimits.limit(bucket)
+
+    render_too_many_requests(bucket, period)
     false
   end
 

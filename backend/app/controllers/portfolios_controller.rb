@@ -7,8 +7,8 @@ class PortfoliosController < ApplicationController
   include UserRateLimit
   include ScalarParams
 
-  CREATES_PER_HOUR = 30
-  DRAFTS_PER_HOUR = 60
+  CREATES_PER_HOUR = RateLimits.limit("portfolio-create")
+  DRAFTS_PER_HOUR = RateLimits.limit("portfolio-draft")
   PLAIN_FIELDS = %w[title purpose visibility].freeze
   # Sent as null (or "") to go back to inheriting the master copy.
   OVERRIDE_TEXT = %w[headline bio city].freeze
@@ -38,7 +38,7 @@ class PortfoliosController < ApplicationController
   def create
     return unless (actor = current_actor)
     return unless require_scalar_params!(*PLAIN_FIELDS, *OVERRIDE_TEXT, :isDefault)
-    return unless within_user_rate_limit?("portfolio-create", limit: CREATES_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("portfolio-create")
 
     portfolio = Portfolio.new(owner_type: actor.type, owner_id: actor.id)
     return unless assign_fields(portfolio)
@@ -134,7 +134,7 @@ class PortfoliosController < ApplicationController
       return render_error("Describe what this portfolio is for.", :unprocessable_content, "GOAL_REQUIRED", fields: { goal: ["Describe what this portfolio is for."] })
     end
     return render_error("goal must be 500 characters or fewer.", :unprocessable_content, "INVALID_GOAL") if goal.length > 500
-    return unless within_user_rate_limit?("portfolio-draft", limit: DRAFTS_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("portfolio-draft")
 
     library = Portfolio.library_for(actor.user? ? actor.id : actor.record.owner_id)
     render json: { draft: PortfolioDraft.new(goal: [purpose.tr("-", " "), goal].join(" "), title: params[:title].presence || goal.presence || purpose, purpose:).call(library) }

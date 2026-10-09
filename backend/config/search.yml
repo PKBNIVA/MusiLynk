@@ -31,7 +31,6 @@ suggest:
   max_length: 40
   # Per IP. Type-ahead fires as people type (debounced 150 ms in the browser), so this is higher
   # than the 60 full searches a minute.
-  requests_per_minute: 120
   cache_seconds: 60
   # How many of each kind are returned.
   # role, instrument, genre, event and act_type come from config/search_synonyms.yml (plus the

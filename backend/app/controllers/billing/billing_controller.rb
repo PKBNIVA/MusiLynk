@@ -1,11 +1,8 @@
 module Billing
   class BillingController < ApplicationController
-    PLANS = {
-      "free" => { code: "free", name: "Free", monthly: 0, annual: 0, trialDays: 0, activePosts: 1, seats: 1, shortlist: 20, bookings: 2 },
-      "pro" => { code: "pro", name: "Pro", monthly: 2499, annual: 24_990, trialDays: 14, activePosts: 10, seats: 2, shortlist: 250, bookings: 20 },
-      "studio" => { code: "studio", name: "Studio", monthly: 5999, annual: 59_990, trialDays: 14, activePosts: 50, seats: 8, shortlist: 2_000, bookings: 100 },
-      "enterprise" => { code: "enterprise", name: "Enterprise", monthly: nil, annual: nil, trialDays: 0, activePosts: 9999, seats: 999, shortlist: 99999, bookings: 9999 }
-    }.freeze
+    # Plans live in config/plans.yml (PlanCatalog); this constant is the historical name the rest of
+    # the app reads them by.
+    PLANS = PlanCatalog.all
 
     # Razorpay subscription events -> local status (allowed by the subscriptions_status_valid check).
     # `subscription.authenticated` depends on the trial and is resolved per event.

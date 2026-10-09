@@ -1,0 +1,47 @@
+# Subscription plans: prices (whole INR per period, GST-inclusive per config/legal.yml
+# prices_include_gst), trial length and per-plan capacity. Loaded once per process by PlanCatalog
+# (Billing::BillingController::PLANS, PlanPricing and Entitlements all read from it) and served to
+# the frontend by GET /api/billing/plans and GET /api/public/config. `monthly`/`annual` null =
+# priced by sales (no self-serve checkout). Annual is shown as "2 months free" (10 x monthly).
+# Razorpay plan ids stay in env (RAZORPAY_PLAN_<CODE>[_MONTHLY|_ANNUAL]); see docs/engineering/SETTINGS.md.
+plans:
+  free:
+    code: free
+    name: Free
+    monthly: 0
+    annual: 0
+    trial_days: 0
+    active_posts: 1
+    seats: 1
+    shortlist: 20
+    bookings: 2
+  pro:
+    code: pro
+    name: Pro
+    monthly: 2499
+    annual: 24990
+    trial_days: 14
+    active_posts: 10
+    seats: 2
+    shortlist: 250
+    bookings: 20
+  studio:
+    code: studio
+    name: Studio
+    monthly: 5999
+    annual: 59990
+    trial_days: 14
+    active_posts: 50
+    seats: 8
+    shortlist: 2000
+    bookings: 100
+  enterprise:
+    code: enterprise
+    name: Enterprise
+    monthly: null
+    annual: null
+    trial_days: 0
+    active_posts: 9999
+    seats: 999
+    shortlist: 99999
+    bookings: 9999

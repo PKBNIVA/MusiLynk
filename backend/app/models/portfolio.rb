@@ -16,7 +16,7 @@ class Portfolio < ApplicationRecord
   INHERITED = %w[headline bio city genres rates].freeze
   DIMS = %w[roles genres instruments kinds tags].freeze
   SORTS = %w[featured newest manual].freeze
-  MAX_PER_OWNER = 20
+  MAX_PER_OWNER = Limits.portfolios_per_owner
   MAX_LIBRARY = 500
   MAX_LISTED_IDS = 500
   MAX_GENRES = 20

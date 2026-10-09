@@ -22,7 +22,7 @@ import { ApplyMaterials, type Materials } from '../components/showcase/ApplyMate
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import type { Portfolio, Resume } from '../lib/showcase';
 import { ShareToStageButton } from '../components/stage/ShareToStageButton';
-import { FEATURE_STAGE } from '../lib/features';
+import { useFeature } from '../lib/features';
 import { ShareMenu } from '../components/ShareMenu';
 import { shareCopy } from '../lib/share';
 import { OwnerJobPanel } from '../components/OwnerJobPanel';
@@ -34,6 +34,7 @@ const answerId = (i: number) => `screening-${i}`;
 const title = (x?: string | null) => String(x || '').replace(/(^|\s)\S/g, (m) => m.toUpperCase());
 
 export default function JobDetails() {
+  const FEATURE_STAGE = useFeature('stage');
   const { id } = useParams(),
     nav = useNavigate(),
     { user } = useAuth();

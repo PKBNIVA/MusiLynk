@@ -6,10 +6,13 @@ class AiPricing
   CONFIG_PATH = Rails.root.join("config/ai_pricing.yml")
 
   def self.config
-    @config ||= YAML.safe_load(File.read(CONFIG_PATH), aliases: true).fetch(Rails.env, {}).deep_symbolize_keys
+    @config ||= Settings.load(:ai_pricing)
   end
 
-  def self.reload! = @config = nil
+  def self.reload!
+    @config = nil
+    Settings.reload!(:ai_pricing)
+  end
 
   def self.allowances = config.fetch(:allowances)
   def self.topups = config.fetch(:topups)

@@ -3,8 +3,8 @@
 # `?cursor=` from the previous page's `nextCursor`; responses add `nextCursor` and `total`.
 # The cursor is opaque to clients; here it holds the offset of the next row.
 module ListPaging
-  PAGE_SIZE = 30
-  MAX_PAGE_SIZE = 100
+  PAGE_SIZE = Limits.list_page_size
+  MAX_PAGE_SIZE = Limits.list_max_page_size
 
   private
 

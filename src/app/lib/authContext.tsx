@@ -40,6 +40,7 @@ async function consumeGoogleRedirectCode(): Promise<void> {
 }
 import type { StarterPayload } from './onboarding';
 import { setRealtimeAvailable } from './realtimeAvailability';
+import { setUserFeatures } from './features';
 export type Role = 'jobseeker' | 'employer' | 'admin';
 export interface User {
   id: string;
@@ -124,13 +125,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
     if (!hasAccessToken()) {
       setRealtimeAvailable(false);
+      setUserFeatures(null);
       settle(null);
       return;
     }
     try {
-      const d = await apiGet<{ user: User; realtime?: boolean }>('/me');
+      const d = await apiGet<{ user: User; realtime?: boolean; features?: Record<string, boolean> }>('/me');
       if (current === generation.current) {
         setRealtimeAvailable(d.realtime === true);
+        setUserFeatures(d.features);
         settle(d.user);
       }
     } catch (e) {
@@ -159,41 +162,54 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         generation.current += 1;
         rememberSessionRole(null);
+        setUserFeatures(null);
         setUser(null);
         setLoading(false);
       }),
     [],
   );
   const login = async (email: string, password: string) => {
-    const d = await apiPost<{ user: User; accessToken: string; realtime?: boolean } | SecondFactorChallenge>(
-      '/auth/login',
-      {
-        email,
-        password,
-      },
-    );
+    const d = await apiPost<
+      | { user: User; accessToken: string; realtime?: boolean; features?: Record<string, boolean> }
+      | SecondFactorChallenge
+    >('/auth/login', {
+      email,
+      password,
+    });
     if (isSecondFactorChallenge(d)) return d;
     generation.current += 1;
     setAccessToken(d.accessToken);
     rememberSessionRole(d.user.role);
     setRealtimeAvailable(d.realtime === true);
+    setUserFeatures(d.features);
     setUser(d.user);
     setLoading(false);
     return d.user;
   };
   const register = async (payload: RegisterPayload) => {
-    const d = await apiPost<{ user: User; accessToken: string; realtime?: boolean }>('/auth/register', payload);
+    const d = await apiPost<{
+      user: User;
+      accessToken: string;
+      realtime?: boolean;
+      features?: Record<string, boolean>;
+    }>('/auth/register', payload);
     generation.current += 1;
     setAccessToken(d.accessToken);
     rememberSessionRole(d.user.role);
     setRealtimeAvailable(d.realtime === true);
+    setUserFeatures(d.features);
     setUser(d.user);
     setLoading(false);
     return d.user;
   };
   /* Email sign-in code: same response as /auth/login; creates the account when the code was requested as a sign-up. */ const verifyCode =
     async (email: string, code: string) => {
-      const d = await apiPost<{ user: User; accessToken: string; realtime?: boolean }>('/auth/otp/verify', {
+      const d = await apiPost<{
+        user: User;
+        accessToken: string;
+        realtime?: boolean;
+        features?: Record<string, boolean>;
+      }>('/auth/otp/verify', {
         email,
         code,
       });
@@ -201,12 +217,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setAccessToken(d.accessToken);
       rememberSessionRole(d.user.role);
       setRealtimeAvailable(d.realtime === true);
+      setUserFeatures(d.features);
       setUser(d.user);
       setLoading(false);
       return d.user;
     };
   const completeSecondFactor = async (challengeToken: string, code: string) => {
-    const d = await apiPost<{ user: User; accessToken: string; realtime?: boolean }>('/auth/second-factor', {
+    const d = await apiPost<{
+      user: User;
+      accessToken: string;
+      realtime?: boolean;
+      features?: Record<string, boolean>;
+    }>('/auth/second-factor', {
       challengeToken,
       code,
     });
@@ -214,6 +236,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setAccessToken(d.accessToken);
     rememberSessionRole(d.user.role);
     setRealtimeAvailable(d.realtime === true);
+    setUserFeatures(d.features);
     setUser(d.user);
     setLoading(false);
     return d.user;

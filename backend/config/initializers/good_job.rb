@@ -1,6 +1,7 @@
 # Plain `require` (not autoloaded): this initializer runs before Zeitwerk's autoloading is set
-# up, and AiPricing has no dependencies of its own beyond Rails.root/YAML, so requiring it
+# up, and AiPricing depends only on Settings (itself Rails.root/YAML only), so requiring both
 # directly here is safe regardless of load order.
+require Rails.root.join("app/services/settings")
 require Rails.root.join("app/services/ai_pricing")
 require Rails.root.join("config/job_queues")
 require Rails.root.join("config/backup_schedule")

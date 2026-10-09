@@ -429,7 +429,12 @@ export function watchRuntimeFailures(page: Page) {
   return failures;
 }
 
-export async function openSettledPage(page: Page, path: string) {
+/**
+ * Opens a public page against the mocked API (signed out: /me answers 401). `extraFixtures` adds or overrides
+ * replies by exact `/api/...` pathname for pages whose data is not in `populatedFixtures` (the hire and
+ * rates pages, for example); live and integration runs ignore it and use real data.
+ */
+export async function openSettledPage(page: Page, path: string, extraFixtures: Record<string, unknown> = {}) {
   if (!process.env.QA_BASE_URL && process.env.QA_INTEGRATION !== 'true') {
     await page.route('**/api/**', async (route) => {
       const pathname = new URL(route.request().url()).pathname;
@@ -445,6 +450,7 @@ export async function openSettledPage(page: Page, path: string) {
         '/api/search': { results: [], interpretedAs: [], provider: 'qa-fixture' },
         '/api/billing/plans': { plans: [] },
         '/api/taxonomy': { roleCategories: {}, genres: [], instruments: [] },
+        ...extraFixtures,
       };
       const fixtureKey = Object.keys(fixtures).find((key) => pathname === key);
       return route.fulfill({

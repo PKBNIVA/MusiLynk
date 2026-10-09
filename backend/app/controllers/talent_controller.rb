@@ -6,23 +6,13 @@ class TalentController < ApplicationController
   FACET_PARAMS = %i[language eventType genre budgetMax].freeze
   LIST_PARAMS = (%i[q location role instrument verified remoteRecording limit cursor] + FACET_PARAMS).freeze
 
-  # Ranking rewards proof (plan 5.1.4): verified, then a playable public sample (audio or video with a link, not an image, PDF or project), then how complete the
-  # profile is, then any published rate, then the most recent sign-in. An empty profile therefore never
-  # outranks a populated one. COMPLETENESS mirrors the dashboard's profileScore (six signals, 0-6).
-  HAS_SAMPLE_SQL = "EXISTS (SELECT 1 FROM portfolio_items ranked_samples WHERE ranked_samples.user_id = users.id AND ranked_samples.visibility = 'public' AND ranked_samples.kind IN ('audio', 'video') AND btrim(COALESCE(ranked_samples.url, '')) <> '')".freeze
-  COMPLETENESS_SQL = [
-    *%w[headline bio location].map { "(CASE WHEN btrim(COALESCE(profiles.#{_1}, '')) <> '' THEN 1 ELSE 0 END)" },
-    *%w[skills genres].map { "(CASE WHEN profiles.#{_1} <> '[]'::jsonb THEN 1 ELSE 0 END)" },
-    "(CASE WHEN EXISTS (SELECT 1 FROM portfolio_items scored_items WHERE scored_items.user_id = users.id) THEN 1 ELSE 0 END)"
-  ].join(" + ").then { "(#{_1})" }.freeze
+  # Ranking rewards proof (plan 5.1.4): verified, then a playable public sample, then how complete the
+  # profile is, then any published rate, then a recent sign-in. Those signals are precomputed into
+  # profiles.rank_score (TalentRank) and indexed with the user id, so the unfiltered directory reads
+  # its page off the index and pages by keyset on (rank_score, user_id). Ends in a unique column.
+  LIST_ORDER = ["profiles.rank_score DESC", "profiles.user_id DESC"].freeze
   # The "from" price on a card is the lowest of these rates (tour-day pay is a different kind of engagement).
   FROM_RATE_SQL = "LEAST(NULLIF(profiles.session_rate, 0), NULLIF(profiles.show_rate, 0), NULLIF(profiles.day_rate, 0), NULLIF(profiles.hourly_rate, 0))".freeze
-  HAS_RATES_SQL = "(#{FROM_RATE_SQL} IS NOT NULL)".freeze
-  # Tie-breaks after relevance, and the order of an unfiltered directory; ends in a unique column.
-  LIST_ORDER = [
-    "profiles.verified DESC", "#{HAS_SAMPLE_SQL} DESC", "#{COMPLETENESS_SQL} DESC", "#{HAS_RATES_SQL} DESC",
-    "users.last_login_at DESC NULLS LAST", "users.created_at DESC", "users.id ASC"
-  ].freeze
   # A role filter matches the name and headline (weight A) and roles, skills, instruments and genres (B).
   ROLE_WEIGHTS = "AB".freeze
 
@@ -143,21 +133,38 @@ class TalentController < ApplicationController
 
   # One ranked page of professionals: `key` => rows, plus nextCursor, total and how the query was read.
   # `cache` names the edge-cache lifetime (PublicCaching) for the anonymous public listing.
+  # Browsing (no `q`) pages by keyset on (rank_score, user_id); a typed search ranks by relevance first
+  # and keeps the offset cursor. An offset cursor on a browse is still served for one release.
   def render_listing(key, cache: nil)
-    offset = list_offset
-    return render_invalid_cursor if offset.nil?
+    position = list_position
+    return render_invalid_cursor if position.nil?
     scope = filter(listing_scope.joins(:profile))
     limit = list_limit
-    search = Search::Runner.call(scope, params[:q], Search::Targets::TALENT, order: LIST_ORDER, offset:, limit:)
+    browsing = params[:q].blank?
+    after = browsing ? keyset_condition(position) : nil
+    deprecated_offset_cursor!("talent") if browsing && position[:offset].positive?
+    offset = after ? 0 : position[:offset]
+    search = Search::Runner.call(scope, params[:q], Search::Targets::TALENT, order: LIST_ORDER, offset:, limit:, after:)
     bookings = completed_bookings(search.rows.map(&:id))
     prime_profile_stats(search.rows, completed_bookings: bookings)
-    body = { key => search.rows.map { with_bookings(yield(_1), _1.id, bookings) }, nextCursor: list_next_cursor(search, offset, limit), total: search.total }.merge(search.meta)
+    next_cursor = if !search.more then nil
+                  elsif browsing then encode_keyset_cursor(search.rows.last.profile.rank_score, search.rows.last.id)
+                  else encode_list_cursor(offset + limit)
+                  end
+    body = { key => search.rows.map { with_bookings(yield(_1), _1.id, bookings) }, nextCursor: next_cursor, total: search.total }.merge(search.meta)
     if (role = role_filter)
       body[:role] = role
     end
     json = body.to_json
     return if cache && public_cache!(cache, etag: json)
     render json: json
+  end
+
+  # SQL: rows after the keyset position (rank_score DESC, user_id DESC), or nil without one.
+  def keyset_condition(position)
+    return nil unless position[:key]
+    score, id = position[:key]
+    ActiveRecord::Base.sanitize_sql_array(["(profiles.rank_score, profiles.user_id) < (?, ?)", score, id])
   end
 
   # A landing-page role group ("performer") or a free-text role, as { key:, label: }.

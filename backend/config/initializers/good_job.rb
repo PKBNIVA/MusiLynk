@@ -25,6 +25,12 @@ Rails.application.configure do
       class: "JobAlertSweepJob",
       description: "Deliver due daily and weekly job alerts"
     },
+    # 04:13 IST = 22:43 UTC, after the retention sweep.
+    talent_rank: {
+      cron: "43 22 * * *",
+      class: "TalentRankJob",
+      description: "Recompute profiles.rank_score (talent directory ranking) and age the sign-in recency"
+    },
     auth_cleanup: {
       cron: "17 3 * * *",
       class: "AuthCleanupJob",

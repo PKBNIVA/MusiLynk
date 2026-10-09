@@ -1,12 +1,28 @@
 class NotificationsController < ApplicationController
+  include ScalarParams
   before_action -> { authenticate! }, except: %i[unsubscribe unsubscribe_status unsubscribe_update]
 
+  PAGE_SIZE = 30
+  MAX_PAGE_SIZE = 100
+
+  # Newest first, keyset-paged on (created_at, id) (R4): `?limit=` (default PAGE_SIZE, 1..MAX_PAGE_SIZE)
+  # and `?cursor=` from the previous page's `nextCursor`; a notification created mid-scroll never
+  # shifts a later page.
   def index
+    return unless require_scalar_params!(:limit, :cursor)
+    after = decode_cursor(params[:cursor])
+    return render_error("This list position is no longer valid. Reload the page.", :bad_request, "INVALID_CURSOR") if after == :invalid
+    limit = Integer(params[:limit].to_s, 10, exception: false)&.clamp(1, MAX_PAGE_SIZE) || PAGE_SIZE
     scope = current_user.notifications
-    notifications = scope.order(created_at: :desc).limit(100).as_json.map do |row|
+    page = after ? scope.where("(notifications.created_at, notifications.id) < (?, ?)", after[:created_at], after[:id]) : scope
+    rows = page.order(created_at: :desc, id: :desc).limit(limit + 1).to_a
+    more = rows.length > limit
+    rows = rows.first(limit)
+    notifications = rows.as_json.map do |row|
       row.transform_keys { _1.camelize(:lower) }.merge(type: row.delete("kind"))
     end
-    render json: { notifications:, unread: scope.where(read_at: nil).count }
+    next_cursor = more ? Base64.urlsafe_encode64({ t: rows.last.created_at.utc.iso8601(6), i: rows.last.id }.to_json, padding: false) : nil
+    render json: { notifications:, unread: scope.where(read_at: nil).count, nextCursor: next_cursor }
   end
 
   # Polled by the navigation (about every 30 s while the tab is visible).
@@ -97,6 +113,16 @@ class NotificationsController < ApplicationController
   end
 
   private
+
+  # { created_at:, id: } after a valid cursor, nil without one, :invalid when it cannot be read.
+  def decode_cursor(raw)
+    return nil if raw.blank?
+    data = JSON.parse(Base64.urlsafe_decode64(raw.to_s))
+    return :invalid unless data.is_a?(Hash) && data["i"].is_a?(String) && data["t"].is_a?(String)
+    { created_at: Time.iso8601(data["t"]), id: data["i"] }
+  rescue ArgumentError, JSON::ParserError, TypeError
+    :invalid
+  end
 
   def default_preferences
     { "digest" => true, "lifecycle" => true, "requests" => true, "product" => true }

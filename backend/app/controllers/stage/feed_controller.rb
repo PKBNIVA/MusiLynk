@@ -1,10 +1,18 @@
 module Stage
-  # The Stage home feed: a blend of posts from people and Pages you follow (plus your own),
-  # posts matching your city and genres, and trending posts (applause + comments in the last
-  # 72h, time-decayed). Cursor-paginated over the ranked order.
+  # The Stage home feed: posts from people and Pages you follow (plus your own), posts matching your
+  # city and genres, and trending posts (applause + comments in the last 72h, time-decayed).
+  #
+  # Paging is keyset on (created_at, id), newest first (R4): each page is the next PAGE_SIZE visible
+  # posts older than the cursor, ranked within that window by the blend above, so every post is
+  # reachable and a post published mid-scroll never shifts a later page (no duplicates, no skips).
+  # Pinned posts lead the first page and are left out of the stream while pinned.
   class FeedController < BaseController
     PAGE_SIZE = 20
-    POOL_LIMIT = 500
+    # Posts read per statement while filling a page; at most MAX_BATCHES statements per page, so a
+    # long run of posts the viewer cannot see ends the page early instead of scanning on.
+    BATCH_SIZE = 60
+    MAX_BATCHES = 3
+    PINNED_LIMIT = 3
     # Above everything else: a pinned post (admin, or the weekly system roundup) always leads
     # the feed while it's pinned.
     PINNED_BONUS = 1_000_000_000.0
@@ -13,30 +21,29 @@ module Stage
     TRENDING_WEIGHT = 1_000.0
 
     def index
-      candidates = visible_posts.where.not(status: %w[hidden deleted])
-        .includes(*LIST_INCLUDES).order(created_at: :desc, id: :desc).limit(POOL_LIMIT).to_a
-
       user = current_user
-      # Follows and blocks are read once for the whole pool (one query each), not once per post:
-      # the per-post checks cost a query or two for each of up to POOL_LIMIT candidates (549 a request).
+      cursor = decode_cursor(params[:cursor])
+      # Follows and blocks are read once for the whole page (one query each), not once per post.
       blocked = blocked_user_ids(user)
-      candidates = visible_to(candidates, user).reject { blocked.include?(_1.created_by_user_id) }
+      shown = ->(posts) { visible_to(posts, user).reject { blocked.include?(_1.created_by_user_id) } }
+      listed = visible_posts.where.not(status: %w[hidden deleted]).includes(*LIST_INCLUDES)
+
+      pinned = cursor ? [] : shown.(listed.pinned.order(pinned_until: :desc, id: :desc).limit(PINNED_LIMIT).to_a)
+      stream = listed.where("posts.pinned_until IS NULL OR posts.pinned_until <= ?", Time.current).order(created_at: :desc, id: :desc)
+      page, last_read, exhausted = fill_page(stream, cursor, shown)
+
       followed_keys = followed_keys(user)
       own_keys = viewer_actor_keys.to_set
       city = user&.profile&.location.presence
       genres = Set.new(Array(user&.profile&.genres).map { _1.to_s.downcase })
+      ranked = page.map { |post| [score(post, followed_keys, own_keys, city, genres), post] }
+      ranked.sort_by! { |score, post| [-score, -post.created_at.to_f, post.id] }
+      posts = pinned + ranked.map(&:last)
 
-      scored = candidates.map { |post| [score(post, followed_keys, own_keys, city, genres), post] }
-      scored.sort_by! { |score, post| [-score, -post.created_at.to_f, post.id] }
-
-      start_index = start_index_for(scored, decode_cursor(params[:cursor]))
-      page = scored[start_index, PAGE_SIZE] || []
-
-      preload_for_json(page.map(&:last))
-      applauded = applauded_post_ids(page.map(&:last))
-      next_cursor = page.length == PAGE_SIZE && scored[start_index + PAGE_SIZE] ? encode_cursor(page.last, start_index + page.length) : nil
-
-      render json: { posts: page.map { |_score, post| post.api_json(applauded_post_ids: applauded) }, nextCursor: next_cursor }
+      preload_for_json(posts)
+      applauded = applauded_post_ids(posts)
+      next_cursor = !exhausted && last_read ? encode_cursor(last_read) : nil
+      render json: { posts: posts.map { _1.api_json(applauded_post_ids: applauded) }, nextCursor: next_cursor }
     end
 
     private
@@ -63,28 +70,51 @@ module Stage
       total
     end
 
-    # The ranking is time-decayed, so a score recorded on one request never equals the score of
-    # the same post on the next. The cursor therefore remembers the last post's id (continue right
-    # after it wherever it now ranks) and the offset it was served at (used when that post has
-    # dropped out of the candidate pool), never the score itself.
-    def encode_cursor(entry, offset)
-      _score, post = entry
-      Base64.urlsafe_encode64({ i: post.id, o: offset }.to_json)
+    # Reads `stream` after `cursor` in batches until PAGE_SIZE posts pass `shown`. Returns the page,
+    # the last post read (the next cursor: posts read but not shown are not read again), and whether
+    # the stream ran out.
+    def fill_page(stream, cursor, shown)
+      page = []
+      last_read = nil
+      boundary = cursor
+      MAX_BATCHES.times do
+        scope = boundary ? stream.where("(posts.created_at, posts.id) < (?, ?)", boundary[:created_at], boundary[:id]) : stream
+        batch = scope.limit(BATCH_SIZE).to_a
+        visible = shown.(batch).to_set
+        batch.each do |post|
+          last_read = post
+          next unless visible.include?(post)
+          page << post
+          return [page, last_read, batch.length < BATCH_SIZE && post.equal?(batch.last)] if page.length == PAGE_SIZE
+        end
+        return [page, last_read, true] if batch.length < BATCH_SIZE
+        boundary = { created_at: last_read.created_at, id: last_read.id }
+      end
+      [page, last_read, false]
     end
 
+    # The cursor is the (created_at, id) of the last post read, opaque to clients.
+    def encode_cursor(post) = Base64.urlsafe_encode64({ t: post.created_at.utc.iso8601(6), i: post.id }.to_json)
+
+    # { created_at:, id: } or nil (first page). The pre-R4 cursor ({ i: id, o: offset }) is still
+    # read for one release: it continues after that post's (created_at, id).
     def decode_cursor(raw)
-      return nil if raw.blank?
+      return nil if raw.blank? || !raw.is_a?(String)
       data = JSON.parse(Base64.urlsafe_decode64(raw))
-      return nil unless data.is_a?(Hash)
-      { id: data["i"].to_s, offset: data["o"].to_i }
+      return nil unless data.is_a?(Hash) && data["i"].is_a?(String)
+      if data.key?("t")
+        created_at = Time.iso8601(data["t"].to_s)
+        return { created_at:, id: data["i"] }
+      end
+      deprecated_offset_cursor!
+      created_at = Post.where(id: data["i"]).pick(:created_at)
+      created_at ? { created_at:, id: data["i"] } : nil
     rescue ArgumentError, JSON::ParserError, TypeError
       nil
     end
 
-    def start_index_for(scored, cursor)
-      return 0 unless cursor
-      found = scored.index { |_score, post| post.id == cursor[:id] }
-      found ? found + 1 : [[cursor[:offset], 0].max, scored.length].min
+    def deprecated_offset_cursor!
+      Rails.logger.info({ event: "deprecated_offset_cursor", list: "stage_feed" }.to_json)
     end
   end
 end

@@ -29,11 +29,14 @@ module Search
 
     # `order` breaks score ties (and orders an empty query); it must end in a unique column.
     # `target` is a Search::Document (Search::Targets).
-    def self.call(scope, raw, target, order:, offset: 0, limit: 30)
-      new(scope, target, order, offset, limit).call(raw.is_a?(Query) ? raw : Query.new(raw))
+    # `after` (browse only) is a keyset condition (SQL) on `order`: the page starts after the row it
+    # names, and the total still counts the whole list.
+    def self.call(scope, raw, target, order:, offset: 0, limit: 30, after: nil)
+      new(scope, target, order, offset, limit, after).call(raw.is_a?(Query) ? raw : Query.new(raw))
     end
 
-    def initialize(scope, target, order, offset, limit)
+    def initialize(scope, target, order, offset, limit, after = nil)
+      @after = after
       @scope = scope
       @target = target
       @order = order.map { Arel.sql(_1) }
@@ -115,9 +118,10 @@ module Search
 
     # An empty query (browse): the scope in `order`, with a capped total.
     def page(ordered, query, mode, did_you_mean = nil)
-      rows = ordered.offset(@offset).limit(@limit + 1).to_a
+      paged = @after ? ordered.where(Arel.sql(@after)) : ordered
+      rows = paged.offset(@offset).limit(@limit + 1).to_a
       more = rows.length > @limit
-      total = more || (rows.empty? && @offset.positive?) ? total_for(ordered) : @offset + rows.length
+      total = more || @after || (rows.empty? && @offset.positive?) ? total_for(ordered) : @offset + rows.length
       Result.new(rows: rows.first(@limit), total:, more:, query:, mode:, did_you_mean:)
     end
 

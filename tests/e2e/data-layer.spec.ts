@@ -82,13 +82,25 @@ test.describe('lists and records', () => {
     expect(calls.filter((c) => c.includes('/public/talent/u3'))).toHaveLength(1);
   });
 
-  test('on a phone the first touch on a card prefetches its profile', async ({ page, isMobile }) => {
+  test('on a phone a touch that rests on a card prefetches its profile', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'Touch only.');
     const calls = await mockTalent(page);
     await page.goto('/music-professionals');
     const link = page.getByRole('link', { name: 'Musician 4' });
-    await link.dispatchEvent('touchstart');
+    // Changed from touchstart: a finger that rests (pointerdown, no movement) prefetches after a short delay.
+    await link.dispatchEvent('pointerdown', { pointerType: 'touch' });
     await expect.poll(() => calls.filter((c) => c.includes('/public/talent/u4')).length).toBe(1);
+  });
+
+  test('on a phone a touch that moves (scrolling) prefetches nothing', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'Touch only.');
+    const calls = await mockTalent(page);
+    await page.goto('/music-professionals');
+    const link = page.getByRole('link', { name: 'Musician 4' });
+    await link.dispatchEvent('pointerdown', { pointerType: 'touch' });
+    await link.dispatchEvent('pointermove', { pointerType: 'touch' });
+    await page.waitForTimeout(500);
+    expect(calls.filter((c) => c.includes('/public/talent/u4'))).toHaveLength(0);
   });
 
   test('a 3-page browse (list, profile, back, another profile) makes one list request and one per profile', async ({

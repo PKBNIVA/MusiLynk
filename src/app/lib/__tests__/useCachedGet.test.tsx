@@ -6,7 +6,7 @@ const { apiGet } = vi.hoisted(() => ({ apiGet: vi.fn() }));
 vi.mock('../api', () => ({ apiGet, onApiWrite: () => () => undefined, onIdentityChange: () => () => undefined }));
 
 import { realtime, resetDataCacheForTests } from '../dataCache';
-import { useCachedGet } from '../useCachedGet';
+import { TOUCH_PREFETCH_DELAY_MS, useCachedGet, usePrefetchIntent } from '../useCachedGet';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const flush = () =>
@@ -62,6 +62,43 @@ describe('useCachedGet', () => {
     await flush();
     expect(apiGet).toHaveBeenCalledTimes(2);
     expect(shown.at(-1)).toEqual({ conversations: ['c1'] });
+    act(() => root.unmount());
+  });
+});
+
+describe('usePrefetchIntent', () => {
+  let props: ReturnType<typeof usePrefetchIntent>;
+  function Card() {
+    props = usePrefetchIntent('/public/talent/1');
+    return null;
+  }
+  beforeEach(() => {
+    vi.useFakeTimers();
+    apiGet.mockResolvedValue({});
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('does not prefetch when a touch moves (scrolling) or ends before the delay', () => {
+    const root = createRoot(document.createElement('div'));
+    act(() => root.render(createElement(Card)));
+    props.onPointerDown?.({ pointerType: 'touch' } as never);
+    props.onPointerMove?.();
+    vi.advanceTimersByTime(TOUCH_PREFETCH_DELAY_MS * 3);
+    props.onPointerDown?.({ pointerType: 'touch' } as never);
+    vi.advanceTimersByTime(TOUCH_PREFETCH_DELAY_MS - 1);
+    props.onPointerUp?.();
+    vi.advanceTimersByTime(TOUCH_PREFETCH_DELAY_MS * 3);
+    expect(apiGet).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('prefetches when a touch rests, and on hover', () => {
+    const root = createRoot(document.createElement('div'));
+    act(() => root.render(createElement(Card)));
+    props.onPointerDown?.({ pointerType: 'touch' } as never);
+    vi.advanceTimersByTime(TOUCH_PREFETCH_DELAY_MS + 1);
+    expect(apiGet).toHaveBeenCalledTimes(1);
+    expect(props).not.toHaveProperty('onTouchStart');
     act(() => root.unmount());
   });
 });

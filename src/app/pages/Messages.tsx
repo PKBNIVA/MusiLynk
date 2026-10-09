@@ -18,7 +18,7 @@ import { useAuth } from '../lib/authContext';
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { errorCode, errorMessage as messageOf, errorStatus } from '../lib/errors';
 import { announceUnreadChanged, useVisiblePolling } from '../lib/usePolling';
-import { byTime, mergeMessages } from '../lib/messageMerge';
+import { byTime, dropConfirmedPending, mergeMessages, newPendingId, PENDING_PREFIX } from '../lib/messageMerge';
 import { useRealtime, useRealtimeInterval } from '../lib/realtime';
 import { linkify } from '../lib/linkify';
 import { formatWhen, formatNumber } from '../lib/format';
@@ -27,8 +27,6 @@ import type { Conversation, Message, MessagePage } from '../lib/apiTypes';
 const MESSAGE_MAX_LENGTH = 5000;
 const THREAD_POLL_MS = 3_000;
 const INBOX_POLL_MS = 10_000;
-/** Id prefix of a sent message the server has not confirmed yet (optimistic). */
-const PENDING_PREFIX = 'pending-';
 
 const errorMessage = (e: unknown, fallback: string) => {
   if (errorStatus(e) === 429)
@@ -225,11 +223,16 @@ export default function Messages() {
           const oldest = server[0]?.createdAt || '';
           const newest = server[server.length - 1]?.createdAt || '';
           // Keep older pages already loaded, and anything sent locally after this response was produced; the next poll will include it.
-          setMsgs((prev) => [
-            ...prev.filter((m) => oldest && m.createdAt < oldest && !server.some((s) => s.id === m.id)),
-            ...server,
-            ...prev.filter((m) => m.createdAt > newest && !server.some((s) => s.id === m.id)),
-          ]);
+          setMsgs((prev) =>
+            dropConfirmedPending(
+              [
+                ...prev.filter((m) => oldest && m.createdAt < oldest && !server.some((s) => s.id === m.id)),
+                ...server,
+                ...prev.filter((m) => m.createdAt > newest && !server.some((s) => s.id === m.id)),
+              ],
+              server,
+            ),
+          );
           if (!olderLoaded.current) setTruncated(Boolean(d.truncated));
         }
         setThreadState('ready');
@@ -383,7 +386,7 @@ export default function Messages() {
     setSendError('');
     // Optimistic: the message appears at once and the box clears; on failure it is removed and the text restored.
     const pending: Message = {
-      id: `${PENDING_PREFIX}${Date.now()}`,
+      id: newPendingId(),
       senderId: user?.id || '',
       body,
       createdAt: new Date().toISOString(),

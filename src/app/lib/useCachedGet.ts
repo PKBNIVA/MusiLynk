@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cachedGet, isInvalidated, peek, prefetch, subscribe, type CachedGetOptions } from './dataCache';
 import type { CacheFamily } from './dataCache.config';
 import { useLatestCallback } from './useLatestCallback';
@@ -58,13 +58,47 @@ export function useCachedGet<T>(path: string | null, options: { family?: CacheFa
   return useMemo(() => ({ ...state, refresh }), [state, refresh]);
 }
 
+/** How long a finger must rest on a card before it counts as a tap-in-progress rather than a scroll. */
+export const TOUCH_PREFETCH_DELAY_MS = 120;
+
 /**
  * Event handlers that warm the cache for the page a card leads to: pointer hover and keyboard focus on
- * a desktop, the first touch on a phone. Rate-limited by `prefetch`; nothing is fetched twice.
+ * a desktop; on a phone, a touch that rests for a moment without moving (pointerdown + a short delay,
+ * cancelled by pointermove, pointerup, pointercancel or leaving), so scrolling past cards fetches nothing.
+ * Rate-limited by `prefetch`; nothing is fetched twice.
  */
 export function usePrefetchIntent(path: string | null, family: CacheFamily = 'record') {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const start = useCallback(() => {
     if (path) prefetch(path, family);
   }, [path, family]);
-  return useMemo(() => ({ onMouseEnter: start, onFocus: start, onTouchStart: start }), [start]);
+  const cancel = useCallback(() => {
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = null;
+  }, []);
+  useEffect(() => cancel, [cancel]);
+  const onPointerDown = useCallback(
+    (event: { pointerType?: string }) => {
+      cancel();
+      // A mouse is covered by hover; only touch and pen wait for a rest.
+      if (event.pointerType === 'mouse') return;
+      timer.current = setTimeout(() => {
+        timer.current = null;
+        start();
+      }, TOUCH_PREFETCH_DELAY_MS);
+    },
+    [cancel, start],
+  );
+  return useMemo(
+    () => ({
+      onMouseEnter: start,
+      onFocus: start,
+      onPointerDown,
+      onPointerMove: cancel,
+      onPointerUp: cancel,
+      onPointerCancel: cancel,
+      onPointerLeave: cancel,
+    }),
+    [start, onPointerDown, cancel],
+  );
 }

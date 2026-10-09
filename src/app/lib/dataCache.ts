@@ -42,12 +42,16 @@ type Entry<T = unknown> = {
   stale: boolean;
   /** The request in flight for this path, shared by every caller (de-duplication). */
   inFlight: Promise<T> | null;
+  /** Bumped by `invalidate` and forced reads: a response from an older generation is ignored. */
+  gen: number;
   error: unknown;
 };
 
 type Listener = () => void;
 
 const entries = new Map<string, Entry>();
+/** Bumped by `clear()` (identity change): a response that began in an older epoch is dropped. */
+let epoch = 0;
 const listeners = new Map<string, Set<Listener>>();
 
 /** Structural equality for API payloads (JSON data: objects, arrays, primitives). */
@@ -67,7 +71,7 @@ export function sameData(a: unknown, b: unknown): boolean {
 function entryFor<T>(path: string, family: CacheFamily): Entry<T> {
   let entry = entries.get(path) as Entry<T> | undefined;
   if (!entry) {
-    entry = { data: undefined, updatedAt: 0, family, stale: false, inFlight: null, error: undefined };
+    entry = { data: undefined, updatedAt: 0, family, stale: false, inFlight: null, gen: 0, error: undefined };
     entries.set(path, entry as Entry);
   }
   return entry;
@@ -109,11 +113,17 @@ export function isFresh(path: string): boolean {
   return Boolean(entry && status(entry).fresh);
 }
 
-function request<T>(path: string, entry: Entry<T>, options?: ApiOptions): Promise<T> {
-  if (entry.inFlight) return entry.inFlight;
+function request<T>(path: string, entry: Entry<T>, options?: ApiOptions, fresh = false): Promise<T> {
+  if (entry.inFlight && !fresh) return entry.inFlight;
+  // A forced read supersedes whatever is in flight: its result will be ignored.
+  if (entry.inFlight) entry.gen += 1;
+  const startedEpoch = epoch;
+  const startedGen = entry.gen;
+  const current = () => startedEpoch === epoch && startedGen === entry.gen && entries.get(path) === (entry as Entry);
   // Options are passed only when given, so callers and tests see `apiGet(path)` for a plain read.
   const promise = (options && Object.keys(options).length ? apiGet<T>(path, options) : apiGet<T>(path))
     .then((data) => {
+      if (!current()) return data; // identity changed or a newer request owns the entry: do not cache this
       const changed = !sameData(entry.data, data);
       entry.data = data;
       entry.updatedAt = Date.now();
@@ -123,7 +133,7 @@ function request<T>(path: string, entry: Entry<T>, options?: ApiOptions): Promis
       return data;
     })
     .catch((error: unknown) => {
-      entry.error = error;
+      if (current()) entry.error = error;
       throw error;
     })
     .finally(() => {
@@ -150,7 +160,7 @@ export function cachedGet<T>(path: string, options: CachedGetOptions = {}): Prom
   entry.family = family;
   const { has, fresh } = status(entry);
   if (!force && fresh) return Promise.resolve(entry.data as T);
-  const pending = request(path, entry, apiOptions);
+  const pending = request(path, entry, apiOptions, force);
   if (!force && has) {
     // Stale-while-revalidate: show what we have, refresh quietly.
     pending.catch(() => undefined);
@@ -164,6 +174,9 @@ export function invalidate(prefix: string) {
   for (const [path, entry] of entries) {
     if (path === prefix || path.startsWith(prefix)) {
       entry.stale = true;
+      // A response already on its way may predate the change: forget it, the next read asks again.
+      entry.gen += 1;
+      entry.inFlight = null;
       notify(path);
     }
   }
@@ -181,6 +194,7 @@ export function update<T>(path: string, next: (current: T | undefined) => T) {
 
 /** Forgets everything (identity change, tests). */
 export function clear() {
+  epoch += 1;
   entries.clear();
   for (const path of listeners.keys()) notify(path);
 }
@@ -273,6 +287,7 @@ export const realtime = { event: invalidateForEvent, invalidate, update };
 
 /** Test hook: a fresh cache and prefetch budget. */
 export function resetDataCacheForTests() {
+  epoch += 1;
   entries.clear();
   listeners.clear();
   prefetchInFlight = 0;

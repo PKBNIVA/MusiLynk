@@ -425,10 +425,17 @@ export function hasAccessToken() {
 export function onAccessTokenChange(listener: (signedIn: boolean) => void) {
   const handler = (event: StorageEvent) => {
     // A null key means the other tab cleared all of localStorage.
-    if (event.key !== null && event.key !== TOKEN_KEY) return;
+    if (event.key !== null && event.key !== TOKEN_KEY && event.key !== ACT_AS_KEY) return;
     try {
       if (event.storageArea !== localStorage) return;
     } catch {
+      return;
+    }
+    if (event.key === ACT_AS_KEY) {
+      // Another tab switched the "act as" Page: this tab's cached data belongs to the old identity.
+      if (event.newValue) memoryStore.set(`local:${ACT_AS_KEY}`, event.newValue);
+      else memoryStore.delete(`local:${ACT_AS_KEY}`);
+      announceIdentityChange();
       return;
     }
     const token = event.key === null ? null : event.newValue;

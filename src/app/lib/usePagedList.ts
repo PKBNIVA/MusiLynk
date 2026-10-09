@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { onIdentityChange } from './api';
 import { cachedGet, isFresh, peek, prefetch } from './dataCache';
 import { CACHE_TTL_MS } from './dataCache.config';
 import { useLatestCallback } from './useLatestCallback';
@@ -35,9 +36,15 @@ type Remembered<T, P> = {
   at: number;
 };
 const remembered = new Map<string, Remembered<unknown, unknown>>();
-/** Test hook: forget every remembered list. */
-export function forgetListsForTests() {
+/** Forget every remembered list (sign-out, identity change, tests): nobody sees another identity's rows. */
+export function forgetLists() {
   remembered.clear();
+}
+export const forgetListsForTests = forgetLists;
+try {
+  onIdentityChange(forgetLists);
+} catch {
+  /* partial api mock in a unit test */
 }
 
 type Options<T, P> = {

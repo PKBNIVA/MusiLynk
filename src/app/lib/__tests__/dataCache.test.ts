@@ -215,3 +215,54 @@ describe('sameData', () => {
     expect(cache.sameData([], {})).toBe(false);
   });
 });
+
+describe('cache epoch and in-flight requests', () => {
+  it('drops a response that began before clear()', async () => {
+    const slow = deferred<unknown>();
+    apiGet.mockReturnValueOnce(slow.promise);
+    const pending = cache.cachedGet('/me');
+    cache.clear();
+    slow.resolve({ who: 'old identity' });
+    await pending;
+    expect(cache.peek('/me')).toBeUndefined();
+    apiGet.mockResolvedValueOnce({ who: 'new identity' });
+    expect(await cache.cachedGet('/me')).toEqual({ who: 'new identity' });
+    expect(cache.peek('/me')).toEqual({ who: 'new identity' });
+  });
+
+  it('does not reuse an in-flight GET after invalidate: starts a fresh one and ignores the older result', async () => {
+    const older = deferred<unknown>();
+    const newer = deferred<unknown>();
+    apiGet.mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise);
+    const first = cache.cachedGet('/conversations');
+    cache.invalidate('/conversations');
+    const second = cache.cachedGet('/conversations');
+    expect(apiGet).toHaveBeenCalledTimes(2);
+    newer.resolve({ v: 2 });
+    await second;
+    older.resolve({ v: 1 });
+    await first;
+    expect(cache.peek('/conversations')).toEqual({ v: 2 });
+  });
+
+  it('a forced read starts a fresh request and the older result is ignored', async () => {
+    const older = deferred<unknown>();
+    apiGet.mockReturnValueOnce(older.promise).mockResolvedValueOnce({ v: 2 });
+    const first = cache.cachedGet('/thread');
+    expect(await cache.cachedGet('/thread', { force: true })).toEqual({ v: 2 });
+    older.resolve({ v: 1 });
+    await first;
+    expect(apiGet).toHaveBeenCalledTimes(2);
+    expect(cache.peek('/thread')).toEqual({ v: 2 });
+  });
+
+  it('still shares one request between plain concurrent reads', async () => {
+    const d = deferred<unknown>();
+    apiGet.mockReturnValueOnce(d.promise);
+    const a = cache.cachedGet('/x');
+    const b = cache.cachedGet('/x');
+    d.resolve({ ok: 1 });
+    await Promise.all([a, b]);
+    expect(apiGet).toHaveBeenCalledTimes(1);
+  });
+});

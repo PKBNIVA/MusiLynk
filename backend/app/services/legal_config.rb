@@ -5,10 +5,13 @@ class LegalConfig
   CONFIG_PATH = Rails.root.join("config/legal.yml")
 
   def self.config
-    @config ||= YAML.safe_load(File.read(CONFIG_PATH), aliases: true).fetch(Rails.env, {}).deep_symbolize_keys
+    @config ||= Settings.load(:legal)
   end
 
-  def self.reload! = @config = nil
+  def self.reload!
+    @config = nil
+    Settings.reload!(:legal)
+  end
 
   def self.business = config.fetch(:business, {})
   def self.grievance_officer = config.fetch(:grievance_officer, {})

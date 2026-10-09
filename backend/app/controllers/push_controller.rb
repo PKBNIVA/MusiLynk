@@ -3,7 +3,7 @@
 class PushController < ApplicationController
   include UserRateLimit
 
-  MAX_SUBSCRIPTIONS_PER_USER = 10
+  MAX_SUBSCRIPTIONS_PER_USER = Limits.push_subscriptions_per_user
   CHANGES_PER_HOUR = 30
 
   before_action -> { authenticate! }, except: :settings

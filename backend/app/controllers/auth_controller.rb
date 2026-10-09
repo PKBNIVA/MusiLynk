@@ -7,7 +7,7 @@ class AuthController < ApplicationController
   LOGIN_FAILURES_PER_EMAIL_AND_IP = 10
   LOGIN_FAILURES_PER_EMAIL = 100
   LOGIN_FAILURES_PER_IP = 50
-  MAX_LIVE_SESSIONS = 10
+  MAX_LIVE_SESSIONS = Limits.max_live_sessions
   OTP_REQUEST_PERIOD = 1.hour
   OTP_REQUESTS_PER_EMAIL = 5
   # Mobile carriers put many users behind one IP (CGNAT); the per-email limit is the real guard.
@@ -356,7 +356,7 @@ class AuthController < ApplicationController
 
   def me
     return unless authenticate!
-    render json: { user: public_user(current_user).merge(verification_state(current_user)), realtime: Realtime.enabled? }
+    render json: { user: public_user(current_user).merge(verification_state(current_user)), realtime: Realtime.enabled?, features: Features.for(current_user) }
   end
 
   def request_verification

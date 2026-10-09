@@ -24,6 +24,7 @@ class EdgeCachingTest < ActionDispatch::IntegrationTest
   def endpoints
     {
       "/api/public/stats" => :stats,
+      "/api/public/config" => :config,
       "/api/public/talent?location=Mumbai&limit=6" => :listing,
       "/api/public/talent/#{@musician.id}" => :show,
       "/api/public/acts" => :listing,

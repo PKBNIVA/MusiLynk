@@ -67,7 +67,7 @@ class TalentController < ApplicationController
         { startAt: window.start_at, endAt: window.end_at, status: window.status, city: window.city }
       end
       public_profile(candidate).merge(
-        "portfolio" => PortfolioItem.preload_image_sets(candidate.portfolio_items.where(visibility: "public").limit(8)).map(&:api_json),
+        "portfolio" => PortfolioItem.preload_image_sets(candidate.portfolio_items.where(visibility: "public").limit(Limits.public_portfolio_items_shown)).map(&:api_json),
         "availability" => availability,
         "shortlisted" => shortlisted.include?(candidate.id)
       )

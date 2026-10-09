@@ -1,0 +1,30 @@
+# Product limits and page sizes that are not plan capacity (those are config/plans.yml) and not
+# request throttles (config/rate_limits.yml). Loaded once per process by Limits; the values the
+# frontend needs are served by GET /api/public/config. Every value is a positive integer.
+auth:
+  # Live sessions per account; the oldest beyond this are revoked at sign-in (AuthController).
+  max_live_sessions: 10
+portfolio:
+  # Public portfolio items shown on a profile card in the compare view (TalentController#compare).
+  public_items_shown: 8
+  # Portfolios one owner may keep (Portfolio::MAX_PER_OWNER).
+  max_per_owner: 20
+paging:
+  # Cursor-paged lists (talent, acts, candidates, jobs): `?limit=` default and ceiling.
+  list_page_size: 30
+  list_max_page_size: 100
+  # Admin tables: `?perPage=` default and ceiling.
+  admin_page_size: 50
+  admin_max_page_size: 100
+search:
+  # Global search (SearchController): rows returned across every type.
+  max_results: 60
+messages:
+  # Characters in one chat message (MessagesController; the composer shows the same count).
+  max_length: 5000
+jobs:
+  # Roles one opportunity may list (JobsController#roles).
+  max_roles: 6
+push:
+  # Web-push devices per account (PushController).
+  max_subscriptions_per_user: 10

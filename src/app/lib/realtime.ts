@@ -1,10 +1,13 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { apiPost } from './api';
+import { realtime as dataCacheRealtime } from './dataCache';
 import { onRealtimeAvailability, realtimeAvailable } from './realtimeAvailability';
 
 /**
  * Live updates over Action Cable (`/cable` on the API). Payloads are ids and states only; callers
- * refetch from the API as they did when polling, so authorisation stays in the endpoints.
+ * refetch from the API as they did when polling, so authorisation stays in the endpoints. Every event
+ * first marks the client data cache stale where it matters (dataCache `realtime.event`,
+ * INVALIDATE_ON_EVENT in dataCache.config.ts), so screens reading through the cache refetch too.
  *
  * Polling stays the fallback: while the socket is connected, `useRealtimeInterval` stretches a
  * poll to CONNECTED_POLL_MS; when it drops, polls return to their usual intervals at once.
@@ -76,7 +79,10 @@ function attach(entry: Entry) {
       },
       disconnected: () => dropped(),
       received: (data) => {
-        if (data && typeof data === 'object') entry.listeners.forEach((listener) => listener(data as RealtimeEvent));
+        if (!data || typeof data !== 'object') return;
+        // The client data cache hears first, so a page that refetches in its listener gets fresh data.
+        dataCacheRealtime.event(data as RealtimeEvent);
+        entry.listeners.forEach((listener) => listener(data as RealtimeEvent));
       },
     },
   );

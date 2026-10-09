@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { Navigation } from '../components/Navigation';
 import { PageHeader } from '../components/PageHeader';
+import { ListSkeleton } from '../components/ListSkeleton';
 import { apiGet, apiPost } from '../lib/api';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -174,10 +175,22 @@ export default function Bookings() {
     void load();
   }, []);
   async function changeStatus(id: string, s: string, success: string, noShow?: 'musician' | 'hirer', message?: string) {
-    const res = await apiPost<{
-      refund?: { amount: number; currency: string; note: string } | null;
-      conversationId?: string | null;
-    }>(`/bookings/${id}/status`, { status: s, ...(noShow ? { noShow } : {}), ...(message ? { message } : {}) });
+    // Optimistic: the row shows its new status at once; a failed request puts the old row back and toasts.
+    // Only this row rolls back, so a refresh that landed meanwhile is kept for the others.
+    const previous = rows.find((b) => b.id === id);
+    setRows((current) => current.map((b) => (b.id === id ? { ...b, status: s } : b)));
+    let res: { refund?: { amount: number; currency: string; note: string } | null; conversationId?: string | null };
+    try {
+      res = await apiPost(`/bookings/${id}/status`, {
+        status: s,
+        ...(noShow ? { noShow } : {}),
+        ...(message ? { message } : {}),
+      });
+    } catch (e: unknown) {
+      if (previous) setRows((current) => current.map((b) => (b.id === id ? previous : b)));
+      toast.error(errorMessage(e, 'Unable to update this booking.'));
+      throw e;
+    }
     if (s === 'accepted') trackBookingQuoteAccepted();
     toast.success(res.refund ? `${success} · ${res.refund.note}` : success, {
       action: res.conversationId
@@ -355,9 +368,7 @@ export default function Bookings() {
       <main className="max-w-6xl mx-auto px-4 sm:px-5 pt-28 pb-24">
         <PageHeader title="Bookings" />
         {loading ? (
-          <p className="text-slate-400 text-center py-16" role="status">
-            Loading bookings…
-          </p>
+          <ListSkeleton label="Loading bookings" count={4} cardClassName="h-36" gridClassName="grid gap-4" />
         ) : loadError ? (
           <div className="text-center py-16" role="alert">
             <p className="text-rose-300">{loadError}</p>

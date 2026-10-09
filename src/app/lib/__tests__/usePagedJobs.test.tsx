@@ -3,7 +3,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePagedJobs, type JobPage } from '../usePagedJobs';
 
-vi.mock('../api', () => ({ apiGet: vi.fn() }));
+vi.mock('../api', () => ({
+  apiGet: vi.fn(),
+  onApiWrite: () => () => undefined,
+  onIdentityChange: () => () => undefined,
+}));
 import { apiGet } from '../api';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;

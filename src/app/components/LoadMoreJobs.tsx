@@ -7,6 +7,7 @@ type Props = {
   loading: boolean;
   error: string;
   onLoadMore: () => Promise<number | null>;
+  onNear?: () => void;
 };
 
 const NOUN = ['opportunity', 'opportunities'] as const;

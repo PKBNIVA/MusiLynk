@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 
 type Props = {
@@ -11,6 +12,8 @@ type Props = {
   noun: readonly [string, string];
   /** The attribute each list item carries with its index, e.g. "data-list-item". */
   itemAttribute?: string;
+  /** Called once each time the visitor scrolls within about one screen of the button (prefetch the next page). */
+  onNear?: () => void;
 };
 
 /**
@@ -29,7 +32,23 @@ export function LoadMore({
   onLoadMore,
   noun,
   itemAttribute = 'data-list-item',
+  onNear,
 }: Props) {
+  const sentinel = useRef<HTMLDivElement>(null);
+  const near = useRef(onNear);
+  near.current = onNear;
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node || !hasMore || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) near.current?.();
+      },
+      { rootMargin: '100% 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, shown]);
   if (!shown) return null;
   const [one, many] = noun;
   const count = Math.max(total, shown);
@@ -44,6 +63,7 @@ export function LoadMore({
 
   return (
     <div className="flex flex-col items-center gap-3 mt-8">
+      <div ref={sentinel} aria-hidden="true" />
       <p className="text-sm text-slate-400" role="status" aria-live="polite">
         Showing {shown} of {count} {count === 1 ? one : many}
       </p>

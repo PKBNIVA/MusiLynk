@@ -13,11 +13,12 @@ import { UserAvatar } from '../components/kit/UserAvatar';
 import { ReportDialog } from '../components/ReportDialog';
 import { useConfirm } from '../components/booking/BookingDialogs';
 import { apiDelete, apiGet, apiPost } from '../lib/api';
+import { cachedGet, peek, sameData, update as updateCache } from '../lib/dataCache';
 import { useAuth } from '../lib/authContext';
 import { AiSuggestButton } from '../components/ai/AiSuggestButton';
 import { errorCode, errorMessage as messageOf, errorStatus } from '../lib/errors';
 import { announceUnreadChanged, useVisiblePolling } from '../lib/usePolling';
-import { byTime, mergeMessages } from '../lib/messageMerge';
+import { byTime, dropConfirmedPending, mergeMessages, newPendingId, PENDING_PREFIX } from '../lib/messageMerge';
 import { useRealtime, useRealtimeInterval } from '../lib/realtime';
 import { linkify } from '../lib/linkify';
 import { formatWhen, formatNumber } from '../lib/format';
@@ -143,13 +144,25 @@ export default function Messages() {
   );
 
   const loadConvs = useCallback(async () => {
-    try {
-      const d = await apiGet<{ conversations?: Conversation[] }>('/conversations');
-      const rows: Conversation[] = d.conversations || [];
+    type Inbox = { conversations?: Conversation[] };
+    // The inbox as it was last seen comes from the client data cache at once (no blank on return);
+    // the request below refreshes it. A poll that returns the same rows changes nothing on screen.
+    const applyRows = (rows: Conversation[]) => {
       // The open thread was marked read when it loaded; an inbox response computed earlier may still count it.
-      setConvs(
-        readThreadRef.current ? rows.map((c) => (c.id === readThreadRef.current ? { ...c, unreadCount: 0 } : c)) : rows,
-      );
+      const next = readThreadRef.current
+        ? rows.map((c) => (c.id === readThreadRef.current ? { ...c, unreadCount: 0 } : c))
+        : rows;
+      setConvs((current) => (sameData(current, next) ? current : next));
+    };
+    const cached = peek<Inbox>('/conversations');
+    if (cached && !convsRef.current.length) {
+      applyRows(cached.conversations || []);
+      setConvsLoading(false);
+    }
+    try {
+      const d = await cachedGet<Inbox>('/conversations', { family: 'inbox', force: true });
+      const rows: Conversation[] = d.conversations || [];
+      applyRows(rows);
       setConvsError('');
       // Desktop shows list and thread side by side, so open the latest thread; phones keep the list.
       if (!activeRef.current && rows[0] && isDesktop()) select(rows[0].id, true);
@@ -168,16 +181,34 @@ export default function Messages() {
       }
       // A silent (polling) fetch of a thread already in view only needs what's new: the `after`
       // cursor keeps the fast 3s poll cheap instead of re-fetching the whole history each time.
-      const cursor = silent ? msgsRef.current[msgsRef.current.length - 1]?.id : undefined;
+      // An optimistic bubble ("pending-…") is not on the server yet, so it is never the cursor.
+      const cursor = silent
+        ? [...msgsRef.current].reverse().find((m) => !m.id.startsWith(PENDING_PREFIX))?.id
+        : undefined;
+      const threadPath = `/conversations/${id}/messages`;
+      // A thread opened before shows its last known messages at once while the request refreshes them.
+      const cached = !cursor ? peek<MessagePage>(threadPath) : undefined;
+      if (cached && !silent) {
+        setMsgs([...(cached.messages || [])].sort(byTime));
+        setThreadState('ready');
+      }
       try {
-        const d = await apiGet<MessagePage>(
-          cursor
-            ? `/conversations/${id}/messages?after=${encodeURIComponent(cursor)}`
-            : `/conversations/${id}/messages`,
-        );
+        const d = cursor
+          ? await apiGet<MessagePage>(`${threadPath}?after=${encodeURIComponent(cursor)}`)
+          : await cachedGet<MessagePage>(threadPath, { family: 'thread', force: true });
         if (activeRef.current !== id) return;
         const server: Message[] = [...(d.messages || [])].sort(byTime);
         if (cursor) {
+          // Nothing new: leave the screen alone (the poll is a diff, not a re-render).
+          if (!server.length && !d.theirReadAt) {
+            setThreadState('ready');
+            return;
+          }
+          if (server.length)
+            updateCache<MessagePage>(threadPath, (page) => ({
+              ...(page as MessagePage),
+              messages: mergeMessages(page?.messages || [], server),
+            }));
           setMsgs((prev) => {
             const merged = mergeMessages(prev, server);
             // theirReadAt: the counterpart may have read an earlier message of ours that this
@@ -192,11 +223,16 @@ export default function Messages() {
           const oldest = server[0]?.createdAt || '';
           const newest = server[server.length - 1]?.createdAt || '';
           // Keep older pages already loaded, and anything sent locally after this response was produced; the next poll will include it.
-          setMsgs((prev) => [
-            ...prev.filter((m) => oldest && m.createdAt < oldest && !server.some((s) => s.id === m.id)),
-            ...server,
-            ...prev.filter((m) => m.createdAt > newest && !server.some((s) => s.id === m.id)),
-          ]);
+          setMsgs((prev) =>
+            dropConfirmedPending(
+              [
+                ...prev.filter((m) => oldest && m.createdAt < oldest && !server.some((s) => s.id === m.id)),
+                ...server,
+                ...prev.filter((m) => m.createdAt > newest && !server.some((s) => s.id === m.id)),
+              ],
+              server,
+            ),
+          );
           if (!olderLoaded.current) setTruncated(Boolean(d.truncated));
         }
         setThreadState('ready');
@@ -348,13 +384,33 @@ export default function Messages() {
     }
     setSending(true);
     setSendError('');
+    // Optimistic: the message appears at once and the box clears; on failure it is removed and the text restored.
+    const pending: Message = {
+      id: newPendingId(),
+      senderId: user?.id || '',
+      body,
+      createdAt: new Date().toISOString(),
+      readAt: null,
+    };
+    stickToBottom.current = true;
+    setMsgs((xs) => [...xs, pending]);
+    setText('');
     try {
       const d = await apiPost<{ message: Message }>(`/conversations/${id}/messages`, { body });
       if (activeRef.current === id) {
         stickToBottom.current = true;
-        setMsgs((xs) => mergeMessages(xs, [d.message]));
-      }
-      setText('');
+        // Reconcile: the server copy replaces the optimistic one (a live update may have brought it already).
+        setMsgs((xs) =>
+          mergeMessages(
+            xs.filter((m) => m.id !== pending.id),
+            [d.message],
+          ),
+        );
+      } else setMsgs((xs) => xs.filter((m) => m.id !== pending.id));
+      updateCache<MessagePage>(`/conversations/${id}/messages`, (page) => ({
+        ...(page as MessagePage),
+        messages: mergeMessages(page?.messages || [], [d.message]),
+      }));
       setConvs((prev) => {
         const row = prev.find((c) => c.id === id);
         return row
@@ -366,6 +422,9 @@ export default function Messages() {
       });
       void loadConvs();
     } catch (err: unknown) {
+      // Roll back: the optimistic bubble goes, the draft comes back.
+      setMsgs((xs) => xs.filter((m) => m.id !== pending.id));
+      setText((current) => current || body);
       const message = errorMessage(err, 'Unable to send your message.');
       setSendError(message);
       // Blocks and deactivated accounts change what the thread allows; refresh so the composer reflects it.
@@ -637,8 +696,13 @@ export default function Messages() {
                     {convs.length ? 'Select a conversation' : 'Your messages will appear here'}
                   </div>
                 ) : threadState === 'loading' && msgs.length === 0 ? (
-                  <div className="text-slate-400 text-sm" role="status">
-                    Loading messages…
+                  <div role="status" aria-label="Loading messages" data-testid="thread-skeleton" className="space-y-3">
+                    <span className="sr-only">Loading messages…</span>
+                    <div aria-hidden="true" className="space-y-3">
+                      {['w-3/5', 'ml-auto w-1/2', 'w-2/5', 'ml-auto w-3/5'].map((width, i) => (
+                        <div key={i} className={`${width} h-12 animate-pulse rounded-2xl bg-white/10`} />
+                      ))}
+                    </div>
                   </div>
                 ) : threadState === 'missing' ? (
                   <div className="h-full grid place-items-center text-center text-slate-400" role="alert">
@@ -684,7 +748,9 @@ export default function Messages() {
                           key={m.id}
                           data-testid="message"
                           data-mine={mine ? 'true' : 'false'}
-                          className={`max-w-[85%] md:max-w-[75%] w-fit rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-violet-600' : 'bg-white/10'}`}
+                          data-pending={m.id.startsWith(PENDING_PREFIX) ? 'true' : undefined}
+                          aria-busy={m.id.startsWith(PENDING_PREFIX) || undefined}
+                          className={`max-w-[85%] md:max-w-[75%] w-fit rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-violet-600' : 'bg-white/10'} ${m.id.startsWith(PENDING_PREFIX) ? 'opacity-70' : ''}`}
                         >
                           <div
                             className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
@@ -700,7 +766,11 @@ export default function Messages() {
                             <time dateTime={m.createdAt}>{formatTime(m.createdAt)}</time>
                             {mine && m.id === lastMineId && (
                               <span data-testid="read-receipt">
-                                {m.readAt ? `Seen ${formatTime(m.readAt)}` : 'Sent'}
+                                {m.id.startsWith(PENDING_PREFIX)
+                                  ? 'Sending…'
+                                  : m.readAt
+                                    ? `Seen ${formatTime(m.readAt)}`
+                                    : 'Sent'}
                               </span>
                             )}
                           </div>

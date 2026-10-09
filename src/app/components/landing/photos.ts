@@ -1,5 +1,5 @@
 import { IMAGE_CREDITS } from '../../pages/public/imageCredits';
-import { HERO_PHOTO, HERO_PHOTO_SIZES } from '../../lib/photo';
+import { HERO_PHOTO, HERO_PHOTO_SIZES, ROLE_PHOTOS, ROLE_PHOTO_FALLBACK } from '../../lib/photo';
 
 /** One editorial photograph from public/img, ready for `<Photo>`. Credits live on /credits. */
 export type EditorialPhoto = { src: string; alt: string; width: number; height: number };
@@ -16,21 +16,7 @@ export function editorialPhoto(file: string): EditorialPhoto {
 /** The landing hero photo and how wide it renders (both from src/app/lib/photo.ts, shared with the HTML preload). */
 export { HERO_PHOTO, HERO_PHOTO_SIZES };
 
-/** The photo behind each hire page and role tile, keyed by the SEO role slug (seoPages.ts). */
-export const ROLE_PHOTOS: Readonly<Record<string, string>> = {
-  drummer: 'drummer-stage',
-  guitarist: 'guitarist-stage',
-  bassist: 'rehearsal-room',
-  'keyboard-player': 'keyboard-player',
-  singer: 'carnatic-vocalist',
-  'tabla-player': 'tabla-kolkata',
-  'dhol-player': 'wedding-band',
-  violinist: 'violinist',
-  saxophonist: 'saxophonist',
-  dj: 'dj-goa',
-  'sound-engineer': 'sound-desk',
-  'music-producer': 'recording-studio',
-};
+export { ROLE_PHOTOS };
 
 /** The photo for a role slug; unknown roles fall back to the rehearsal room. */
-export const rolePhoto = (slug: string) => editorialPhoto(ROLE_PHOTOS[slug.toLowerCase()] ?? 'rehearsal-room');
+export const rolePhoto = (slug: string) => editorialPhoto(ROLE_PHOTOS[slug.toLowerCase()] ?? ROLE_PHOTO_FALLBACK);

@@ -5,7 +5,7 @@ import { DemoBadge } from '../../components/DemoBadge';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 import { UserAvatar } from '../../components/kit/UserAvatar';
 import { PhotoHeader } from '../../components/landing/PhotoHeader';
-import { ROLE_PHOTOS } from '../../components/landing/photos';
+import { ROLE_PHOTOS, ROLE_PHOTO_FALLBACK } from '../../lib/photo';
 import { absoluteUrl, usePageMeta } from '../../components/PageMeta';
 import { PublicNav } from '../../components/PublicNav';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../components/ui/accordion';
@@ -116,7 +116,7 @@ export default function HirePage() {
             {/* A listed role and city have their heading before the API answers (and in the pre-rendered HTML). */}
             {knownRole && knownCity && (
               <PhotoHeader
-                photo={ROLE_PHOTOS[role.toLowerCase()] ?? 'rehearsal-room'}
+                photo={ROLE_PHOTOS[role.toLowerCase()] ?? ROLE_PHOTO_FALLBACK}
                 eyebrow="Musician directory"
                 title={hireHeading(knownRole, knownCity)}
               />
@@ -150,7 +150,7 @@ function HirePageContent({ data }: { data: HirePageData }) {
   return (
     <>
       <PhotoHeader
-        photo={ROLE_PHOTOS[role.slug] ?? 'rehearsal-room'}
+        photo={ROLE_PHOTOS[role.slug] ?? ROLE_PHOTO_FALLBACK}
         eyebrow="Musician directory"
         title={hireHeading(role.label, city.name)}
       >

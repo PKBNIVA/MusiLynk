@@ -147,8 +147,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
   useEffect(() => {
     void consumeGoogleRedirectCode().then(() => refresh());
-    /* Business settings and anonymous flags (GET /api/public/config), after first paint and out of the entry chunk. */
-    void import('./publicConfig').then((m) => m.loadPublicConfig());
   }, []);
   /* An expired session on a role-less page (the Stage) signs in again as the same kind of account. The role (never the token) is remembered at sign-in, so a cold load whose token has already expired still knows it; only sign-out forgets it, not a failed or slow /me. */
   useEffect(() => {

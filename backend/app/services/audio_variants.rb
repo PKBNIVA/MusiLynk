@@ -140,7 +140,11 @@ module AudioVariants
         stdin.close
         result = nil
         errors = +""
-        reader = Thread.new { errors << stderr.read.to_s }
+        reader = Thread.new do
+          errors << stderr.read.to_s
+        rescue IOError
+          nil # the pipe was closed under a timeout kill
+        end
         begin
           Timeout.timeout(timeout_seconds) { result = yield stdout }
         rescue Timeout::Error

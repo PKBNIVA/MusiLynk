@@ -31,13 +31,18 @@ class PortfolioItem < ApplicationRecord
   # or each item costs a lookup.
   def api_json = attributes.transform_keys { _1.camelize(:lower) }.merge(type: kind, image: image_sets[url], thumbnail: image_sets[thumbnail_url], audio: audio_sets[url])
 
-  # Resolves the variants of every item's image and thumbnail URLs in one query (or hands the items
-  # a lookup already made, `sets`, so a page can resolve them together with other URLs), and the
-  # audio samples' variants in one more (none when the page has no uploaded audio). Returns the items.
-  def self.preload_image_sets(items, sets: nil)
+  # Resolves the variants of every item's image, thumbnail and audio URLs in one query (or hands the
+  # items lookups already made, `sets` and `audio`, so a page can resolve them together with other
+  # URLs; see TalentController#public_show). Returns the items.
+  def self.preload_image_sets(items, sets: nil, audio: nil)
     items = Array(items)
+    if sets.nil? && audio.nil?
+      uploads = Upload.variants_by_url(image_urls(items) + audio_urls(items)).to_a
+      sets = ImageSet.from_uploads(uploads)
+      audio = AudioSet.from_uploads(uploads)
+    end
     sets ||= ImageSet.by_url(image_urls(items))
-    audio = AudioSet.by_url(audio_urls(items))
+    audio ||= AudioSet.by_url(audio_urls(items))
     items.each do |item|
       item.instance_variable_set(:@image_sets, sets)
       item.instance_variable_set(:@audio_sets, audio)

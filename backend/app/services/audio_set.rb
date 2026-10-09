@@ -22,9 +22,8 @@ module AudioSet
 
   # { public_url => audio set } for the finished uploads among `urls` that have audio variants.
   # One query; an empty list of URLs runs none.
-  def by_url(urls)
-    urls = Array(urls).compact_blank.uniq
-    return {} if urls.empty?
-    Upload.complete.where(public_url: urls).where.not(variants: {}).to_h { [_1.public_url, AudioSet.for(_1)] }.compact
-  end
+  def by_url(urls) = from_uploads(Upload.variants_by_url(urls))
+
+  # { public_url => audio set } for the uploads (a loaded list or relation) that have audio variants.
+  def from_uploads(uploads) = uploads.to_h { [_1.public_url, AudioSet.for(_1)] }.compact
 end

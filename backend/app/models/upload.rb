@@ -16,6 +16,12 @@ class Upload < ApplicationRecord
   validates :byte_size, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_SIZE }
 
   scope :complete, -> { where(status: "complete") }
+  # The finished uploads among `urls` that carry generated variants (image or audio), for one lookup
+  # per page (ImageSet.from_uploads, AudioSet.from_uploads). An empty list runs no query.
+  scope :variants_by_url, ->(urls) {
+    urls = Array(urls).compact_blank.uniq
+    urls.empty? ? none : complete.where(public_url: urls).where.not(variants: {})
+  }
   scope :pending, -> { where(status: "pending") }
 
   def self.sanitize_filename(name)

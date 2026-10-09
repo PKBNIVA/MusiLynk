@@ -1,4 +1,5 @@
 import type { ImageSet } from './imageSet';
+import type { AudioSet } from './audioSet';
 // Response shapes of the Rails API as the pages read them. Each type mirrors what the named
 // controller or model method renders (see backend/app); many endpoints merge raw snake_case
 // column attributes with camelCase extras, so both spellings appear where the API sends both.
@@ -288,6 +289,8 @@ export interface PortfolioItem {
   image?: ImageSet | null;
   /** Responsive variants of an uploaded `thumbnailUrl`. */
   thumbnail?: ImageSet | null;
+  /** Preview clip, full transcode and waveform peaks of an uploaded audio sample (backend AudioSet); null for links and pending variants. */
+  audio?: AudioSet | null;
   visibility?: string | null;
   description?: string | null;
   tags?: string[];

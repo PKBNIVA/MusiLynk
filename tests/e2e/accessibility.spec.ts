@@ -116,6 +116,9 @@ test.describe('Phase 3 UX regressions', () => {
 
   test('a plain footer link with no hover styling of its own still shows hover feedback (P3-05)', async ({ page }) => {
     await openSettledPage(page, '/about');
+    // /about is not pre-rendered: its <main> arrives with the lazy page chunk, which React 19 reveals
+    // up to 300 ms after the Suspense fallback, so wait for it rather than for a fixed settle time.
+    await page.locator('main').waitFor();
     // The legal pages' related-page chips now carry their own hover classes, so add a bare link
     // to check the global fallback rule itself.
     await page.evaluate(() => {

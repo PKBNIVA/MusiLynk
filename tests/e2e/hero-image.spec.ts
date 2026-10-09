@@ -83,6 +83,11 @@ test.describe('hire page header', () => {
     await page.route('**/api/**', (route) =>
       route.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"Not found"}' }),
     );
+    // Hold the hire-page lookup open: a 404 would show the "Not found" state and drop the header. While it
+    // is pending the page shows its pre-API PhotoHeader, the LCP element this test is about.
+    await page.route('**/public/hire-pages/**', () => {
+      // never answered on purpose
+    });
     await page.goto('/hire/drummer/mumbai');
     const header = page.locator('[data-testid="photo-header"] img').first();
     await expect(header).toBeVisible();

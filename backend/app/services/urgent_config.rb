@@ -1,6 +1,7 @@
 # Loads config/urgent.yml once per process (see AiPricing for the same pattern). Every
 # number governing the "need someone by tomorrow" wedge — the response-time promise, how
-# many candidates UrgentMatcher notifies, and quiet hours — lives here.
+# many candidates UrgentMatcher notifies, its scoring weights, and quiet hours — lives here.
+# Update path: docs/ops/urgent-matching.md.
 class UrgentConfig
   CONFIG_PATH = Rails.root.join("config/urgent.yml")
 
@@ -14,7 +15,13 @@ class UrgentConfig
   def self.matcher = config.fetch(:matcher)
   def self.candidate_limit = matcher.fetch(:candidate_limit)
   def self.notify_count = matcher.fetch(:notify_count)
-  def self.recent_activity_within = matcher.fetch(:recent_activity_within_days).days
+  def self.recent_activity_within_days = matcher.fetch(:recent_activity_within_days)
+  def self.recent_activity_within = recent_activity_within_days.days
+  # How long a request with no end time is taken to last, for the availability-window overlap.
+  def self.default_duration = matcher.fetch(:default_duration_hours).hours
+  # Points per scoring signal: role, instrument, city, verified, recent_activity, available.
+  def self.weights = matcher.fetch(:weights)
+  def self.weight(signal) = weights.fetch(signal)
   def self.no_response_after = config.fetch(:no_response_after_minutes).minutes
   def self.expire_after = config.fetch(:expire_after_hours).hours
   def self.quiet_hours = config.fetch(:quiet_hours)

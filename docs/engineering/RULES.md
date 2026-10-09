@@ -13,7 +13,7 @@ links musicians with the people who hire them.
   Playwright. The public site and the admin site are two builds of the same code
   (`VITE_APP_TARGET=admin`). Hosted on Vercel; `vercel.json` carries the CSP, rewrites and
   cache headers.
-- **Backend**: Rails 8.1 API in `backend/`, Ruby 3.3.6, PostgreSQL, GoodJob worker, Solid Cache
+- **Backend**: Rails 8.1 API in `backend/`, Ruby 3.4.5, PostgreSQL, GoodJob worker, Solid Cache
   (Redis if `REDIS_URL` is set), Active Storage on Cloudflare R2 through the S3 API. Hosted on
   Railway as two services (`musilynk-api`, `musilynk-worker`) plus Postgres.
 - **Providers**: Razorpay (payments), Brevo (email), WhatsApp Cloud API (urgent alerts), Sentry

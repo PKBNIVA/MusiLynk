@@ -79,17 +79,22 @@ class StageSystemPostsJobTest < ActiveJob::TestCase
   test "posts and pins the weekly roundup only on Monday 10:00 IST, and only once" do
     monday_ten_ist = ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-09-28 10:15")
 
-    StageSystemPostsJob.perform_now(monday_ten_ist)
-    StageSystemPostsJob.perform_now(monday_ten_ist + 5.minutes)
+    # Post#pinned? compares pinned_until with Time.current, and the pin lasts six days past the
+    # fixed Monday above, so the clock has to sit at that Monday too (unfrozen, this assertion
+    # started failing on 5 Oct 2026 regardless of the Ruby version).
+    travel_to monday_ten_ist do
+      StageSystemPostsJob.perform_now(monday_ten_ist)
+      StageSystemPostsJob.perform_now(monday_ten_ist + 5.minutes)
 
-    posts = Post.where(system_kind: "weekly_roundup")
-    assert_equal 1, posts.count
-    post = posts.first
-    assert post.pinned?
-    assert_includes post.body, "Comment with your roles"
+      posts = Post.where(system_kind: "weekly_roundup")
+      assert_equal 1, posts.count
+      post = posts.first
+      assert post.pinned?
+      assert_includes post.body, "Comment with your roles"
 
-    not_monday_ten = ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-09-29 10:15")
-    StageSystemPostsJob.perform_now(not_monday_ten)
-    assert_equal 1, Post.where(system_kind: "weekly_roundup").count
+      not_monday_ten = ActiveSupport::TimeZone["Asia/Kolkata"].parse("2026-09-29 10:15")
+      StageSystemPostsJob.perform_now(not_monday_ten)
+      assert_equal 1, Post.where(system_kind: "weekly_roundup").count
+    end
   end
 end

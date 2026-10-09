@@ -28,13 +28,13 @@ module TalentRank
 
   # One UPDATE that rewrites only the scores that changed; `user_ids` narrows it to those owners.
   def update_sql(user_ids = nil)
-    owners = user_ids.nil? ? "" : " AND profiles.user_id IN (#{Array(user_ids).map { ActiveRecord::Base.connection.quote(_1.to_s) }.join(', ').presence || 'NULL'})"
+    owners = user_ids.nil? ? "" : " AND profiles.user_id IN (#{Array(user_ids).map { ActiveRecord::Base.lease_connection.quote(_1.to_s) }.join(', ').presence || 'NULL'})"
     "UPDATE profiles SET rank_score = #{SCORE_SQL} FROM users WHERE users.id = profiles.user_id#{owners} AND profiles.rank_score IS DISTINCT FROM #{SCORE_SQL}"
   end
 
   # Recomputes the scores of `user_ids` (every profile when nil); returns the rows changed.
   def refresh!(user_ids = nil)
     return 0 if user_ids && Array(user_ids).compact.empty?
-    ActiveRecord::Base.connection.exec_update(update_sql(user_ids && Array(user_ids).compact.uniq))
+    ActiveRecord::Base.lease_connection.exec_update(update_sql(user_ids && Array(user_ids).compact.uniq))
   end
 end

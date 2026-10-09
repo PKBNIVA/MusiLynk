@@ -28,9 +28,10 @@ module Stage
       shown = ->(posts) { visible_to(posts, user).reject { blocked.include?(_1.created_by_user_id) } }
       listed = visible_posts.where.not(status: %w[hidden deleted]).includes(*LIST_INCLUDES)
 
-      pinned = cursor ? [] : shown.(listed.pinned.order(pinned_until: :desc, id: :desc).limit(PINNED_LIMIT).to_a)
       stream = listed.where("posts.pinned_until IS NULL OR posts.pinned_until <= ?", Time.current).order(created_at: :desc, id: :desc)
-      page, last_read, exhausted = fill_page(stream, cursor, shown)
+      # The first page reads the pinned posts in its first statement (pinned first, then the stream).
+      first = cursor ? nil : listed.pinned_first
+      pinned, page, last_read, exhausted = fill_page(stream, cursor, shown, first:)
 
       followed_keys = followed_keys(user)
       own_keys = viewer_actor_keys.to_set
@@ -70,27 +71,38 @@ module Stage
       total
     end
 
-    # Reads `stream` after `cursor` in batches until PAGE_SIZE posts pass `shown`. Returns the page,
-    # the last post read (the next cursor: posts read but not shown are not read again), and whether
-    # the stream ran out.
-    def fill_page(stream, cursor, shown)
+    # Reads `stream` after `cursor` in batches until PAGE_SIZE posts pass `shown`; `first`, when given,
+    # replaces the first statement and may also return pinned posts ahead of the stream. Returns the
+    # pinned posts shown, the page, the last post read (the next cursor: posts read but not shown are
+    # not read again), and whether the stream ran out.
+    def fill_page(stream, cursor, shown, first: nil)
+      pinned = []
       page = []
       last_read = nil
       boundary = cursor
-      MAX_BATCHES.times do
-        scope = boundary ? stream.where("(posts.created_at, posts.id) < (?, ?)", boundary[:created_at], boundary[:id]) : stream
-        batch = scope.limit(BATCH_SIZE).to_a
+      MAX_BATCHES.times do |n|
+        scope = if n.zero? && first then first
+                elsif boundary then stream.where("(posts.created_at, posts.id) < (?, ?)", boundary[:created_at], boundary[:id])
+                else stream
+                end
+        fetched = scope.limit(BATCH_SIZE).to_a
+        batch = fetched
+        if n.zero? && first
+          leading, batch = fetched.partition(&:pinned?)
+          pinned = shown.(leading).first(PINNED_LIMIT)
+        end
+        full = fetched.length == BATCH_SIZE
         visible = shown.(batch).to_set
         batch.each do |post|
           last_read = post
           next unless visible.include?(post)
           page << post
-          return [page, last_read, batch.length < BATCH_SIZE && post.equal?(batch.last)] if page.length == PAGE_SIZE
+          return [pinned, page, last_read, !full && post.equal?(batch.last)] if page.length == PAGE_SIZE
         end
-        return [page, last_read, true] if batch.length < BATCH_SIZE
-        boundary = { created_at: last_read.created_at, id: last_read.id }
+        return [pinned, page, last_read, true] unless full
+        boundary = { created_at: last_read.created_at, id: last_read.id } if last_read
       end
-      [page, last_read, false]
+      [pinned, page, last_read, false]
     end
 
     # The cursor is the (created_at, id) of the last post read, opaque to clients.

@@ -14,17 +14,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import {
-  HERO_PHOTO,
-  HERO_PHOTO_SIZES,
-  HERO_PHOTO_WIDTHS,
-  PHOTO_HEADER_SIZES,
-  PHOTO_WIDTHS,
-  RATES_HEADER_PHOTO,
-  ROLE_PHOTOS,
-  ROLE_PHOTO_FALLBACK,
-  photoSrcSet,
-} from '../src/app/lib/photo.ts';
+import { HERO_PHOTO, HERO_PHOTO_SIZES, HERO_PHOTO_WIDTHS, photoSrcSet } from '../src/app/lib/photo.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 import { BRAND_NAME } from '../src/app/lib/brand.ts';
@@ -140,21 +130,6 @@ export async function loadRenderer(ssrDir) {
   return (await import(pathToFileURL(entry).href)).render;
 }
 
-/** The hire and rates pages' LCP element is their <PhotoHeader> photo, known from the URL (the role slug,
- *  or the one rates photo). Preloaded like the home hero, with the header's own srcset and sizes;
- *  '' for every other path. */
-export function headerPreload(path) {
-  const hire = /^\/hire\/([^/]+)\/[^/]+$/.exec(path);
-  const photo = hire
-    ? (ROLE_PHOTOS[hire[1]] ?? ROLE_PHOTO_FALLBACK)
-    : /^\/rates\/[^/]+$/.test(path)
-      ? RATES_HEADER_PHOTO
-      : null;
-  if (!photo) return '';
-  const srcset = photoSrcSet(`/img/${photo}`, PHOTO_WIDTHS, 'avif');
-  return `<link rel="preload" as="image" type="image/avif" imagesrcset="${srcset}" imagesizes="${PHOTO_HEADER_SIZES}" fetchpriority="high">`;
-}
-
 /** PageMeta.tsx cuts a description at 160 characters; do the same so the head matches the page. */
 const clip = clipDescription;
 
@@ -242,8 +217,7 @@ export function render(indexHtml, path, [title, description], jsonLd) {
     .replace(/<meta\s+name="description"[^>]*>\s*/, '')
     .replace(/<meta\s+(?:property="og:|name="twitter:)[^>]*>\s*/g, '')
     .replace(/<link\s+rel="canonical"[^>]*>\s*/, '');
-  const preload = path === '/' ? heroPreload() : headerPreload(path);
-  if (preload) html = html.replace('</head>', `    ${preload}\n  </head>`);
+  if (path === '/') html = html.replace('</head>', `    ${heroPreload()}\n  </head>`);
   html = html.replace('</head>', `${head}`);
   return html;
 }

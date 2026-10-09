@@ -13,7 +13,6 @@ import {
   apiPreconnect,
   uploadsDnsPrefetch,
   heroPreload,
-  headerPreload,
   withBody,
   loadRenderer,
   PRERENDERED_PATHS,
@@ -263,20 +262,6 @@ describe('prerender-heads.mjs', () => {
 
   it('writes heads only when the pre-render bundle is missing', async () => {
     expect(await loadRenderer(join(tmpdir(), 'no-such-dist-ssr'))).toBeNull();
-  });
-
-  it('preloads the header photo of a hire or rates page from the URL, nothing elsewhere', () => {
-    const drummer = headerPreload('/hire/drummer/mumbai');
-    expect(drummer).toContain('rel="preload" as="image" type="image/avif"');
-    expect(drummer).toContain(
-      'imagesrcset="/img/drummer-stage-480.avif 480w, /img/drummer-stage-800.avif 800w, /img/drummer-stage-1200.avif 1200w, /img/drummer-stage-1600.avif 1600w"',
-    );
-    expect(drummer).toContain('imagesizes="(min-width: 1152px) 1152px, 100vw" fetchpriority="high"');
-    expect(headerPreload('/hire/theremin-player/mumbai')).toContain('/img/rehearsal-room-480.avif');
-    expect(headerPreload('/rates/goa')).toContain('/img/recording-studio-1200.avif 1200w');
-    expect(headerPreload('/pricing')).toBe('');
-    expect(headerPreload('/hire/drummer')).toBe('');
-    expect(render(FAKE_INDEX, '/rates/goa', ['T', 'D'])).toContain(headerPreload('/rates/goa'));
   });
 
   it('adds a dns-prefetch for the uploads origin and nothing when it is unset or relative', () => {

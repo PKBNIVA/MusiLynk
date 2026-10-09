@@ -2,7 +2,7 @@ class UrgentRequestsController < ApplicationController
   include UserRateLimit
 
   # Each request alerts matching musicians (in-app, email, WhatsApp), so posting is capped per account.
-  CREATES_PER_HOUR = 10
+  CREATES_PER_HOUR = RateLimits.limit("urgent-request-create")
   # The token-based one-click action from the expiry-warning email carries its own signed
   # authorization (UrgentActionToken) and is not necessarily hit by a signed-in session.
   before_action -> { authenticate!("jobseeker", "employer") }, except: :action_from_token
@@ -61,7 +61,7 @@ class UrgentRequestsController < ApplicationController
   # rest (venue, end time, instrument, requirements) is optional. The title is optional too: it
   # is written from the role and city when the client sends none. Every problem is returned at once.
   def create
-    return unless within_user_rate_limit?("urgent-request-create", limit: CREATES_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("urgent-request-create")
     role, city = params[:roleName], params[:city]
     title = params[:title].presence || ("#{role} needed in #{city}" if role.is_a?(String) && city.is_a?(String) && role.present? && city.present?)
     item = UrgentRequest.new(requester: current_user, title:, role_name: role, instrument: params[:instrument],

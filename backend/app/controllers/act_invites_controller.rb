@@ -5,9 +5,9 @@ class ActInvitesController < ApplicationController
   include ScalarParams
   include UserRateLimit
 
-  SEARCH_PER_HOUR = 60
-  RESEND_PER_HOUR = 20
-  TOKEN_ATTEMPTS = 40
+  SEARCH_PER_HOUR = RateLimits.limit("act-invite-search")
+  RESEND_PER_HOUR = RateLimits.limit("act-invite-resend")
+  TOKEN_ATTEMPTS = RateLimits.limit("act-invite-token")
   rescue_from ActInvites::Refused do |error|
     render_error(error.message, error.status, error.code, fields: error.fields)
   end
@@ -19,7 +19,7 @@ class ActInvitesController < ApplicationController
   def search
     act = owned_act
     return unless require_scalar_params!(:q)
-    return unless within_user_rate_limit?("act-invite-search", limit: SEARCH_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("act-invite-search")
     query = params[:q].to_s.squish
     return render json: { musicians: [] } if query.length < 2
 
@@ -58,7 +58,7 @@ class ActInvitesController < ApplicationController
   end
 
   def resend
-    return unless within_user_rate_limit?("act-invite-resend", limit: RESEND_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("act-invite-resend")
     invite = ActInvites.resend!(owned_invite)
     audit!("act_invite.resend", invite, { actId: invite.act_id })
     render json: { invite: invite.owner_json }
@@ -79,7 +79,7 @@ class ActInvitesController < ApplicationController
   # What a link visitor sees before signing in: the band, who invited them and the role. No emails.
   def preview
     return unless require_scalar_params!(:token)
-    return unless throttle!("act-invite-token", limit: TOKEN_ATTEMPTS, period: 10.minutes)
+    return unless throttle!("act-invite-token")
     invite = ActInvite.find_by_token(params[:token])
     return render_error("This invite link isn't valid. Ask the band to send a new one.", :not_found, "INVITE_NOT_FOUND") unless invite
     render json: { invite: invite.invitee_json.merge(addressed: invite.kind != "link") }
@@ -119,7 +119,7 @@ class ActInvitesController < ApplicationController
     if params[:id].present?
       invite = ActInvite.addressed_to(current_user).find_by(id: params[:id].to_s)
     else
-      return nil unless throttle!("act-invite-token", limit: TOKEN_ATTEMPTS, period: 10.minutes)
+      return nil unless throttle!("act-invite-token")
       invite = ActInvite.find_by_token(params[:token])
     end
     render_error("This invite link isn't valid. Ask the band to send a new one.", :not_found, "INVITE_NOT_FOUND") unless invite

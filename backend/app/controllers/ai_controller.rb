@@ -6,8 +6,8 @@
 class AiController < ApplicationController
   include UserRateLimit
 
-  SUGGEST_LIMIT_PER_HOUR = 30
-  SUGGEST_LIMIT_PER_DAY = 150
+  SUGGEST_LIMIT_PER_HOUR = RateLimits.limit("ai-suggest-hour")
+  SUGGEST_LIMIT_PER_DAY = RateLimits.limit("ai-suggest-day")
   MESSAGE_HISTORY_FOR_REPLY = 5
 
   before_action -> { authenticate! }, only: %i[suggest usage]
@@ -21,8 +21,8 @@ class AiController < ApplicationController
   def suggest
     return render_error("AI assist is not enabled right now.", :service_unavailable, "AI_DISABLED") unless AiAssist.enabled?
     return unless daily_budget_available?
-    return unless within_user_rate_limit?("ai-suggest-hour", limit: SUGGEST_LIMIT_PER_HOUR, period: 1.hour)
-    return unless within_user_rate_limit?("ai-suggest-day", limit: SUGGEST_LIMIT_PER_DAY, period: 1.day)
+    return unless within_user_rate_limit?("ai-suggest-hour")
+    return unless within_user_rate_limit?("ai-suggest-day")
 
     task = params[:task].to_s
     return render_error("Unknown AI task.", :unprocessable_content, "UNKNOWN_TASK") unless AiAssist.known_task?(task)

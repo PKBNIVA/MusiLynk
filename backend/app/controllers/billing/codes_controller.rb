@@ -7,7 +7,7 @@ module Billing
 
     def validate
       return unless authenticate!
-      return unless throttle!("promo-validate", limit: 30, period: 1.minute)
+      return unless throttle!("promo-validate")
 
       plan_code = params[:planCode].to_s
       interval = params[:interval].presence || "monthly"

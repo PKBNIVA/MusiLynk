@@ -1,21 +1,21 @@
 class AuthController < ApplicationController
   include ConsumesSignInCodes
 
-  LOGIN_FAILURE_PERIOD = 15.minutes
+  LOGIN_FAILURE_PERIOD = RateLimits.period("login-failure")
   # Strict budget per (email, IP) pair; a looser global per-email budget still
   # stops distributed guessing without letting one attacker lock a user out.
-  LOGIN_FAILURES_PER_EMAIL_AND_IP = 10
-  LOGIN_FAILURES_PER_EMAIL = 100
-  LOGIN_FAILURES_PER_IP = 50
+  LOGIN_FAILURES_PER_EMAIL_AND_IP = RateLimits.limit("login-failure", :email_ip)
+  LOGIN_FAILURES_PER_EMAIL = RateLimits.limit("login-failure", :email)
+  LOGIN_FAILURES_PER_IP = RateLimits.limit("login-failure", :ip)
   MAX_LIVE_SESSIONS = 10
-  OTP_REQUEST_PERIOD = 1.hour
-  OTP_REQUESTS_PER_EMAIL = 5
+  OTP_REQUEST_PERIOD = RateLimits.period("otp-request")
+  OTP_REQUESTS_PER_EMAIL = RateLimits.limit("otp-request", :email)
   # Mobile carriers put many users behind one IP (CGNAT); the per-email limit is the real guard.
-  OTP_REQUESTS_PER_IP = 30
-  OTP_VERIFY_FAILURE_PERIOD = 15.minutes
+  OTP_REQUESTS_PER_IP = RateLimits.limit("otp-request", :ip)
+  OTP_VERIFY_FAILURE_PERIOD = RateLimits.period("otp-verify-failure")
   # Per-code attempts are capped by SignInCode::MAX_ATTEMPTS; this IP budget stops
   # one client spraying guesses across many addresses' codes.
-  OTP_VERIFY_FAILURES_PER_IP = 25
+  OTP_VERIFY_FAILURES_PER_IP = RateLimits.limit("otp-verify-failure", :ip)
   OTP_UNAVAILABLE_MESSAGE = "Email sign-in codes are temporarily unavailable. Try again in a few minutes. If you have a confirmed account with a password you can use that, otherwise contact MusiLynk support.".freeze
   OTP_REQUEST_MESSAGE = "If this email can be used on MusiLynk, a 6-digit code is on its way. It expires in 10 minutes.".freeze
   EMAIL_VERIFICATION_REQUIRED_MESSAGE = "Confirm your email address before signing in with a password. We can send the link again, or you can sign in with an emailed code.".freeze
@@ -28,11 +28,11 @@ class AuthController < ApplicationController
   PHONE_OTP_INVALID_MESSAGE = "Invalid or expired code.".freeze
   # Admin password sign-in needs a second step: a code emailed to the admin.
   SECOND_FACTOR_PURPOSE = :admin_second_factor
-  SECOND_FACTOR_CHALLENGES_PER_EMAIL = 5
-  SECOND_FACTOR_CHALLENGE_PERIOD = 1.hour
-  SECOND_FACTOR_FAILURES_PER_USER = 10
-  SECOND_FACTOR_FAILURES_PER_IP = 25
-  SECOND_FACTOR_FAILURE_PERIOD = 15.minutes
+  SECOND_FACTOR_CHALLENGES_PER_EMAIL = RateLimits.limit("second-factor-challenge", :email)
+  SECOND_FACTOR_CHALLENGE_PERIOD = RateLimits.period("second-factor-challenge")
+  SECOND_FACTOR_FAILURES_PER_USER = RateLimits.limit("second-factor-failure", :user)
+  SECOND_FACTOR_FAILURES_PER_IP = RateLimits.limit("second-factor-failure", :ip)
+  SECOND_FACTOR_FAILURE_PERIOD = RateLimits.period("second-factor-failure")
   SECOND_FACTOR_MESSAGE = "Admin sign-in needs one more step. We emailed a 6-digit code to your address. It expires in 10 minutes.".freeze
   SECOND_FACTOR_EXPIRED_MESSAGE = "This sign-in step has expired. Sign in with your password again.".freeze
   SECOND_FACTOR_UNAVAILABLE_MESSAGE = "Admin sign-in needs an emailed code, but email delivery is not configured on the server. Configure an email provider to sign in.".freeze
@@ -75,7 +75,8 @@ class AuthController < ApplicationController
 
   def register
     # Shared campus, office and mobile-carrier IPs sign up many real users; keep bulk abuse bounded.
-    return unless throttle!("register", limit: 60, period: 1.hour)
+    return unless throttle!("register")
+    return unless turnstile_passed?("register")
     role = params[:role].to_s
     return render_error("Choose either a musician or hirer account.", :unprocessable_content, "INVALID_ROLE") unless %w[jobseeker employer].include?(role)
 
@@ -294,6 +295,7 @@ class AuthController < ApplicationController
     return render_error("Enter a valid email address.", :unprocessable_content, "INVALID_EMAIL") unless email.match?(URI::MailTo::EMAIL_REGEXP) && email.length <= 254
     sign_up = otp_sign_up_params
     return if performed?
+    return unless turnstile_passed?("otp-request")
 
     scopes = { email: [email, OTP_REQUESTS_PER_EMAIL], ip: [request.remote_ip, OTP_REQUESTS_PER_IP] }
     return if failure_budget_exhausted?("otp-request", scopes, period: OTP_REQUEST_PERIOD)
@@ -361,7 +363,7 @@ class AuthController < ApplicationController
 
   def request_verification
     return unless authenticate!
-    return unless throttle!("email-verification", limit: 5, period: 1.hour)
+    return unless throttle!("email-verification")
     return render json: { ok: true, alreadyVerified: true } if current_user.email_verified?
     token = issue_token("verify_email", 24.hours)
     render json: token_response(token, "/verify-email", current_user)
@@ -370,15 +372,15 @@ class AuthController < ApplicationController
   # POST /auth/resend-verification {email}: signed out. Sends a fresh verification link to an
   # unverified account; the answer is identical for every address.
   def resend_verification
-    return unless throttle!("resend-verification", limit: 10, period: 1.hour)
+    return unless throttle!("resend-verification")
 
     email = normalized_email
     user = User.find_by(email:)
     if user && !user.email_verified? && user.active? && !user.admin?
       # Over the per-address budget nothing is sent but the answer is identical (no oracle).
-      key_period = 1.hour
-      count_key = failure_key("resend-verification", :email, email, key_period)
-      if (Rails.cache.increment(count_key, 1, expires_in: key_period) || 1) <= 3
+      key_period = RateLimits.period("resend-verification-email")
+      count_key = failure_key("resend-verification-email", :email, email, key_period)
+      if (rate_limit_count("resend-verification-email", count_key, 1, key_period) || 1) <= RateLimits.limit("resend-verification-email")
         deliver_token(issue_token("verify_email", 24.hours, user), "/verify-email", user)
       end
     end
@@ -397,7 +399,7 @@ class AuthController < ApplicationController
   end
 
   def forgot_password
-    return unless throttle!("password-reset", limit: 10, period: 1.hour)
+    return unless throttle!("password-reset")
     if (user = User.find_by(email: normalized_email)) && reset_email_allowed?(user)
       token = issue_token("reset_password", 2.hours, user)
       _link, delivery = deliver_token(token, "/reset-password", user)
@@ -421,12 +423,14 @@ class AuthController < ApplicationController
   # Lets the reset-password page tell an expired or already-used link apart from a bad
   # password *before* the person types a new one, and route "Sign in" to the right role.
   def check_reset_password_token
+    return unless throttle!("reset-password-token")
     token = find_usable_reset_token(params[:token])
     return render json: { valid: false } unless token
     render json: { valid: true, role: token.user.role }
   end
 
   def reset_password
+    return unless throttle!("reset-password-token")
     token = find_usable_reset_token(params[:token])
     return render_error(RESET_TOKEN_INVALID_MESSAGE, :bad_request, "TOKEN_INVALID") unless token
     user = token.user
@@ -454,6 +458,26 @@ class AuthController < ApplicationController
   end
 
   private
+
+  TURNSTILE_FAILED_MESSAGE = "We could not confirm you are human. Reload the page and try again.".freeze
+  TURNSTILE_UNAVAILABLE_MESSAGE = "The human check is temporarily unavailable. Try again in a minute.".freeze
+
+  # Cloudflare Turnstile (Turnstile, docs/ops/turnstile.md) on the buckets the config marks
+  # `turnstile: true`. A no-op until TURNSTILE_SECRET_KEY is set; otherwise the widget's token
+  # (`turnstileToken`) must verify. Returns true to proceed; renders 403 or 503 and returns false.
+  def turnstile_passed?(bucket)
+    return true unless RateLimits.turnstile_required?(bucket) && Turnstile.enabled?
+
+    result = Turnstile.verify(params[:turnstileToken], remote_ip: request.remote_ip)
+    return true if result.ok?
+    if result.unavailable?
+      render_error(TURNSTILE_UNAVAILABLE_MESSAGE, :service_unavailable, "TURNSTILE_UNAVAILABLE")
+    else
+      UserRateLimit.count_rejection("turnstile-#{bucket}")
+      render_error(TURNSTILE_FAILED_MESSAGE, :forbidden, "TURNSTILE_FAILED")
+    end
+    false
+  end
 
   # Whether a verification request is waiting for review, and since when (the profile page's
   # "Pending review" state). Unverified accounts only: an approved account has nothing pending.

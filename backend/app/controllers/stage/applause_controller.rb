@@ -3,10 +3,10 @@ module Stage
   class ApplauseController < BaseController
     include UserRateLimit
 
-    LIMIT_PER_HOUR = 300
+    LIMIT_PER_HOUR = RateLimits.limit("stage.applause")
 
     def create
-      return unless within_user_rate_limit?("stage.applause", limit: LIMIT_PER_HOUR, period: 1.hour)
+      return unless within_user_rate_limit?("stage.applause")
       post = find_post!
       actor = current_actor
       return unless actor

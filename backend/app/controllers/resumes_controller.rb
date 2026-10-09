@@ -4,7 +4,7 @@ class ResumesController < ApplicationController
   include UserRateLimit
   include ScalarParams
 
-  CREATES_PER_HOUR = 30
+  CREATES_PER_HOUR = RateLimits.limit("resume-create")
   PLAIN_FIELDS = { title: :title, targetRole: :target_role }.freeze
   # Sent as null (or "") to go back to inheriting the profile.
   OVERRIDE_TEXT = %w[headline summary].freeze
@@ -31,7 +31,7 @@ class ResumesController < ApplicationController
 
   def create
     return unless require_scalar_params!(*PLAIN_FIELDS.keys, *OVERRIDE_TEXT, :uploadId, :isDefault)
-    return unless within_user_rate_limit?("resume-create", limit: CREATES_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("resume-create")
     resume = current_user.resumes.build
     return unless assign_fields(resume)
     Resume.transaction do

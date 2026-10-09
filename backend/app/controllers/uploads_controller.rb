@@ -13,7 +13,7 @@ class UploadsController < ApplicationController
   include UserRateLimit
 
   # Every presign reserves storage and every local PUT writes a file; a signed-in account gets this many an hour.
-  UPLOADS_PER_HOUR = 120
+  UPLOADS_PER_HOUR = RateLimits.limit("upload")
   ALLOWED_TYPES = MediaTypeSniffer::ALLOWED_TYPES
   MAX_SIZE = Upload::MAX_SIZE
   CHUNK_SIZE = 1.megabyte
@@ -22,7 +22,7 @@ class UploadsController < ApplicationController
 
   def presign
     # One file is one hit: a direct upload is counted here, a proxied one when its bytes arrive (#local).
-    return if UploadStorage.direct? && !within_user_rate_limit?("upload", limit: UPLOADS_PER_HOUR, period: 1.hour)
+    return if UploadStorage.direct? && !within_user_rate_limit?("upload")
     content_type = MediaTypeSniffer.canonical(params[:contentType])
     return render_error("Unsupported file type. Upload MP3, WAV, MP4, JPEG, PNG, WebP or PDF.", :unprocessable_content, "UNSUPPORTED_TYPE") unless ALLOWED_TYPES.include?(content_type)
     return render_error("File is too large. The limit is #{MAX_SIZE / 1.megabyte} MB.", :unprocessable_content, "FILE_TOO_LARGE") unless params[:size].to_i.between?(1, MAX_SIZE)
@@ -75,7 +75,7 @@ class UploadsController < ApplicationController
 
   def local
     return render_error("Persistent uploads are disabled.", :forbidden) unless UploadStorage.local_allowed?
-    return unless within_user_rate_limit?("upload", limit: UPLOADS_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("upload")
     declared = MediaTypeSniffer.canonical(request.content_type)
     return render_error("Unsupported file type. Upload MP3, WAV, MP4, JPEG, PNG, WebP or PDF.", :unprocessable_content, "UNSUPPORTED_TYPE") unless ALLOWED_TYPES.include?(declared)
     return render_error("File is too large. The limit is #{MAX_SIZE / 1.megabyte} MB.", :unprocessable_content, "FILE_TOO_LARGE") if request.content_length.to_i > MAX_SIZE

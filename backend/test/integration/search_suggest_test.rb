@@ -82,7 +82,7 @@ class SearchSuggestTest < ActionDispatch::IntegrationTest
 
   test "each IP gets a bounded number of suggestions per minute" do
     freeze_time
-    limit = Search::Settings.suggest.fetch("requests_per_minute")
+    limit = RateLimits.limit("search-suggest")
     limit.times { get "/api/search/suggest", params: { q: "ta" } }
     assert_response :success
     get "/api/search/suggest", params: { q: "ta" }

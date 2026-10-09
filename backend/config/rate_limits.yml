@@ -1,0 +1,350 @@
+# Every rate limit, abuse control and spike threshold the API applies, in one place (RULES rule 2).
+# Read through RateLimits (app/services/rate_limits.rb) and the UserRateLimit concern; no limit is
+# written into a controller. The update path is docs/security/rate-limits.md.
+#
+# Each entry under `limits` is one named bucket (the first argument to throttle!,
+# within_user_rate_limit?, failure_budget_exhausted? and record_failure!):
+#   period_seconds   fixed window; counters live in Rails.cache for this long
+#   limit            requests allowed per window (single-scope buckets)
+#   scopes           per-scope limits for failure budgets, e.g. {email: 5, ip: 30}
+#   fail             "closed" answers 503 RATE_LIMIT_UNAVAILABLE when the cache store cannot count
+#                    (an outage must not turn off the guard on OTP and password reset); "open"
+#                    (the default) lets the request through so a cache outage never takes the site down
+#   key              what the counter is keyed by, for the docs table only: ip, user, email, phone, site
+#   path             the route(s) it guards, for the docs table only
+default: &default
+  limits:
+    # ---- Anyone on the internet can call these (no bearer token) ----
+    register:
+      path: POST /api/auth/register
+      key: ip
+      limit: 60
+      period_seconds: 3600
+      turnstile: true
+    login-failure:
+      path: POST /api/auth/login
+      key: email+ip, email, ip (failures only)
+      period_seconds: 900
+      scopes: { email_ip: 10, email: 100, ip: 50 }
+    otp-request:
+      path: POST /api/auth/otp/request
+      key: email, ip
+      period_seconds: 3600
+      # Mobile carriers put many users behind one IP (CGNAT); the per-email limit is the real guard.
+      scopes: { email: 5, ip: 30 }
+      fail: closed
+      turnstile: true
+    otp-verify-failure:
+      path: POST /api/auth/otp/verify
+      key: ip (failures only; per-code attempts capped by SignInCode::MAX_ATTEMPTS)
+      period_seconds: 900
+      scopes: { ip: 25 }
+      fail: closed
+    phone-otp-request:
+      path: POST /api/auth/phone-otp/request
+      key: phone, ip
+      period_seconds: 3600
+      scopes: { phone: 5, ip: 30 }
+      fail: closed
+    phone-otp-verify-failure:
+      path: POST /api/auth/phone-otp/verify
+      key: ip (failures only)
+      period_seconds: 900
+      scopes: { ip: 25 }
+      fail: closed
+    password-reset:
+      path: POST /api/auth/forgot-password
+      key: ip
+      limit: 10
+      period_seconds: 3600
+      fail: closed
+    reset-password-token:
+      path: GET /api/auth/reset-password/check, POST /api/auth/reset-password
+      key: ip
+      limit: 30
+      period_seconds: 900
+      fail: closed
+    resend-verification:
+      path: POST /api/auth/resend-verification
+      key: ip
+      limit: 10
+      period_seconds: 3600
+    resend-verification-email:
+      path: POST /api/auth/resend-verification (silent per-address cap, same answer either way)
+      key: email
+      limit: 3
+      period_seconds: 3600
+    second-factor-failure:
+      path: POST /api/auth/second-factor
+      key: ip, user (failures only)
+      period_seconds: 900
+      # Open on purpose: a cache outage must never lock every admin out of the admin site.
+      scopes: { ip: 25, user: 10 }
+    second-factor-challenge:
+      path: POST /api/auth/login (admin password step, codes emailed)
+      key: email
+      period_seconds: 3600
+      scopes: { email: 5 }
+    search:
+      path: GET /api/search
+      key: ip
+      limit: 60
+      period_seconds: 60
+    search-suggest:
+      path: GET /api/search/suggest
+      key: ip
+      limit: 120
+      period_seconds: 60
+    events:
+      path: POST /api/events
+      key: ip
+      limit: 120
+      period_seconds: 60
+    link-preview:
+      path: POST /api/link-previews
+      key: ip
+      limit: 60
+      period_seconds: 600
+    link-import-draft:
+      path: POST /api/link-import/draft
+      key: ip
+      limit: 60
+      period_seconds: 600
+    act-invite-token:
+      path: GET /api/act-invites/preview, POST /api/act-invites/accept|decline (by token)
+      key: ip
+      limit: 40
+      period_seconds: 600
+    share-card:
+      path: GET /share-cards/verified/:user_id(.svg|/landscape.svg)
+      key: ip
+      limit: 60
+      period_seconds: 60
+    problem-report-ip:
+      path: POST /api/problem-reports (signed out)
+      key: ip
+      limit: 3
+      period_seconds: 3600
+    problem-report-ip-day:
+      path: POST /api/problem-reports (signed out)
+      key: ip
+      limit: 8
+      period_seconds: 86400
+    problem-report-email:
+      path: POST /api/problem-reports (signed out)
+      key: email
+      limit: 3
+      period_seconds: 86400
+    problem-report-site:
+      path: POST /api/problem-reports (signed out, whole site)
+      key: site
+      limit: 100
+      period_seconds: 86400
+    # ---- Signed in (bearer token) ----
+    problem-report-ip-signed-in:
+      path: POST /api/problem-reports (signed in)
+      key: ip
+      limit: 40
+      period_seconds: 3600
+    problem-report:
+      path: POST /api/problem-reports (signed in)
+      key: user
+      limit: 10
+      period_seconds: 3600
+    email-verification:
+      path: POST /api/auth/request-email-verification
+      key: ip
+      limit: 5
+      period_seconds: 3600
+    onboarding-starter:
+      path: POST /api/onboarding/starter
+      key: ip
+      limit: 30
+      period_seconds: 3600
+    library-import:
+      path: POST /api/library/import
+      key: ip
+      limit: 30
+      period_seconds: 3600
+    promo-validate:
+      path: POST /api/billing/codes/validate
+      key: ip
+      limit: 30
+      period_seconds: 60
+    report:
+      path: POST /api/reports
+      key: user
+      limit: 30
+      period_seconds: 3600
+    urgent-request-create:
+      path: POST /api/urgent-requests
+      key: user
+      limit: 10
+      period_seconds: 3600
+    conversation:
+      path: POST /api/conversations
+      key: user
+      limit: 20
+      period_seconds: 3600
+    message:
+      path: POST /api/conversations/:id/messages
+      key: user
+      limit: 120
+      period_seconds: 3600
+    account-export:
+      path: GET /api/account/export
+      key: user
+      limit: 5
+      period_seconds: 3600
+    account-email-change:
+      path: POST /api/account/email/request
+      key: user
+      limit: 5
+      period_seconds: 3600
+    account-delete:
+      path: DELETE /api/account
+      key: user
+      limit: 10
+      period_seconds: 3600
+    account-email-confirm-failure:
+      path: POST /api/account/email/confirm
+      key: user (failures only)
+      period_seconds: 900
+      scopes: { user: 10 }
+    account-password-failure:
+      path: POST /api/account/password
+      key: user (failures only)
+      period_seconds: 900
+      scopes: { user: 10 }
+    admin-email-change:
+      path: POST /api/admin/account/email/request
+      key: user
+      limit: 5
+      period_seconds: 3600
+    admin-email-confirm-failure:
+      path: POST /api/admin/account/email/confirm
+      key: user (failures only)
+      period_seconds: 900
+      scopes: { user: 10 }
+    admin-password-failure:
+      path: POST /api/admin/account/password
+      key: user (failures only)
+      period_seconds: 900
+      scopes: { user: 10 }
+    act-invite-search:
+      path: GET /api/acts/:id/invitees
+      key: user
+      limit: 60
+      period_seconds: 3600
+    act-invite-resend:
+      path: POST /api/acts/:id/invites/:invite_id/resend
+      key: user
+      limit: 20
+      period_seconds: 3600
+    ai-suggest-hour:
+      path: POST /api/ai/suggest
+      key: user
+      limit: 30
+      period_seconds: 3600
+    ai-suggest-day:
+      path: POST /api/ai/suggest
+      key: user
+      limit: 150
+      period_seconds: 86400
+    career-entry-create:
+      path: POST /api/career-entries
+      key: user
+      limit: 120
+      period_seconds: 3600
+    org-member-invite:
+      path: POST /api/organizations/:id/members
+      key: user
+      limit: 30
+      period_seconds: 3600
+    portfolio-create:
+      path: POST /api/portfolios
+      key: user
+      limit: 30
+      period_seconds: 3600
+    portfolio-draft:
+      path: POST /api/portfolios/draft
+      key: user
+      limit: 60
+      period_seconds: 3600
+    push-subscribe:
+      path: POST /api/push/subscriptions
+      key: user
+      limit: 30
+      period_seconds: 3600
+    push-unsubscribe:
+      path: DELETE /api/push/subscriptions
+      key: user
+      limit: 30
+      period_seconds: 3600
+    resume-create:
+      path: POST /api/resumes
+      key: user
+      limit: 30
+      period_seconds: 3600
+    upload:
+      path: POST /api/uploads/presign, PUT /api/uploads/local
+      key: user
+      limit: 120
+      period_seconds: 3600
+    block:
+      path: POST|DELETE /api/blocks/:id
+      key: user
+      limit: 60
+      period_seconds: 3600
+    billing-profile:
+      path: PUT /api/billing/profile
+      key: user
+      limit: 30
+      period_seconds: 3600
+    stage.applause:
+      path: POST /api/stage/posts/:id/applause
+      key: user
+      limit: 300
+      period_seconds: 3600
+    stage.comments:
+      path: POST /api/stage/posts/:id/comments
+      key: user
+      limit: 60
+      period_seconds: 3600
+    stage.posts:
+      path: POST /api/stage/posts
+      key: user
+      limit: 20
+      period_seconds: 3600
+
+  # Cloudflare Turnstile on sign-up and OTP request (docs/ops/turnstile.md). `enabled` is the
+  # kill switch; the check also stays off until TURNSTILE_SECRET_KEY is set on the API service.
+  turnstile:
+    enabled: true
+    verify_url: https://challenges.cloudflare.com/turnstile/v0/siteverify
+    timeout_seconds: 4
+    # What happens when Cloudflare's verify endpoint itself errors or times out:
+    # "closed" rejects the request (503 TURNSTILE_UNAVAILABLE, the client retries),
+    # "open" lets it through and logs. Closed: an unverifiable challenge is no challenge.
+    on_verifier_error: closed
+
+  # RateLimitSpikeAlertJob (every 5 minutes): one Sentry message per bucket whose 429 count in the
+  # last completed window is at or above `threshold`. Counters are kept in Rails.cache by
+  # UserRateLimit#render_too_many_requests.
+  spike_alert:
+    window_seconds: 300
+    threshold: 50
+    # Per-bucket overrides when the default is wrong for a hot endpoint.
+    thresholds:
+      search: 200
+      search-suggest: 300
+      events: 300
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

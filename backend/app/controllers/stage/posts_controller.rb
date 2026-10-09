@@ -3,7 +3,7 @@ module Stage
     include UserRateLimit
 
     skip_before_action :require_login, only: %i[show by_author]
-    CREATE_LIMIT_PER_HOUR = 20
+    CREATE_LIMIT_PER_HOUR = RateLimits.limit("stage.posts")
 
     def show
       post = find_post!
@@ -25,7 +25,7 @@ module Stage
     end
 
     def create
-      return unless within_user_rate_limit?("stage.posts", limit: CREATE_LIMIT_PER_HOUR, period: 1.hour)
+      return unless within_user_rate_limit?("stage.posts")
       return unless check_event_permission
       actor = current_actor
       return unless actor

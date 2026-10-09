@@ -73,6 +73,11 @@ Rails.application.configure do
       class: "UrgentRequestsSweepJob",
       description: "Warn hirers 6 hours before an urgent request expires, and expire lapsed ones"
     },
+    rate_limit_spike_alert: {
+      cron: "*/5 * * * *",
+      class: "RateLimitSpikeAlertJob",
+      description: "Send a Sentry message for any endpoint whose 429 count in the last 5 minutes crossed its config/rate_limits.yml threshold"
+    },
     urgent_match_sweep: {
       cron: "*/5 * * * *",
       class: "UrgentMatchSweepJob",

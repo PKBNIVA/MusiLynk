@@ -16,6 +16,8 @@ import { errorCode, errorMessage } from '../lib/errors';
 import { useSubmitOnce } from '../lib/formErrors';
 import { CODE_LENGTH, CodeStep, FormError, focusField, useResendCooldown } from '../components/auth/CodeStep';
 import { usePageMeta } from '../components/PageMeta';
+import { TurnstileWidget } from '../components/auth/TurnstileWidget';
+import { turnstileSiteKey } from '../lib/turnstile';
 
 /* Admins use the separate admin site; its address is deliberately not part of this bundle. */
 const ADMIN_SITE_MESSAGE = 'Admins sign in at the admin site.';
@@ -28,6 +30,10 @@ export default function AuthPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { login, verifyCode, completeSecondFactor, logout } = useAuth();
+  /* Turnstile token for the code request; the widget remounts (new key) after each attempt because a token is single-use. */
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileRound, setTurnstileRound] = useState(0);
+  const awaitingTurnstile = turnstileSiteKey() !== null && !turnstileToken;
   // Sign-up lives on the two-minute /join flow; old `?mode=register` links go there (see below).
   const registering = searchParams.get('mode') === 'register';
   const joinPath = role === 'employer' ? '/join/hiring' : '/join/musician';
@@ -238,7 +244,7 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      const response = await requestSignInCode({ email });
+      const response = await requestSignInCode({ email, turnstileToken: turnstileToken ?? undefined });
       setDebugCode(response.debugCode);
       setCode('');
       setCodeStep('code');
@@ -251,6 +257,8 @@ export default function AuthPage() {
         toast.error(errorMessage(e));
       } else fail(e, 'Could not send a code. Try again.');
     } finally {
+      setTurnstileToken(null);
+      setTurnstileRound((round) => round + 1);
       setLoading(false);
     }
   }
@@ -314,8 +322,12 @@ export default function AuthPage() {
     codeStep === 'email' ? (
       <form onSubmit={sendCode} className="space-y-4" aria-busy={loading}>
         {emailField}
+        <TurnstileWidget key={turnstileRound} action="otp-request" onToken={setTurnstileToken} />
         {errorBox}
-        <Button disabled={loading} className="w-full border-0 bg-gradient-to-r from-fuchsia-600 to-violet-600">
+        <Button
+          disabled={loading || awaitingTurnstile}
+          className="w-full border-0 bg-gradient-to-r from-fuchsia-600 to-violet-600"
+        >
           <Mail className="mr-2 h-4 w-4" />
           {loading ? 'Sending code…' : 'Email me a sign-in code'}
         </Button>

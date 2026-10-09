@@ -5,6 +5,8 @@
 #
 # Served as SVG only; the browser rasterises it to a PNG for download (src/app/lib/shareCard.ts).
 class ShareCardsController < ActionController::API
+  include UserRateLimit
+
   CACHE_CONTROL = "public, max-age=86400, immutable".freeze
 
   def verified
@@ -18,6 +20,7 @@ class ShareCardsController < ActionController::API
   private
 
   def render_card(variant)
+    return unless throttle!("share-card")
     user = User.joins(:profile).where(profiles: { verified: true, share_verification_publicly: true }).find_by(id: params[:user_id])
     return head :not_found unless user
 
@@ -25,4 +28,10 @@ class ShareCardsController < ActionController::API
     response.set_header("Cache-Control", CACHE_CONTROL)
     render plain: svg, content_type: "image/svg+xml"
   end
+
+  def render_error(message, status, code = nil)
+    render json: { error: message, code: }.compact, status:
+  end
+
+  def digest(value) = Digest::SHA256.hexdigest(value.to_s)
 end

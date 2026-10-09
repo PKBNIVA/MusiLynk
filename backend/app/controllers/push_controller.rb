@@ -4,7 +4,7 @@ class PushController < ApplicationController
   include UserRateLimit
 
   MAX_SUBSCRIPTIONS_PER_USER = 10
-  CHANGES_PER_HOUR = 30
+  CHANGES_PER_HOUR = RateLimits.limit("push-subscribe")
 
   before_action -> { authenticate! }, except: :settings
 
@@ -21,7 +21,7 @@ class PushController < ApplicationController
   # else moves to that user (a browser has one push subscription, whoever is signed in).
   def subscribe
     return render_error("Push notifications are not available right now.", :not_found, "PUSH_DISABLED") unless PushNotifications.enabled?
-    return unless within_user_rate_limit?("push-subscribe", limit: CHANGES_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("push-subscribe")
 
     endpoint = params[:endpoint].to_s
     keys = params[:keys].respond_to?(:permit) ? params[:keys] : {}
@@ -40,7 +40,7 @@ class PushController < ApplicationController
 
   # DELETE /api/push/subscriptions { endpoint }. Idempotent, and only ever removes the caller's own.
   def unsubscribe
-    return unless within_user_rate_limit?("push-unsubscribe", limit: CHANGES_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("push-unsubscribe")
 
     endpoint = params[:endpoint].to_s
     return render_error("Say which subscription to remove.", :bad_request, "INVALID_SUBSCRIPTION") if endpoint.blank?

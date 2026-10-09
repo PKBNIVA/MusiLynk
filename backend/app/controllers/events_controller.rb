@@ -5,7 +5,7 @@
 class EventsController < ApplicationController
   MAX_BATCH = 25
   MAX_EVENT_BYTES = 1_024
-  RATE_LIMIT_PER_MINUTE = 120
+  RATE_LIMIT_PER_MINUTE = RateLimits.limit("events")
 
   # Every name analytics.ts (and the steps documented for the landing/signup pages in
   # backend/docs/analytics.md) is allowed to send. Anything else is dropped, not stored.
@@ -33,7 +33,7 @@ class EventsController < ApplicationController
   def self.redact_path(value) = redact_secrets(value.split(/[?#]/).first.to_s)
 
   def create
-    return unless throttle!("events", limit: RATE_LIMIT_PER_MINUTE, period: 1.minute)
+    return unless throttle!("events")
 
     events = Array(params[:events])
     return render_error("events must be a non-empty array.", :unprocessable_content, "INVALID_EVENTS") if events.blank?

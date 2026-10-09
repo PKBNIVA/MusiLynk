@@ -6,12 +6,12 @@
 # per-account AI limit instead of the anonymous-per-IP one. See LinkImport::Resolver for what is
 # fetched and LinkImport::ProfileDraft for how the draft is built.
 class LinkImportController < ApplicationController
-  DRAFTS_PER_IP = 60
-  PERIOD = 10.minutes
+  DRAFTS_PER_IP = RateLimits.limit("link-import-draft")
+  PERIOD = RateLimits.period("link-import-draft")
   MAX_LINKS = 8
 
   def draft
-    return unless throttle!("link-import-draft", limit: DRAFTS_PER_IP, period: PERIOD)
+    return unless throttle!("link-import-draft")
 
     links = Array(params[:links]).select { _1.is_a?(String) }.first(MAX_LINKS)
     return render_error("Paste at least one link.", :unprocessable_content, "INVALID_URL", fields: { links: ["Paste at least one link."] }) if links.empty?

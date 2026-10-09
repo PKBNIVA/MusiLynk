@@ -9,10 +9,10 @@ module Admin
     include UserRateLimit
 
     EMAIL_CHANGE_PURPOSE = :admin_email_change
-    EMAIL_CHANGE_REQUESTS_PER_HOUR = 5
-    CONFIRM_FAILURES_PER_USER = 10
-    PASSWORD_FAILURES_PER_USER = 10
-    FAILURE_PERIOD = 15.minutes
+    EMAIL_CHANGE_REQUESTS_PER_HOUR = RateLimits.limit("admin-email-change")
+    CONFIRM_FAILURES_PER_USER = RateLimits.limit("admin-email-confirm-failure", :user)
+    PASSWORD_FAILURES_PER_USER = RateLimits.limit("admin-password-failure", :user)
+    FAILURE_PERIOD = RateLimits.period("admin-password-failure")
     MIN_PASSWORD_LENGTH = 10
     EMAIL_CHANGE_MESSAGE = "We emailed a 6-digit code to the new address. Enter it here to finish the change. It expires in 10 minutes.".freeze
     EMAIL_CHANGE_EXPIRED_MESSAGE = "This email change has expired or was started by someone else. Start again.".freeze
@@ -30,7 +30,7 @@ module Admin
     # The code goes to the new address, so completing the change proves that mailbox works
     # before the admin's sign-in codes start going there.
     def request_email_change
-      return unless within_user_rate_limit?("admin-email-change", limit: EMAIL_CHANGE_REQUESTS_PER_HOUR, period: 1.hour)
+      return unless within_user_rate_limit?("admin-email-change")
       email = params[:email].to_s.strip.downcase
       return render_error("Enter a valid email address.", :unprocessable_content, "INVALID_EMAIL") unless email.match?(URI::MailTo::EMAIL_REGEXP) && email.length <= 254
       return render_error(EMAIL_UNCHANGED_MESSAGE, :unprocessable_content, "EMAIL_UNCHANGED") if email == current_user.email

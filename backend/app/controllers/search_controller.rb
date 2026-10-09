@@ -4,7 +4,7 @@ class SearchController < ApplicationController
   # Search is public, so bound the work one request can ask for: queries are cut to
   # MAX_QUERY_LENGTH characters and each IP gets REQUESTS_PER_MINUTE searches.
   MAX_QUERY_LENGTH = Search::Query::MAX_LENGTH
-  REQUESTS_PER_MINUTE = 60
+  REQUESTS_PER_MINUTE = RateLimits.limit("search")
   MAX_RESULTS = 60
   # "All" takes at most this many of each type (then fair-shares MAX_RESULTS between them).
   PER_TYPE = 30
@@ -27,7 +27,7 @@ class SearchController < ApplicationController
   # Every response says how the query was read: interpretedAs, matchMode, didYouMean.
   # `language`, `eventType`, `genre` and `budgetMax` narrow the talent results (see TalentController.apply_facets).
   def index
-    return unless throttle!("search", limit: REQUESTS_PER_MINUTE, period: 1.minute)
+    return unless throttle!("search")
     return render_error("Search filters must be plain text.", :bad_request, "INVALID_PARAMETER") unless [*%i[q type limit cursor], *TalentController::FACET_PARAMS].all? { params[_1].nil? || params[_1].is_a?(String) }
 
     query = Search::Query.new(params[:q].to_s.strip.first(MAX_QUERY_LENGTH).strip)
@@ -49,7 +49,7 @@ class SearchController < ApplicationController
   # suggest.cache_seconds, in the shared cache and in the browser.
   def suggest
     settings = Search::Settings.suggest
-    return unless throttle!("search-suggest", limit: settings.fetch("requests_per_minute"), period: 1.minute)
+    return unless throttle!("search-suggest")
     return render_error("Search filters must be plain text.", :bad_request, "INVALID_PARAMETER") unless params[:q].nil? || params[:q].is_a?(String)
 
     text = Search::Query.normalize(params[:q].to_s.first(settings.fetch("max_length"))).strip

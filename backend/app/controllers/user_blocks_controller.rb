@@ -4,13 +4,13 @@ class UserBlocksController < ApplicationController
   include UserRateLimit
   include ScalarParams
 
-  CHANGES_PER_HOUR = 60
+  CHANGES_PER_HOUR = RateLimits.limit("block")
 
   before_action -> { authenticate! }
 
   def create
     return unless require_scalar_params!(:userId)
-    return unless within_user_rate_limit?("block", limit: CHANGES_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("block")
 
     target = User.find_by(id: params[:userId])
     return render_error("User not found", :not_found) unless target
@@ -26,7 +26,7 @@ class UserBlocksController < ApplicationController
   end
 
   def destroy
-    return unless within_user_rate_limit?("block", limit: CHANGES_PER_HOUR, period: 1.hour)
+    return unless within_user_rate_limit?("block")
 
     UserBlock.where(blocker: current_user, blocked_id: params[:id]).delete_all
     render json: { blocked: false }

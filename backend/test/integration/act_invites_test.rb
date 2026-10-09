@@ -403,7 +403,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
   end
 
   test "searching and resending are limited per inviter" do
-    stub_const(ActInvitesController, :SEARCH_PER_HOUR, 2) do
+    with_limits("act-invite-search" => 2) do
       2.times { get "/api/acts/#{@act.id}/invitees", params: { q: "Ro" }, headers: auth(@owner) }
       assert_response :ok
       get "/api/acts/#{@act.id}/invitees", params: { q: "Ro" }, headers: auth(@owner)
@@ -411,7 +411,7 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
       assert response.headers["Retry-After"].present?
     end
     invite!({ kind: "email", email: "limit@example.com", roleName: "Keys" })
-    stub_const(ActInvitesController, :RESEND_PER_HOUR, 0) do
+    with_limits("act-invite-resend" => 0) do
       post "/api/acts/#{@act.id}/invites/#{last_invite.id}/resend", headers: auth(@owner)
       assert_response :too_many_requests
     end
@@ -501,6 +501,13 @@ class ActInvitesTest < ActionDispatch::IntegrationTest
     post "/api/act-invites/accept", params: { token: }, headers: auth(@rohan), as: :json
     assert_response :gone
     assert_not @act.act_members.exists?(user_id: @rohan.id)
+  end
+
+  # The per-inviter limits live in config/rate_limits.yml (RateLimits); the controller constants are
+  # only aliases read at load time, so a test lowers the configured value instead.
+  def with_limits(overrides, &)
+    original = RateLimits.method(:limit)
+    RateLimits.stub(:limit, ->(name, scope = nil) { overrides.fetch(name) { original.call(name, scope) } }, &)
   end
 
   def stub_const(klass, name, value)

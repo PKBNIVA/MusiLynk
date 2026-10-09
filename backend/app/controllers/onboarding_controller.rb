@@ -5,7 +5,7 @@ class OnboardingController < ApplicationController
   before_action -> { authenticate!("jobseeker", "employer") }
 
   def starter
-    return unless throttle!("onboarding-starter", limit: 30, period: 1.hour)
+    return unless throttle!("onboarding-starter")
     starter = Onboarding::Starter.from_params(params)
     unless starter.valid?(current_user.role)
       return render_error(starter.errors.values.flatten.to_sentence, :unprocessable_content, "VALIDATION_FAILED", fields: starter.errors)

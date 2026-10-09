@@ -9,7 +9,7 @@ for budgets, rule 8 for the gates).
 | Layer | Version | Notes |
 | --- | --- | --- |
 | Node | 22 (`engines >=22.18`, CI `node-version: 22`) | 24 in PR #178 (open) |
-| Ruby | 3.3.6 (`backend/.ruby-version`, `backend/Dockerfile`) | 3.4.5 in PR #178 (open) |
+| Ruby | 3.4.5 (`backend/.ruby-version`, `backend/Dockerfile`) | upgraded 2026-10-09 in #194; 3.4.11 is the newest 3.4 patch, bump it next |
 | Rails | 8.1.4 (`load_defaults 8.1`) | upgraded 2026-09-27, [RAILS8_UPGRADE.md](RAILS8_UPGRADE.md) |
 | React / React DOM | 18.3.1 | 19 on hold, see below |
 | React Router | 7.18.4 | 8 on hold, see below |
@@ -47,6 +47,12 @@ Open at the time of writing:
 - **#178** Node 22 → 24 and Ruby 3.3.6 → 3.4.5. Both Vercel projects were already switched to
   Node 24.x through the API; CI, `.nvmrc`, `engines`, `backend/.ruby-version`, `Gemfile` and the
   Dockerfile move in the PR. 961 Vitest and 2020 Rails tests green on the new runtimes.
+- **#194** Ruby 3.3.6 → 3.4.5, the Ruby half of #178 (closed unmerged after two attempts). What
+  sank #178 and how #194 avoids it: `bundle lock --add-platform` re-resolved the whole lockfile and
+  took minitest to 6 (minitest/mock became a separate gem), so #194 uses `bundle lock --conservative`
+  and the lockfile diff is the RUBY VERSION line alone; and Ruby 3.4's `Hash#inspect` puts spaces
+  around `=>`, which changes one jsonb default in `db/schema.rb`, so the schema was re-dumped on 3.4
+  the way CI does it (`rm db/schema.rb && bin/rails db:migrate` on an empty database) and committed.
 - **#177** Dependabot: `react-dom` and `@types/react-dom` 18 → 19.3 (the `react` group). On hold,
   see below.
 - **#170** Dependabot: `react-resizable-panels` 2.1.7 → 4.14.1. Obsolete: #174 removed the

@@ -27,7 +27,7 @@ read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Run it locally
 
-Needs Node 22, Ruby 3.3.6 (`backend/.ruby-version`) and a running PostgreSQL (CI uses 16).
+Needs Node 22, Ruby 3.4.5 (`backend/.ruby-version`) and a running PostgreSQL (CI uses 16).
 
 ```bash
 npm ci

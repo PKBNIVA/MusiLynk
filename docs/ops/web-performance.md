@@ -94,12 +94,14 @@ both rate-limited.
 **TTLs and invalidation rules live in one file, `src/app/lib/dataCache.config.ts`**: `CACHE_TTL_MS` per
 family (`list` 60 s, `record` 120 s, `inbox`/`thread`/`unread` 0 = always revalidate but show memory
 first, `notifications`/`bookings` 15 s), `CACHE_MAX_AGE_MS`, the prefetch limits, and
-`INVALIDATE_ON_WRITE` (which cached paths a POST/PUT/PATCH/DELETE to a resource makes stale). Update path:
-change the number or the list there, in the PR that needs it, and say why in the PR.
+`INVALIDATE_ON_WRITE` (which cached paths a POST/PUT/PATCH/DELETE to a resource makes stale) and
+`INVALIDATE_ON_EVENT` (which cached paths a live update of a given type makes stale). Update path: change
+the number or the list there, in the PR that needs it, and say why in the PR.
 
-Realtime (R2, Action Cable): on a socket event call `realtime.invalidate(path)` or
-`realtime.update(path, fn)` from `dataCache.ts`; subscribers re-render, no polling needed. The file header
-documents both calls.
+Realtime (Action Cable, `src/app/lib/realtime.ts`): every socket event reaches the cache first
+(`realtime.event`), which stales the paths `INVALIDATE_ON_EVENT` names for its type; a screen showing one
+of them refetches it at once. A new event type needs a line there. Pages can also call
+`realtime.invalidate(path)` or `realtime.update(path, fn)`; the `dataCache.ts` header documents the calls.
 
 Optimistic writes: sending a message shows the bubble at once ("Sending…") and reconciles with the server
 copy; a failure removes it, restores the draft and toasts. Booking status changes update the row at once

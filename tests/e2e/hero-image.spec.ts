@@ -63,3 +63,47 @@ test.describe('360px at 2x', () => {
     expect(Number(/-(\d+)\.(?:avif|webp)$/.exec(src)?.[1])).toBe(768);
   });
 });
+
+test.describe('hire page header', () => {
+  test('a 390px phone at 3x gets the 1200px header photo, preloaded from the HTML and downloaded once', async ({
+    page,
+    request,
+  }) => {
+    const photoRequests: string[] = [];
+    page.on('request', (req) => {
+      if (/\/img\/drummer-stage-\d+\.(avif|webp)/.test(req.url())) photoRequests.push(req.url());
+    });
+    // vite preview has no vercel.json rewrites: serve the built file for the URL ourselves.
+    const html = await (await request.get('/hire/drummer/mumbai/index.html')).text();
+    expect(html).toContain('rel="preload" as="image" type="image/avif" imagesrcset="/img/drummer-stage-480.avif');
+    await page.route(
+      (u) => u.pathname === '/hire/drummer/mumbai',
+      (route) => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }),
+    );
+    await page.route('**/api/**', (route) =>
+      route.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"Not found"}' }),
+    );
+    // Hold the hire-page lookup open: a 404 would show the "Not found" state and drop the header. While it
+    // is pending the page shows its pre-API PhotoHeader, the LCP element this test is about.
+    await page.route('**/public/hire-pages/**', () => {
+      // never answered on purpose
+    });
+    await page.goto('/hire/drummer/mumbai');
+    const header = page.locator('[data-testid="photo-header"] img').first();
+    await expect(header).toBeVisible();
+    await expect.poll(() => header.evaluate((img: HTMLImageElement) => img.complete && img.currentSrc)).toBeTruthy();
+    const info = await header.evaluate((img: HTMLImageElement) => ({
+      currentSrc: img.currentSrc,
+      sizes: img.getAttribute('sizes') ?? '',
+      avifSrcset: img.parentElement?.querySelector('source[type="image/avif"]')?.getAttribute('srcset') ?? '',
+      preload: document.querySelector('link[rel="preload"][as="image"]')?.getAttribute('imagesrcset') ?? '',
+      preloadSizes: document.querySelector('link[rel="preload"][as="image"]')?.getAttribute('imagesizes') ?? '',
+      priority: img.getAttribute('fetchpriority'),
+    }));
+    expect(info.currentSrc).toMatch(/drummer-stage-1200\.avif$/);
+    expect(info.preload).toBe(info.avifSrcset);
+    expect(info.preloadSizes).toBe(info.sizes);
+    expect(info.priority).toBe('high');
+    expect(photoRequests).toHaveLength(1);
+  });
+});

@@ -76,7 +76,7 @@ describe('Field', () => {
     act(() =>
       root.render(
         <Field id="x" label="X" maxLength={10}>
-          {'plain' as unknown as React.ReactElement}
+          {'plain' as unknown as React.ReactElement<{ id?: string }>}
         </Field>,
       ),
     );

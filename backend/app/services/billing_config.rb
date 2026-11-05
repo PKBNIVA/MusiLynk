@@ -4,10 +4,13 @@ class BillingConfig
   CONFIG_PATH = Rails.root.join("config/billing.yml")
 
   def self.config
-    @config ||= YAML.safe_load(File.read(CONFIG_PATH), aliases: true).fetch(Rails.env, {}).deep_symbolize_keys
+    @config ||= Settings.load(:billing)
   end
 
-  def self.reload! = @config = nil
+  def self.reload!
+    @config = nil
+    Settings.reload!(:billing)
+  end
 
   def self.early_access = config.fetch(:early_access)
   def self.early_access_enabled? = early_access.fetch(:enabled)

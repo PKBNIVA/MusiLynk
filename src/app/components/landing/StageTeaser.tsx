@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight } from 'lucide-react';
-import { FEATURE_STAGE } from '../../lib/features';
+import { useFeature } from '../../lib/features';
 import { formatDate } from '../../lib/format';
 import { loadStageTeaser, type StageTeaserPost } from '../../lib/landing';
 
@@ -13,9 +13,10 @@ const MIN_SHOWN = 3;
  * author route. Renders nothing when the Stage is switched off, under three posts, or on failure.
  */
 export function StageTeaser() {
+  const stage = useFeature('stage');
   const [posts, setPosts] = useState<StageTeaserPost[]>([]);
   useEffect(() => {
-    if (!FEATURE_STAGE) return;
+    if (!stage) return;
     let live = true;
     loadStageTeaser()
       .then((found) => live && setPosts(found))
@@ -23,9 +24,9 @@ export function StageTeaser() {
     return () => {
       live = false;
     };
-  }, []);
+  }, [stage]);
 
-  if (posts.length < MIN_SHOWN) return null;
+  if (!stage || posts.length < MIN_SHOWN) return null;
   return (
     <section aria-labelledby="stage-teaser-title" className="px-4 pb-16 sm:px-6 md:pb-20" data-testid="stage-teaser">
       <div className="mx-auto max-w-6xl">

@@ -59,7 +59,7 @@ import { SkipLink } from './SkipLink';
 import type { UnreadCounts } from '../lib/apiTypes';
 import type { LucideIcon } from 'lucide-react';
 import { ActingAsChip, IdentitySwitcher } from './showcase/IdentitySwitcher';
-import { FEATURE_RESUMES, FEATURE_STAGE } from '../lib/features';
+import { useFeature } from '../lib/features';
 import { usePendingSuggestions } from './showcase/usePendingSuggestions';
 
 const UNREAD_POLL_MS = 10_000;
@@ -68,6 +68,8 @@ type NavItem = { path: string; icon: LucideIcon; label: string };
 type NavGroup = { label: string; icon: LucideIcon; items: NavItem[] };
 
 export function Navigation() {
+  const FEATURE_STAGE = useFeature('stage');
+  const FEATURE_RESUMES = useFeature('resumes');
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();

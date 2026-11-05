@@ -7,7 +7,7 @@ class AuthController < ApplicationController
   LOGIN_FAILURES_PER_EMAIL_AND_IP = 10
   LOGIN_FAILURES_PER_EMAIL = 100
   LOGIN_FAILURES_PER_IP = 50
-  MAX_LIVE_SESSIONS = 10
+  MAX_LIVE_SESSIONS = Limits.max_live_sessions
   OTP_REQUEST_PERIOD = 1.hour
   OTP_REQUESTS_PER_EMAIL = 5
   # Mobile carriers put many users behind one IP (CGNAT); the per-email limit is the real guard.
@@ -101,7 +101,7 @@ class AuthController < ApplicationController
     verification_token = issue_token("verify_email", 24.hours, user)
     _verification_link, verification_delivery = deliver_token(verification_token, "/verify-email", user)
     audit!("auth.register", user, starter.any? ? { starter: created } : {})
-    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled?, verificationRequired: true, verificationDelivery: verification_delivery, starter: created }, status: :created
+    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled?, features: Features.for(user), verificationRequired: true, verificationDelivery: verification_delivery, starter: created }, status: :created
   rescue ActiveRecord::RecordNotUnique
     render_error("An account already exists for this email.", :conflict)
   end
@@ -144,7 +144,7 @@ class AuthController < ApplicationController
     user.update!(last_login_at: Time.current)
     token = sign_in(user)
     audit!("auth.login", user, second_factor ? { secondFactor: second_factor == :off ? "disabled" : "skipped" } : {})
-    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled? }
+    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled?, features: Features.for(user) }
   end
 
   # POST /auth/second-factor {challengeToken, code} -> same shape as /auth/login.
@@ -173,7 +173,7 @@ class AuthController < ApplicationController
     user.update!(last_login_at: Time.current)
     token = sign_in(user)
     audit!("auth.login", user, { method: "password", secondFactor: "email_code" })
-    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled? }
+    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled?, features: Features.for(user) }
   end
 
   # POST /auth/otp/request {email, role?, name?}
@@ -200,7 +200,7 @@ class AuthController < ApplicationController
     return render_error("This sign-in link has expired or was already used.", :unauthorized, "EXCHANGE_INVALID") if admin_code_only_sign_in_blocked?(user)
     return render_error("This account is not active.", :forbidden) unless user.active?
     token = sign_in(user)
-    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled? }
+    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled?, features: Features.for(user) }
   end
 
   # POST /api/auth/connect-ticket (signed in) -> {ticket, expiresIn}. A single-use,
@@ -285,7 +285,7 @@ class AuthController < ApplicationController
     user.update!(last_login_at: Time.current)
     token = sign_in(user)
     audit!("auth.login", user, { method: "whatsapp_code" })
-    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled? }
+    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled?, features: Features.for(user) }
   end
 
   def otp_request
@@ -345,7 +345,7 @@ class AuthController < ApplicationController
     notify_password_removed(user) if dropped
     token = sign_in(user)
     audit!(created ? "auth.register" : "auth.login", user, { method: "email_code" })
-    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled? }
+    render json: { user: public_user(user), accessToken: token, realtime: Realtime.enabled?, features: Features.for(user) }
   end
 
   def logout
@@ -356,7 +356,7 @@ class AuthController < ApplicationController
 
   def me
     return unless authenticate!
-    render json: { user: public_user(current_user).merge(verification_state(current_user)), realtime: Realtime.enabled? }
+    render json: { user: public_user(current_user).merge(verification_state(current_user)), realtime: Realtime.enabled?, features: Features.for(current_user) }
   end
 
   def request_verification
@@ -450,7 +450,7 @@ class AuthController < ApplicationController
     return render json: { ok: true, signInRequired: true } if user.admin?
 
     accessToken = sign_in(user)
-    render json: { ok: true, user: public_user(user), accessToken:, realtime: Realtime.enabled? }
+    render json: { ok: true, user: public_user(user), accessToken:, realtime: Realtime.enabled?, features: Features.for(user) }
   end
 
   private

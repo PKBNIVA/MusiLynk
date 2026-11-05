@@ -6,12 +6,15 @@ class EdgeCache
 
   class << self
     def config
-      @config ||= YAML.safe_load(File.read(CONFIG_PATH), aliases: true).fetch("shared").to_h do |kind, values|
+      @config ||= Settings.load(:edge_cache, symbolize: false).fetch("shared").to_h do |kind, values|
         [kind.to_sym, Lifetime.new(**values.symbolize_keys.slice(*Lifetime.members))]
       end
     end
 
-    def reload! = @config = nil
+    def reload!
+      @config = nil
+      Settings.reload!(:edge_cache)
+    end
 
     def kinds = config.keys
 

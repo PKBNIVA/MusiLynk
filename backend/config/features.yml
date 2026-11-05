@@ -1,0 +1,20 @@
+# Server-side feature flags. Each flag has:
+#   enabled:    master switch (false = off for everyone, whatever the rest says)
+#   percentage: 0..100, the share of signed-in users the flag is on for (stable per user id, so a
+#               person never flips between visits); 100 = everyone. Anonymous visitors only see a
+#               flag as on when enabled and percentage is 100 (there is no id to bucket).
+#   allowlist:  user ids or email addresses that always get the flag while it is enabled.
+# Env override FEATURE_<NAME> (true/1/on = on for everyone, false/0/off = kill switch) wins over
+# this file without a deploy. Resolved values are served in GET /api/me (per user) and
+# GET /api/public/config (anonymous). Update path and kill-switch runbook: docs/ops/feature-flags.md.
+flags:
+  # The Stage community feed: nav link, routes and Share-to-Stage buttons.
+  stage:
+    enabled: true
+    percentage: 100
+    allowlist: []
+  # Career record and resumes: nav item, routes and the resume picker when applying.
+  resumes:
+    enabled: false
+    percentage: 100
+    allowlist: []

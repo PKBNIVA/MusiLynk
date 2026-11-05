@@ -33,6 +33,7 @@ Lifetimes live in **`backend/config/edge_cache.yml`** (seconds); change them the
 | Endpoint | Kind | `s-maxage` (edge) | `stale-while-revalidate` | Browser `max-age` |
 | --- | --- | --- | --- | --- |
 | `GET /api/public/stats` | `stats` | 300 | 600 | 300 |
+| `GET /api/public/config` (business settings for the frontend, docs/engineering/SETTINGS.md) | `config` | 300 | 600 | 0 |
 | `GET /api/public/talent` (per query string) | `listing` | 60 | 300 | 0 |
 | `GET /api/public/acts` (per query string) | `listing` | 60 | 300 | 0 |
 | `GET /api/jobs` (per query string) | `listing` | 60 | 300 | 0 |

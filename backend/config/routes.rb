@@ -62,6 +62,7 @@ Rails.application.routes.draw do
     post "link-import/draft", to: "link_import#draft"
     post "library/import", to: "library_imports#create"
     get "public/stats", to: "public_stats#show"
+    get "public/config", to: "public_config#show"
 
     get "jobs/limits", to: "jobs#limits"
     resources :jobs, only: %i[index show create] do

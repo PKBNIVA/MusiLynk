@@ -19,10 +19,13 @@ class BookingFeePolicy
   end
 
   def self.config
-    @config ||= YAML.safe_load(File.read(CONFIG_PATH), aliases: true).fetch(Rails.env, {}).deep_symbolize_keys
+    @config ||= Settings.load(:bookings)
   end
 
-  def self.reload! = @config = nil
+  def self.reload!
+    @config = nil
+    Settings.reload!(:bookings)
+  end
 
   def self.policy_version = config.fetch(:policy_version, 1)
   def self.platform_fee_percent = config.fetch(:platform_fee_percent, 0).to_f

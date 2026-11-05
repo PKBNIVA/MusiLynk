@@ -3,8 +3,8 @@
 module AdminPagination
   extend ActiveSupport::Concern
 
-  DEFAULT_PER_PAGE = 50
-  MAX_PER_PAGE = 100
+  DEFAULT_PER_PAGE = Limits.admin_page_size
+  MAX_PER_PAGE = Limits.admin_max_page_size
   # (MAX_PAGE - 1) * MAX_PER_PAGE stays far under Postgres's bigint range, so a huge
   # `page` (e.g. 10**30) can never overflow the OFFSET it turns into.
   MAX_PAGE = 1_000_000_000

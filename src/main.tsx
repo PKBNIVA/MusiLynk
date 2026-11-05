@@ -30,3 +30,7 @@ if (prerenderedRouteMatches(root.dataset.prerendered, location.pathname) && root
   if (root.dataset.prerendered) root.replaceChildren();
   createRoot(root).render(<App />);
 }
+
+// Business settings and anonymous feature flags (GET /api/public/config): one lazy fetch after first render,
+// out of the entry chunk. Components that read them (usePublicConfig, useFeature) re-render when it lands.
+void import('./app/lib/publicConfig').then((m) => m.loadPublicConfig());

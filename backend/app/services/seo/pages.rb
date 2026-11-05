@@ -39,7 +39,7 @@ module Seo
 
     def data
       @data ||= begin
-        raw = YAML.safe_load_file(PATH)
+        raw = Settings.load(:seo_pages, symbolize: false)
         { roles: raw.fetch("roles").freeze, cities: raw.fetch("cities").freeze }.freeze
       end
     end

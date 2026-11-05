@@ -7,8 +7,8 @@ class JobsController < ApplicationController
   # The public listing is paged with a keyset cursor: `?limit=` (default PAGE_SIZE, at most
   # MAX_PAGE_SIZE; anything else falls back to the default) and `?cursor=` from the previous
   # page's `nextCursor`.
-  PAGE_SIZE = 30
-  MAX_PAGE_SIZE = 100
+  PAGE_SIZE = Limits.list_page_size
+  MAX_PAGE_SIZE = Limits.list_max_page_size
   LIST_ORDER = ["jobs.featured DESC", "jobs.created_at DESC", "jobs.id DESC"].freeze
   # Newest-first browsing (no search query): V-16. Kept apart from LIST_ORDER, which still breaks
   # ties for search relevance ranking.
@@ -18,7 +18,7 @@ class JobsController < ApplicationController
   # only guards against that invariant ever slipping.
   BROWSE_SENTINEL = "-infinity"
   # `?roles=Drummer,Vocalist` finds opportunities for any of those roles (a musician's own roles).
-  MAX_ROLES = 6
+  MAX_ROLES = Limits.job_max_roles
 
   def index
     # ?location[]=a or ?kind[x]=y arrive as arrays/hashes; the filters below expect text.

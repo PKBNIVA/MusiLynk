@@ -71,6 +71,7 @@ class ApiMatrixTest < ActionDispatch::IntegrationTest
     [:post, "/api/link-import/draft", :public, { params: { links: ["https://soundcloud.com/matrix-artist/a-track"] }, bad: { links: [] }, bad_status: [422], keys: %w[sources draft aiUsed provenance] }],
     [:post, "/api/library/import", :talent, { params: { roles: ["Guitarist"] }, keys: %w[portfolioItems suggestedReview] }],
     [:get, "/api/public/stats", :public, { keys: %w[verifiedProfiles professionals cities openOpportunities urgentRequests generatedAt] }],
+    [:get, "/api/public/config", :public, { keys: %w[fees plans limits catalog features generatedAt] }],
 
     [:get, "/api/jobs", :public, { keys: %w[jobs nextCursor total] }],
     [:get, "/api/jobs/limits", :talent, { keys: %w[activeAllowed activeUsed plan planName] }],

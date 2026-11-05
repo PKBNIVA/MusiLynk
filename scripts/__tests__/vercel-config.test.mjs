@@ -75,11 +75,11 @@ describe('vercel.json SPA rewrites', () => {
 });
 
 describe('vercel.json edge-cached API rewrites', () => {
-  // The landing page's three anonymous reads go through same-origin paths that Vercel proxies to the
+  // The landing page's anonymous reads and the public settings go through same-origin paths that Vercel proxies to the
   // API and caches per s-maxage (docs/ops/edge-caching.md). Nothing else under /api may be proxied:
   // a signed-in endpoint on the edge would be a mistake even though Vercel skips caching with a token.
   const API_HOST = 'https://musilynk-api-production.up.railway.app';
-  const EDGE_READS = ['/api/public/stats', '/api/public/talent', '/api/stage/authors/system/:id/posts'];
+  const EDGE_READS = ['/api/public/stats', '/api/public/config', '/api/public/talent', '/api/stage/authors/system/:id/posts'];
   const apiRules = config.rewrites.filter((rule) => rule.source.startsWith('/api/'));
   /** Vercel's path-to-regexp for the shapes vercel.json uses: `:name*` (rest), `:name` (one segment), groups. */
   const compile = (source) =>
@@ -87,7 +87,7 @@ describe('vercel.json edge-cached API rewrites', () => {
   /** The first rewrite whose source matches `path` (its `has` condition assumed met), as Vercel applies them. */
   const firstMatch = (path) => config.rewrites.find((rule) => compile(rule.source).test(path));
 
-  it('proxies exactly the three landing reads to the API host, path preserved', () => {
+  it('proxies exactly the anonymous edge reads to the API host, path preserved', () => {
     expect(apiRules.map((rule) => rule.source)).toEqual(EDGE_READS);
     for (const rule of apiRules) {
       expect(rule.destination).toBe(`${API_HOST}${rule.source}`);
@@ -96,7 +96,7 @@ describe('vercel.json edge-cached API rewrites', () => {
   });
 
   it('wins over the crawler and SPA rules for the paths the landing page calls', () => {
-    for (const path of ['/api/public/stats', '/api/public/talent', '/api/stage/authors/system/musilynk/posts']) {
+    for (const path of ['/api/public/stats', '/api/public/config', '/api/public/talent', '/api/stage/authors/system/musilynk/posts']) {
       const rule = firstMatch(path);
       expect(rule?.destination, path).toMatch(new RegExp(`^${API_HOST}/api/`));
       expect(servedAsApp(path), path).toBe(false);

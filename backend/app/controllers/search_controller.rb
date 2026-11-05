@@ -5,7 +5,7 @@ class SearchController < ApplicationController
   # MAX_QUERY_LENGTH characters and each IP gets REQUESTS_PER_MINUTE searches.
   MAX_QUERY_LENGTH = Search::Query::MAX_LENGTH
   REQUESTS_PER_MINUTE = 60
-  MAX_RESULTS = 60
+  MAX_RESULTS = Limits.search_max_results
   # "All" takes at most this many of each type (then fair-shares MAX_RESULTS between them).
   PER_TYPE = 30
   ORDERS = {

@@ -6,7 +6,7 @@ import { FieldHelp } from '../help/FieldHelp';
 import { PortfolioPreview } from './PortfolioPreview';
 import { apiGet } from '../../lib/api';
 import type { Portfolio, Resume } from '../../lib/showcase';
-import { FEATURE_RESUMES } from '../../lib/features';
+import { useFeature } from '../../lib/features';
 
 export interface Materials {
   portfolioId?: string;
@@ -38,6 +38,7 @@ export function ApplyMaterials({
   change.current = onChange;
   const details = useRef(onDetails);
   details.current = onDetails;
+  const resumesOn = useFeature('resumes');
 
   useEffect(() => {
     let live = true;
@@ -45,7 +46,7 @@ export function ApplyMaterials({
       apiGet<{ portfolios?: Portfolio[] }>('/portfolios')
         .then((d) => (d.portfolios || []).filter((p) => p.status !== 'hidden'))
         .catch(() => [] as Portfolio[]),
-      FEATURE_RESUMES
+      resumesOn
         ? apiGet<{ resumes?: Resume[] }>('/resumes')
             .then((d) => d.resumes || [])
             .catch(() => [] as Resume[])
@@ -59,7 +60,7 @@ export function ApplyMaterials({
     return () => {
       live = false;
     };
-  }, []);
+  }, [resumesOn]);
 
   useEffect(() => {
     const id = value.portfolioId;

@@ -3,7 +3,7 @@ class MessagesController < ApplicationController
 
   HISTORY_LIMIT = 200
   SEND_LIMIT_PER_HOUR = 120
-  MAX_LENGTH = 5_000
+  MAX_LENGTH = Limits.message_max_length
 
   before_action -> { authenticate! }
   before_action :load_conversation

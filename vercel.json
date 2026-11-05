@@ -30,6 +30,10 @@
       "destination": "https://musilynk-api-production.up.railway.app/api/public/stats"
     },
     {
+      "source": "/api/public/config",
+      "destination": "https://musilynk-api-production.up.railway.app/api/public/config"
+    },
+    {
       "source": "/api/public/talent",
       "destination": "https://musilynk-api-production.up.railway.app/api/public/talent"
     },

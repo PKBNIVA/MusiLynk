@@ -1,6 +1,6 @@
 # "Need someone by tomorrow": everything that governs the urgent-hire wedge (Mumbai first).
-# Read through UrgentConfig, never inline, so the founder can retune the promise and the
-# notify fan-out without a deploy touching code.
+# Read through UrgentConfig, never inline, so the founder can retune the promise, the notify
+# fan-out and the matcher's scoring without a deploy touching code. Update path: docs/ops/urgent-matching.md.
 default: &default
   # Shown on the confirmation screen ("We're on it").
   response_time_promise: "within 2 hours, 9am–11pm IST"
@@ -17,6 +17,19 @@ default: &default
     notify_count: 15
     # A candidate must have signed in or acted within this window to count as "recently active".
     recent_activity_within_days: 30
+    # A request with no end time is assumed to last this long when it is compared with the
+    # candidates' availability windows (a window that overlaps blocks them; one that covers it scores).
+    default_duration_hours: 3
+    # Points per signal; a candidate's score is the sum, and the reasons shown to the hirer and the
+    # admin are listed in this order (the first three). A candidate must match the role or the
+    # instrument to be ranked at all, so `role` and `instrument` are also the gate.
+    weights:
+      role: 40
+      instrument: 20
+      city: 25
+      verified: 20
+      recent_activity: 10
+      available: 5
   # A request with no responses this long after posting is flagged red on the admin funnel.
   no_response_after_minutes: 60
   # "Requests never go silent": how long an open request stays live before UrgentRequestsSweepJob
